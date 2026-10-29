@@ -11,7 +11,7 @@ const ai = new GoogleGenAI({}); // reads GEMINI_API_KEY from ../.env
 
 const MODEL = "gemini-3.5-flash";
 const MAX_VIDEO_SECONDS = 180; // design §1: videos ≤ 3 minutes
-const OUT_DIR = new URL("./out/", import.meta.url).pathname;
+const OUT_DIR = `${import.meta.dirname}/out`;
 // Instagram often wants a logged-in session; e.g. YTDLP_BROWSER=chrome reuses Chrome's cookies.
 const COOKIE_ARGS = process.env.YTDLP_BROWSER
   ? ["--cookies-from-browser", process.env.YTDLP_BROWSER]
@@ -113,38 +113,40 @@ type Result = {
   tookSeconds: number;
 };
 
+// Exact host or a subdomain, so "notyoutube.com" doesn't count.
+function isHost(host: string, domain: string): boolean {
+  return host === domain || host.endsWith(`.${domain}`);
+}
+
 function detectPlatform(url: string): Platform | "unknown" {
   if (!URL.canParse(url)) return "unknown";
   const host = new URL(url).hostname;
-  if (host.endsWith("youtube.com") || host === "youtu.be") return "youtube";
-  if (host.endsWith("instagram.com")) return "instagram";
-  if (host.endsWith("facebook.com") || host === "fb.watch") return "facebook";
+  if (isHost(host, "youtube.com") || host === "youtu.be") return "youtube";
+  if (isHost(host, "instagram.com")) return "instagram";
+  if (isHost(host, "facebook.com") || host === "fb.watch") return "facebook";
   return "unknown";
 }
 
-async function readVideoSeconds(url: string): Promise<number> {
-  const { stdout } = await run("yt-dlp", [
-    ...COOKIE_ARGS,
-    "--dump-json",
-    "--no-warnings",
-    url,
-  ]);
-  return JSON.parse(stdout).duration;
+// --playlist-items 1: a carousel or playlist link would otherwise give several videos.
+// The timeout stops one hung link from stalling the whole run.
+function ytDlp(args: string[]) {
+  return run(
+    "yt-dlp",
+    [...COOKIE_ARGS, "--no-warnings", "--playlist-items", "1", ...args],
+    { timeout: 120_000 },
+  );
 }
 
-// Saves as <name>.mp4: --remux-video turns other containers into mp4 without re-encoding.
-async function downloadVideo(url: string, name: string): Promise<string> {
-  const output = `${OUT_DIR}tmp/${name}`;
-  await run("yt-dlp", [
-    ...COOKIE_ARGS,
-    "--no-warnings",
-    "--remux-video",
-    "mp4",
-    "-o",
-    `${output}.%(ext)s`,
-    url,
-  ]);
-  return `${output}.mp4`;
+async function readVideoSeconds(url: string): Promise<number> {
+  const { stdout } = await ytDlp(["--print", "duration", url]);
+  const seconds = Number(stdout.trim());
+  if (!Number.isFinite(seconds)) throw new Error("yt-dlp gave no video length");
+  return seconds;
+}
+
+// Saves as <base>.mp4: --remux-video turns other containers into mp4 without re-encoding.
+async function downloadVideo(url: string, base: string) {
+  await ytDlp(["--remux-video", "mp4", "-o", `${base}.%(ext)s`, url]);
 }
 
 async function askGemini(video: Part): Promise<Record<string, unknown>> {
@@ -166,32 +168,45 @@ async function uploadVideo(path: string) {
     file: path,
     config: { mimeType: "video/mp4" },
   });
-  while (file.state === FileState.PROCESSING && file.name) {
+  const name = file.name;
+  if (!name) throw new Error("Gemini file has no name");
+  while (file.state === FileState.PROCESSING) {
     await sleep(2000);
-    file = await ai.files.get({ name: file.name });
+    file = await ai.files.get({ name });
   }
   if (file.state !== FileState.ACTIVE || !file.uri)
     throw new Error(`Gemini file is ${file.state}`);
   return file;
 }
 
-// Instagram / Facebook: check the length, download, upload, ask. Media is deleted in finally.
-async function extractFromDownload(url: string, name: string, result: Result) {
-  result.videoSeconds = await readVideoSeconds(url);
-  if (result.videoSeconds > MAX_VIDEO_SECONDS)
-    throw new Error(`Video is ${result.videoSeconds}s, over the limit`);
-  const path = await downloadVideo(url, name);
+// Instagram / Facebook: download, upload, ask. Media is deleted in finally (design §4.1).
+async function extractFromDownload(url: string, name: string) {
+  const base = `${OUT_DIR}/tmp/${name}`;
+  const path = `${base}.mp4`;
   let geminiFileName: string | undefined;
   try {
+    await downloadVideo(url, base);
     const file = await uploadVideo(path);
     geminiFileName = file.name;
     return await askGemini({
-      fileData: { fileUri: file.uri, mimeType: file.mimeType },
+      fileData: { fileUri: file.uri, mimeType: "video/mp4" },
     });
   } finally {
     await rm(path, { force: true });
-    if (geminiFileName) await ai.files.delete({ name: geminiFileName });
+    // A failed delete must not hide the real error; Gemini deletes files after 48h anyway.
+    if (geminiFileName)
+      await ai.files.delete({ name: geminiFileName }).catch(() => {});
   }
+}
+
+function count(value: unknown): number {
+  return Array.isArray(value) ? value.length : 0;
+}
+
+// yt-dlp's reason ("ERROR: ... login required") is the last line of its stderr.
+function lastLine(error: unknown): string {
+  const text = error instanceof Error ? error.message : String(error);
+  return text.trim().split("\n").at(-1) ?? text;
 }
 
 async function tryLink(url: string, index: number): Promise<Result> {
@@ -202,22 +217,23 @@ async function tryLink(url: string, index: number): Promise<Result> {
   try {
     if (platform === "unknown")
       throw new Error("Not an Instagram, Facebook or YouTube link");
+    // The length check comes before any download or Gemini call (design §1: ≤ 3 minutes).
+    result.videoSeconds = await readVideoSeconds(url);
+    if (result.videoSeconds > MAX_VIDEO_SECONDS)
+      throw new Error(`Video is ${result.videoSeconds}s, over the limit`);
     // YouTube: Gemini watches the public video from its URL (design §4.1).
     const recipe =
       platform === "youtube"
         ? await askGemini({ fileData: { fileUri: url } })
-        : await extractFromDownload(url, name, result);
-    await writeFile(`${OUT_DIR}${name}.json`, JSON.stringify(recipe, null, 2));
+        : await extractFromDownload(url, name);
+    await writeFile(`${OUT_DIR}/${name}.json`, JSON.stringify(recipe, null, 2));
     result.outcome = recipe.isRecipe ? "recipe" : "not a recipe";
-    result.title = String(recipe.title);
-    result.ingredients = Array.isArray(recipe.ingredients)
-      ? recipe.ingredients.length
-      : 0;
-    result.steps = Array.isArray(recipe.steps) ? recipe.steps.length : 0;
-    result.tags = Array.isArray(recipe.tags) ? recipe.tags.length : 0;
+    result.title = typeof recipe.title === "string" ? recipe.title : "";
+    result.ingredients = count(recipe.ingredients);
+    result.steps = count(recipe.steps);
+    result.tags = count(recipe.tags);
   } catch (error) {
-    result.error =
-      error instanceof Error ? error.message.split("\n")[0] : String(error);
+    result.error = lastLine(error);
   }
   result.tookSeconds = Math.round((Date.now() - started) / 1000);
   return result;
@@ -247,12 +263,12 @@ function toMarkdown(results: Result[]): string {
   return header + rows.map((row) => `| ${row} |`).join("\n") + "\n";
 }
 
-const links = (await readFile(new URL("./links.txt", import.meta.url), "utf8"))
+const links = (await readFile(`${import.meta.dirname}/links.txt`, "utf8"))
   .split("\n")
   .map((line) => line.trim())
   .filter((line) => line && !line.startsWith("#"));
 
-await mkdir(`${OUT_DIR}tmp`, { recursive: true });
+await mkdir(`${OUT_DIR}/tmp`, { recursive: true });
 const results: Result[] = [];
 // One at a time on purpose: easy to follow in the log and gentle on Gemini rate limits.
 for (const [index, url] of links.entries()) {
@@ -262,5 +278,5 @@ for (const [index, url] of links.entries()) {
   );
   results.push(result);
 }
-await writeFile(`${OUT_DIR}results.md`, toMarkdown(results));
-console.log(`Wrote ${OUT_DIR}results.md`);
+await writeFile(`${OUT_DIR}/results.md`, toMarkdown(results));
+console.log(`Wrote ${OUT_DIR}/results.md`);

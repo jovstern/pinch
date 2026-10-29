@@ -5,7 +5,7 @@ Slices for later milestones are filled in when the milestone starts.
 
 ## M0 — Spike: can we get recipes out of links?
 
-- [ ] `spike/`: a script that takes a list of links, downloads with `yt-dlp` (or passes YouTube
+- [x] `spike/`: a script that takes a list of links, downloads with `yt-dlp` (or passes YouTube
       URLs straight through), sends to Gemini, and writes what came back to a results table
 - [ ] Run it on real links (10 Instagram reels, 5 Facebook reels, 3 YouTube, 3 stories);
       write the findings into `docs/spike-results.md` and adjust the design if needed
