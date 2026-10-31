@@ -1,8 +1,8 @@
 # M0 spike results
 
 Run on 2026-10-31 with `spike/` (yt-dlp 2026.10.26, `gemini-3.5-flash`), no cookies.
-The design changes these findings caused are in `docs/system-design.md` (§1, §4.1, §4.5, §9,
-§11, D15, D16).
+The design changes these findings caused are in `docs/system-design.md` (§1, §3, §4.1, §4.3,
+§4.5, §9, §11, D15, D16).
 
 ## What we ran
 
@@ -36,10 +36,12 @@ The links were run three times:
 
 ## Findings
 
-1. **All three platforms download without cookies** (public posts). Instagram 3/3 and
-   Facebook 3/3. We never needed `YTDLP_BROWSER`.
+1. **`yt-dlp` read all three platforms without cookies** (public posts): it read the info for
+   all 12 links and downloaded all 6 Instagram and Facebook videos. We never needed
+   `YTDLP_BROWSER`.
 2. **Instagram doesn't report a video length** (`duration` is `NA`). The length can only be
    checked after the download, with `ffprobe`. The videos were small: 13–36 s and 3–11 MB.
+   So "Video s" in the table comes from `ffprobe` for Instagram and from `yt-dlp` for the rest.
 3. **The caption often holds the real recipe.** Gemini only sees what it's sent, and in the
    first runs it never saw the caption. On the 10 links that were recipes in both runs,
    ingredients without a quantity went from **42 of 106** (video only) to **13 of 101**
@@ -47,16 +49,21 @@ The links were run three times:
    - The cake (#5) went from 17 missing to 0, and the almond bread (#12) from 9 to 1; their
      quantities are written in the caption, not said in the video.
    - #11 stayed at 10/11 missing: its caption is an advert with no recipe.
+   - Not all of the drop is the caption. #2 has no caption and still improved (5 → 1), and #6
+     returned different ingredients (1/6 → 0/4). That is run-to-run variance (finding 9), so
+     part of the drop is noise; most of it is #5 and #12, where the caption is the source.
    - yt-dlp reads the caption for YouTube too, so every platform gets it the same way.
 4. **The caption also helps spot non-recipes.** #7 is a product promo ("comment below to get
    the recipe"). From the video alone Gemini made up a three-ingredient recipe; with the
    caption it said "not a recipe".
 5. **A Gemini call can hang.** #4 waited 27 minutes and then failed with `fetch failed`. It
    had worked in both earlier runs. A job must never outlive its 3-minute lease (§4.3), so
-   every Gemini call needs its own timeout. After that, the normal retry handles it.
+   each attempt gets a deadline under the lease and every external call a timeout inside it.
+   After that, the normal retry handles it.
 6. **Language is unstable.** The same Hebrew reel came back with an English title in one run
    and a Hebrew title in the next. **Decision (D16): the draft is written in the language of
-   the post.** The prompt says so; tags stay English codes.
+   the post.** The M5 prompt will say so; the spike's prompt didn't, which is why the language
+   changed between runs. Tags stay English codes.
 7. **Small output quirks for the Zod schema (M5):**
    - `unit` is often `""` instead of missing, so empty strings are turned into "not set".
    - `meal` sometimes has two values (lunch and dinner). That is fine: tags are an array.

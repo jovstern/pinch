@@ -162,7 +162,10 @@ async function measureVideoSeconds(path: string): Promise<number> {
     "csv=p=0",
     path,
   ]);
-  return Number(stdout.trim());
+  const seconds = Number(stdout.trim());
+  if (!Number.isFinite(seconds))
+    throw new Error("ffprobe gave no video length");
+  return seconds;
 }
 
 function checkLength(seconds: number) {
@@ -209,6 +212,7 @@ async function uploadVideo(path: string) {
 }
 
 // Instagram / Facebook: download, upload, ask. Media is deleted in finally (design §4.1).
+// Fills result.videoSeconds when the platform didn't report a length before the download.
 async function extractFromDownload(
   url: string,
   name: string,

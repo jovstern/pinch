@@ -50,7 +50,7 @@ Meal planning, shopping lists, scaling servings, Instagram/Facebook **stories** 
 | Look and feel | Clean and friendly; it should feel finished |
 | CRUD latency | < 300 ms |
 | Import time | Typically < 60 s, always **asynchronous**: the UI never waits on it |
-| Video length | ≤ 3 minutes (checked before downloading; Instagram only after, see §4.1) |
+| Video length | ≤ 3 minutes (checked before downloading when the platform reports it; otherwise right after, see §4.1) |
 | Reliability | A crash never loses an import or creates a duplicate recipe |
 | Media | **Never stored.** Only text, plus a tiny thumbnail (§5) |
 | Cost | Imports per user per day are capped (default 20) |
@@ -71,7 +71,7 @@ flowchart LR
   C -. "poll import status" .-> A
   A <--> M[(MongoDB<br/>users · recipes · imports)]
   W[Import worker<br/>separate process] <-- "claim job / write draft" --> M
-  W -- "download (yt-dlp)" --> S[Instagram / Facebook]
+  W -- "info + caption (yt-dlp), download for Instagram / Facebook" --> S[Instagram / Facebook / YouTube]
   W -- "YouTube URL, video file or text" --> G[Gemini API<br/>+ Files API]
 ```
 
@@ -144,6 +144,10 @@ stateDiagram-v2
   ```
 - **Lease.** If the worker dies mid-job, `leaseUntil` passes and the job is claimed again (the
   same idea as an SQS visibility timeout).
+- **Deadline.** A whole attempt must finish inside its lease, or a second worker would claim a
+  job that is still running. So each attempt has a deadline under the lease (about 150 s),
+  and every external call in it (`yt-dlp`, upload, Gemini) has a timeout inside that. In the
+  spike one Gemini call hung for 27 minutes. A timeout is a failed attempt and retries as usual.
 - **Retries with backoff.** A failed attempt goes back to `pending` with `nextAttemptAt` = now +
   10 s, then 60 s. After 3 attempts → `failed` with a readable `error`.
 - **Back-pressure.** At most **2 jobs at a time** per worker, to stay within Gemini rate limits.
@@ -166,14 +170,15 @@ create a duplicate recipe when the user clicks again.
 
 | Source | How | Risk |
 |---|---|---|
-| YouTube | Gemini reads the URL | Low; public videos only |
+| YouTube | Gemini reads the URL; `yt-dlp` reads the length and caption | Low; public videos only |
 | Instagram reel/post | `yt-dlp` download | Medium: breaks when Instagram changes; public posts needed no cookies in the spike; a grey area under Instagram's terms — acceptable for a personal POC, not for a product |
 | Facebook reel | `yt-dlp` download | Same as Instagram |
 | Stories | Not supported from a link | Use the screenshot fallback |
 
-**The spike (M0)** measured this before building anything else. 12 real links (6 YouTube, 3
-Instagram, 3 Facebook): all downloaded without cookies and all became recipes. Results and
-findings are in `docs/spike-results.md`.
+**The spike (M0)** measured this before building anything else: 12 real links (6 YouTube, 3
+Instagram, 3 Facebook). `yt-dlp` read all of them without cookies; Gemini turned 10 into
+recipes, correctly rejected one promo, and one call hung. Results and findings are in
+`docs/spike-results.md`.
 
 ## 5. Thumbnails
 
@@ -316,13 +321,14 @@ changes**. The planned design:
   about Gemini, so the model or provider can change in one place.
 - The current Gemini Flash model (version checked when coding), with **structured output**:
   the response schema is generated from the Zod schema.
-- The input is the video (or text / screenshots) **plus the post's caption** (D15).
+- The input is the video (or text / screenshots) **plus the post's caption** (D15). The caption
+  is a stranger's text: it is sent as data to read, never as instructions, and the output is
+  still bound by the schema, Zod and the user's review.
 - The prompt asks for: title, ingredients with quantities and units, steps, servings, times, tags
   from the fixed lists only, and a nutrition estimate per serving. If the video isn't a recipe,
   the model says so and the import fails with "This doesn't look like a recipe".
 - The recipe is written **in the language of the post**; tags stay English codes (D16).
-- Every call has a **timeout** well inside the 3-minute lease (§4.3): in the spike one call
-  hung for 27 minutes. A timeout is a failed attempt and retries as usual.
+- Every call has a **timeout** inside the attempt's deadline (§4.3).
 - The output is validated with Zod anyway; invalid output counts as a failed attempt. The
   model often returns `""` for a field it doesn't know (e.g. `unit`); the schema treats an
   empty string as "not set".
@@ -353,11 +359,11 @@ changes**. The planned design:
 | Risk | Mitigation |
 |---|---|
 | Instagram/Facebook block `yt-dlp` | The spike first; fallback to text or screenshots; keep `yt-dlp` updated |
-| Gemini invents ingredients or quantities | Draft review; Zod validation; a prompt that allows "unknown" |
+| Gemini invents ingredients or quantities | The caption as a second source (D15); draft review; Zod validation; a prompt that allows "unknown" |
 | Nutrition numbers are wrong | Shown as "≈ estimate" |
 | Gemini cost or rate limits | Daily cap per user; 2 jobs at a time; videos ≤ 3 min |
-| Long or non-recipe videos | Length check before download (after it for Instagram); "not a recipe" failure |
-| A Gemini call hangs | A timeout on every call, inside the lease; then the normal retry |
+| Long or non-recipe videos | Length check before download (right after it when the platform doesn't report a length); "not a recipe" failure |
+| A Gemini call hangs | A deadline per attempt under the lease, a timeout on every call (§4.3); then the normal retry |
 
 ## 12. Build plan (small PRs)
 
