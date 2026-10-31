@@ -21,11 +21,12 @@ and types used by both). MongoDB through the native driver + Zod. Gemini for ext
 ## Commands
 
 - `npm run dev` — the client (Vite) on http://localhost:5173.
-- `npm run check` — every gate: Prettier, then per workspace ESLint, Vitest and the build
-  (`tsc -b` + `vite build`).
+- `npm run dev:api` — the API on http://localhost:3000 (restarts on change, readable logs).
+- `npm run check` — every gate: Prettier, then per workspace ESLint, Vitest and the types
+  (client: `tsc -b` + `vite build`; server: `tsc`).
 - `npm run format` — Prettier writes.
 
-The rest arrive with M1's next slices (API and worker dev; e2e; db:indexes; db:seed).
+The rest arrive with later slices (worker dev; e2e; db:indexes; db:seed).
 
 ## How work happens
 
