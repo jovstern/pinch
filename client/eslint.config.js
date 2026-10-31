@@ -1,7 +1,6 @@
 import js from "@eslint/js";
 import { defineConfig, globalIgnores } from "eslint/config";
 import reactHooks from "eslint-plugin-react-hooks";
-import globals from "globals";
 import tseslint from "typescript-eslint";
 
 export default defineConfig([
@@ -11,11 +10,11 @@ export default defineConfig([
     extends: [
       js.configs.recommended,
       tseslint.configs.strictTypeChecked,
-      // Includes the React Compiler's rules.
+      // Its recommended set includes the React Compiler's rules, so code the compiler
+      // can't optimise fails lint.
       reactHooks.configs.flat.recommended,
     ],
     languageOptions: {
-      globals: globals.browser,
       parserOptions: { projectService: true, tsconfigRootDir: import.meta.dirname },
     },
     rules: {

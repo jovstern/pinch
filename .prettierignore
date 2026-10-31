@@ -1,6 +1,8 @@
-# Prose is wrapped by hand; the spike is a throwaway script with its own formatting.
+# Prose is wrapped by hand.
 *.md
+# A throwaway script with its own formatting.
 spike/
+# Kit files (skills, agents), not app code.
 .claude/
-dist/
+# npm writes it.
 package-lock.json
