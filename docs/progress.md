@@ -12,7 +12,7 @@ Slices for later milestones are filled in when the milestone starts.
 
 ## M1 — Scaffold
 
-- [ ] Workspaces + `client/` from the Vite starter (Tailwind), gates green
+- [x] Workspaces + `client/` from the Vite starter (Tailwind), gates green
 - [ ] `server/`: Express app, config, error handler, `/health`, dev-user middleware, Mongo client, tests
 - [ ] `shared/` schemas, Vite proxy `/api`, the client calls `/health`; root `check`
 

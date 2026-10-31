@@ -1,0 +1,6 @@
+# Prose is wrapped by hand; the spike is a throwaway script with its own formatting.
+*.md
+spike/
+.claude/
+dist/
+package-lock.json

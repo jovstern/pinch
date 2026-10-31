@@ -1,0 +1,17 @@
+{
+  "name": "pinch",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "client"
+  ],
+  "scripts": {
+    "dev": "npm run dev -w client",
+    "format": "prettier --write .",
+    "check": "prettier --check . && npm run check --workspaces"
+  },
+  "devDependencies": {
+    "prettier": "^3.9.10",
+    "prettier-plugin-tailwindcss": "^0.8.1"
+  }
+}
