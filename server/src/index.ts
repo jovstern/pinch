@@ -2,7 +2,7 @@ import { once } from "node:events";
 import { pino } from "pino";
 import { createApp } from "./app.ts";
 import { loadConfig } from "./config.ts";
-import { connectToMongo } from "./db.ts";
+import { connectToMongo } from "./db/client.ts";
 
 const config = loadConfig(process.env);
 const logger = pino({ level: config.LOG_LEVEL });
@@ -14,8 +14,8 @@ const server = app.listen(config.PORT, (error) => {
   logger.info({ port: config.PORT }, "API listening");
 });
 
-// Graceful shutdown: stop taking new requests, let the ones in flight finish, then close the
-// database connection.
+// The module waits here for the life of the process. On SIGTERM, shut down gracefully: stop
+// taking new requests, let the ones in flight finish, then close the database connection.
 await once(process, "SIGTERM");
 logger.info("SIGTERM: shutting down");
 await new Promise((resolve) => server.close(resolve));

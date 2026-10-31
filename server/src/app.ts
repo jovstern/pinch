@@ -20,10 +20,12 @@ export function createApp({ logger, db, devUserId }: AppDeps) {
     res.json({ status: "ok" });
   });
 
-  app.get("/api/ready", async (_req, res) => {
+  app.get("/api/ready", async (req, res) => {
+    // The one route that catches: it turns a driver error into a known 503 (design §8.2).
     try {
       await db.command({ ping: 1 });
-    } catch {
+    } catch (error) {
+      req.log.warn({ err: error }, "database ping failed");
       // 503, not 500: the API itself is fine, it just can't serve until Mongo is back.
       throw new HttpError(503, "db_unreachable", "The database can't be reached.");
     }

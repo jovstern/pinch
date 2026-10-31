@@ -308,7 +308,8 @@ them. No try/catch in each route.
 
 ### 8.3 Auth — later, but designed in now
 
-v1 has no login. A small middleware sets `req.userId` to one seeded dev user (from `.env`).
+v1 has no login. A small middleware sets `req.userId` from config `DEV_USER_ID` (not a secret,
+so it has a default and needs no `.env` entry; `db:seed` creates that user when users are needed).
 Every query already filters by `ownerId: req.userId`. When auth is built, **only that middleware
 changes**. The planned design:
 

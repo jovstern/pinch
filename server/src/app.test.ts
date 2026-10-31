@@ -39,16 +39,16 @@ test("GET /api/ready answers 503 when the database can't be reached", async () =
   const unreachable = new MongoClient("mongodb://localhost:1", { serverSelectionTimeoutMS: 200 });
   const appWithoutDb = createApp({
     logger,
-    db: unreachable.db("x"),
+    db: unreachable.db("pinch-test-unreachable"),
     devUserId: config.DEV_USER_ID,
   });
 
   const response = await request(appWithoutDb).get("/api/ready");
+  await unreachable.close();
   expect(response.status).toBe(503);
   expect(response.body).toEqual({
     error: { code: "db_unreachable", message: "The database can't be reached." },
   });
-  await unreachable.close();
 });
 
 test("an unknown route answers 404 in the API error shape", async () => {
