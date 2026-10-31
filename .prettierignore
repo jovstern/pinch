@@ -1,0 +1,8 @@
+# Prose is wrapped by hand.
+*.md
+# A throwaway script with its own formatting.
+spike/
+# Kit files (skills, agents), not app code.
+.claude/
+# npm writes it.
+package-lock.json

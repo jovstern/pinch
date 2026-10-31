@@ -1,0 +1,13 @@
+@import "tailwindcss";
+
+/* Design tokens (styling.md): components use these names, never raw colours. */
+@theme {
+  --color-surface: oklch(0.985 0.008 85);
+  --color-text: oklch(0.25 0.02 60);
+  --color-text-muted: oklch(0.48 0.02 60);
+  --color-accent: oklch(0.62 0.17 45);
+}
+
+body {
+  @apply bg-surface text-text antialiased;
+}
