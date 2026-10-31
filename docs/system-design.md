@@ -50,7 +50,7 @@ Meal planning, shopping lists, scaling servings, Instagram/Facebook **stories** 
 | Look and feel | Clean and friendly; it should feel finished |
 | CRUD latency | < 300 ms |
 | Import time | Typically < 60 s, always **asynchronous**: the UI never waits on it |
-| Video length | ≤ 3 minutes (checked before downloading) |
+| Video length | ≤ 3 minutes (checked before downloading; Instagram only after, see §4.1) |
 | Reliability | A crash never loses an import or creates a duplicate recipe |
 | Media | **Never stored.** Only text, plus a tiny thumbnail (§5) |
 | Cost | Imports per user per day are capped (default 20) |
@@ -93,13 +93,17 @@ Mongo is the only shared state. There is no Redis, no queue service and no objec
    platform (`instagram | facebook | youtube`), checks the daily cap, creates an import with
    `status: "pending"` and answers **202** with the import.
 2. The worker **claims** the job, then:
+   - **Every link** → read the post's info with `yt-dlp` (no download): its length, checked
+     against the limit, and its **caption**, which often holds the full recipe with
+     quantities (D15).
    - **YouTube** → send the URL to Gemini directly (Gemini can watch public YouTube videos).
-   - **Instagram / Facebook** → check the length with `yt-dlp`, download to a temp folder,
-     upload to the **Gemini Files API**.
+   - **Instagram / Facebook** → download to a temp folder, upload to the **Gemini Files API**.
+     Instagram doesn't report a length, so for it the length is checked after the download
+     with `ffprobe` (the spike found reels of 3–11 MB).
    - **Text / screenshots** (fallback) → send them to Gemini as they are.
-3. Gemini returns JSON that matches our recipe schema (structured output). The worker
-   **validates it with Zod**, makes the thumbnail (§5), saves `draft` on the import, sets
-   `status: "ready"`.
+3. Gemini gets the video and the caption together and returns JSON that matches our recipe
+   schema (structured output). The worker **validates it with Zod**, makes the thumbnail
+   (§5), saves `draft` on the import, sets `status: "ready"`.
 4. **Cleanup in `finally`**: delete the temp file and the Gemini file. Media lives for about a minute.
 5. The client polls `GET /api/imports/:id` every 2 s while anything is in progress, then opens
    the draft for review.
@@ -163,12 +167,13 @@ create a duplicate recipe when the user clicks again.
 | Source | How | Risk |
 |---|---|---|
 | YouTube | Gemini reads the URL | Low; public videos only |
-| Instagram reel/post | `yt-dlp` download | Medium: breaks when Instagram changes; may need cookies; a grey area under Instagram's terms — acceptable for a personal POC, not for a product |
+| Instagram reel/post | `yt-dlp` download | Medium: breaks when Instagram changes; public posts needed no cookies in the spike; a grey area under Instagram's terms — acceptable for a personal POC, not for a product |
 | Facebook reel | `yt-dlp` download | Same as Instagram |
 | Stories | Not supported from a link | Use the screenshot fallback |
 
-**The spike (M0)** measures this before building anything else: 10 Instagram reels, 5 Facebook
-reels, 3 YouTube videos and 3 stories, recording what downloads and what Gemini extracts.
+**The spike (M0)** measured this before building anything else. 12 real links (6 YouTube, 3
+Instagram, 3 Facebook): all downloaded without cookies and all became recipes. Results and
+findings are in `docs/spike-results.md`.
 
 ## 5. Thumbnails
 
@@ -311,10 +316,16 @@ changes**. The planned design:
   about Gemini, so the model or provider can change in one place.
 - The current Gemini Flash model (version checked when coding), with **structured output**:
   the response schema is generated from the Zod schema.
+- The input is the video (or text / screenshots) **plus the post's caption** (D15).
 - The prompt asks for: title, ingredients with quantities and units, steps, servings, times, tags
   from the fixed lists only, and a nutrition estimate per serving. If the video isn't a recipe,
   the model says so and the import fails with "This doesn't look like a recipe".
-- The output is validated with Zod anyway; invalid output counts as a failed attempt.
+- The recipe is written **in the language of the post**; tags stay English codes (D16).
+- Every call has a **timeout** well inside the 3-minute lease (§4.3): in the spike one call
+  hung for 27 minutes. A timeout is a failed attempt and retries as usual.
+- The output is validated with Zod anyway; invalid output counts as a failed attempt. The
+  model often returns `""` for a field it doesn't know (e.g. `unit`); the schema treats an
+  empty string as "not set".
 
 ## 10. Decisions log
 
@@ -334,6 +345,8 @@ changes**. The planned design:
 | D12 | Gemini | Reads video and YouTube URLs natively; has a Files API | Claude (needs frames + transcript for video) |
 | D13 | Auth later, behind a dev-user middleware | Learn the core first; ownership is in every query from day one | Building auth first |
 | D14 | Nutrition estimated by Gemini, labelled as an estimate | Good enough for a POC | A nutrition database lookup (later) |
+| D15 | Send the post's caption to Gemini with the video | The spike: quantities are often only in the caption (missing quantities fell from 42/106 to 13/101), and it helps spot non-recipes | Video only |
+| D16 | The recipe is in the language of the post | Nothing lost in translation; the model's choice was unstable without a rule | Always Hebrew; always English |
 
 ## 11. Risks
 
@@ -343,7 +356,8 @@ changes**. The planned design:
 | Gemini invents ingredients or quantities | Draft review; Zod validation; a prompt that allows "unknown" |
 | Nutrition numbers are wrong | Shown as "≈ estimate" |
 | Gemini cost or rate limits | Daily cap per user; 2 jobs at a time; videos ≤ 3 min |
-| Long or non-recipe videos | Length check before download; "not a recipe" failure |
+| Long or non-recipe videos | Length check before download (after it for Instagram); "not a recipe" failure |
+| A Gemini call hangs | A timeout on every call, inside the lease; then the normal retry |
 
 ## 12. Build plan (small PRs)
 

@@ -104,6 +104,7 @@ type Result = {
   url: string;
   platform: Platform | "unknown";
   videoSeconds?: number;
+  captionChars?: number;
   outcome: "recipe" | "not a recipe" | "failed";
   error?: string;
   title?: string;
@@ -128,20 +129,45 @@ function detectPlatform(url: string): Platform | "unknown" {
 }
 
 // --playlist-items 1: a carousel or playlist link would otherwise give several videos.
-// The timeout stops one hung link from stalling the whole run.
+// The timeout stops one hung link from stalling the whole run; --dump-json for a YouTube
+// video is larger than execFile's default 1 MB buffer.
 function ytDlp(args: string[]) {
   return run(
     "yt-dlp",
     [...COOKIE_ARGS, "--no-warnings", "--playlist-items", "1", ...args],
-    { timeout: 120_000 },
+    { timeout: 120_000, maxBuffer: 20_000_000 },
   );
 }
 
-async function readVideoSeconds(url: string): Promise<number> {
-  const { stdout } = await ytDlp(["--print", "duration", url]);
-  const seconds = Number(stdout.trim());
-  if (!Number.isFinite(seconds)) throw new Error("yt-dlp gave no video length");
-  return seconds;
+// The caption often holds the full recipe with quantities (spike finding), and
+// Instagram doesn't report a length ("NA"), so seconds can be undefined.
+async function readVideoInfo(url: string) {
+  const { stdout } = await ytDlp(["--dump-json", url]);
+  const info = JSON.parse(stdout);
+  const seconds = Number(info.duration);
+  return {
+    seconds: Number.isFinite(seconds) ? seconds : undefined,
+    caption: typeof info.description === "string" ? info.description : "",
+  };
+}
+
+// The length of a downloaded file, for when the platform didn't tell us before.
+async function measureVideoSeconds(path: string): Promise<number> {
+  const { stdout } = await run("ffprobe", [
+    "-v",
+    "error",
+    "-show_entries",
+    "format=duration",
+    "-of",
+    "csv=p=0",
+    path,
+  ]);
+  return Number(stdout.trim());
+}
+
+function checkLength(seconds: number) {
+  if (seconds > MAX_VIDEO_SECONDS)
+    throw new Error(`Video is ${seconds}s, over the limit`);
 }
 
 // Saves as <base>.mp4: --remux-video turns other containers into mp4 without re-encoding.
@@ -149,10 +175,13 @@ async function downloadVideo(url: string, base: string) {
   await ytDlp(["--remux-video", "mp4", "-o", `${base}.%(ext)s`, url]);
 }
 
-async function askGemini(video: Part): Promise<Record<string, unknown>> {
+async function askGemini(
+  video: Part,
+  caption: string,
+): Promise<Record<string, unknown>> {
   const response = await ai.models.generateContent({
     model: MODEL,
-    contents: [video, PROMPT],
+    contents: [video, `The post's caption:\n${caption}`, PROMPT],
     config: {
       responseMimeType: "application/json",
       responseJsonSchema: RECIPE_SCHEMA,
@@ -180,17 +209,27 @@ async function uploadVideo(path: string) {
 }
 
 // Instagram / Facebook: download, upload, ask. Media is deleted in finally (design §4.1).
-async function extractFromDownload(url: string, name: string) {
+async function extractFromDownload(
+  url: string,
+  name: string,
+  caption: string,
+  result: Result,
+) {
   const base = `${OUT_DIR}/tmp/${name}`;
   const path = `${base}.mp4`;
   let geminiFileName: string | undefined;
   try {
     await downloadVideo(url, base);
+    if (result.videoSeconds === undefined) {
+      result.videoSeconds = await measureVideoSeconds(path);
+      checkLength(result.videoSeconds);
+    }
     const file = await uploadVideo(path);
     geminiFileName = file.name;
-    return await askGemini({
-      fileData: { fileUri: file.uri, mimeType: "video/mp4" },
-    });
+    return await askGemini(
+      { fileData: { fileUri: file.uri, mimeType: "video/mp4" } },
+      caption,
+    );
   } finally {
     await rm(path, { force: true });
     // A failed delete must not hide the real error; Gemini deletes files after 48h anyway.
@@ -217,15 +256,17 @@ async function tryLink(url: string, index: number): Promise<Result> {
   try {
     if (platform === "unknown")
       throw new Error("Not an Instagram, Facebook or YouTube link");
-    // The length check comes before any download or Gemini call (design §1: ≤ 3 minutes).
-    result.videoSeconds = await readVideoSeconds(url);
-    if (result.videoSeconds > MAX_VIDEO_SECONDS)
-      throw new Error(`Video is ${result.videoSeconds}s, over the limit`);
+    // The length check comes before any download or Gemini call when the platform
+    // reports it (design §1: ≤ 3 minutes); otherwise right after the download.
+    const { seconds, caption } = await readVideoInfo(url);
+    result.videoSeconds = seconds;
+    result.captionChars = caption.length;
+    if (seconds !== undefined) checkLength(seconds);
     // YouTube: Gemini watches the public video from its URL (design §4.1).
     const recipe =
       platform === "youtube"
-        ? await askGemini({ fileData: { fileUri: url } })
-        : await extractFromDownload(url, name);
+        ? await askGemini({ fileData: { fileUri: url } }, caption)
+        : await extractFromDownload(url, name, caption, result);
     await writeFile(`${OUT_DIR}/${name}.json`, JSON.stringify(recipe, null, 2));
     result.outcome = recipe.isRecipe ? "recipe" : "not a recipe";
     result.title = typeof recipe.title === "string" ? recipe.title : "";
@@ -241,14 +282,15 @@ async function tryLink(url: string, index: number): Promise<Result> {
 
 function toMarkdown(results: Result[]): string {
   const header =
-    "| # | Platform | Link | Video s | Outcome | Title | Ingredients | Steps | Tags | Took s | Error |\n" +
-    "|---|---|---|---|---|---|---|---|---|---|---|\n";
+    "| # | Platform | Link | Video s | Caption chars | Outcome | Title | Ingredients | Steps | Tags | Took s | Error |\n" +
+    "|---|---|---|---|---|---|---|---|---|---|---|---|\n";
   const rows = results.map((r, i) =>
     [
       i + 1,
       r.platform,
       r.url,
       r.videoSeconds,
+      r.captionChars,
       r.outcome,
       r.title,
       r.ingredients,
