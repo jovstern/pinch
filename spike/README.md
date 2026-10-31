@@ -9,5 +9,6 @@ links into recipes?
    If Instagram asks for a login, rerun with `YTDLP_BROWSER=chrome npm start` to reuse
    Chrome's cookies.
 
-It writes `out/results.md` (one row per link) and `out/<n>-<platform>.json` (what Gemini
-returned). `out/` is git-ignored; the findings go into `docs/spike-results.md`.
+Gemini gets each post's caption along with the video. The script writes `out/results.md`
+(one row per link) and `out/<n>-<platform>.json` (what Gemini returned). `out/` is
+git-ignored; the findings are in `docs/spike-results.md`.
