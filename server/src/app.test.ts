@@ -23,6 +23,7 @@ test("an unknown route answers 404 in the API error shape", async () => {
 });
 
 test("an unexpected error answers 500 without its details", async () => {
+  // createApp has no route that throws, so this mounts errorHandler behind one.
   const app = express();
   app.use(pinoHttp({ logger: silentLogger }));
   app.get("/boom", () => {

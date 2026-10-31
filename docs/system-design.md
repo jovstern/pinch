@@ -270,10 +270,14 @@ Queries:
 
 ## 8. API
 
-All under `/api`, JSON, errors as `{ error: { code, message } }`. `ownerId` always comes from
+All under `/api` (the health routes too, so the Vite proxy covers everything), JSON, errors as
+`{ error: { code, message } }`. `ownerId` always comes from
 the request's user (§8.3), never from the body or the URL.
 
 ```
+GET    /api/health                     the process is up
+GET    /api/ready                      the database is reachable
+
 GET    /api/recipes?q=&tags=cuisine:italian,flavor:spicy&cursor=   → { items, nextCursor }
 POST   /api/recipes                    create by hand
 GET    /api/recipes/:id
@@ -353,6 +357,7 @@ changes**. The planned design:
 | D14 | Nutrition estimated by Gemini, labelled as an estimate | Good enough for a POC | A nutrition database lookup (later) |
 | D15 | Send the post's caption to Gemini with the video | The spike: quantities are often only in the caption (missing quantities fell from 42/106 to 13/101), and it helps spot non-recipes | Video only |
 | D16 | The recipe is in the language of the post | Nothing lost in translation; the model's choice was unstable without a rule | Always Hebrew; always English |
+| D17 | The server runs on Node 24's built-in TypeScript type stripping | One fewer dependency; the spike already runs this way | `tsx` (node-api.md's default) |
 
 ## 11. Risks
 
