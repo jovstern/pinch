@@ -281,7 +281,7 @@ GET    /api/ready                      the database is reachable
 GET    /api/recipes?q=&tags=cuisine:italian,flavor:spicy&cursor=   → { items, nextCursor }
 POST   /api/recipes                    create by hand
 GET    /api/recipes/:id
-PATCH  /api/recipes/:id
+PUT    /api/recipes/:id                replace what the user can edit (the form sends it all)
 DELETE /api/recipes/:id
 GET    /api/recipes/:id/thumbnail      image/webp
 

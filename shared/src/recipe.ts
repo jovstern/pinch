@@ -65,6 +65,14 @@ export const RecipeSchema = RecipeInputSchema.extend({
   updatedAt: z.iso.datetime(),
 });
 
+// GET /api/recipes, newest first. nextCursor is null until cursor pagination arrives (M3);
+// the shape is final now so the client won't change then.
+export const RecipeListSchema = z.object({
+  items: z.array(RecipeSchema),
+  nextCursor: z.string().nullable(),
+});
+
 export type Ingredient = z.infer<typeof IngredientSchema>;
 export type RecipeInput = z.infer<typeof RecipeInputSchema>;
 export type Recipe = z.infer<typeof RecipeSchema>;
+export type RecipeList = z.infer<typeof RecipeListSchema>;

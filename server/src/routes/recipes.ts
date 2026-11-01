@@ -1,4 +1,4 @@
-import { RecipeInputSchema } from "@pinch/shared";
+import { RecipeInputSchema, type RecipeList } from "@pinch/shared";
 import express from "express";
 import { ObjectId, type Db } from "mongodb";
 import { recipesCollection, toRecipe, type RecipeDocument } from "../db/recipes.ts";
@@ -8,6 +8,16 @@ import { HttpError, parseInput } from "../errors.ts";
 export function recipesRouter(db: Db) {
   const recipes = recipesCollection(db);
   const router = express.Router();
+
+  router.get("/", async (req, res) => {
+    // Never an unbounded list (node-api.md): the newest 50 until M3 adds the cursor (§7).
+    const items = await recipes
+      .find({ ownerId: req.userId })
+      .sort({ createdAt: -1, _id: -1 })
+      .limit(50)
+      .toArray();
+    res.json({ items: items.map(toRecipe), nextCursor: null } satisfies RecipeList);
+  });
 
   router.post("/", async (req, res) => {
     const input = parseInput(RecipeInputSchema, req.body);
@@ -28,6 +38,37 @@ export function recipesRouter(db: Db) {
     const recipe = await recipes.findOne({ _id: parseId(req.params.id), ownerId: req.userId });
     if (!recipe) throw recipeNotFound();
     res.json(toRecipe(recipe));
+  });
+
+  // PUT, not PATCH: the form always sends the whole recipe, so an optional field it leaves out
+  // is cleared rather than kept (design §8).
+  router.put("/:id", async (req, res) => {
+    const input = parseInput(RecipeInputSchema, req.body);
+    const filter = { _id: parseId(req.params.id), ownerId: req.userId };
+    const existing = await recipes.findOne(filter);
+    if (!existing) throw recipeNotFound();
+    // What the user can't edit is kept; everything else comes from the input.
+    const recipe: RecipeDocument = {
+      ...input,
+      _id: existing._id,
+      ownerId: existing.ownerId,
+      source: existing.source,
+      createdAt: existing.createdAt,
+      updatedAt: new Date(),
+    };
+    // Deleted between the read and the write: not found, like any missing recipe.
+    const { matchedCount } = await recipes.replaceOne(filter, recipe);
+    if (matchedCount === 0) throw recipeNotFound();
+    res.json(toRecipe(recipe));
+  });
+
+  router.delete("/:id", async (req, res) => {
+    const { deletedCount } = await recipes.deleteOne({
+      _id: parseId(req.params.id),
+      ownerId: req.userId,
+    });
+    if (deletedCount === 0) throw recipeNotFound();
+    res.status(204).end();
   });
 
   return router;
