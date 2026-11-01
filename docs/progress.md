@@ -16,7 +16,7 @@ Slices for later milestones are filled in when the milestone starts.
 - [x] `server/`: Express app, config, logging, error handler, `/api/health`, tests
 - [x] `server/`: Mongo client, `/api/ready`, dev-user middleware, test database
 - [x] `shared/` schemas, Vite proxy `/api`, the client calls `/api/health`; root `check`
-- [ ] Playwright (`npm run e2e`) with one test of the main flow; end of milestone: UI review,
+- [x] Playwright (`npm run e2e`) with one test of the main flow; end of milestone: UI review,
       observer metrics, demo
 
 ## M2 — Recipes CRUD
