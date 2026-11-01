@@ -28,7 +28,7 @@ Slices for later milestones are filled in when the milestone starts.
 - [x] Client: recipe detail, and delete
 - [x] Client: the recipe form, and New recipe
 - [x] Client: Edit recipe (the same form, filled in; `PUT`)
-- [ ] e2e of create → list → edit → delete; end of milestone: UI review, observer metrics, demo
+- [x] e2e of create → list → edit → delete; end of milestone: UI review, observer metrics, demo
 
 ## M3 — Find
 ## M4 — Pipeline without AI
