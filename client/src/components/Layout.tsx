@@ -1,4 +1,5 @@
 import { Link, Outlet } from "react-router";
+import { Button } from "./Button.tsx";
 
 // Every screen sits in this frame: the name (home) and the one primary action (design §14).
 export function Layout() {
@@ -9,12 +10,9 @@ export function Layout() {
           <Link to="/" className="text-2xl font-bold tracking-tight text-accent">
             Pinch
           </Link>
-          <Link
-            to="/recipes/new"
-            className="inline-flex min-h-11 items-center rounded-lg bg-accent-strong px-4 font-semibold text-white hover:bg-accent-strong/90 active:bg-accent-strong/80"
-          >
-            New recipe
-          </Link>
+          <Button asChild variant="primary">
+            <Link to="/recipes/new">New recipe</Link>
+          </Button>
         </div>
       </header>
       <main className="mx-auto max-w-3xl px-4 py-8 sm:px-6">

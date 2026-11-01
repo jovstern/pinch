@@ -1,6 +1,7 @@
 import type { Recipe } from "@pinch/shared";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router";
+import { Button } from "../../components/Button.tsx";
 import { recipeListQuery } from "./recipeQueries.ts";
 
 export function RecipeListPage() {
@@ -27,14 +28,15 @@ export function RecipeListPage() {
         <div role="alert" className="mt-6">
           <p>We couldn't load your recipes.</p>
           {/* The status stays "error" while it retries, so the button shows the wait. */}
-          <button
+          <Button
             type="button"
+            variant="secondary"
             onClick={() => void refetch()}
             disabled={isFetching}
-            className="mt-3 min-h-11 rounded-lg border border-border px-4 font-semibold hover:bg-border/40 active:bg-border/60 disabled:opacity-60"
+            className="mt-3"
           >
             {isFetching ? "Trying…" : "Try again"}
-          </button>
+          </Button>
         </div>
       )}
 
