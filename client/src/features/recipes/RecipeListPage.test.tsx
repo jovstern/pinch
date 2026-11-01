@@ -32,6 +32,19 @@ test("lists each recipe as a link to it, with what it needs", async () => {
   expect(link).toHaveTextContent("2 ingredients · 10 min");
 });
 
+test("one ingredient is counted in the singular", async () => {
+  const lemonade = { ...omelette, ingredients: [{ name: "lemons" }], prepMinutes: undefined };
+  vi.stubGlobal(
+    "fetch",
+    vi.fn().mockResolvedValue(Response.json({ items: [lemonade], nextCursor: null })),
+  );
+  renderApp("/");
+
+  expect(await screen.findByRole("link", { name: /Omelette/ })).toHaveTextContent(
+    "1 ingredient · 5 min",
+  );
+});
+
 test("with no recipes, it offers to add the first one", async () => {
   vi.stubGlobal("fetch", vi.fn().mockResolvedValue(Response.json({ items: [], nextCursor: null })));
   renderApp("/");

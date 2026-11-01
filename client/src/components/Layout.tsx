@@ -11,7 +11,7 @@ export function Layout() {
           </Link>
           <Link
             to="/recipes/new"
-            className="inline-flex min-h-11 items-center rounded-lg bg-accent-strong px-4 font-semibold text-white hover:bg-accent-strong/90"
+            className="inline-flex min-h-11 items-center rounded-lg bg-accent-strong px-4 font-semibold text-white hover:bg-accent-strong/90 active:bg-accent-strong/80"
           >
             New recipe
           </Link>
