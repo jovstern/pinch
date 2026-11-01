@@ -6,6 +6,7 @@ import type { Logger } from "pino";
 import { pinoHttp } from "pino-http";
 import { devUser } from "./devUser.ts";
 import { errorHandler, HttpError, notFound } from "./errors.ts";
+import { recipesRouter } from "./routes/recipes.ts";
 
 type AppDeps = { logger: Logger; db: Db; devUserId: string };
 
@@ -16,6 +17,8 @@ export function createApp({ logger, db, devUserId }: AppDeps) {
   // One log line per request, with a request id, method, path, status and duration.
   app.use(pinoHttp({ logger }));
   app.use(devUser(devUserId));
+  // JSON bodies only, up to express's default 100 kB: far more than any recipe needs.
+  app.use(express.json());
 
   app.get("/api/health", (_req, res) => {
     res.json({ status: "ok" } satisfies Health);
@@ -32,6 +35,8 @@ export function createApp({ logger, db, devUserId }: AppDeps) {
     }
     res.json({ status: "ok" } satisfies Health);
   });
+
+  app.use("/api/recipes", recipesRouter(db));
 
   app.use(notFound);
   app.use(errorHandler);

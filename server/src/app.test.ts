@@ -1,25 +1,18 @@
-import { randomUUID } from "node:crypto";
 import express from "express";
 import { MongoClient } from "mongodb";
 import { pino } from "pino";
 import { pinoHttp } from "pino-http";
 import request from "supertest";
-import { afterAll, expect, test } from "vitest";
+import { expect, test } from "vitest";
 import { createApp } from "./app.ts";
 import { loadConfig } from "./config.ts";
 import { errorHandler } from "./errors.ts";
+import { createTestDb } from "./testDb.ts";
 
 const config = loadConfig(process.env);
 const logger = pino({ level: "silent" });
 
-// Tests never touch the app's data: this run gets its own database, dropped at the end.
-const client = new MongoClient(config.MONGODB_URI);
-const db = client.db(`pinch-test-${randomUUID()}`);
-afterAll(async () => {
-  await db.dropDatabase();
-  await client.close();
-});
-
+const db = createTestDb();
 const app = createApp({ logger, db, devUserId: config.DEV_USER_ID });
 
 test("GET /api/health answers 200 with status ok", async () => {

@@ -204,7 +204,7 @@ User {
 
 Recipe {
   _id, ownerId, title, description?,
-  ingredients: [{ name, quantity?, unit?, note? }],
+  ingredients: [{ name, quantity?, unit?, note? }],   // quantity is text: "1/2", "a pinch"
   steps: [string],
   tags: [string],                  // "cuisine:italian", "flavor:spicy" — see §7
   servings?, prepMinutes?, cookMinutes?,
@@ -299,7 +299,9 @@ so they can't drift apart.
 ### 8.1 Validation
 
 Every request body and query string is parsed with Zod before it reaches the handler. Invalid
-input → 400 with the field that failed.
+input → 400 `invalid_input` with `fields`: each failed field by its path and a message the form
+can show, e.g. `{ "title": "Give the recipe a title.", "ingredients.0.name": "Name the
+ingredient." }`. A body that isn't JSON → 400 `bad_request`.
 
 ### 8.2 Errors
 
@@ -360,6 +362,7 @@ changes**. The planned design:
 | D16 | The recipe is in the language of the post | Nothing lost in translation; the model's choice was unstable without a rule | Always Hebrew; always English |
 | D17 | The server runs on Node 24's built-in TypeScript type stripping | One fewer dependency; the spike already runs this way | `tsx` (node-api.md's default) |
 | D18 | Schemas in an npm-workspace package `shared/`, used as TypeScript source with no build: its `exports` point at `src/index.ts`; Vite compiles it, and Node type-strips it because the workspace symlink resolves to a path outside `node_modules` | One copy for client and server, no build step | `server/src/schemas/` (node-api.md); a copy on each side; a built package |
+| D19 | MongoDB through the native driver; Zod checks every write, and every response is parsed with its schema, which drops stored fields like `ownerId` | You see the real queries, which suits learning indexes; one schema layer, shared with the client | Mongoose (a second schema layer next to Zod) |
 
 ## 11. Risks
 
@@ -393,7 +396,5 @@ noise, and M5/M6 only swap the extractor.
 
 ## 13. Open for the coding stage
 
-- **Mongo access:** the native driver plus Zod (you see the real queries, which suits learning
-  indexes) or Mongoose (models and validation built in).
 - **Tests:** what gets tested first (the claim query, approve, Find queries).
 - **The lighter kit:** how much of the agents setup to keep, given that you own the code and want small PRs.
