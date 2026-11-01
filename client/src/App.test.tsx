@@ -1,19 +1,15 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen } from "@testing-library/react";
-import { afterEach, expect, test, vi } from "vitest";
-import { App } from "./App.tsx";
+import { screen } from "@testing-library/react";
+import { expect, test } from "vitest";
+import { renderApp } from "./test-utils.tsx";
 
-afterEach(() => {
-  vi.unstubAllGlobals();
+test("an unknown address shows the not-found page with a way back", () => {
+  renderApp("/nope");
+  expect(screen.getByRole("heading", { level: 1, name: "Page not found" })).toBeInTheDocument();
+  expect(screen.getByRole("link", { name: "Back to your recipes" })).toHaveAttribute("href", "/");
 });
 
-test("shows the app name as the page heading", () => {
-  vi.stubGlobal("fetch", vi.fn().mockResolvedValue(Response.json({ status: "ok" })));
-  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  render(
-    <QueryClientProvider client={queryClient}>
-      <App />
-    </QueryClientProvider>,
-  );
-  expect(screen.getByRole("heading", { level: 1, name: "Pinch" })).toBeInTheDocument();
+test("the header links home and to a new recipe", () => {
+  renderApp("/nope");
+  expect(screen.getByRole("link", { name: "Pinch" })).toHaveAttribute("href", "/");
+  expect(screen.getByRole("link", { name: "New recipe" })).toHaveAttribute("href", "/recipes/new");
 });

@@ -24,7 +24,7 @@ Slices for later milestones are filled in when the milestone starts.
 - [x] Recipe schemas in `shared/`; `POST /api/recipes`, `GET /api/recipes/:id`; Zod → 400 with
       `fields`
 - [x] `GET /api/recipes` (newest first, capped at 50; the cursor comes in M3), `PUT`, `DELETE`
-- [ ] Client: router, app layout, the recipe list with its empty state
+- [x] Client: router, app layout, the recipe list with its empty state
 - [ ] Client: recipe detail, and delete
 - [ ] Client: the recipe form (create and edit)
 - [ ] e2e of create → list → edit → delete; end of milestone: UI review, observer metrics, demo
