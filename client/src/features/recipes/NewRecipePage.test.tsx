@@ -50,7 +50,7 @@ test("saves a new recipe and shows it", async () => {
   await userEvent.type(ingredient(1).getByLabelText("Ingredient"), "bread");
   await userEvent.click(screen.getByRole("button", { name: "Add an ingredient" }));
   await userEvent.type(ingredient(2).getByLabelText("Ingredient"), "butter");
-  await userEvent.type(ingredient(2).getByLabelText("Note (optional)"), "soft");
+  await userEvent.type(ingredient(2).getByLabelText("Note"), "soft");
   await userEvent.type(screen.getByLabelText("Step 1"), "Toast the bread.");
   await userEvent.click(screen.getByRole("button", { name: "Save recipe" }));
 
@@ -81,7 +81,7 @@ test("an incomplete recipe says what to fix, and focuses the first field", async
   expect(screen.getByText("A step can't be empty.")).toBeInTheDocument();
   expect(screen.getByLabelText("Title")).toHaveFocus();
   expect(screen.getByLabelText("Title")).toHaveAccessibleDescription("Give the recipe a title.");
-  expect(fetch).not.toHaveBeenCalledWith("/api/recipes", expect.anything());
+  expect(fetch.mock.calls.some(([, init]) => init?.method === "POST")).toBe(false);
 });
 
 test("shows the API's message under the field it names", async () => {
@@ -120,4 +120,39 @@ test("when saving fails, it says so and keeps what was typed", async () => {
 
   expect(await screen.findByText("It couldn't be saved. Try again.")).toBeInTheDocument();
   expect(screen.getByLabelText("Title")).toHaveValue("Toast");
+});
+
+test("a 400 that names no field still says it couldn't be saved", async () => {
+  stubApi(() =>
+    Response.json(
+      { error: { code: "bad_request", message: "Send the data as a JSON object." } },
+      { status: 400 },
+    ),
+  );
+  renderApp("/recipes/new");
+
+  await userEvent.type(await screen.findByLabelText("Title"), "Toast");
+  await userEvent.type(ingredient(1).getByLabelText("Ingredient"), "bread");
+  await userEvent.type(screen.getByLabelText("Step 1"), "Toast the bread.");
+  await userEvent.click(screen.getByRole("button", { name: "Save recipe" }));
+
+  expect(await screen.findByText("It couldn't be saved. Try again.")).toBeInTheDocument();
+});
+
+test("rows can be added and removed; the last one stays", async () => {
+  stubApi(() => Response.json(saved, { status: 201 }));
+  renderApp("/recipes/new");
+
+  expect(await screen.findByRole("button", { name: "Remove ingredient 1" })).toBeDisabled();
+  await userEvent.click(screen.getByRole("button", { name: "Add an ingredient" }));
+  await userEvent.click(screen.getByRole("button", { name: "Add an ingredient" }));
+  await userEvent.type(ingredient(1).getByLabelText("Ingredient"), "bread");
+  await userEvent.type(ingredient(2).getByLabelText("Ingredient"), "jam");
+  await userEvent.type(ingredient(3).getByLabelText("Ingredient"), "butter");
+  await userEvent.click(screen.getByRole("button", { name: "Remove ingredient 2" }));
+
+  // The rows after the removed one move up, with what was typed in them.
+  expect(ingredient(1).getByLabelText("Ingredient")).toHaveValue("bread");
+  expect(ingredient(2).getByLabelText("Ingredient")).toHaveValue("butter");
+  expect(screen.queryByRole("group", { name: "Ingredient 3" })).not.toBeInTheDocument();
 });

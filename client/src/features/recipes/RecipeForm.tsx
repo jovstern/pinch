@@ -3,6 +3,7 @@ import { useForm } from "@tanstack/react-form";
 import { useRef } from "react";
 import { Link } from "react-router";
 import { Button } from "../../components/Button.tsx";
+import { FieldError } from "../../components/FieldError.tsx";
 import { TextField } from "../../components/TextField.tsx";
 import { ApiError } from "../../lib/api.ts";
 
@@ -52,7 +53,8 @@ export function RecipeForm({ defaultValues, submitLabel, cancelTo, save }: Recip
           await save(result.data);
           return null;
         } catch (error) {
-          if (error instanceof ApiError && error.status === 400) {
+          // A 400 without fields (a body the API couldn't read) has nothing to show on a field.
+          if (error instanceof ApiError && error.status === 400 && hasKeys(error.fields)) {
             return { fields: toFieldNames(error.fields) };
           }
           // A plain message is an error for the whole form, not one field.
@@ -64,7 +66,8 @@ export function RecipeForm({ defaultValues, submitLabel, cancelTo, save }: Recip
 
   async function submit() {
     await form.handleSubmit();
-    // ui-craft: after a failed submit, focus moves to the first field to fix.
+    // ui-craft: after a failed submit, focus moves to the first field to fix. React has drawn
+    // the errors by now: handleSubmit resolves after the store update that shows them.
     formRef.current?.querySelector<HTMLElement>("[aria-invalid=true]")?.focus();
   }
 
@@ -78,9 +81,12 @@ export function RecipeForm({ defaultValues, submitLabel, cancelTo, save }: Recip
       }}
       className="mt-6 grid gap-6"
     >
+      <p className="text-sm text-text-muted">
+        A title, the ingredients and the steps are all a recipe needs.
+      </p>
       <form.Field name="title">{(field) => <TextField field={field} label="Title" />}</form.Field>
       <form.Field name="description">
-        {(field) => <TextField field={field} label="Description (optional)" multiline />}
+        {(field) => <TextField field={field} label="Description" multiline />}
       </form.Field>
 
       <div className="grid grid-cols-3 gap-3">
@@ -99,8 +105,9 @@ export function RecipeForm({ defaultValues, submitLabel, cancelTo, save }: Recip
         {(list) => (
           <fieldset className="grid gap-4">
             <legend className="mb-2 text-xl font-semibold">Ingredients</legend>
+            <FieldError errors={list.state.meta.errors} />
             {list.state.value.map((_, index) => {
-              const number = String(index + 1);
+              const position = String(index + 1);
               // TanStack Form types the name as `ingredients[${number}]`: the index must stay a
               // number, which this rule forbids in a template.
               // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
@@ -111,7 +118,7 @@ export function RecipeForm({ defaultValues, submitLabel, cancelTo, save }: Recip
                   key={index}
                   className="grid grid-cols-[5rem_5rem_1fr_auto] items-start gap-3 border-b border-border pb-4"
                 >
-                  <legend className="sr-only">Ingredient {number}</legend>
+                  <legend className="sr-only">Ingredient {position}</legend>
                   <form.Field name={`${row}.quantity`}>
                     {(field) => <TextField field={field} label="Amount" />}
                   </form.Field>
@@ -124,18 +131,23 @@ export function RecipeForm({ defaultValues, submitLabel, cancelTo, save }: Recip
                     )}
                   </form.Field>
                   <form.Field name={`${row}.note`}>
-                    {(field) => (
-                      <TextField field={field} label="Note (optional)" className="col-span-3" />
-                    )}
+                    {(field) => <TextField field={field} label="Note" className="col-span-3" />}
                   </form.Field>
-                  <RemoveButton
-                    label={`Remove ingredient ${number}`}
-                    // A recipe needs at least one ingredient (§6), so the last row stays.
+                  {/* Its name says which row, for screen readers. mt-6 skips the label above the
+                      inputs beside it, so it lines up with them even when one shows an error. A
+                      recipe needs an ingredient (§6), so the last row stays. */}
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    aria-label={`Remove ingredient ${position}`}
                     disabled={list.state.value.length === 1}
                     onClick={() => {
                       list.removeValue(index);
                     }}
-                  />
+                    className="mt-6"
+                  >
+                    Remove
+                  </Button>
                 </fieldset>
               );
             })}
@@ -157,23 +169,30 @@ export function RecipeForm({ defaultValues, submitLabel, cancelTo, save }: Recip
         {(list) => (
           <fieldset className="grid gap-4">
             <legend className="mb-2 text-xl font-semibold">Steps</legend>
+            <FieldError errors={list.state.meta.errors} />
             {list.state.value.map((_, index) => {
-              const number = String(index + 1);
+              const position = String(index + 1);
               // As above: the index must stay a number.
               // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
               const step = `steps[${index}]` as const;
               return (
                 <div key={index} className="grid grid-cols-[1fr_auto] items-start gap-3">
                   <form.Field name={step}>
-                    {(field) => <TextField field={field} label={`Step ${number}`} multiline />}
+                    {(field) => <TextField field={field} label={`Step ${position}`} multiline />}
                   </form.Field>
-                  <RemoveButton
-                    label={`Remove step ${number}`}
+                  {/* As for ingredients. */}
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    aria-label={`Remove step ${position}`}
                     disabled={list.state.value.length === 1}
                     onClick={() => {
                       list.removeValue(index);
                     }}
-                  />
+                    className="mt-6"
+                  >
+                    Remove
+                  </Button>
                 </div>
               );
             })}
@@ -217,25 +236,6 @@ export function RecipeForm({ defaultValues, submitLabel, cancelTo, save }: Recip
   );
 }
 
-type RemoveButtonProps = { label: string; disabled: boolean; onClick: () => void };
-
-// Says "Remove"; its full name says which row, for screen readers. mt-6 skips the label above
-// the inputs beside it, so it lines up with them even when one shows an error.
-function RemoveButton({ label, disabled, onClick }: RemoveButtonProps) {
-  return (
-    <Button
-      type="button"
-      variant="danger-quiet"
-      aria-label={label}
-      disabled={disabled}
-      onClick={onClick}
-      className="mt-6"
-    >
-      Remove
-    </Button>
-  );
-}
-
 // What the API takes. The schema trims text and drops blank optional fields (design §9); the
 // numbers are typed as text, so they're turned into numbers here ("abc" fails as not whole).
 function toInput(values: RecipeFormValues) {
@@ -256,4 +256,8 @@ function toFieldNames(fields: Record<string, string>) {
   return Object.fromEntries(
     Object.entries(fields).map(([path, message]) => [path.replace(/\.(\d+)/g, "[$1]"), message]),
   );
+}
+
+function hasKeys(fields: Record<string, string>) {
+  return Object.keys(fields).length > 0;
 }
