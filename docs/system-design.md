@@ -416,7 +416,7 @@ one primary action, **New recipe**; the content in a single readable column belo
 | `/` | Your recipes | Pick something to cook; each card shows the title, the number of ingredients and the total time | Loading (placeholder cards), empty (says what goes here, links to New recipe), error (Try again) |
 | `/recipes/new` | New recipe | Write a recipe by hand | On Save: each error under its field (§8.1), focus on the first; saving (button says so); failed (says so, keeps what was typed) |
 | `/recipes/:id` | A recipe | Read it while cooking; Edit, Delete (asks first) | Loading, error (Try again), not found |
-| `/recipes/:id/edit` | Edit recipe | Change it | As New recipe |
+| `/recipes/:id/edit` | Edit recipe | Change it; Cancel goes back to the recipe | Loading, error (Try again), not found; then as New recipe |
 | anything else | Page not found | Get back to the recipes | — |
 
 From M4 the paste-a-link box on `/` becomes the main action, and import status shows there.

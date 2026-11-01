@@ -27,7 +27,7 @@ Slices for later milestones are filled in when the milestone starts.
 - [x] Client: router, app layout, the recipe list with its empty state
 - [x] Client: recipe detail, and delete
 - [x] Client: the recipe form, and New recipe
-- [ ] Client: Edit recipe (the same form, filled in; `PUT`)
+- [x] Client: Edit recipe (the same form, filled in; `PUT`)
 - [ ] e2e of create → list → edit → delete; end of milestone: UI review, observer metrics, demo
 
 ## M3 — Find

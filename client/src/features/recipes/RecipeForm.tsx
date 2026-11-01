@@ -1,4 +1,4 @@
-import { fieldErrors, RecipeInputSchema, type RecipeInput } from "@pinch/shared";
+import { fieldErrors, RecipeInputSchema, type Recipe, type RecipeInput } from "@pinch/shared";
 import { useForm } from "@tanstack/react-form";
 import { useRef } from "react";
 import { Link } from "react-router";
@@ -29,6 +29,24 @@ export const emptyRecipe: RecipeFormValues = {
   prepMinutes: "",
   cookMinutes: "",
 };
+
+// A saved recipe, as the inputs show it: what it doesn't set is a blank input.
+export function toFormValues(recipe: Recipe): RecipeFormValues {
+  return {
+    title: recipe.title,
+    description: recipe.description ?? "",
+    ingredients: recipe.ingredients.map((ingredient) => ({
+      quantity: ingredient.quantity ?? "",
+      unit: ingredient.unit ?? "",
+      name: ingredient.name,
+      note: ingredient.note ?? "",
+    })),
+    steps: recipe.steps,
+    servings: toText(recipe.servings),
+    prepMinutes: toText(recipe.prepMinutes),
+    cookMinutes: toText(recipe.cookMinutes),
+  };
+}
 
 type RecipeFormProps = {
   defaultValues: RecipeFormValues;
@@ -245,6 +263,10 @@ function toInput(values: RecipeFormValues) {
     prepMinutes: toNumber(values.prepMinutes),
     cookMinutes: toNumber(values.cookMinutes),
   };
+}
+
+function toText(number: number | undefined) {
+  return number === undefined ? "" : String(number);
 }
 
 function toNumber(text: string) {

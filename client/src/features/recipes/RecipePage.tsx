@@ -2,9 +2,8 @@ import type { Ingredient, Recipe } from "@pinch/shared";
 import { useQuery } from "@tanstack/react-query";
 import { Link, useParams } from "react-router";
 import { Button } from "../../components/Button.tsx";
-import { NotFoundPage } from "../../components/NotFoundPage.tsx";
-import { ApiError } from "../../lib/api.ts";
 import { DeleteRecipeButton } from "./DeleteRecipeButton.tsx";
+import { RecipeLoadError } from "./RecipeLoadError.tsx";
 import { recipeQuery } from "./recipeQueries.ts";
 
 export function RecipePage() {
@@ -15,21 +14,7 @@ export function RecipePage() {
   if (status === "pending") return <p className="text-text-muted">Loading the recipe…</p>;
 
   if (status === "error") {
-    if (error instanceof ApiError && error.status === 404) return <NotFoundPage />;
-    return (
-      <div role="alert">
-        <p>We couldn't load this recipe.</p>
-        <Button
-          type="button"
-          variant="secondary"
-          onClick={() => void refetch()}
-          disabled={isFetching}
-          className="mt-3"
-        >
-          {isFetching ? "Trying…" : "Try again"}
-        </Button>
-      </div>
-    );
+    return <RecipeLoadError error={error} retry={() => void refetch()} retrying={isFetching} />;
   }
 
   const recipeDetails = details(recipe);
