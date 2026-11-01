@@ -2,6 +2,7 @@ import type { Recipe } from "@pinch/shared";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { AlertDialog } from "radix-ui";
 import { useNavigate } from "react-router";
+import { Button } from "../../components/Button.tsx";
 import { deleteResource } from "../../lib/api.ts";
 import { recipeListQuery } from "./recipeQueries.ts";
 
@@ -13,6 +14,9 @@ export function DeleteRecipeButton({ recipe }: { recipe: Recipe }) {
     mutationFn: () => deleteResource(`/api/recipes/${recipe.id}`),
     onSuccess: async () => {
       // Refresh the list before going back to it, so the deleted recipe never shows there.
+      // exact: only the list, not this recipe, which would now answer 404. refetchType "all":
+      // the list isn't on screen, and an inactive query isn't refetched otherwise. The deleted
+      // recipe stays in the cache; Back shows it briefly, then its refetch finds it gone.
       await queryClient.invalidateQueries({
         queryKey: recipeListQuery.queryKey,
         exact: true,
@@ -23,9 +27,14 @@ export function DeleteRecipeButton({ recipe }: { recipe: Recipe }) {
   });
 
   return (
-    <AlertDialog.Root>
-      <AlertDialog.Trigger className="min-h-11 rounded-lg px-4 font-semibold text-danger hover:bg-danger/10 active:bg-danger/20">
-        Delete
+    // Closing clears a failed attempt, so the question opens fresh next time.
+    <AlertDialog.Root
+      onOpenChange={(open) => {
+        if (!open) deletion.reset();
+      }}
+    >
+      <AlertDialog.Trigger asChild>
+        <Button variant="danger-quiet">Delete</Button>
       </AlertDialog.Trigger>
       <AlertDialog.Portal>
         <AlertDialog.Overlay className="fixed inset-0 bg-text/40" />
@@ -42,21 +51,21 @@ export function DeleteRecipeButton({ recipe }: { recipe: Recipe }) {
             </p>
           )}
           <div className="mt-6 flex justify-end gap-3">
-            <AlertDialog.Cancel className="min-h-11 rounded-lg border border-border px-4 font-semibold hover:bg-border/40 active:bg-border/60">
-              Keep it
+            <AlertDialog.Cancel asChild>
+              <Button variant="secondary">Keep it</Button>
             </AlertDialog.Cancel>
             {/* A plain button, not AlertDialog.Action: Action closes the dialog at once, and
                 this one stays open until the delete is done or shows its error. */}
-            <button
+            <Button
               type="button"
+              variant="danger"
               onClick={() => {
                 deletion.mutate();
               }}
               disabled={deletion.isPending}
-              className="min-h-11 rounded-lg bg-danger px-4 font-semibold text-white hover:bg-danger/90 active:bg-danger/80 disabled:opacity-60"
             >
               {deletion.isPending ? "Deleting…" : "Delete"}
-            </button>
+            </Button>
           </div>
         </AlertDialog.Content>
       </AlertDialog.Portal>

@@ -2,7 +2,7 @@ import { RecipeListSchema, RecipeSchema } from "@pinch/shared";
 import { queryOptions } from "@tanstack/react-query";
 import { getJson } from "../../lib/api.ts";
 
-// Keys nest under "recipes", so one invalidation can reach the list and every recipe.
+// Keys nest under "recipes": the list is ["recipes"], one recipe ["recipes", id].
 export const recipeListQuery = queryOptions({
   queryKey: ["recipes"],
   queryFn: () => getJson("/api/recipes", RecipeListSchema),

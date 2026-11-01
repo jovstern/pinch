@@ -2,7 +2,7 @@ import type { z } from "zod";
 
 // A failed answer from the API. The status lets a screen tell "not found" from "broken".
 export class ApiError extends Error {
-  status: number;
+  readonly status: number;
 
   constructor(method: string, path: string, status: number) {
     super(`${method} ${path} answered ${String(status)}`);

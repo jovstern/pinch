@@ -411,7 +411,7 @@ one primary action, **New recipe**; the content in a single readable column belo
 |---|---|---|---|
 | `/` | Your recipes | Pick something to cook; each card shows the title, the number of ingredients and the total time | Loading (placeholder cards), empty (says what goes here, links to New recipe), error (Try again) |
 | `/recipes/new` | New recipe | Write a recipe by hand | The form's own (§8.1 messages) |
-| `/recipes/:id` | A recipe | Read it while cooking; Edit, Delete | Loading, not found |
+| `/recipes/:id` | A recipe | Read it while cooking; Edit, Delete (asks first) | Loading, error (Try again), not found |
 | `/recipes/:id/edit` | Edit recipe | Change it | As New recipe |
 | anything else | Page not found | Get back to the recipes | — |
 

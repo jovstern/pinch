@@ -1,6 +1,7 @@
 import type { Ingredient, Recipe } from "@pinch/shared";
 import { useQuery } from "@tanstack/react-query";
 import { Link, useParams } from "react-router";
+import { Button } from "../../components/Button.tsx";
 import { NotFoundPage } from "../../components/NotFoundPage.tsx";
 import { ApiError } from "../../lib/api.ts";
 import { DeleteRecipeButton } from "./DeleteRecipeButton.tsx";
@@ -18,14 +19,15 @@ export function RecipePage() {
     return (
       <div role="alert">
         <p>We couldn't load this recipe.</p>
-        <button
+        <Button
           type="button"
+          variant="secondary"
           onClick={() => void refetch()}
           disabled={isFetching}
-          className="mt-3 min-h-11 rounded-lg border border-border px-4 font-semibold hover:bg-border/40 active:bg-border/60 disabled:opacity-60"
+          className="mt-3"
         >
           {isFetching ? "Trying…" : "Try again"}
-        </button>
+        </Button>
       </div>
     );
   }
@@ -39,12 +41,9 @@ export function RecipePage() {
       {recipeDetails && <p className="mt-3 text-sm text-text-muted">{recipeDetails}</p>}
 
       <div className="mt-4 flex gap-3">
-        <Link
-          to={`/recipes/${recipe.id}/edit`}
-          className="inline-flex min-h-11 items-center rounded-lg border border-border px-4 font-semibold hover:bg-border/40 active:bg-border/60"
-        >
-          Edit
-        </Link>
+        <Button asChild variant="secondary">
+          <Link to={`/recipes/${recipe.id}/edit`}>Edit</Link>
+        </Button>
         <DeleteRecipeButton recipe={recipe} />
       </div>
 
@@ -56,7 +55,7 @@ export function RecipePage() {
         {recipe.ingredients.map((ingredient, index) => (
           // Ingredients have no id; their order is their identity within the recipe.
           <li key={index}>
-            {amount(ingredient)} {ingredient.name}
+            {ingredientLine(ingredient)}
             {ingredient.note && <span className="text-text-muted">, {ingredient.note}</span>}
           </li>
         ))}
@@ -76,17 +75,16 @@ export function RecipePage() {
   );
 }
 
-// "Serves 4 · Prep 10 min · Cook 20 min", leaving out what the recipe doesn't say.
+// "Serves 4 · Prep 10 min · Cook 25 min", leaving out what the recipe doesn't say.
 function details(recipe: Recipe) {
-  const parts = [
-    recipe.servings && `Serves ${String(recipe.servings)}`,
-    recipe.prepMinutes && `Prep ${String(recipe.prepMinutes)} min`,
-    recipe.cookMinutes && `Cook ${String(recipe.cookMinutes)} min`,
-  ];
-  return parts.filter(Boolean).join(" · ");
+  const parts: string[] = [];
+  if (recipe.servings) parts.push(`Serves ${String(recipe.servings)}`);
+  if (recipe.prepMinutes) parts.push(`Prep ${String(recipe.prepMinutes)} min`);
+  if (recipe.cookMinutes) parts.push(`Cook ${String(recipe.cookMinutes)} min`);
+  return parts.join(" · ");
 }
 
-// "2 tbsp", "2" or "" before the ingredient's name.
-function amount(ingredient: Ingredient) {
-  return [ingredient.quantity, ingredient.unit].filter(Boolean).join(" ");
+// "2 tbsp olive oil", or just "salt" when the recipe gives no amount.
+function ingredientLine(ingredient: Ingredient) {
+  return [ingredient.quantity, ingredient.unit, ingredient.name].filter(Boolean).join(" ");
 }

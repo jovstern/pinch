@@ -23,10 +23,12 @@ const omelette: Recipe = {
   updatedAt: "2026-11-01T10:00:00.000Z",
 };
 
-// A fake API: the recipe, an empty list, and DELETE answering 204.
-function stubApi() {
+// A fake API: the recipe, an empty list, and DELETE answering 204 (or the status given).
+function stubApi(deleteStatus = 204) {
   const fetch = vi.fn((path: string, init?: RequestInit) => {
-    if (init?.method === "DELETE") return Promise.resolve(new Response(null, { status: 204 }));
+    if (init?.method === "DELETE") {
+      return Promise.resolve(new Response(null, { status: deleteStatus }));
+    }
     if (path === "/api/recipes")
       return Promise.resolve(Response.json({ items: [], nextCursor: null }));
     return Promise.resolve(Response.json(omelette));
@@ -58,6 +60,13 @@ test("a recipe that doesn't exist shows the not-found page", async () => {
   expect(await screen.findByRole("heading", { name: "Page not found" })).toBeInTheDocument();
 });
 
+test("when loading fails, it offers to try again", async () => {
+  vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(null, { status: 500 })));
+  renderApp(`/recipes/${omelette.id}`);
+
+  expect(await screen.findByRole("button", { name: "Try again" })).toBeInTheDocument();
+});
+
 test("Delete asks first, then deletes the recipe and goes back to the list", async () => {
   const fetch = stubApi();
   renderApp(`/recipes/${omelette.id}`);
@@ -79,4 +88,16 @@ test("Keep it closes the question without deleting", async () => {
 
   expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
   expect(fetch).not.toHaveBeenCalledWith(expect.anything(), { method: "DELETE" });
+});
+
+test("a failed delete keeps the question open and says so", async () => {
+  stubApi(500);
+  renderApp(`/recipes/${omelette.id}`);
+
+  await userEvent.click(await screen.findByRole("button", { name: "Delete" }));
+  const dialog = screen.getByRole("alertdialog");
+  await userEvent.click(within(dialog).getByRole("button", { name: "Delete" }));
+
+  expect(await within(dialog).findByRole("alert")).toHaveTextContent("It couldn't be deleted.");
+  expect(screen.queryByRole("heading", { name: "Your recipes" })).not.toBeInTheDocument();
 });
