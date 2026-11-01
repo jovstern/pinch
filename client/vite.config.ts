@@ -7,7 +7,8 @@ export default defineConfig({
   // The React Compiler memoizes components, so the code never uses useMemo/useCallback/memo.
   plugins: [react(), babel({ presets: [reactCompilerPreset()] }), tailwindcss()],
   // The browser calls the API on the same origin, so no CORS in development (design §8.3).
-  server: { proxy: { "/api": "http://localhost:3000" } },
+  // `vite preview` uses the same proxy; the e2e run points it at its own API (API_URL).
+  server: { proxy: { "/api": process.env.API_URL ?? "http://localhost:3000" } },
   test: {
     environment: "jsdom",
     setupFiles: ["./src/test-setup.ts"],
