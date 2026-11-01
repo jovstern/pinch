@@ -2,34 +2,28 @@ import type { Ingredient, Recipe } from "@pinch/shared";
 import { useQuery } from "@tanstack/react-query";
 import { Link, useParams } from "react-router";
 import { Button } from "../../components/Button.tsx";
-import { NotFoundPage } from "../../components/NotFoundPage.tsx";
-import { ApiError } from "../../lib/api.ts";
 import { DeleteRecipeButton } from "./DeleteRecipeButton.tsx";
+import { RecipeLoadError } from "./RecipeLoadError.tsx";
 import { recipeQuery } from "./recipeQueries.ts";
 
 export function RecipePage() {
   // The route is "recipes/:id", so the id is always there.
   const { id = "" } = useParams();
-  const { status, data: recipe, error, refetch, isFetching } = useQuery(recipeQuery(id));
+  const {
+    status,
+    isLoadingError,
+    data: recipe,
+    error,
+    refetch,
+    isFetching,
+  } = useQuery(recipeQuery(id));
 
   if (status === "pending") return <p className="text-text-muted">Loading the recipe…</p>;
 
-  if (status === "error") {
-    if (error instanceof ApiError && error.status === 404) return <NotFoundPage />;
-    return (
-      <div role="alert">
-        <p>We couldn't load this recipe.</p>
-        <Button
-          type="button"
-          variant="secondary"
-          onClick={() => void refetch()}
-          disabled={isFetching}
-          className="mt-3"
-        >
-          {isFetching ? "Trying…" : "Try again"}
-        </Button>
-      </div>
-    );
+  // Only a first load that failed: a failed refetch (on window focus, say) keeps the recipe on
+  // screen, and what the user typed in the form.
+  if (isLoadingError) {
+    return <RecipeLoadError error={error} retry={() => void refetch()} retrying={isFetching} />;
   }
 
   const recipeDetails = details(recipe);

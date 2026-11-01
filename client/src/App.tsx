@@ -10,8 +10,11 @@ import { RecipePage } from "./features/recipes/RecipePage.tsx";
 const NewRecipePage = lazy(async () => ({
   default: (await import("./features/recipes/NewRecipePage.tsx")).NewRecipePage,
 }));
+const EditRecipePage = lazy(async () => ({
+  default: (await import("./features/recipes/EditRecipePage.tsx")).EditRecipePage,
+}));
 
-// The screens (design §14). Edit arrives in the next M2 slice.
+// The screens (design §14).
 export function App() {
   return (
     <Routes>
@@ -19,6 +22,7 @@ export function App() {
         <Route index element={<RecipeListPage />} />
         <Route path="recipes/new" element={<NewRecipePage />} />
         <Route path="recipes/:id" element={<RecipePage />} />
+        <Route path="recipes/:id/edit" element={<EditRecipePage />} />
         <Route path="*" element={<NotFoundPage />} />
       </Route>
     </Routes>
