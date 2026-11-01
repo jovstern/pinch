@@ -1,4 +1,4 @@
-import { type Health } from "@pinch/shared";
+import type { Health } from "@pinch/shared";
 import express from "express";
 import helmet from "helmet";
 import type { Db } from "mongodb";
