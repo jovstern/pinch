@@ -26,7 +26,8 @@ Slices for later milestones are filled in when the milestone starts.
 - [x] `GET /api/recipes` (newest first, capped at 50; the cursor comes in M3), `PUT`, `DELETE`
 - [x] Client: router, app layout, the recipe list with its empty state
 - [x] Client: recipe detail, and delete
-- [ ] Client: the recipe form (create and edit)
+- [x] Client: the recipe form, and New recipe
+- [ ] Client: Edit recipe (the same form, filled in; `PUT`)
 - [ ] e2e of create → list → edit → delete; end of milestone: UI review, observer metrics, demo
 
 ## M3 — Find

@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { Link, Outlet } from "react-router";
 import { Button } from "./Button.tsx";
 
@@ -16,7 +17,10 @@ export function Layout() {
         </div>
       </header>
       <main className="mx-auto max-w-3xl px-4 py-8 sm:px-6">
-        <Outlet />
+        {/* While a screen's code is loading (App.tsx loads some only when they open). */}
+        <Suspense fallback={<p className="text-text-muted">Loading…</p>}>
+          <Outlet />
+        </Suspense>
       </main>
     </>
   );

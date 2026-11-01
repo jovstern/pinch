@@ -35,6 +35,7 @@
   },
   "dependencies": {
     "@pinch/shared": "*",
+    "@tanstack/react-form": "^1.33.5",
     "@tanstack/react-query": "^5.105.0",
     "radix-ui": "^1.8.1",
     "react": "^19.3.1",
