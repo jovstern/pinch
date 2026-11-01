@@ -1,2 +1,20 @@
 # One link per line. Lines starting with # are skipped.
 # The spike plan (design §4.5): 10 Instagram reels, 5 Facebook reels, 3 YouTube videos, 3 stories.
+
+# You-tube
+https://youtube.com/shorts/VDVwb6TPNJQ?si=_L-pNb3wl8s4dmlX
+https://youtube.com/shorts/lq5SCDXnHas?si=Qo5qxh9KjNVKzdHe
+https://youtube.com/shorts/EANHIKRUAxY?si=EJeYTMS2izXZ-Gy-
+https://youtube.com/shorts/eABcor1z3h0?si=eK7Cl2KVuQeTEWOx
+https://youtube.com/shorts/o6grlhecoog?si=zyRyVPILbdeX-AhF
+https://youtube.com/shorts/vQ8ftYTjAFM?si=NMvyqQEitclF7XZn
+
+# Instagram
+https://www.instagram.com/p/DeCkUWhtbdq/
+https://www.instagram.com/p/DY2ENmhs7CB/
+https://www.instagram.com/p/DddY-Nis0bp/
+
+# Facebook
+https://www.facebook.com/reel/4357200687845537
+https://www.facebook.com/reel/1245626137429213
+https://www.facebook.com/reel/842208542104817

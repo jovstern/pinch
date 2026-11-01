@@ -271,7 +271,7 @@ Queries:
 ## 8. API
 
 All under `/api` (the health routes too, so the Vite proxy covers everything), JSON, errors as
-`{ error: { code, message } }`. `ownerId` always comes from
+`{ error: { code, message } }` (plus `fields` for invalid input, §8.1). `ownerId` always comes from
 the request's user (§8.3), never from the body or the URL.
 
 ```
@@ -301,7 +301,8 @@ so they can't drift apart.
 Every request body and query string is parsed with Zod before it reaches the handler. Invalid
 input → 400 `invalid_input` with `fields`: each failed field by its path and a message the form
 can show, e.g. `{ "title": "Give the recipe a title.", "ingredients.0.name": "Name the
-ingredient." }`. A body that isn't JSON → 400 `bad_request`.
+ingredient." }`. A missing body, or one that isn't JSON → 400 `bad_request`; too large → 413
+`too_large`.
 
 ### 8.2 Errors
 

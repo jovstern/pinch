@@ -58,6 +58,26 @@ test("POST /api/recipes answers 400 naming each field that is not valid", async 
   });
 });
 
+test("an empty optional field is not stored", async () => {
+  const response = await request(app)
+    .post("/api/recipes")
+    .send({ ...omelette, description: "  ", ingredients: [{ name: "eggs", unit: "" }] });
+
+  const { id } = RecipeSchema.parse(response.body);
+  const stored = await recipesCollection(db).findOne({ _id: new ObjectId(id) });
+  expect(stored).not.toHaveProperty("description");
+  expect(stored?.ingredients).toEqual([{ name: "eggs" }]);
+});
+
+test("a request without a JSON body answers 400", async () => {
+  const response = await request(app).post("/api/recipes");
+
+  expect(response.status).toBe(400);
+  expect(response.body).toEqual({
+    error: { code: "bad_request", message: "Send the data as a JSON object." },
+  });
+});
+
 test("a body that is not JSON answers 400", async () => {
   const response = await request(app)
     .post("/api/recipes")
@@ -65,7 +85,9 @@ test("a body that is not JSON answers 400", async () => {
     .send("{ not json");
 
   expect(response.status).toBe(400);
-  expect(response.body).toMatchObject({ error: { code: "bad_request" } });
+  expect(response.body).toEqual({
+    error: { code: "bad_request", message: "The request body isn't valid JSON." },
+  });
 });
 
 test("another user's recipe is not found", async () => {

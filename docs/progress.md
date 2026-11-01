@@ -28,6 +28,7 @@ Slices for later milestones are filled in when the milestone starts.
 - [ ] Client: recipe detail, and delete
 - [ ] Client: the recipe form (create and edit)
 - [ ] e2e of create → list → edit → delete; end of milestone: UI review, observer metrics, demo
+
 ## M3 — Find
 ## M4 — Pipeline without AI
 ## M5 — Gemini
