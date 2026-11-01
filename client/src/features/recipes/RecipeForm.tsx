@@ -247,7 +247,10 @@ export function RecipeForm({ defaultValues, submitLabel, cancelTo, save }: Recip
           )}
         </form.Subscribe>
         <Button asChild variant="secondary">
-          <Link to={cancelTo}>Cancel</Link>
+          {/* replace, as after a save: Back never returns to the form. */}
+          <Link to={cancelTo} replace>
+            Cancel
+          </Link>
         </Button>
       </div>
     </form>

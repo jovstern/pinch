@@ -9,7 +9,14 @@ import { recipeListQuery, recipeQuery } from "./recipeQueries.ts";
 export function EditRecipePage() {
   // The route is "recipes/:id/edit", so the id is always there.
   const { id = "" } = useParams();
-  const { status, data: recipe, error, refetch, isFetching } = useQuery(recipeQuery(id));
+  const {
+    status,
+    isLoadingError,
+    data: recipe,
+    error,
+    refetch,
+    isFetching,
+  } = useQuery(recipeQuery(id));
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   // PUT sends the whole recipe: the form always has every field (design §8, D20).
@@ -29,7 +36,9 @@ export function EditRecipePage() {
   });
 
   if (status === "pending") return <p className="text-text-muted">Loading the recipe…</p>;
-  if (status === "error") {
+  // Only a first load that failed: a failed refetch (on window focus, say) keeps the recipe on
+  // screen, and what the user typed in the form.
+  if (isLoadingError) {
     return <RecipeLoadError error={error} retry={() => void refetch()} retrying={isFetching} />;
   }
 

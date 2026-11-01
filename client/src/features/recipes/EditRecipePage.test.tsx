@@ -1,5 +1,5 @@
 import type { Recipe } from "@pinch/shared";
-import { screen } from "@testing-library/react";
+import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, test, vi } from "vitest";
 import { renderApp } from "../../test-utils.tsx";
@@ -19,11 +19,13 @@ const omelette: Recipe = {
   updatedAt: "2026-11-01T10:00:00.000Z",
 };
 
-// A fake API: the recipe, an empty list, and PUT answering with what was sent, saved.
+// A fake API: the recipe, an empty list, and PUT answering with the recipe as the test saves
+// it (retitled, servings cleared).
 function stubApi() {
   const fetch = vi.fn((path: string, init?: RequestInit) => {
     if (init?.method === "PUT") {
-      return Promise.resolve(Response.json({ ...omelette, title: "Cheese omelette" }));
+      const saved = { ...omelette, title: "Cheese omelette", servings: undefined };
+      return Promise.resolve(Response.json(saved));
     }
     if (path === "/api/recipes")
       return Promise.resolve(Response.json({ items: [], nextCursor: null }));
@@ -49,6 +51,7 @@ test("shows the recipe in the form, and saves the whole of it", async () => {
   expect(
     await screen.findByRole("heading", { level: 1, name: "Cheese omelette" }),
   ).toBeInTheDocument();
+  // Keys in the schema's order.
   expect(fetch).toHaveBeenCalledWith(`/api/recipes/${omelette.id}`, {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
@@ -76,4 +79,24 @@ test("Cancel goes back to the recipe, unchanged", async () => {
 
   expect(await screen.findByRole("heading", { level: 1, name: "Omelette" })).toBeInTheDocument();
   expect(fetch.mock.calls.some(([, init]) => init?.method === "PUT")).toBe(false);
+});
+
+test("a failed refetch keeps the form and what was typed", async () => {
+  // The first load works; every request after it fails.
+  const fetch = vi
+    .fn()
+    .mockResolvedValueOnce(Response.json(omelette))
+    .mockResolvedValue(new Response(null, { status: 500 }));
+  vi.stubGlobal("fetch", fetch);
+  renderApp(`/recipes/${omelette.id}/edit`);
+
+  const title = await screen.findByLabelText("Title");
+  await userEvent.type(title, " with herbs");
+  // Coming back to the tab refetches the recipe (TanStack Query's refetch on window focus).
+  window.dispatchEvent(new Event("visibilitychange"));
+
+  await waitFor(() => {
+    expect(fetch).toHaveBeenCalledTimes(2);
+  });
+  expect(screen.getByLabelText("Title")).toHaveValue("Omelette with herbs");
 });
