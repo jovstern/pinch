@@ -11,6 +11,7 @@ export function recipesRouter(db: Db) {
 
   router.get("/", async (req, res) => {
     // Never an unbounded list (node-api.md): the newest 50 until M3 adds the cursor (§7).
+    // When thumbnails arrive (M6), project them out here: lists don't send them (§5).
     const items = await recipes
       .find({ ownerId: req.userId })
       .sort({ createdAt: -1, _id: -1 })
@@ -47,7 +48,8 @@ export function recipesRouter(db: Db) {
     const filter = { _id: parseId(req.params.id), ownerId: req.userId };
     const existing = await recipes.findOne(filter);
     if (!existing) throw recipeNotFound();
-    // What the user can't edit is kept; everything else comes from the input.
+    // Every stored field the form doesn't send is kept here, or replaceOne erases it. When
+    // thumbnail and sourceImportId arrive (M4, M6), add them (design D20).
     const recipe: RecipeDocument = {
       ...input,
       _id: existing._id,

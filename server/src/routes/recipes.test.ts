@@ -129,9 +129,11 @@ test("GET /api/recipes lists my recipes, newest first", async () => {
   const response = await request(app).get("/api/recipes");
   expect(response.status).toBe(200);
   const ids = RecipeListSchema.parse(response.body).items.map((recipe) => recipe.id);
-  expect(ids.indexOf(RecipeSchema.parse(newer.body).id)).toBeLessThan(
-    ids.indexOf(RecipeSchema.parse(older.body).id),
-  );
+  // These two are the newest recipes in the database, so they come first.
+  expect(ids.slice(0, 2)).toEqual([
+    RecipeSchema.parse(newer.body).id,
+    RecipeSchema.parse(older.body).id,
+  ]);
   expect(ids).not.toContain(othersId);
 });
 
@@ -183,19 +185,17 @@ test("PUT on another user's recipe is not found and changes nothing", async () =
     .put(`/api/recipes/${id}`)
     .send({ ...omelette, title: "Mine now" });
   expect(response.status).toBe(404);
-  const stored = await recipesCollection(db).findOne({
-    _id: new ObjectId(id),
-  });
+  const stored = await recipesCollection(db).findOne({ _id: new ObjectId(id) });
   expect(stored?.title).toBe("Omelette");
 });
 
 test("DELETE /api/recipes/:id answers 204 and the recipe is gone", async () => {
   const created = await request(app).post("/api/recipes").send(omelette);
-  const url = created.headers.location ?? "";
+  const { id } = RecipeSchema.parse(created.body);
 
-  const response = await request(app).delete(url);
+  const response = await request(app).delete(`/api/recipes/${id}`);
   expect(response.status).toBe(204);
-  expect((await request(app).get(url)).status).toBe(404);
+  expect((await request(app).get(`/api/recipes/${id}`)).status).toBe(404);
 });
 
 test("DELETE on another user's recipe is not found and keeps it", async () => {
