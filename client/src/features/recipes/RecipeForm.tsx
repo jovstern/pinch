@@ -30,12 +30,10 @@ export function RecipeForm({ defaultValues, submitLabel, cancelTo, save }: Recip
         return result.success ? undefined : { fields: toFieldNames(fieldErrors(result.error)) };
       },
       // Then the save itself, the last check: its 400 names fields the same way. It lives here,
-      // not in onSubmit, because only a validator can put errors on fields. It runs only once
-      // onDynamic passes, so the parse here can't fail.
+      // not in onSubmit, because only a validator can put errors on fields.
       onSubmitAsync: async ({ value }) => {
-        const input = RecipeInputSchema.parse(toInput(value));
         try {
-          await save(input);
+          await save(RecipeInputSchema.parse(toInput(value)));
           return null;
         } catch (error) {
           // A 400 without fields (a body the API couldn't read) has nothing to show on a field.

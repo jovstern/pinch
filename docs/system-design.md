@@ -409,7 +409,8 @@ noise, and M5/M6 only swap the extractor.
 ## 14. Screens
 
 Phone first (§1). Every screen sits in one frame: a header with the name (a link home) and the
-one primary action, **New recipe** (hidden on its own page, where Save is the primary action); the content in a single readable column below it.
+one primary action, **New recipe** (hidden on its own page, where Save is the primary action);
+the content in a single readable column below it.
 
 | Address | Screen | Its job | States |
 |---|---|---|---|

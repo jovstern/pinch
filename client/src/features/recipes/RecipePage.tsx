@@ -1,16 +1,10 @@
 import type { Ingredient, Recipe } from "@pinch/shared";
 import { useQuery } from "@tanstack/react-query";
-import { lazy, Suspense } from "react";
 import { Link, useParams } from "react-router";
 import { Button } from "../../components/Button.tsx";
+import { LazyDeleteRecipeButton } from "./LazyDeleteRecipeButton.tsx";
 import { RecipeLoadError } from "./RecipeLoadError.tsx";
 import { recipeQuery } from "./recipeQueries.ts";
-
-// Delete's dialog (Radix, ~14 kB) loads with the page but apart from it, so it isn't in every
-// screen's first load (docs/metrics/m02.md). Edit shows first; Delete appears beside it.
-const DeleteRecipeButton = lazy(async () => ({
-  default: (await import("./DeleteRecipeButton.tsx")).DeleteRecipeButton,
-}));
 
 export function RecipePage() {
   // The route is "recipes/:id", so the id is always there.
@@ -44,9 +38,7 @@ export function RecipePage() {
         <Button asChild variant="secondary">
           <Link to={`/recipes/${recipe.id}/edit`}>Edit</Link>
         </Button>
-        <Suspense>
-          <DeleteRecipeButton recipe={recipe} />
-        </Suspense>
+        <LazyDeleteRecipeButton recipe={recipe} />
       </div>
 
       {/* Each list is named by its heading, for screen readers (and the tests). */}
