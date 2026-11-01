@@ -359,6 +359,7 @@ changes**. The planned design:
 | D15 | Send the post's caption to Gemini with the video | The spike: quantities are often only in the caption (missing quantities fell from 42/106 to 13/101), and it helps spot non-recipes | Video only |
 | D16 | The recipe is in the language of the post | Nothing lost in translation; the model's choice was unstable without a rule | Always Hebrew; always English |
 | D17 | The server runs on Node 24's built-in TypeScript type stripping | One fewer dependency; the spike already runs this way | `tsx` (node-api.md's default) |
+| D18 | Schemas in an npm-workspace package `shared/`, used as TypeScript source with no build: its `exports` point at `src/index.ts`; Vite compiles it, and Node type-strips it because the workspace symlink resolves to a path outside `node_modules` | One copy for client and server, no build step | `server/src/schemas/` (node-api.md); a copy on each side; a built package |
 
 ## 11. Risks
 
@@ -392,8 +393,6 @@ noise, and M5/M6 only swap the extractor.
 
 ## 13. Open for the coding stage
 
-- **Repo layout:** one repo with `client/`, `server/` (API and worker entry points) and a way to
-  share Zod schemas with the client (npm workspaces with `shared/`, or one copy on each side).
 - **Mongo access:** the native driver plus Zod (you see the real queries, which suits learning
   indexes) or Mongoose (models and validation built in).
 - **Tests:** what gets tested first (the claim query, approve, Find queries).

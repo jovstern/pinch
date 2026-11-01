@@ -1,3 +1,4 @@
+import type { Health } from "@pinch/shared";
 import express from "express";
 import helmet from "helmet";
 import type { Db } from "mongodb";
@@ -17,7 +18,7 @@ export function createApp({ logger, db, devUserId }: AppDeps) {
   app.use(devUser(devUserId));
 
   app.get("/api/health", (_req, res) => {
-    res.json({ status: "ok" });
+    res.json({ status: "ok" } satisfies Health);
   });
 
   app.get("/api/ready", async (req, res) => {
@@ -29,7 +30,7 @@ export function createApp({ logger, db, devUserId }: AppDeps) {
       // 503, not 500: the API itself is fine, it just can't serve until Mongo is back.
       throw new HttpError(503, "db_unreachable", "The database can't be reached.");
     }
-    res.json({ status: "ok" });
+    res.json({ status: "ok" } satisfies Health);
   });
 
   app.use(notFound);
