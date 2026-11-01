@@ -156,3 +156,35 @@ test("rows can be added and removed; the last one stays", async () => {
   expect(ingredient(2).getByLabelText("Ingredient")).toHaveValue("butter");
   expect(screen.queryByRole("group", { name: "Ingredient 3" })).not.toBeInTheDocument();
 });
+
+test("every Save checks the whole form again, even while errors still show", async () => {
+  stubApi(() => Response.json(saved, { status: 201 }));
+  renderApp("/recipes/new");
+
+  await userEvent.click(await screen.findByRole("button", { name: "Save recipe" }));
+  expect(await screen.findByText("Give the recipe a title.")).toBeInTheDocument();
+  await userEvent.type(screen.getByLabelText("Title"), "Toast");
+  await userEvent.type(screen.getByLabelText("Serves"), "abc");
+  await userEvent.click(screen.getByRole("button", { name: "Save recipe" }));
+
+  expect(await screen.findByText("Enter a whole number.")).toBeInTheDocument();
+});
+
+test("after the API's message, the next Save goes through", async () => {
+  const invalid = Response.json(
+    { error: { code: "invalid_input", message: "", fields: { title: "Taken." } } },
+    { status: 400 },
+  );
+  const answers = [invalid, Response.json(saved, { status: 201 })];
+  stubApi(() => answers.shift() ?? Response.json(saved, { status: 201 }));
+  renderApp("/recipes/new");
+
+  await userEvent.type(await screen.findByLabelText("Title"), "Toast");
+  await userEvent.type(ingredient(1).getByLabelText("Ingredient"), "bread");
+  await userEvent.type(screen.getByLabelText("Step 1"), "Toast the bread.");
+  await userEvent.click(screen.getByRole("button", { name: "Save recipe" }));
+  expect(await screen.findByText("Taken.")).toBeInTheDocument();
+  await userEvent.click(screen.getByRole("button", { name: "Save recipe" }));
+
+  expect(await screen.findByRole("heading", { level: 1, name: "Toast" })).toBeInTheDocument();
+});

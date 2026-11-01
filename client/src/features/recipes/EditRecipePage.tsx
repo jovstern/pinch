@@ -2,7 +2,8 @@ import { RecipeSchema, type RecipeInput } from "@pinch/shared";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useParams } from "react-router";
 import { sendJson } from "../../lib/api.ts";
-import { RecipeForm, toFormValues } from "./RecipeForm.tsx";
+import { LazyRecipeForm } from "./LazyRecipeForm.tsx";
+import { toFormValues } from "./recipeFormValues.ts";
 import { RecipeLoadError } from "./RecipeLoadError.tsx";
 import { recipeListQuery, recipeQuery } from "./recipeQueries.ts";
 
@@ -46,7 +47,7 @@ export function EditRecipePage() {
     <>
       <title>{`Edit ${recipe.title} · Pinch`}</title>
       <h1 className="text-3xl font-bold tracking-tight text-balance">Edit recipe</h1>
-      <RecipeForm
+      <LazyRecipeForm
         defaultValues={toFormValues(recipe)}
         submitLabel="Save changes"
         cancelTo={`/recipes/${id}`}

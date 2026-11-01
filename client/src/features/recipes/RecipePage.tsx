@@ -1,10 +1,16 @@
 import type { Ingredient, Recipe } from "@pinch/shared";
 import { useQuery } from "@tanstack/react-query";
+import { lazy, Suspense } from "react";
 import { Link, useParams } from "react-router";
 import { Button } from "../../components/Button.tsx";
-import { DeleteRecipeButton } from "./DeleteRecipeButton.tsx";
 import { RecipeLoadError } from "./RecipeLoadError.tsx";
 import { recipeQuery } from "./recipeQueries.ts";
+
+// Delete's dialog (Radix, ~14 kB) loads with the page but apart from it, so it isn't in every
+// screen's first load (docs/metrics/m02.md). Edit shows first; Delete appears beside it.
+const DeleteRecipeButton = lazy(async () => ({
+  default: (await import("./DeleteRecipeButton.tsx")).DeleteRecipeButton,
+}));
 
 export function RecipePage() {
   // The route is "recipes/:id", so the id is always there.
@@ -31,14 +37,16 @@ export function RecipePage() {
     <article>
       <title>{`${recipe.title} · Pinch`}</title>
       <h1 className="text-3xl font-bold tracking-tight text-balance">{recipe.title}</h1>
-      {recipe.description && <p className="mt-3 text-pretty">{recipe.description}</p>}
+      {recipe.description && <p className="mt-3 max-w-prose text-pretty">{recipe.description}</p>}
       {recipeDetails && <p className="mt-3 text-sm text-text-muted">{recipeDetails}</p>}
 
       <div className="mt-4 flex gap-3">
         <Button asChild variant="secondary">
           <Link to={`/recipes/${recipe.id}/edit`}>Edit</Link>
         </Button>
-        <DeleteRecipeButton recipe={recipe} />
+        <Suspense>
+          <DeleteRecipeButton recipe={recipe} />
+        </Suspense>
       </div>
 
       {/* Each list is named by its heading, for screen readers (and the tests). */}
@@ -58,7 +66,7 @@ export function RecipePage() {
       <h2 id="steps" className="mt-8 text-xl font-semibold">
         Steps
       </h2>
-      <ol aria-labelledby="steps" className="mt-3 grid list-decimal gap-3 pl-6">
+      <ol aria-labelledby="steps" className="mt-3 grid max-w-prose list-decimal gap-3 pl-6">
         {recipe.steps.map((step, index) => (
           <li key={index} className="pl-1 text-pretty">
             {step}

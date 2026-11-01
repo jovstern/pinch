@@ -14,7 +14,10 @@ export function RecipeLoadError({ error, retry, retrying }: RecipeLoadErrorProps
   if (error instanceof ApiError && error.status === 404) return <NotFoundPage />;
   return (
     <div role="alert">
-      <p>We couldn't load this recipe.</p>
+      <title>Recipe not loaded · Pinch</title>
+      <h1 className="text-3xl font-bold tracking-tight text-balance">
+        We couldn't load this recipe
+      </h1>
       <Button
         type="button"
         variant="secondary"
