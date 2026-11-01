@@ -20,6 +20,15 @@ Slices for later milestones are filled in when the milestone starts.
       observer metrics, demo
 
 ## M2 — Recipes CRUD
+
+- [x] Recipe schemas in `shared/`; `POST /api/recipes`, `GET /api/recipes/:id`; Zod → 400 with
+      `fields`
+- [ ] `GET /api/recipes` (newest first, capped at 50; the cursor comes in M3), `PATCH`, `DELETE`
+- [ ] Client: router, app layout, the recipe list with its empty state
+- [ ] Client: recipe detail, and delete
+- [ ] Client: the recipe form (create and edit)
+- [ ] e2e of create → list → edit → delete; end of milestone: UI review, observer metrics, demo
+
 ## M3 — Find
 ## M4 — Pipeline without AI
 ## M5 — Gemini
