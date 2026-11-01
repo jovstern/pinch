@@ -1,3 +1,4 @@
+import { fieldErrors } from "@pinch/shared";
 import type { ErrorRequestHandler, RequestHandler } from "express";
 import type { z } from "zod";
 
@@ -27,13 +28,12 @@ export function parseInput<T>(schema: z.ZodType<T>, value: unknown): T {
   if (result.error.issues.some((issue) => issue.path.length === 0)) {
     throw new HttpError(400, "bad_request", "Send the data as a JSON object.");
   }
-  // One message per field: the first, which is what the user should fix first.
-  const fields = Object.fromEntries(
-    result.error.issues
-      .toReversed()
-      .map((issue) => [issue.path.map(String).join("."), issue.message]),
+  throw new HttpError(
+    400,
+    "invalid_input",
+    "Some fields are not valid.",
+    fieldErrors(result.error),
   );
-  throw new HttpError(400, "invalid_input", "Some fields are not valid.", fields);
 }
 
 export const notFound: RequestHandler = () => {

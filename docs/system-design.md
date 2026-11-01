@@ -304,6 +304,10 @@ can show, e.g. `{ "title": "Give the recipe a title.", "ingredients.0.name": "Na
 ingredient." }`. A missing body, or one that isn't JSON → 400 `bad_request`; too large → 413
 `too_large`.
 
+The form checks with the same schema before it sends (shared `fieldErrors` builds `fields` on
+both sides), so the user sees the API's messages without a round trip; the API's 400 is still
+shown the same way, under the field it names.
+
 ### 8.2 Errors
 
 Handlers throw; one Express error middleware turns errors into the JSON shape above and logs
@@ -410,7 +414,7 @@ one primary action, **New recipe**; the content in a single readable column belo
 | Address | Screen | Its job | States |
 |---|---|---|---|
 | `/` | Your recipes | Pick something to cook; each card shows the title, the number of ingredients and the total time | Loading (placeholder cards), empty (says what goes here, links to New recipe), error (Try again) |
-| `/recipes/new` | New recipe | Write a recipe by hand | The form's own (§8.1 messages) |
+| `/recipes/new` | New recipe | Write a recipe by hand | On Save: each error under its field (§8.1), focus on the first; saving (button says so); failed (says so, keeps what was typed) |
 | `/recipes/:id` | A recipe | Read it while cooking; Edit, Delete (asks first) | Loading, error (Try again), not found |
 | `/recipes/:id/edit` | Edit recipe | Change it | As New recipe |
 | anything else | Page not found | Get back to the recipes | — |
