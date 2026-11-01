@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <!-- The accent color from globals.css (--color-accent), in hex for every browser. -->
+  <rect width="32" height="32" rx="8" fill="#d9622b" />
+  <text x="16" y="23" text-anchor="middle" font-family="system-ui, sans-serif" font-size="20" font-weight="700" fill="#fff">P</text>
+</svg>

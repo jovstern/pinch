@@ -7,7 +7,8 @@ import "./globals.css";
 const root = document.getElementById("root");
 if (!root) throw new Error("index.html has no #root element");
 
-const queryClient = new QueryClient();
+// One retry, not TanStack's default three (about 7 s): an error shows up quickly.
+const queryClient = new QueryClient({ defaultOptions: { queries: { retry: 1 } } });
 
 createRoot(root).render(
   <StrictMode>
