@@ -1,4 +1,4 @@
-import { RecipeSchema } from "@pinch/shared";
+import { RecipeListSchema, RecipeSchema } from "@pinch/shared";
 import { ObjectId } from "mongodb";
 import { pino } from "pino";
 import request from "supertest";
@@ -90,7 +90,8 @@ test("a body that is not JSON answers 400", async () => {
   });
 });
 
-test("another user's recipe is not found", async () => {
+// A recipe that belongs to someone else, written straight to the database.
+async function insertOtherUsersRecipe() {
   const { insertedId } = await recipesCollection(db).insertOne({
     ...omelette,
     _id: new ObjectId(),
@@ -99,8 +100,13 @@ test("another user's recipe is not found", async () => {
     createdAt: new Date(),
     updatedAt: new Date(),
   });
+  return insertedId.toHexString();
+}
 
-  const response = await request(app).get(`/api/recipes/${insertedId.toHexString()}`);
+test("another user's recipe is not found", async () => {
+  const id = await insertOtherUsersRecipe();
+
+  const response = await request(app).get(`/api/recipes/${id}`);
   expect(response.status).toBe(404);
   expect(response.body).toMatchObject({ error: { code: "recipe_not_found" } });
 });
@@ -109,4 +115,93 @@ test("an id that is not an ObjectId is not found", async () => {
   const response = await request(app).get("/api/recipes/not-an-id");
   expect(response.status).toBe(404);
   expect(response.body).toMatchObject({ error: { code: "recipe_not_found" } });
+});
+
+test("GET /api/recipes lists my recipes, newest first", async () => {
+  const older = await request(app)
+    .post("/api/recipes")
+    .send({ ...omelette, title: "Older" });
+  const newer = await request(app)
+    .post("/api/recipes")
+    .send({ ...omelette, title: "Newer" });
+  const othersId = await insertOtherUsersRecipe();
+
+  const response = await request(app).get("/api/recipes");
+  expect(response.status).toBe(200);
+  const ids = RecipeListSchema.parse(response.body).items.map((recipe) => recipe.id);
+  // These two are the newest recipes in the database, so they come first.
+  expect(ids.slice(0, 2)).toEqual([
+    RecipeSchema.parse(newer.body).id,
+    RecipeSchema.parse(older.body).id,
+  ]);
+  expect(ids).not.toContain(othersId);
+});
+
+test("GET /api/recipes answers at most 50 recipes", async () => {
+  for (let i = 0; i < 51; i++) await request(app).post("/api/recipes").send(omelette);
+
+  const response = await request(app).get("/api/recipes");
+  expect(RecipeListSchema.parse(response.body)).toMatchObject({ nextCursor: null });
+  expect(RecipeListSchema.parse(response.body).items).toHaveLength(50);
+});
+
+test("PUT /api/recipes/:id replaces what the user can edit and clears what they left out", async () => {
+  const created = await request(app)
+    .post("/api/recipes")
+    .send({ ...omelette, description: "Quick" });
+  const before = RecipeSchema.parse(created.body);
+
+  const edited = { title: "Herb omelette", ingredients: [{ name: "eggs" }], steps: ["Cook."] };
+  const response = await request(app).put(`/api/recipes/${before.id}`).send(edited);
+
+  expect(response.status).toBe(200);
+  const after = RecipeSchema.parse(response.body);
+  expect(response.body).toEqual({
+    ...edited,
+    id: before.id,
+    source: before.source,
+    createdAt: before.createdAt,
+    updatedAt: after.updatedAt,
+  });
+  const read = await request(app).get(`/api/recipes/${before.id}`);
+  expect(read.body).toEqual(response.body);
+});
+
+test("PUT /api/recipes/:id answers 400 for invalid input", async () => {
+  const created = await request(app).post("/api/recipes").send(omelette);
+  const { id } = RecipeSchema.parse(created.body);
+
+  const response = await request(app)
+    .put(`/api/recipes/${id}`)
+    .send({ ...omelette, steps: [] });
+  expect(response.status).toBe(400);
+  expect(response.body).toMatchObject({ error: { fields: { steps: "Add at least one step." } } });
+});
+
+test("PUT on another user's recipe is not found and changes nothing", async () => {
+  const id = await insertOtherUsersRecipe();
+
+  const response = await request(app)
+    .put(`/api/recipes/${id}`)
+    .send({ ...omelette, title: "Mine now" });
+  expect(response.status).toBe(404);
+  const stored = await recipesCollection(db).findOne({ _id: new ObjectId(id) });
+  expect(stored?.title).toBe("Omelette");
+});
+
+test("DELETE /api/recipes/:id answers 204 and the recipe is gone", async () => {
+  const created = await request(app).post("/api/recipes").send(omelette);
+  const { id } = RecipeSchema.parse(created.body);
+
+  const response = await request(app).delete(`/api/recipes/${id}`);
+  expect(response.status).toBe(204);
+  expect((await request(app).get(`/api/recipes/${id}`)).status).toBe(404);
+});
+
+test("DELETE on another user's recipe is not found and keeps it", async () => {
+  const id = await insertOtherUsersRecipe();
+
+  const response = await request(app).delete(`/api/recipes/${id}`);
+  expect(response.status).toBe(404);
+  expect(await recipesCollection(db).countDocuments({ _id: new ObjectId(id) })).toBe(1);
 });

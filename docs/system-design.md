@@ -281,7 +281,7 @@ GET    /api/ready                      the database is reachable
 GET    /api/recipes?q=&tags=cuisine:italian,flavor:spicy&cursor=   → { items, nextCursor }
 POST   /api/recipes                    create by hand
 GET    /api/recipes/:id
-PATCH  /api/recipes/:id
+PUT    /api/recipes/:id                replace what the user can edit (the form sends it all)
 DELETE /api/recipes/:id
 GET    /api/recipes/:id/thumbnail      image/webp
 
@@ -364,6 +364,7 @@ changes**. The planned design:
 | D17 | The server runs on Node 24's built-in TypeScript type stripping | One fewer dependency; the spike already runs this way | `tsx` (node-api.md's default) |
 | D18 | Schemas in an npm-workspace package `shared/`, used as TypeScript source with no build: its `exports` point at `src/index.ts`; Vite compiles it, and Node type-strips it because the workspace symlink resolves to a path outside `node_modules` | One copy for client and server, no build step | `server/src/schemas/` (node-api.md); a copy on each side; a built package |
 | D19 | MongoDB through the native driver; Zod checks every write, and every response is parsed with its schema, which drops stored fields like `ownerId` | You see the real queries, which suits learning indexes; one schema layer, shared with the client | Mongoose (a second schema layer next to Zod) |
+| D20 | Editing is `PUT`: it replaces what the user can edit and keeps the fields the server owns (`_id`, `ownerId`, `source`, `createdAt`, later `thumbnail` and `sourceImportId`), listed in the route | The form always sends the whole recipe, so a field the user clears is simply left out; no `null`/`""` rules | `PATCH` with `null` to clear a field |
 
 ## 11. Risks
 

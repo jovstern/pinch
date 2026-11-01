@@ -4,9 +4,11 @@ export { HealthSchema, type Health } from "./health.ts";
 export {
   IngredientSchema,
   RecipeInputSchema,
+  RecipeListSchema,
   RecipeSchema,
   SourceSchema,
   type Ingredient,
   type Recipe,
   type RecipeInput,
+  type RecipeList,
 } from "./recipe.ts";
