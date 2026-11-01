@@ -1,13 +1,16 @@
-import { ApiStatus } from "./features/health/ApiStatus.tsx";
+import { Route, Routes } from "react-router";
+import { Layout } from "./components/Layout.tsx";
+import { NotFoundPage } from "./components/NotFoundPage.tsx";
+import { RecipeListPage } from "./features/recipes/RecipeListPage.tsx";
 
+// The screens (design §14). New, a recipe, and edit arrive in the next M2 slices.
 export function App() {
   return (
-    <main className="mx-auto flex min-h-dvh max-w-xl flex-col justify-center gap-3 px-6">
-      <h1 className="text-5xl font-bold tracking-tight text-accent">Pinch</h1>
-      <p className="text-lg text-pretty text-text-muted">
-        Pinch a recipe from a reel, cook it later.
-      </p>
-      <ApiStatus />
-    </main>
+    <Routes>
+      <Route element={<Layout />}>
+        <Route index element={<RecipeListPage />} />
+        <Route path="*" element={<NotFoundPage />} />
+      </Route>
+    </Routes>
   );
 }

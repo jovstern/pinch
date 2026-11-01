@@ -365,6 +365,7 @@ changes**. The planned design:
 | D18 | Schemas in an npm-workspace package `shared/`, used as TypeScript source with no build: its `exports` point at `src/index.ts`; Vite compiles it, and Node type-strips it because the workspace symlink resolves to a path outside `node_modules` | One copy for client and server, no build step | `server/src/schemas/` (node-api.md); a copy on each side; a built package |
 | D19 | MongoDB through the native driver; Zod checks every write, and every response is parsed with its schema, which drops stored fields like `ownerId` | You see the real queries, which suits learning indexes; one schema layer, shared with the client | Mongoose (a second schema layer next to Zod) |
 | D20 | Editing is `PUT`: it replaces what the user can edit and keeps the fields the server owns (`_id`, `ownerId`, `source`, `createdAt`, later `thumbnail` and `sourceImportId`), listed in the route | The form always sends the whole recipe, so a field the user clears is simply left out; no `null`/`""` rules | `PATCH` with `null` to clear a field |
+| D21 | React Router (declarative: `<Routes>` in `App.tsx`, `useParams`, `Link`) | A handful of screens; the most familiar API and the least setup, easy to read line by line | TanStack Router (type-safe routes and loaders, more concepts) |
 
 ## 11. Risks
 
@@ -400,3 +401,18 @@ noise, and M5/M6 only swap the extractor.
 
 - **Tests:** what gets tested first (the claim query, approve, Find queries).
 - **The lighter kit:** how much of the agents setup to keep, given that you own the code and want small PRs.
+
+## 14. Screens
+
+Phone first (§1). Every screen sits in one frame: a header with the name (a link home) and the
+one primary action, **New recipe**; the content in a single readable column below it.
+
+| Address | Screen | Its job | States |
+|---|---|---|---|
+| `/` | Your recipes | Pick something to cook; each card shows the title, the number of ingredients and the total time | Loading (placeholder cards), empty (says what goes here, links to New recipe), error (Try again) |
+| `/recipes/new` | New recipe | Write a recipe by hand | The form's own (§8.1 messages) |
+| `/recipes/:id` | A recipe | Read it while cooking; Edit, Delete | Loading, not found |
+| `/recipes/:id/edit` | Edit recipe | Change it | As New recipe |
+| anything else | Page not found | Get back to the recipes | — |
+
+From M4 the paste-a-link box on `/` becomes the main action, and import status shows there.
