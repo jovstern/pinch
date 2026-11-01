@@ -1,3 +1,5 @@
+import { ApiStatus } from "./features/health/ApiStatus.tsx";
+
 export function App() {
   return (
     <main className="mx-auto flex min-h-dvh max-w-xl flex-col justify-center gap-3 px-6">
@@ -5,6 +7,7 @@ export function App() {
       <p className="text-lg text-pretty text-text-muted">
         Pinch a recipe from a reel, cook it later.
       </p>
+      <ApiStatus />
     </main>
   );
 }
