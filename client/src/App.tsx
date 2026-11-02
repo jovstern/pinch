@@ -1,18 +1,10 @@
-import { lazy } from "react";
 import { Route, Routes } from "react-router";
 import { Layout } from "./components/Layout.tsx";
 import { NotFoundPage } from "./components/NotFoundPage.tsx";
+import { EditRecipePage } from "./features/recipes/EditRecipePage.tsx";
+import { NewRecipePage } from "./features/recipes/NewRecipePage.tsx";
 import { RecipeListPage } from "./features/recipes/RecipeListPage.tsx";
 import { RecipePage } from "./features/recipes/RecipePage.tsx";
-
-// The form and its library load only when a form opens: in the first load they'd put the JS
-// over its 150 kB budget (docs/metrics/m01.md). Layout shows "Loading…" meanwhile.
-const NewRecipePage = lazy(async () => ({
-  default: (await import("./features/recipes/NewRecipePage.tsx")).NewRecipePage,
-}));
-const EditRecipePage = lazy(async () => ({
-  default: (await import("./features/recipes/EditRecipePage.tsx")).EditRecipePage,
-}));
 
 // The screens (design §14).
 export function App() {

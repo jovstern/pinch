@@ -31,9 +31,9 @@ export function TextField({ field, label, multiline, inputMode, className = "" }
     onBlur: field.handleBlur,
     "aria-invalid": invalid,
     "aria-describedby": invalid ? errorId : undefined,
-    className:
-      "min-h-11 w-full rounded-lg border border-border bg-surface-raised px-3 py-2 aria-invalid:border-danger",
   };
+  const box =
+    "w-full rounded-lg border border-border bg-surface-raised px-3 py-2 aria-invalid:border-danger";
 
   return (
     <div className={className}>
@@ -41,9 +41,10 @@ export function TextField({ field, label, multiline, inputMode, className = "" }
         {label}
       </label>
       {multiline ? (
+        // Grows with its text (field-sizing), so a long step is read whole, not scrolled.
         <textarea
-          rows={3}
           {...shared}
+          className={`field-sizing-content min-h-24 ${box}`}
           onChange={(event) => {
             field.handleChange(event.target.value);
           }}
@@ -53,6 +54,7 @@ export function TextField({ field, label, multiline, inputMode, className = "" }
           type="text"
           inputMode={inputMode}
           {...shared}
+          className={`min-h-11 ${box}`}
           onChange={(event) => {
             field.handleChange(event.target.value);
           }}

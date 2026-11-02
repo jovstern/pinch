@@ -1,2 +1,5 @@
 milestone,route,perf,a11y,lcp_ms,cls,tbt_ms,js_kb
 m01,/,100,100,755,0,0,97.8
+m02,/,100,100,755,0,0,124.8
+m02,/recipes/:id,100,100,1805,0,0,124.8
+m02,/recipes/new,100,100,754,0,0,143.6

@@ -2,7 +2,8 @@ import { RecipeSchema, type RecipeInput } from "@pinch/shared";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router";
 import { sendJson } from "../../lib/api.ts";
-import { emptyRecipe, RecipeForm } from "./RecipeForm.tsx";
+import { LazyRecipeForm } from "./LazyRecipeForm.tsx";
+import { emptyRecipe } from "./recipeFormValues.ts";
 import { recipeListQuery, recipeQuery } from "./recipeQueries.ts";
 
 export function NewRecipePage() {
@@ -29,7 +30,10 @@ export function NewRecipePage() {
     <>
       <title>New recipe · Pinch</title>
       <h1 className="text-3xl font-bold tracking-tight text-balance">New recipe</h1>
-      <RecipeForm
+      <p className="mt-3 text-sm text-text-muted">
+        A title, the ingredients and the steps are all a recipe needs.
+      </p>
+      <LazyRecipeForm
         defaultValues={emptyRecipe}
         submitLabel="Save recipe"
         cancelTo="/"

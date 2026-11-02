@@ -409,12 +409,13 @@ noise, and M5/M6 only swap the extractor.
 ## 14. Screens
 
 Phone first (§1). Every screen sits in one frame: a header with the name (a link home) and the
-one primary action, **New recipe**; the content in a single readable column below it.
+one primary action, **New recipe** (hidden on its own page, where Save is the primary action);
+the content in a single readable column below it.
 
 | Address | Screen | Its job | States |
 |---|---|---|---|
 | `/` | Your recipes | Pick something to cook; each card shows the title, the number of ingredients and the total time | Loading (placeholder cards), empty (says what goes here, links to New recipe), error (Try again) |
-| `/recipes/new` | New recipe | Write a recipe by hand | On Save: each error under its field (§8.1), focus on the first; saving (button says so); failed (says so, keeps what was typed) |
+| `/recipes/new` | New recipe | Write a recipe by hand | From the first Save: each error under its field (§8.1), updated as the user types; focus on the first; saving (button says so); failed (says so, keeps what was typed) |
 | `/recipes/:id` | A recipe | Read it while cooking; Edit, Delete (asks first) | Loading, error (Try again), not found |
 | `/recipes/:id/edit` | Edit recipe | Change it; Cancel goes back to the recipe | Loading, error (Try again), not found; then as New recipe |
 | anything else | Page not found | Get back to the recipes | — |
