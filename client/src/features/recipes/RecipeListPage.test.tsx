@@ -67,3 +67,39 @@ test("when loading fails, Try again loads the list again", async () => {
   await userEvent.click(await screen.findByRole("button", { name: "Try again" }));
   expect(await screen.findByRole("link", { name: /Omelette/ })).toBeInTheDocument();
 });
+
+const toast = { ...omelette, id: "6650a1b2c3d4e5f600000002", title: "Toast" };
+
+test("Show more adds the next page, focuses its first recipe, and goes when there's no more", async () => {
+  const fetch = vi
+    .fn()
+    .mockResolvedValueOnce(Response.json({ items: [omelette], nextCursor: "next-page" }))
+    .mockResolvedValueOnce(Response.json({ items: [toast], nextCursor: null }));
+  vi.stubGlobal("fetch", fetch);
+  renderApp("/");
+
+  await userEvent.click(await screen.findByRole("button", { name: "Show more" }));
+
+  expect(await screen.findByRole("link", { name: /Toast/ })).toHaveFocus();
+  expect(screen.getByRole("link", { name: /Omelette/ })).toBeInTheDocument();
+  expect(fetch).toHaveBeenLastCalledWith("/api/recipes?cursor=next-page");
+  expect(screen.queryByRole("button", { name: "Show more" })).not.toBeInTheDocument();
+});
+
+test("when the next page fails, the list stays and says so", async () => {
+  const fetch = vi
+    .fn()
+    .mockResolvedValueOnce(Response.json({ items: [omelette], nextCursor: "next-page" }))
+    .mockResolvedValueOnce(new Response(null, { status: 502 }))
+    .mockResolvedValueOnce(Response.json({ items: [toast], nextCursor: null }));
+  vi.stubGlobal("fetch", fetch);
+  renderApp("/");
+
+  await userEvent.click(await screen.findByRole("button", { name: "Show more" }));
+  expect(await screen.findByRole("alert")).toHaveTextContent("We couldn't load more recipes.");
+  expect(screen.getByRole("link", { name: /Omelette/ })).toBeInTheDocument();
+
+  await userEvent.click(screen.getByRole("button", { name: "Show more" }));
+  expect(await screen.findByRole("link", { name: /Toast/ })).toBeInTheDocument();
+  expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+});
