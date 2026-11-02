@@ -64,6 +64,7 @@ export function findNewestRecipes(
 // My recipes with any of the words of q in the title or an ingredient, the best matches first,
 // with every one of the tags (design §7). One page: a search answers its best 50, no cursor.
 // Matching is by word, with English stemming ("eggs" finds "egg"); Hebrew matches whole words.
+// q is Mongo's $search syntax: "a phrase" in quotes, and -word leaves a word out.
 export function searchRecipes(
   recipes: Collection<RecipeDocument>,
   ownerId: ObjectId,

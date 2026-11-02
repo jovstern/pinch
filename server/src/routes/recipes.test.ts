@@ -291,8 +291,8 @@ test("the list filtered by tags reads the tags index, only the recipes it answer
   expect(explain.executionStats).toMatchObject({ nReturned: 51, totalDocsExamined: 51 });
 });
 
-// A user of their own with three recipes, saved through the API. Returns the app that acts as
-// them and their id.
+// A user of their own with three recipes, oldest first, written straight to the database.
+// Returns the app that acts as them and their id.
 async function insertSearchableRecipes() {
   const ownerId = new ObjectId();
   const userApp = createApp({
@@ -309,11 +309,19 @@ async function insertSearchableRecipes() {
     },
     { title: "Tomato soup", ingredients: [{ name: "tomatoes" }] },
   ];
-  for (const recipe of recipes) {
-    await request(userApp)
-      .post("/api/recipes")
-      .send({ ...recipe, steps: ["Cook."] });
-  }
+  const start = Date.now();
+  await recipesCollection(db).insertMany(
+    recipes.map((recipe, i) => ({
+      tags: [],
+      ...recipe,
+      steps: ["Cook."],
+      _id: new ObjectId(),
+      ownerId,
+      source: { type: "manual" as const },
+      createdAt: new Date(start + i),
+      updatedAt: new Date(start + i),
+    })),
+  );
   return { ownerId, userApp };
 }
 
@@ -323,10 +331,19 @@ test("GET /api/recipes?q= finds my recipes by title and ingredient, the best mat
   const response = await request(userApp).get("/api/recipes").query({ q: "eggs" });
 
   // "eggs" finds "egg" too (stemming). Egg salad matches in the title and an ingredient, so it
-  // comes first. The omelettes of the other tests belong to another user.
+  // comes first. The other tests' omelettes (eggs too) belong to the default user, not this one.
   const list = RecipeListSchema.parse(response.body);
   expect(list.items.map((recipe) => recipe.title)).toEqual(["Egg salad", "Shakshuka"]);
   expect(list.nextCursor).toBeNull();
+});
+
+test("a blank search lists my recipes as usual", async () => {
+  const { userApp } = await insertSearchableRecipes();
+
+  const response = await request(userApp).get("/api/recipes").query({ q: "  " });
+
+  const titles = RecipeListSchema.parse(response.body).items.map((recipe) => recipe.title);
+  expect(titles).toEqual(["Tomato soup", "Shakshuka", "Egg salad"]);
 });
 
 test("GET /api/recipes?q=&tags= finds the matches that have the tags", async () => {
@@ -358,9 +375,10 @@ test("a search reads the text index, not the whole collection (§6)", async () =
     await searchRecipes(recipesCollection(db), ownerId, "tomato").explain("executionStats"),
   );
 
-  // The SORT is by score, over the matches only.
+  // Only the two matches are read; sorting by score needs them all, so a SORT stage is expected.
   const plan = JSON.stringify(explain.queryPlanner.winningPlan);
   expect(plan).toContain('"indexName":"ownerId_1_title_text_ingredients.name_text"');
+  expect(plan).toContain('"stage":"SORT"');
   expect(plan).not.toContain("COLLSCAN");
   expect(explain.executionStats).toMatchObject({ nReturned: 2, totalDocsExamined: 2 });
 });

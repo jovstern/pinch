@@ -19,7 +19,8 @@ export function recipesRouter(db: Db) {
 
   router.get("/", async (req, res) => {
     const { q, tags, cursor } = parseInput(ListQuerySchema, req.query);
-    // A search answers its best matches as one page, so it has no cursor (design §7).
+    // A search answers its best matches as one page, so it has no cursor; one sent with it is
+    // ignored (design §7).
     if (q) {
       const matches = await searchRecipes(recipes, req.userId, q, { tags }).toArray();
       res.json({ items: matches.map(toRecipe), nextCursor: null } satisfies RecipeList);
