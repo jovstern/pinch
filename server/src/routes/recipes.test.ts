@@ -142,8 +142,9 @@ test("GET /api/recipes lists my recipes, newest first", async () => {
 });
 
 // A user of their own with 120 recipes, three to each millisecond, so pages also split
-// recipes created at the same time. Returns the app that acts as them and the recipes, newest
-// first.
+// recipes created at the same time. The later an id, the older its recipe: a cursor that
+// compared ids alone would put them in the wrong order. Returns the app that acts as them and
+// the recipes, newest first.
 async function insertManyRecipes() {
   const ownerId = new ObjectId();
   const start = Date.now();
@@ -152,14 +153,14 @@ async function insertManyRecipes() {
     _id: new ObjectId(),
     ownerId,
     source: { type: "manual" as const },
-    createdAt: new Date(start + Math.floor(i / 3)),
+    createdAt: new Date(start - Math.floor(i / 3)),
     updatedAt: new Date(start),
   }));
   await recipesCollection(db).insertMany(recipes);
   const newestFirst = recipes.toSorted(
     (a, b) =>
       b.createdAt.getTime() - a.createdAt.getTime() ||
-      b._id.toHexString().localeCompare(a._id.toHexString()),
+      (a._id.toHexString() < b._id.toHexString() ? 1 : -1),
   );
   return {
     ownerId,
@@ -176,15 +177,13 @@ test("GET /api/recipes answers pages of 50, and the cursor leads through all of 
   const { userApp, newestFirst } = await insertManyRecipes();
 
   const pages = [];
-  let cursor: string | null = "";
-  while (cursor !== null) {
-    const response = await request(userApp)
-      .get("/api/recipes")
-      .query(cursor ? { cursor } : {});
+  let cursor: string | undefined;
+  do {
+    const response = await request(userApp).get("/api/recipes").query({ cursor });
     const page = RecipeListSchema.parse(response.body);
     pages.push(page.items.map((recipe) => recipe.id));
-    cursor = page.nextCursor;
-  }
+    cursor = page.nextCursor ?? undefined;
+  } while (cursor);
 
   // Each recipe once, in order: 50, 50, then the last 20 with no cursor after them.
   expect(pages.map((page) => page.length)).toEqual([50, 50, 20]);
@@ -220,7 +219,8 @@ test("the list's second page reads its index from the cursor on, not the page be
   expect(plan).toContain("IXSCAN");
   expect(plan).not.toMatch(/COLLSCAN|"SORT"/);
   // ...that reads the 51 recipes it answers, not the 50 before them too. (At most 2 more: the
-  // cursor's own recipe and one created in the same millisecond, read and dropped.)
+  // cursor's own recipe and one created in the same millisecond, read and dropped; three per
+  // millisecond, see insertManyRecipes.)
   expect(explain.executionStats.nReturned).toBe(51);
   expect(explain.executionStats.totalDocsExamined).toBeLessThanOrEqual(53);
 });

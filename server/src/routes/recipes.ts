@@ -21,7 +21,8 @@ export function recipesRouter(db: Db) {
     const found = await findNewestRecipes(recipes, req.userId, cursor).toArray();
     const items = found.slice(0, PAGE_SIZE);
     const last = items.at(-1);
-    // Only when there is one more recipe after this page: the last page says null.
+    // Only when there is one more recipe after this page: the last page says null. (`last` is
+    // always there when there is more; the check is for TypeScript.)
     const nextCursor = found.length > PAGE_SIZE && last ? toCursorText(last) : null;
     res.json({ items: items.map(toRecipe), nextCursor } satisfies RecipeList);
   });
@@ -86,8 +87,9 @@ export function recipesRouter(db: Db) {
 // sends back the nextCursor it was given and never reads it (design §7).
 const ListQuerySchema = z.object({
   cursor: z
-    .string()
+    .string("This cursor isn't valid.")
     .regex(/^\d{1,15}_[0-9a-f]{24}$/, "This cursor isn't valid.")
+    // The id is the last 24 characters; the time is what comes before the "_".
     .transform((text) => ({
       createdAt: new Date(Number(text.slice(0, -25))),
       _id: new ObjectId(text.slice(-24)),
