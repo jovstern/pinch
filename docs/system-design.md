@@ -277,7 +277,12 @@ Queries:
   reads 101. Either is fast at this scale, and never more than my recipes with that one tag; if
   it matters later, the route can put the narrower facet first.
 - **Text search:** `{ ownerId, $text: { $search: q } }` plus the same tag filter, sorted by text
-  score, first 50 results. At POC scale that is enough; no deep pagination for search.
+  score, first 50 results. At POC scale that is enough; no deep pagination for search. A
+  recipe matches if any word of `q` is in its title or an ingredient's name. The text index
+  stems English ("eggs" finds "egg"); Mongo has no Hebrew stemmer, so Hebrew matches whole
+  words only ("חריף" doesn't find "חריפה"). Quotes ask for a phrase and a leading "-" leaves a
+  word out (Mongo's `$search` syntax); a search of only stop words ("the") finds nothing.
+  Smarter search is semantic search, later (§1).
 
 ## 8. API
 
