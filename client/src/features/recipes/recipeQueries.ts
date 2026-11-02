@@ -2,7 +2,8 @@ import { RecipeListSchema, RecipeSchema } from "@pinch/shared";
 import { infiniteQueryOptions, queryOptions } from "@tanstack/react-query";
 import { getJson } from "../../lib/api.ts";
 
-// Keys nest under "recipes": a list is ["recipes", "list", filters], one recipe ["recipes", id].
+// Keys nest under "recipes": a list is ["recipes", "list", filters], one recipe
+// ["recipes", "detail", id], so the lists' prefix never matches a recipe.
 
 // What the list is narrowed to: a search, and tags it must all have (design §7). Blank is none.
 export type RecipeFilters = { q: string; tags: string[] };
@@ -14,6 +15,7 @@ export const recipeListsKey = ["recipes", "list"];
 // nextCursor of the page before. A null cursor means there is no next page (a search has one).
 export function recipeListQuery(filters: RecipeFilters) {
   return infiniteQueryOptions({
+    // A new filters object each render is fine: TanStack compares keys by value.
     queryKey: [...recipeListsKey, filters],
     queryFn: ({ pageParam }) => getJson(listPath(filters, pageParam), RecipeListSchema),
     // The cursor's type comes from here: null alone would make every cursor null.
@@ -24,7 +26,7 @@ export function recipeListQuery(filters: RecipeFilters) {
 
 export function recipeQuery(id: string) {
   return queryOptions({
-    queryKey: ["recipes", id],
+    queryKey: ["recipes", "detail", id],
     queryFn: () => getJson(`/api/recipes/${id}`, RecipeSchema),
   });
 }

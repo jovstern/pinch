@@ -160,3 +160,25 @@ test("when nothing matches, it says so and offers to clear the search and filter
   expect(fetch).toHaveBeenLastCalledWith("/api/recipes");
   expect(screen.getByRole("searchbox")).toHaveValue("");
 });
+
+test("Show more keeps the filter when it asks for the next page", async () => {
+  const fetch = vi
+    .fn()
+    .mockResolvedValueOnce(Response.json({ items: [omelette], nextCursor: "next-page" }))
+    .mockResolvedValueOnce(Response.json({ items: [toast], nextCursor: null }));
+  vi.stubGlobal("fetch", fetch);
+  renderApp("/?tags=meal:breakfast");
+
+  await userEvent.click(await screen.findByRole("button", { name: "Show more" }));
+
+  expect(await screen.findByRole("link", { name: /Toast/ })).toBeInTheDocument();
+  expect(fetch).toHaveBeenLastCalledWith("/api/recipes?tags=meal%3Abreakfast&cursor=next-page");
+});
+
+test("a tag in the address that isn't in the lists is left out", async () => {
+  const fetch = stubList();
+  renderApp("/?tags=meal:martian,meal:breakfast");
+
+  expect(await screen.findByText("1 recipe matches.")).toHaveAttribute("role", "status");
+  expect(fetch).toHaveBeenCalledWith("/api/recipes?tags=meal%3Abreakfast");
+});

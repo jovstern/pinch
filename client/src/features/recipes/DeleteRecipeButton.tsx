@@ -13,11 +13,11 @@ export function DeleteRecipeButton({ recipe }: { recipe: Recipe }) {
   const deletion = useMutation({
     mutationFn: () => deleteResource(`/api/recipes/${recipe.id}`),
     onSuccess: async () => {
-      // Refresh the list before going back to it, so the deleted recipe never shows there.
-      // Every list (each search and filter seen), not this recipe, which would now answer 404.
-      // refetchType "all": the list isn't on screen, and an inactive query isn't refetched
-      // otherwise. The deleted
-      // recipe stays in the cache; Back shows it briefly, then its refetch finds it gone.
+      // Refresh the lists before going back, so the deleted recipe never shows there: every
+      // list (each search and filter seen lately, so "Deleting…" may wait for a few), not this
+      // recipe, which would now answer 404. refetchType "all": the lists aren't on screen, and
+      // an inactive query isn't refetched otherwise. The deleted recipe stays in the cache;
+      // Back shows it briefly, then its refetch finds it gone.
       await queryClient.invalidateQueries({
         queryKey: recipeListsKey,
         refetchType: "all",

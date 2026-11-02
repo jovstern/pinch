@@ -13,11 +13,11 @@ type ListFiltersProps = {
 export function ListFilters({ filters, onChange }: ListFiltersProps) {
   const searchId = useId();
   // What's typed. When the address's search changes from elsewhere (Clear, the Pinch link), the
-  // box takes it: React's "adjusting state when a prop changes", done while rendering.
+  // box takes it: React docs, "Storing information from previous renders".
   const [text, setText] = useState(filters.q);
-  const [shownQ, setShownQ] = useState(filters.q);
-  if (filters.q !== shownQ) {
-    setShownQ(filters.q);
+  const [prevQ, setPrevQ] = useState(filters.q);
+  if (filters.q !== prevQ) {
+    setPrevQ(filters.q);
     setText(filters.q);
   }
   // Folded unless the address already has tags: 35 chips would push the list off a phone's
@@ -59,7 +59,7 @@ export function ListFilters({ filters, onChange }: ListFiltersProps) {
           {count === 0 ? "Filter by tags" : `Filter by tags (${String(count)})`}
         </summary>
         <TagPicker
-          legend="Tags"
+          legend="Filter by tags"
           legendClassName="sr-only"
           selected={filters.tags}
           onChange={(tags) => {

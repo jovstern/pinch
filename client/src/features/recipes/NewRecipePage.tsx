@@ -15,8 +15,8 @@ export function NewRecipePage() {
       // The answer is the saved recipe: cached, its page shows at once, without a spinner.
       queryClient.setQueryData(recipeQuery(recipe.id).queryKey, recipe);
       // The lists aren't on screen, so they're refetched now ("all"; every filter and every page
-      // loaded so far), ready for when they are. Not
-      // awaited, unlike delete: this goes to the new recipe, not to the list.
+      // loaded so far), ready for when they are. Not awaited, unlike delete: this goes to the
+      // new recipe, not to the list.
       void queryClient.invalidateQueries({
         queryKey: recipeListsKey,
         refetchType: "all",

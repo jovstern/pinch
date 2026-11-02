@@ -11,7 +11,7 @@ export function RecipeListPage() {
   // A tag not in the lists (a hand-edited link) is left out rather than sent: it's a 400.
   const [searchParams, setSearchParams] = useSearchParams();
   const filters: RecipeFilters = {
-    q: searchParams.get("q") ?? "",
+    q: searchParams.get("q")?.trim() ?? "",
     tags: searchParams.get("tags")?.split(",").filter(isTag) ?? [],
   };
   const filtering = filters.q !== "" || filters.tags.length > 0;
@@ -42,6 +42,8 @@ export function RecipeListPage() {
   }, [data]);
 
   function changeFilters(next: RecipeFilters) {
+    // A Show more still on its way belongs to the list being left: don't focus into the next.
+    firstNewRef.current = null;
     // replace: each tick or search changes the address in place; Back leaves the list rather
     // than undoing filters one by one.
     setSearchParams(filterParams(next), { replace: true });
@@ -68,7 +70,9 @@ export function RecipeListPage() {
           <ListFilters filters={filters} onChange={changeFilters} />
           {/* Announced as results arrive (ui-craft: aria-live for async results). */}
           <p role="status" className="mt-3 text-sm text-text-muted">
-            {filtering && recipes !== undefined && matches(recipes.length, hasNextPage)}
+            {filtering &&
+              recipes !== undefined &&
+              matches(recipes.length, hasNextPage, filters.q !== "")}
           </p>
         </>
       )}
@@ -105,7 +109,12 @@ export function RecipeListPage() {
       {/* By the data, not the status: a failed next page or refetch turns the status to "error"
           and keeps the list. */}
       {filtering && recipes?.length === 0 && (
-        <Link to="/" className="mt-3 inline-block font-semibold text-accent-strong underline">
+        // replace, like every filter change. It goes as it's clicked, so focus falls to the page.
+        <Link
+          to="/"
+          replace
+          className="mt-3 inline-block font-semibold text-accent-strong underline"
+        >
           Clear the search and filters
         </Link>
       )}
@@ -154,10 +163,15 @@ export function RecipeListPage() {
   );
 }
 
-// "3 recipes match": a page with more after it says so rather than count them all.
-function matches(count: number, more: boolean) {
+// The API's page, and how many a search answers (design §7).
+const PAGE_SIZE = 50;
+
+// "3 recipes match". A page with more after it says so rather than count them all; a search
+// answers only its best 50 (design §7), so a full one says that.
+function matches(count: number, more: boolean, searching: boolean) {
   if (count === 0) return "No recipes match.";
   if (more) return `More than ${String(count)} recipes match.`;
+  if (searching && count === PAGE_SIZE) return `The ${String(PAGE_SIZE)} best matches.`;
   return count === 1 ? "1 recipe matches." : `${String(count)} recipes match.`;
 }
 
