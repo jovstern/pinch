@@ -60,3 +60,21 @@ export function findNewestRecipes(
     .sort({ createdAt: -1, _id: -1 })
     .limit(PAGE_SIZE + 1);
 }
+
+// My recipes with any of the words of q in the title or an ingredient, the best matches first,
+// with every one of the tags (design §7). One page: a search answers its best 50, no cursor.
+// Matching is by word, with English stemming ("eggs" finds "egg"); Hebrew matches whole words.
+export function searchRecipes(
+  recipes: Collection<RecipeDocument>,
+  ownerId: ObjectId,
+  q: string,
+  { tags = [] }: { tags?: string[] } = {},
+) {
+  const filter: Filter<RecipeDocument> = { ownerId, $text: { $search: q } };
+  if (tags.length > 0) filter.tags = { $all: tags };
+  // Equal scores, newest first.
+  return recipes
+    .find(filter)
+    .sort({ score: { $meta: "textScore" }, createdAt: -1, _id: -1 })
+    .limit(PAGE_SIZE);
+}

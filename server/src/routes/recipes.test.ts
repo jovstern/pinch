@@ -7,7 +7,7 @@ import { z } from "zod";
 import { createApp } from "../app.ts";
 import { loadConfig } from "../config.ts";
 import { createIndexes } from "../db/indexes.ts";
-import { findNewestRecipes, recipesCollection } from "../db/recipes.ts";
+import { findNewestRecipes, recipesCollection, searchRecipes } from "../db/recipes.ts";
 import { createTestDb } from "../testDb.ts";
 
 const config = loadConfig(process.env);
@@ -289,6 +289,80 @@ test("the list filtered by tags reads the tags index, only the recipes it answer
   expect(plan).toContain('"indexName":"ownerId_1_tags_1_createdAt_-1__id_-1"');
   expect(plan).not.toMatch(/COLLSCAN|"SORT"/);
   expect(explain.executionStats).toMatchObject({ nReturned: 51, totalDocsExamined: 51 });
+});
+
+// A user of their own with three recipes, saved through the API. Returns the app that acts as
+// them and their id.
+async function insertSearchableRecipes() {
+  const ownerId = new ObjectId();
+  const userApp = createApp({
+    logger: pino({ level: "silent" }),
+    db,
+    devUserId: ownerId.toHexString(),
+  });
+  const recipes = [
+    { title: "Egg salad", ingredients: [{ name: "egg" }, { name: "mayonnaise" }] },
+    {
+      title: "Shakshuka",
+      ingredients: [{ name: "eggs" }, { name: "tomatoes" }],
+      tags: ["meal:breakfast"],
+    },
+    { title: "Tomato soup", ingredients: [{ name: "tomatoes" }] },
+  ];
+  for (const recipe of recipes) {
+    await request(userApp)
+      .post("/api/recipes")
+      .send({ ...recipe, steps: ["Cook."] });
+  }
+  return { ownerId, userApp };
+}
+
+test("GET /api/recipes?q= finds my recipes by title and ingredient, the best match first", async () => {
+  const { userApp } = await insertSearchableRecipes();
+
+  const response = await request(userApp).get("/api/recipes").query({ q: "eggs" });
+
+  // "eggs" finds "egg" too (stemming). Egg salad matches in the title and an ingredient, so it
+  // comes first. The omelettes of the other tests belong to another user.
+  const list = RecipeListSchema.parse(response.body);
+  expect(list.items.map((recipe) => recipe.title)).toEqual(["Egg salad", "Shakshuka"]);
+  expect(list.nextCursor).toBeNull();
+});
+
+test("GET /api/recipes?q=&tags= finds the matches that have the tags", async () => {
+  const { userApp } = await insertSearchableRecipes();
+
+  const response = await request(userApp)
+    .get("/api/recipes")
+    .query({ q: "egg", tags: "meal:breakfast" });
+
+  const titles = RecipeListSchema.parse(response.body).items.map((recipe) => recipe.title);
+  expect(titles).toEqual(["Shakshuka"]);
+});
+
+test("GET /api/recipes answers 400 for a search over 200 characters", async () => {
+  const response = await request(app)
+    .get("/api/recipes")
+    .query({ q: "egg ".repeat(51) });
+
+  expect(response.status).toBe(400);
+  expect(response.body).toMatchObject({
+    error: { fields: { q: "Keep the search under 200 characters." } },
+  });
+});
+
+test("a search reads the text index, not the whole collection (§6)", async () => {
+  const { ownerId } = await insertSearchableRecipes();
+
+  const explain = ExplainSchema.parse(
+    await searchRecipes(recipesCollection(db), ownerId, "tomato").explain("executionStats"),
+  );
+
+  // The SORT is by score, over the matches only.
+  const plan = JSON.stringify(explain.queryPlanner.winningPlan);
+  expect(plan).toContain('"indexName":"ownerId_1_title_text_ingredients.name_text"');
+  expect(plan).not.toContain("COLLSCAN");
+  expect(explain.executionStats).toMatchObject({ nReturned: 2, totalDocsExamined: 2 });
 });
 
 test("PUT /api/recipes/:id replaces what the user can edit and clears what they left out", async () => {

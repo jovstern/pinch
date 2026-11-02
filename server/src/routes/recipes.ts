@@ -6,6 +6,7 @@ import {
   findNewestRecipes,
   PAGE_SIZE,
   recipesCollection,
+  searchRecipes,
   toRecipe,
   type RecipeDocument,
 } from "../db/recipes.ts";
@@ -17,7 +18,13 @@ export function recipesRouter(db: Db) {
   const router = express.Router();
 
   router.get("/", async (req, res) => {
-    const { tags, cursor } = parseInput(ListQuerySchema, req.query);
+    const { q, tags, cursor } = parseInput(ListQuerySchema, req.query);
+    // A search answers its best matches as one page, so it has no cursor (design §7).
+    if (q) {
+      const matches = await searchRecipes(recipes, req.userId, q, { tags }).toArray();
+      res.json({ items: matches.map(toRecipe), nextCursor: null } satisfies RecipeList);
+      return;
+    }
     const found = await findNewestRecipes(recipes, req.userId, { tags, after: cursor }).toArray();
     const items = found.slice(0, PAGE_SIZE);
     const last = items.at(-1);
@@ -83,10 +90,16 @@ export function recipesRouter(db: Db) {
   return router;
 }
 
-// The list's query string (design §8). Tags are comma-separated: "cuisine:italian,meal:dinner".
+// The list's query string (design §8). q is a search; blank means none. Tags are
+// comma-separated: "cuisine:italian,meal:dinner".
 // The cursor is the last recipe's time and id, "<ms>_<id>": the client sends back the nextCursor
 // it was given and never reads it (§7).
 const ListQuerySchema = z.object({
+  q: z
+    .string("Search for one thing at a time.")
+    .trim()
+    .max(200, "Keep the search under 200 characters.")
+    .optional(),
   tags: z
     .string("Send the tags once, comma-separated.")
     .transform((text) => text.split(","))

@@ -10,5 +10,8 @@ export async function createIndexes(db: Db) {
     // The same, filtered by tags. The index holds one entry per tag of a recipe (multikey), so
     // the scan reads the recipes with the first tag and checks the others on each (design §7).
     { key: { ownerId: 1, tags: 1, createdAt: -1, _id: -1 } },
+    // Text search inside my recipes (searchRecipes). A collection has at most one text index;
+    // ownerId before it means every search must name the owner, which it always does.
+    { key: { ownerId: 1, title: "text", "ingredients.name": "text" } },
   ]);
 }
