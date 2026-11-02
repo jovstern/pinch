@@ -5,6 +5,7 @@ import { Button } from "../../components/Button.tsx";
 import { LazyDeleteRecipeButton } from "./LazyDeleteRecipeButton.tsx";
 import { RecipeLoadError } from "./RecipeLoadError.tsx";
 import { recipeQuery } from "./recipeQueries.ts";
+import { tagLabel } from "./tagLabels.ts";
 
 export function RecipePage() {
   // The route is "recipes/:id", so the id is always there.
@@ -33,6 +34,16 @@ export function RecipePage() {
       <h1 className="text-3xl font-bold tracking-tight text-balance">{recipe.title}</h1>
       {recipe.description && <p className="mt-3 max-w-prose text-pretty">{recipe.description}</p>}
       {recipeDetails && <p className="mt-3 text-sm text-text-muted">{recipeDetails}</p>}
+      {recipe.tags.length > 0 && (
+        // No heading above it, so it's named here (screen readers, tests).
+        <ul aria-label="Tags" className="mt-3 flex flex-wrap gap-2">
+          {recipe.tags.map((tag) => (
+            <li key={tag} className="rounded-full bg-border/60 px-3 py-1 text-sm">
+              {tagLabel(tag)}
+            </li>
+          ))}
+        </ul>
+      )}
 
       <div className="mt-4 flex gap-3">
         <Button asChild variant="secondary">

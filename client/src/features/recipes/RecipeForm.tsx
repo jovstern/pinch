@@ -7,6 +7,7 @@ import { FieldError } from "../../components/FieldError.tsx";
 import { TextField } from "../../components/TextField.tsx";
 import { ApiError } from "../../lib/api.ts";
 import { emptyIngredient, toInput, type RecipeFormValues } from "./recipeFormValues.ts";
+import { TagPicker } from "./TagPicker.tsx";
 
 type RecipeFormProps = {
   defaultValues: RecipeFormValues;
@@ -189,6 +190,8 @@ export function RecipeForm({ defaultValues, submitLabel, cancelTo, save }: Recip
           </fieldset>
         )}
       </form.Field>
+
+      <form.Field name="tags">{(field) => <TagPicker field={field} />}</form.Field>
 
       <form.Subscribe selector={(state) => state.errorMap.onSubmit}>
         {(error) =>

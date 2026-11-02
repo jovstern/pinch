@@ -1,4 +1,4 @@
-import type { Recipe } from "@pinch/shared";
+import { isTag, type Recipe } from "@pinch/shared";
 
 // The form's values and how they map to and from a recipe. Apart from RecipeForm, so the pages
 // can use them without loading the form and its library (LazyRecipeForm).
@@ -12,8 +12,7 @@ export type RecipeFormValues = {
   servings: string;
   prepMinutes: string;
   cookMinutes: string;
-  // No input yet ("tags in the form", a later M3 slice): kept as loaded, so saving doesn't
-  // erase them.
+  // "facet:value", as the recipe stores them (TagPicker).
   tags: string[];
 };
 
@@ -45,7 +44,8 @@ export function toFormValues(recipe: Recipe): RecipeFormValues {
     servings: toText(recipe.servings),
     prepMinutes: toText(recipe.prepMinutes),
     cookMinutes: toText(recipe.cookMinutes),
-    tags: recipe.tags,
+    // A tag no longer in the lists (D10) has no chip to untick, and would block Save: dropped.
+    tags: recipe.tags.filter(isTag),
   };
 }
 
