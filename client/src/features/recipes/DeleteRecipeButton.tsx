@@ -4,7 +4,7 @@ import { AlertDialog } from "radix-ui";
 import { useNavigate } from "react-router";
 import { Button } from "../../components/Button.tsx";
 import { deleteResource } from "../../lib/api.ts";
-import { recipeListQuery } from "./recipeQueries.ts";
+import { recipeListsKey } from "./recipeQueries.ts";
 
 // Deleting can't be undone, so it asks first (a Radix dialog: focus, Escape, screen readers).
 export function DeleteRecipeButton({ recipe }: { recipe: Recipe }) {
@@ -14,12 +14,12 @@ export function DeleteRecipeButton({ recipe }: { recipe: Recipe }) {
     mutationFn: () => deleteResource(`/api/recipes/${recipe.id}`),
     onSuccess: async () => {
       // Refresh the list before going back to it, so the deleted recipe never shows there.
-      // exact: only the list, not this recipe, which would now answer 404. refetchType "all":
-      // the list isn't on screen, and an inactive query isn't refetched otherwise. The deleted
+      // Every list (each search and filter seen), not this recipe, which would now answer 404.
+      // refetchType "all": the list isn't on screen, and an inactive query isn't refetched
+      // otherwise. The deleted
       // recipe stays in the cache; Back shows it briefly, then its refetch finds it gone.
       await queryClient.invalidateQueries({
-        queryKey: recipeListQuery.queryKey,
-        exact: true,
+        queryKey: recipeListsKey,
         refetchType: "all",
       });
       void navigate("/");

@@ -191,7 +191,17 @@ export function RecipeForm({ defaultValues, submitLabel, cancelTo, save }: Recip
         )}
       </form.Field>
 
-      <form.Field name="tags">{(field) => <TagPicker field={field} />}</form.Field>
+      <form.Field name="tags">
+        {(field) => (
+          <TagPicker
+            legend="Tags"
+            legendClassName="mb-3 text-xl font-semibold"
+            selected={field.state.value}
+            onChange={field.handleChange}
+            errors={field.state.meta.errors}
+          />
+        )}
+      </form.Field>
 
       <form.Subscribe selector={(state) => state.errorMap.onSubmit}>
         {(error) =>

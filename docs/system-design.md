@@ -430,7 +430,7 @@ the content in a single readable column below it.
 
 | Address | Screen | Its job | States |
 |---|---|---|---|
-| `/` | Your recipes | Pick something to cook; each card shows the title, the number of ingredients and the total time | Loading (placeholder cards), empty (says what goes here, links to New recipe), error (Try again); 50 at a time, then Show more (focus moves to the first new recipe; a failed page says so and keeps the list) |
+| `/` | Your recipes | Pick something to cook; each card shows the title, the number of ingredients and the total time. Search (on Enter) and tag filters (folded, applied as ticked) sit above the list and live in the address: `/?q=egg&tags=meal:dinner` | Loading (placeholder cards), empty (says what goes here, links to New recipe), error (Try again); 50 at a time, then Show more (focus moves to the first new recipe; a failed page says so and keeps the list); filtered: how many match (announced), or none and a link to clear them |
 | `/recipes/new` | New recipe | Write a recipe by hand; tags are chips to tick, a group per facet (§7) | From the first Save: each error under its field (§8.1), updated as the user types; focus on the first; saving (button says so); failed (says so, keeps what was typed) |
 | `/recipes/:id` | A recipe | Read it while cooking (its tags under the title); Edit, Delete (asks first) | Loading, error (Try again), not found |
 | `/recipes/:id/edit` | Edit recipe | Change it; Cancel goes back to the recipe | Loading, error (Try again), not found; then as New recipe |
