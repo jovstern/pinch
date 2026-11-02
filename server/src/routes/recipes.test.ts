@@ -3,13 +3,17 @@ import { ObjectId } from "mongodb";
 import { pino } from "pino";
 import request from "supertest";
 import { expect, test } from "vitest";
+import { z } from "zod";
 import { createApp } from "../app.ts";
 import { loadConfig } from "../config.ts";
-import { recipesCollection } from "../db/recipes.ts";
+import { createIndexes } from "../db/indexes.ts";
+import { findNewestRecipes, recipesCollection } from "../db/recipes.ts";
 import { createTestDb } from "../testDb.ts";
 
 const config = loadConfig(process.env);
 const db = createTestDb();
+// The same indexes as the app's database, so the explain test sees the real plan.
+await createIndexes(db);
 const app = createApp({ logger: pino({ level: "silent" }), db, devUserId: config.DEV_USER_ID });
 
 const omelette = {
@@ -137,12 +141,88 @@ test("GET /api/recipes lists my recipes, newest first", async () => {
   expect(ids).not.toContain(othersId);
 });
 
-test("GET /api/recipes answers at most 50 recipes", async () => {
-  for (let i = 0; i < 51; i++) await request(app).post("/api/recipes").send(omelette);
+// A user of their own with 120 recipes, three to each millisecond, so pages also split
+// recipes created at the same time. The later an id, the older its recipe: a cursor that
+// compared ids alone would put them in the wrong order. Returns the app that acts as them and
+// the recipes, newest first.
+async function insertManyRecipes() {
+  const ownerId = new ObjectId();
+  const start = Date.now();
+  const recipes = Array.from({ length: 120 }, (_, i) => ({
+    ...omelette,
+    _id: new ObjectId(),
+    ownerId,
+    source: { type: "manual" as const },
+    createdAt: new Date(start - Math.floor(i / 3)),
+    updatedAt: new Date(start),
+  }));
+  await recipesCollection(db).insertMany(recipes);
+  const newestFirst = recipes.toSorted(
+    (a, b) =>
+      b.createdAt.getTime() - a.createdAt.getTime() ||
+      (a._id.toHexString() < b._id.toHexString() ? 1 : -1),
+  );
+  return {
+    ownerId,
+    userApp: createApp({
+      logger: pino({ level: "silent" }),
+      db,
+      devUserId: ownerId.toHexString(),
+    }),
+    newestFirst,
+  };
+}
 
-  const response = await request(app).get("/api/recipes");
-  expect(RecipeListSchema.parse(response.body)).toMatchObject({ nextCursor: null });
-  expect(RecipeListSchema.parse(response.body).items).toHaveLength(50);
+test("GET /api/recipes answers pages of 50, and the cursor leads through all of them", async () => {
+  const { userApp, newestFirst } = await insertManyRecipes();
+
+  const pages = [];
+  let cursor: string | undefined;
+  do {
+    const response = await request(userApp).get("/api/recipes").query({ cursor });
+    const page = RecipeListSchema.parse(response.body);
+    pages.push(page.items.map((recipe) => recipe.id));
+    cursor = page.nextCursor ?? undefined;
+  } while (cursor);
+
+  // Each recipe once, in order: 50, 50, then the last 20 with no cursor after them.
+  expect(pages.map((page) => page.length)).toEqual([50, 50, 20]);
+  expect(pages.flat()).toEqual(newestFirst.map((recipe) => recipe._id.toHexString()));
+});
+
+test("GET /api/recipes answers 400 for a cursor it didn't give", async () => {
+  const response = await request(app).get("/api/recipes").query({ cursor: "page-2" });
+
+  expect(response.status).toBe(400);
+  expect(response.body).toMatchObject({
+    error: { code: "invalid_input", fields: { cursor: "This cursor isn't valid." } },
+  });
+});
+
+// The parts of explain("executionStats") the test reads; the driver types it as any document.
+const ExplainSchema = z.object({
+  queryPlanner: z.object({ winningPlan: z.unknown() }),
+  executionStats: z.object({ nReturned: z.number(), totalDocsExamined: z.number() }),
+});
+
+test("the list's second page reads its index from the cursor on, not the page before (§6)", async () => {
+  const { ownerId, newestFirst } = await insertManyRecipes();
+  const cursor = newestFirst[49];
+  if (!cursor) throw new Error("expected 120 recipes");
+
+  const explain = ExplainSchema.parse(
+    await findNewestRecipes(recipesCollection(db), ownerId, cursor).explain("executionStats"),
+  );
+
+  // An index scan in the index's own order (no SORT stage)...
+  const plan = JSON.stringify(explain.queryPlanner.winningPlan);
+  expect(plan).toContain("IXSCAN");
+  expect(plan).not.toMatch(/COLLSCAN|"SORT"/);
+  // ...that reads the 51 recipes it answers, not the 50 before them too. (At most 2 more: the
+  // cursor's own recipe and one created in the same millisecond, read and dropped; three per
+  // millisecond, see insertManyRecipes.)
+  expect(explain.executionStats.nReturned).toBe(51);
+  expect(explain.executionStats.totalDocsExamined).toBeLessThanOrEqual(53);
 });
 
 test("PUT /api/recipes/:id replaces what the user can edit and clears what they left out", async () => {

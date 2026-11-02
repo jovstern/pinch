@@ -1,7 +1,14 @@
 import { RecipeInputSchema, type RecipeList } from "@pinch/shared";
 import express from "express";
 import { ObjectId, type Db } from "mongodb";
-import { recipesCollection, toRecipe, type RecipeDocument } from "../db/recipes.ts";
+import { z } from "zod";
+import {
+  findNewestRecipes,
+  PAGE_SIZE,
+  recipesCollection,
+  toRecipe,
+  type RecipeDocument,
+} from "../db/recipes.ts";
 import { HttpError, parseInput } from "../errors.ts";
 
 // Every query filters by ownerId: a user only ever sees their own recipes (design §1, §8.3).
@@ -10,14 +17,14 @@ export function recipesRouter(db: Db) {
   const router = express.Router();
 
   router.get("/", async (req, res) => {
-    // Never an unbounded list (node-api.md): the newest 50 until M3 adds the cursor (§7).
-    // When thumbnails arrive (M6), project them out here: lists don't send them (§5).
-    const items = await recipes
-      .find({ ownerId: req.userId })
-      .sort({ createdAt: -1, _id: -1 })
-      .limit(50)
-      .toArray();
-    res.json({ items: items.map(toRecipe), nextCursor: null } satisfies RecipeList);
+    const { cursor } = parseInput(ListQuerySchema, req.query);
+    const found = await findNewestRecipes(recipes, req.userId, cursor).toArray();
+    const items = found.slice(0, PAGE_SIZE);
+    const last = items.at(-1);
+    // Only when there is one more recipe after this page: the last page says null. (`last` is
+    // always there when there is more; the check is for TypeScript.)
+    const nextCursor = found.length > PAGE_SIZE && last ? toCursorText(last) : null;
+    res.json({ items: items.map(toRecipe), nextCursor } satisfies RecipeList);
   });
 
   router.post("/", async (req, res) => {
@@ -74,6 +81,24 @@ export function recipesRouter(db: Db) {
   });
 
   return router;
+}
+
+// The list's query string. The cursor is the last recipe's time and id, "<ms>_<id>": the client
+// sends back the nextCursor it was given and never reads it (design §7).
+const ListQuerySchema = z.object({
+  cursor: z
+    .string("This cursor isn't valid.")
+    .regex(/^\d{1,15}_[0-9a-f]{24}$/, "This cursor isn't valid.")
+    // The id is the last 24 characters; the time is what comes before the "_".
+    .transform((text) => ({
+      createdAt: new Date(Number(text.slice(0, -25))),
+      _id: new ObjectId(text.slice(-24)),
+    }))
+    .optional(),
+});
+
+function toCursorText(recipe: RecipeDocument) {
+  return `${String(recipe.createdAt.getTime())}_${recipe._id.toHexString()}`;
 }
 
 // An id that can't exist is simply not found (mongodb.md: validate ids before querying).

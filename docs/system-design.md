@@ -233,7 +233,7 @@ them to Gemini, then removed from the document.
 
 | Collection | Index | Serves |
 |---|---|---|
-| recipes | `{ ownerId: 1, tags: 1, createdAt: -1 }` | My recipes, filtered by tags, newest first |
+| recipes | `{ ownerId: 1, tags: 1, createdAt: -1, _id: -1 }` | My recipes, filtered by tags, newest first |
 | recipes | `{ ownerId: 1, createdAt: -1, _id: -1 }` | My recipes, no filter, cursor pagination |
 | recipes | `{ ownerId: 1, title: "text", "ingredients.name": "text" }` | Text search inside my recipes |
 | recipes | `{ sourceImportId: 1 }` unique, sparse | Idempotent approve |
@@ -265,6 +265,11 @@ Queries:
 - **Filters only:** `{ ownerId, tags: { $all: [...] } }`, sorted by `createdAt: -1`, **cursor
   pagination** on `(createdAt, _id)`: the next page asks for items older than the last one seen.
   (`skip` reads and throws away every skipped document, so it gets slower page by page.)
+- **The cursor** is the last recipe's `(createdAt, _id)`; the next page is
+  `{ $or: [{ createdAt < c }, { createdAt = c, _id < id }] }` plus a plain `createdAt ≤ c`.
+  Without that range, Mongo's chosen plan scanned the index from the newest recipe and dropped
+  the pages before (`explain`: 101 documents read for a page of 51). A page asks for 51 and
+  answers 50, so `nextCursor` is null on the last page instead of pointing at an empty one.
 - **Text search:** `{ ownerId, $text: { $search: q } }` plus the same tag filter, sorted by text
   score, first 50 results. At POC scale that is enough; no deep pagination for search.
 
