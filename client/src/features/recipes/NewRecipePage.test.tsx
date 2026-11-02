@@ -53,6 +53,8 @@ test("saves a new recipe and shows it", async () => {
   await userEvent.type(ingredient(2).getByLabelText("Ingredient"), "butter");
   await userEvent.type(ingredient(2).getByLabelText("Note"), "soft");
   await userEvent.type(screen.getByLabelText("Step 1"), "Toast the bread.");
+  await userEvent.click(screen.getByRole("checkbox", { name: "breakfast" }));
+  await userEvent.click(screen.getByRole("checkbox", { name: "quick" }));
   await userEvent.click(screen.getByRole("button", { name: "Save recipe" }));
 
   expect(await screen.findByRole("heading", { level: 1, name: "Toast" })).toBeInTheDocument();
@@ -65,7 +67,7 @@ test("saves a new recipe and shows it", async () => {
       ingredients: saved.ingredients,
       steps: ["Toast the bread."],
       servings: 1,
-      tags: [],
+      tags: ["meal:breakfast", "fit:quick"],
     }),
   });
 });

@@ -12,8 +12,7 @@ export type RecipeFormValues = {
   servings: string;
   prepMinutes: string;
   cookMinutes: string;
-  // No input yet ("tags in the form", a later M3 slice): kept as loaded, so saving doesn't
-  // erase them.
+  // "facet:value", as the recipe stores them (TagPicker).
   tags: string[];
 };
 

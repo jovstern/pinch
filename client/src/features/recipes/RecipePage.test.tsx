@@ -18,7 +18,7 @@ const omelette: Recipe = {
   steps: ["Beat the eggs.", "Cook them in butter."],
   servings: 1,
   prepMinutes: 5,
-  tags: [],
+  tags: ["meal:breakfast", "cuisine:middle-eastern"],
   source: { type: "manual" },
   createdAt: "2026-11-01T10:00:00.000Z",
   updatedAt: "2026-11-01T10:00:00.000Z",
@@ -38,12 +38,18 @@ function stubApi(deleteStatus = 204) {
   return fetch;
 }
 
-test("shows the recipe: its details, ingredients and steps", async () => {
+test("shows the recipe: its details, tags, ingredients and steps", async () => {
   stubApi();
   renderApp(`/recipes/${omelette.id}`);
 
   expect(await screen.findByRole("heading", { level: 1, name: "Omelette" })).toBeInTheDocument();
   expect(screen.getByText("Serves 1 · Prep 5 min")).toBeInTheDocument();
+  const tags = screen.getByRole("list", { name: "Tags" });
+  expect(
+    within(tags)
+      .getAllByRole("listitem")
+      .map((item) => item.textContent),
+  ).toEqual(["breakfast", "middle eastern"]);
   const ingredients = screen.getByRole("list", { name: "Ingredients" });
   expect(
     within(ingredients)
