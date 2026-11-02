@@ -21,6 +21,7 @@ const omelette = {
   ingredients: [{ name: "eggs", quantity: "2" }, { name: "salt" }],
   steps: ["Beat the eggs.", "Cook them in butter."],
   servings: 1,
+  tags: ["meal:breakfast", "fit:quick"],
 };
 
 test("POST /api/recipes creates a recipe and answers 201 with its location", async () => {
@@ -143,8 +144,8 @@ test("GET /api/recipes lists my recipes, newest first", async () => {
 
 // A user of their own with 120 recipes, three to each millisecond, so pages also split
 // recipes created at the same time. The later an id, the older its recipe: a cursor that
-// compared ids alone would put them in the wrong order. Returns the app that acts as them and
-// the recipes, newest first.
+// compared ids alone would put them in the wrong order. Every other one is Italian, the rest
+// French. Returns the app that acts as them and the recipes, newest first.
 async function insertManyRecipes() {
   const ownerId = new ObjectId();
   const start = Date.now();
@@ -152,6 +153,7 @@ async function insertManyRecipes() {
     ...omelette,
     _id: new ObjectId(),
     ownerId,
+    tags: [i % 2 === 0 ? "cuisine:italian" : "cuisine:french", "meal:dinner"],
     source: { type: "manual" as const },
     createdAt: new Date(start - Math.floor(i / 3)),
     updatedAt: new Date(start),
@@ -211,7 +213,9 @@ test("the list's second page reads its index from the cursor on, not the page be
   if (!cursor) throw new Error("expected 120 recipes");
 
   const explain = ExplainSchema.parse(
-    await findNewestRecipes(recipesCollection(db), ownerId, cursor).explain("executionStats"),
+    await findNewestRecipes(recipesCollection(db), ownerId, { after: cursor }).explain(
+      "executionStats",
+    ),
   );
 
   // An index scan in the index's own order (no SORT stage)...
@@ -223,6 +227,67 @@ test("the list's second page reads its index from the cursor on, not the page be
   // millisecond, see insertManyRecipes.)
   expect(explain.executionStats.nReturned).toBe(51);
   expect(explain.executionStats.totalDocsExamined).toBeLessThanOrEqual(53);
+});
+
+test("POST /api/recipes keeps each tag once, and answers 400 for a tag not in the lists", async () => {
+  const created = await request(app)
+    .post("/api/recipes")
+    .send({ ...omelette, tags: ["meal:dinner", "meal:dinner"] });
+  expect(created.body).toMatchObject({ tags: ["meal:dinner"] });
+
+  const response = await request(app)
+    .post("/api/recipes")
+    .send({ ...omelette, tags: ["meal:dinner", "cuisine:martian"] });
+  expect(response.status).toBe(400);
+  expect(response.body).toMatchObject({
+    error: { fields: { "tags.1": "Pick a tag from the list." } },
+  });
+});
+
+test("GET /api/recipes?tags= lists the recipes with every one of the tags, a page at a time", async () => {
+  const { userApp, newestFirst } = await insertManyRecipes();
+  const italian = newestFirst
+    .filter((recipe) => recipe.tags.includes("cuisine:italian"))
+    .map((recipe) => recipe._id.toHexString());
+
+  const tags = "cuisine:italian,meal:dinner";
+  const first = RecipeListSchema.parse(
+    (await request(userApp).get("/api/recipes").query({ tags })).body,
+  );
+  const cursor = first.nextCursor ?? "";
+  const second = RecipeListSchema.parse(
+    (await request(userApp).get("/api/recipes").query({ tags, cursor })).body,
+  );
+
+  // 60 Italian recipes: 50, then 10.
+  expect([...first.items, ...second.items].map((recipe) => recipe.id)).toEqual(italian);
+  expect(second.nextCursor).toBeNull();
+});
+
+test("GET /api/recipes answers 400 for a tag filter not in the lists", async () => {
+  const response = await request(app).get("/api/recipes").query({ tags: "cuisine:martian" });
+
+  expect(response.status).toBe(400);
+  expect(response.body).toMatchObject({
+    error: { fields: { "tags.0": "Pick a tag from the list." } },
+  });
+});
+
+test("the list filtered by a tag reads the tags index, only the recipes it answers (§6)", async () => {
+  const { ownerId } = await insertManyRecipes();
+
+  const explain = ExplainSchema.parse(
+    await findNewestRecipes(recipesCollection(db), ownerId, {
+      tags: ["cuisine:italian"],
+    }).explain("executionStats"),
+  );
+
+  // Half the recipes are Italian: the tags index goes straight to them, in order; the other
+  // index would read the French ones too and drop them.
+  const plan = JSON.stringify(explain.queryPlanner.winningPlan);
+  expect(plan).toContain('"indexName":"ownerId_1_tags_1_createdAt_-1__id_-1"');
+  expect(plan).not.toMatch(/COLLSCAN|"SORT"/);
+  expect(explain.executionStats).toMatchObject({ nReturned: 51, totalDocsExamined: 51 });
 });
 
 test("PUT /api/recipes/:id replaces what the user can edit and clears what they left out", async () => {
@@ -238,6 +303,7 @@ test("PUT /api/recipes/:id replaces what the user can edit and clears what they 
   const after = RecipeSchema.parse(response.body);
   expect(response.body).toEqual({
     ...edited,
+    tags: [],
     id: before.id,
     source: before.source,
     createdAt: before.createdAt,

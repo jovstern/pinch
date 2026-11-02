@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { TagSchema } from "./tags.ts";
 
 // An optional text field. Forms send "" for a blank input and models often answer "", so an
 // empty string means "not set" (design §9): one meaning, stored one way.
@@ -24,7 +25,7 @@ export const IngredientSchema = z.object({
 });
 
 // What the user writes: the body of POST /api/recipes (design §6). Every limit has a message
-// the form can show (§8.1). Tags come with Find (M3), nutrition with Gemini (M5).
+// the form can show (§8.1). Nutrition comes with Gemini (M5).
 export const RecipeInputSchema = z.object({
   title: z
     .string()
@@ -49,6 +50,12 @@ export const RecipeInputSchema = z.object({
   servings: optionalWholeNumber(1, 100, "Servings must be between 1 and 100."),
   prepMinutes: optionalWholeNumber(0, 1440, "Prep time must be between 0 and 1440 minutes."),
   cookMinutes: optionalWholeNumber(0, 1440, "Cook time must be between 0 and 1440 minutes."),
+  // Left out means none, so recipes stored before tags existed read as untagged. Each tag once.
+  tags: z
+    .array(TagSchema)
+    .max(20, "A recipe can have up to 20 tags.")
+    .default([])
+    .transform((tags) => [...new Set(tags)]),
 });
 
 export const SourceSchema = z.object({

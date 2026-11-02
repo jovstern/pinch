@@ -17,6 +17,7 @@ const saved: Recipe = {
   ],
   steps: ["Toast the bread."],
   servings: 1,
+  tags: [],
   source: { type: "manual" },
   createdAt: "2026-11-01T10:00:00.000Z",
   updatedAt: "2026-11-01T10:00:00.000Z",
@@ -64,6 +65,7 @@ test("saves a new recipe and shows it", async () => {
       ingredients: saved.ingredients,
       steps: ["Toast the bread."],
       servings: 1,
+      tags: [],
     }),
   });
 });

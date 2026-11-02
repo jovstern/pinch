@@ -262,7 +262,10 @@ Facets and their allowed values (fixed lists, so filters stay clean; the AI must
 
 Queries:
 
-- **Filters only:** `{ ownerId, tags: { $all: [...] } }`, sorted by `createdAt: -1`, **cursor
+- **Filters only:** `{ ownerId, tags: { $all: [...] } }`, sorted by `createdAt: -1`. The index
+  has one entry per tag of a recipe, so with two tags the scan reads one tag's recipes and checks
+  the other on each; the planner's race picks the rarer tag (`explain` of a second page: 53
+  documents read for 51). **Cursor
   pagination** on `(createdAt, _id)`: the next page asks for items older than the last one seen.
   (`skip` reads and throws away every skipped document, so it gets slower page by page.)
 - **The cursor** is the last recipe's `(createdAt, _id)`; the next page is

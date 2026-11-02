@@ -13,3 +13,4 @@ export {
   type RecipeInput,
   type RecipeList,
 } from "./recipe.ts";
+export { tagFacets, TagSchema } from "./tags.ts";

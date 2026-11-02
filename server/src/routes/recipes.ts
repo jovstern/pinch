@@ -1,4 +1,4 @@
-import { RecipeInputSchema, type RecipeList } from "@pinch/shared";
+import { RecipeInputSchema, TagSchema, type RecipeList } from "@pinch/shared";
 import express from "express";
 import { ObjectId, type Db } from "mongodb";
 import { z } from "zod";
@@ -17,8 +17,8 @@ export function recipesRouter(db: Db) {
   const router = express.Router();
 
   router.get("/", async (req, res) => {
-    const { cursor } = parseInput(ListQuerySchema, req.query);
-    const found = await findNewestRecipes(recipes, req.userId, cursor).toArray();
+    const { tags, cursor } = parseInput(ListQuerySchema, req.query);
+    const found = await findNewestRecipes(recipes, req.userId, { tags, after: cursor }).toArray();
     const items = found.slice(0, PAGE_SIZE);
     const last = items.at(-1);
     // Only when there is one more recipe after this page: the last page says null. (`last` is
@@ -83,9 +83,15 @@ export function recipesRouter(db: Db) {
   return router;
 }
 
-// The list's query string. The cursor is the last recipe's time and id, "<ms>_<id>": the client
-// sends back the nextCursor it was given and never reads it (design §7).
+// The list's query string (design §8). Tags are comma-separated: "cuisine:italian,meal:dinner".
+// The cursor is the last recipe's time and id, "<ms>_<id>": the client sends back the nextCursor
+// it was given and never reads it (§7).
 const ListQuerySchema = z.object({
+  tags: z
+    .string("Pick tags from the list.")
+    .transform((text) => text.split(","))
+    .pipe(z.array(TagSchema).max(20, "Filter by up to 20 tags."))
+    .optional(),
   cursor: z
     .string("This cursor isn't valid.")
     .regex(/^\d{1,15}_[0-9a-f]{24}$/, "This cursor isn't valid.")
