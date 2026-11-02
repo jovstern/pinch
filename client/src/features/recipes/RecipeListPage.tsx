@@ -22,20 +22,23 @@ export function RecipeListPage() {
   const firstNewRef = useRef<number | null>(null);
   const recipes = data?.pages.flatMap((page) => page.items);
 
-  // ui-craft: focus goes to the first new recipe, so the keyboard carries on from there rather
-  // than from the button below the new ones. In an effect, because the page arrives (and
-  // fetchNextPage resolves) before React draws it.
+  // Design §14: focus goes to the first new recipe, so the keyboard carries on from there rather
+  // than from the button below the new ones. In an effect that runs when a page arrives, because
+  // fetchNextPage resolves before React draws it. (One link per card, so link n is recipe n.)
   useEffect(() => {
     if (firstNewRef.current === null) return;
-    const link = listRef.current?.querySelectorAll("a")[firstNewRef.current];
-    if (!link) return;
-    link.focus();
+    listRef.current?.querySelectorAll("a")[firstNewRef.current]?.focus();
     firstNewRef.current = null;
-  });
+  }, [data]);
 
   function showMore() {
+    // Not disabled while loading: a disabled button loses focus, and the keyboard with it.
+    if (isFetchingNextPage) return;
     firstNewRef.current = recipes?.length ?? 0;
-    void fetchNextPage();
+    void fetchNextPage().then((result) => {
+      // Nothing new to focus; focus stays on the button, next to the alert.
+      if (result.isError) firstNewRef.current = null;
+    });
   }
 
   return (
@@ -72,6 +75,8 @@ export function RecipeListPage() {
         </div>
       )}
 
+      {/* By the data, not the status: a failed next page or refetch turns the status to "error"
+          and keeps the list. */}
       {recipes?.length === 0 && (
         <div className="mt-6">
           <p className="text-pretty text-text-muted">
@@ -103,18 +108,12 @@ export function RecipeListPage() {
       )}
 
       {isFetchNextPageError && (
-        <p role="alert" className="mt-6">
-          We couldn't load more recipes. Try again.
+        <p role="alert" className="mt-6 text-danger">
+          We couldn't load more recipes. Press Show more to try again.
         </p>
       )}
       {hasNextPage && (
-        <Button
-          type="button"
-          variant="secondary"
-          onClick={showMore}
-          disabled={isFetchingNextPage}
-          className="mt-6"
-        >
+        <Button type="button" variant="secondary" onClick={showMore} className="mt-6">
           {isFetchingNextPage ? "Loading…" : "Show more"}
         </Button>
       )}
