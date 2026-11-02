@@ -34,4 +34,10 @@ const allTags = new Set(
   ),
 );
 
-export const TagSchema = z.string().refine((tag) => allTags.has(tag), "Pick a tag from the list.");
+export type TagFacet = keyof typeof tagFacets;
+
+export function isTag(tag: string) {
+  return allTags.has(tag);
+}
+
+export const TagSchema = z.string().refine(isTag, "Pick a tag from the list.");

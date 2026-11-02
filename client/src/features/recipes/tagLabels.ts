@@ -1,13 +1,16 @@
-import { tagFacets } from "@pinch/shared";
+import type { TagFacet } from "@pinch/shared";
 
-// How the facets are named on screen (design §7), in the order they're shown.
-export const facetNames: Record<keyof typeof tagFacets, string> = {
+// How the facets are named on screen (design §7). The record type makes every facet need one.
+export const facetNames: Record<TagFacet, string> = {
   cuisine: "Cuisine",
   meal: "Meal",
   diet: "Diet",
   flavor: "Flavor",
   fit: "Good for",
 };
+
+// The facets, in the order shown (this record's). Object.keys types its keys as plain strings.
+export const facets = Object.keys(facetNames) as TagFacet[];
 
 // "cuisine:middle-eastern" → "middle eastern": the value, in words.
 export function tagLabel(tag: string) {

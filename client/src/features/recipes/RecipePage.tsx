@@ -35,6 +35,7 @@ export function RecipePage() {
       {recipe.description && <p className="mt-3 max-w-prose text-pretty">{recipe.description}</p>}
       {recipeDetails && <p className="mt-3 text-sm text-text-muted">{recipeDetails}</p>}
       {recipe.tags.length > 0 && (
+        // No heading above it, so it's named here (screen readers, tests).
         <ul aria-label="Tags" className="mt-3 flex flex-wrap gap-2">
           {recipe.tags.map((tag) => (
             <li key={tag} className="rounded-full bg-border/60 px-3 py-1 text-sm">

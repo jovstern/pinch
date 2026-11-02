@@ -72,6 +72,22 @@ test("saves a new recipe and shows it", async () => {
   });
 });
 
+test("more than 20 tags says so, and focuses the first tag, under the message", async () => {
+  const fetch = stubApi(() => Response.json(saved, { status: 201 }));
+  renderApp("/recipes/new");
+
+  await userEvent.type(await screen.findByLabelText("Title"), "Toast");
+  await userEvent.type(ingredient(1).getByLabelText("Ingredient"), "bread");
+  await userEvent.type(screen.getByLabelText("Step 1"), "Toast the bread.");
+  const tags = screen.getAllByRole("checkbox");
+  for (const tag of tags.slice(0, 21)) await userEvent.click(tag);
+  await userEvent.click(screen.getByRole("button", { name: "Save recipe" }));
+
+  expect(await screen.findByText("A recipe can have up to 20 tags.")).toBeInTheDocument();
+  expect(tags[0]).toHaveFocus();
+  expect(fetch.mock.calls.some(([, init]) => init?.method === "POST")).toBe(false);
+});
+
 test("an incomplete recipe says what to fix, and focuses the first field", async () => {
   const fetch = stubApi(() => Response.json(saved, { status: 201 }));
   renderApp("/recipes/new");
