@@ -7,5 +7,8 @@ export async function createIndexes(db: Db) {
   await recipesCollection(db).createIndexes([
     // My recipes, newest first, and the cursor's next page (findNewestRecipes).
     { key: { ownerId: 1, createdAt: -1, _id: -1 } },
+    // The same, filtered by tags. The index holds one entry per tag of a recipe (multikey), so
+    // the scan reads the recipes with the first tag and checks the others on each (design §7).
+    { key: { ownerId: 1, tags: 1, createdAt: -1, _id: -1 } },
   ]);
 }

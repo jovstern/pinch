@@ -270,6 +270,12 @@ Queries:
   Without that range, Mongo's chosen plan scanned the index from the newest recipe and dropped
   the pages before (`explain`: 101 documents read for a page of 51). A page asks for 51 and
   answers 50, so `nextCursor` is null on the last page instead of pointing at an empty one.
+- **Tags:** the index holds one entry per tag of a recipe (multikey), so with two tags the scan
+  reads the recipes with the **first** tag of `$all` and checks the other on each; Mongo doesn't
+  pick the rarer one. With every recipe a dinner and half Italian, `cuisine:italian,meal:dinner`
+  reads 51 documents for a page of 51 (`explain`, in a test), `meal:dinner,cuisine:italian`
+  reads 101. Either is fast at this scale, and never more than my recipes with that one tag; if
+  it matters later, the route can put the narrower facet first.
 - **Text search:** `{ ownerId, $text: { $search: q } }` plus the same tag filter, sorted by text
   score, first 50 results. At POC scale that is enough; no deep pagination for search.
 
@@ -283,7 +289,7 @@ the request's user (§8.3), never from the body or the URL.
 GET    /api/health                     the process is up
 GET    /api/ready                      the database is reachable
 
-GET    /api/recipes?q=&tags=cuisine:italian,flavor:spicy&cursor=   → { items, nextCursor }
+GET    /api/recipes?q=…&tags=cuisine:italian,flavor:spicy&cursor=…   → { items, nextCursor }
 POST   /api/recipes                    create by hand
 GET    /api/recipes/:id
 PUT    /api/recipes/:id                replace what the user can edit (the form sends it all)
@@ -363,7 +369,7 @@ changes**. The planned design:
 | D7 | Paste a link in v1; share-sheet channels later | Works everywhere today; every channel later just creates an import | WhatsApp bot, PWA share target, iOS Shortcut in v1 |
 | D8 | `yt-dlp` for Instagram and Facebook, with a spike first and fallbacks | The only way to get the reel itself; fallbacks keep the user unblocked | Caption-only scraping, Meta oEmbed |
 | D9 | Idempotent approve (unique `sourceImportId`) | Safe to repeat; works on a standalone Mongo | A transaction (needs a replica set) |
-| D10 | Tags as one `facet:value` array from fixed lists | One compound index; clean filters | Separate arrays per facet; free tags |
+| D10 | Tags as one `facet:value` array from fixed lists; renaming or removing a value needs a migration of the stored recipes | One compound index; clean filters | Separate arrays per facet; free tags |
 | D11 | Cursor pagination | Constant speed at any depth | `skip` / `limit` |
 | D12 | Gemini | Reads video and YouTube URLs natively; has a Files API | Claude (needs frames + transcript for video) |
 | D13 | Auth later, behind a dev-user middleware | Learn the core first; ownership is in every query from day one | Building auth first |

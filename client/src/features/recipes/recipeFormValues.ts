@@ -12,6 +12,9 @@ export type RecipeFormValues = {
   servings: string;
   prepMinutes: string;
   cookMinutes: string;
+  // No input yet ("tags in the form", a later M3 slice): kept as loaded, so saving doesn't
+  // erase them.
+  tags: string[];
 };
 
 export const emptyIngredient = { quantity: "", unit: "", name: "", note: "" };
@@ -24,6 +27,7 @@ export const emptyRecipe: RecipeFormValues = {
   servings: "",
   prepMinutes: "",
   cookMinutes: "",
+  tags: [],
 };
 
 // A saved recipe, as the inputs show it: what it doesn't set is a blank input.
@@ -41,6 +45,7 @@ export function toFormValues(recipe: Recipe): RecipeFormValues {
     servings: toText(recipe.servings),
     prepMinutes: toText(recipe.prepMinutes),
     cookMinutes: toText(recipe.cookMinutes),
+    tags: recipe.tags,
   };
 }
 

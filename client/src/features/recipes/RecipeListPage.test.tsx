@@ -15,6 +15,7 @@ const omelette: Recipe = {
   steps: ["Beat the eggs.", "Cook them in butter."],
   prepMinutes: 5,
   cookMinutes: 5,
+  tags: [],
   source: { type: "manual" },
   createdAt: "2026-11-01T10:00:00.000Z",
   updatedAt: "2026-11-01T10:00:00.000Z",

@@ -2,7 +2,8 @@ import { RecipeSchema, type Recipe, type RecipeInput } from "@pinch/shared";
 import type { Collection, Db, Filter, ObjectId } from "mongodb";
 
 // A recipe as it is stored (design §6). A field added here that the form doesn't send must
-// also be kept by PUT /api/recipes/:id (routes/recipes.ts, design D20).
+// also be kept by PUT /api/recipes/:id (routes/recipes.ts, design D20). Recipes saved before
+// tags existed have no `tags` field; toRecipe reads them as [].
 export type RecipeDocument = RecipeInput & {
   _id: ObjectId;
   ownerId: ObjectId;
@@ -32,16 +33,17 @@ export const PAGE_SIZE = 50;
 // Where the next page starts: the last recipe of the page before (design §7, D11).
 export type RecipeCursor = { createdAt: Date; _id: ObjectId };
 
-// My recipes, newest first, after the cursor, served by the index { ownerId, createdAt, _id }
-// (db/indexes.ts). It reads one more than a page, so the route knows whether another page
-// follows without the client asking for an empty one.
+// My recipes, newest first, with every one of the tags, after the cursor; each shape of the
+// query has its index (db/indexes.ts). It reads one more than a page, so the route knows
+// whether another page follows without the client asking for an empty one.
 // When thumbnails arrive (M6), project them out here: lists don't send them (§5).
 export function findNewestRecipes(
   recipes: Collection<RecipeDocument>,
   ownerId: ObjectId,
-  after?: RecipeCursor,
+  { tags = [], after }: { tags?: string[]; after?: RecipeCursor } = {},
 ) {
   const filter: Filter<RecipeDocument> = { ownerId };
+  if (tags.length > 0) filter.tags = { $all: tags };
   if (after) {
     // The range starts the index scan at the cursor; without it, Mongo's plan reads every
     // recipe of the pages before and throws them away (checked with explain).

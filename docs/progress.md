@@ -34,7 +34,7 @@ Slices for later milestones are filled in when the milestone starts.
 
 - [x] Indexes in one module and `npm run db:indexes`; cursor pagination on `GET /api/recipes`,
       its index checked with `explain` in a test
-- [ ] Tags: the fixed facet lists in `shared/`, stored and kept by `PUT`;
+- [x] Tags: the fixed facet lists in `shared/`, stored and kept by `PUT`;
       `GET /api/recipes?tags=` filters with `$all`, on its own index
 - [ ] Text search: `GET /api/recipes?q=` on the text index, first 50 by score, with the tags
 - [ ] Client: Show more on the list (the cursor)

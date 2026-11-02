@@ -14,6 +14,7 @@ const omelette: Recipe = {
   ingredients: [{ name: "eggs", quantity: "2" }],
   steps: ["Beat the eggs.", "Cook them in butter."],
   servings: 1,
+  tags: ["meal:breakfast"],
   source: { type: "manual" },
   createdAt: "2026-11-01T10:00:00.000Z",
   updatedAt: "2026-11-01T10:00:00.000Z",
@@ -59,6 +60,8 @@ test("shows the recipe in the form, and saves the whole of it", async () => {
       title: "Cheese omelette",
       ingredients: omelette.ingredients,
       steps: omelette.steps,
+      // The form has no tags input yet; it keeps them so saving doesn't erase them.
+      tags: omelette.tags,
     }),
   });
 });
