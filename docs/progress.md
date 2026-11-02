@@ -31,6 +31,17 @@ Slices for later milestones are filled in when the milestone starts.
 - [x] e2e of create → list → edit → delete; end of milestone: UI review, observer metrics, demo
 
 ## M3 — Find
+
+- [x] Indexes in one module and `npm run db:indexes`; cursor pagination on `GET /api/recipes`,
+      its index checked with `explain` in a test
+- [ ] Tags: the fixed facet lists in `shared/`, stored and kept by `PUT`;
+      `GET /api/recipes?tags=` filters with `$all`, on its own index
+- [ ] Text search: `GET /api/recipes?q=` on the text index, first 50 by score, with the tags
+- [ ] Client: Show more on the list (the cursor)
+- [ ] Client: tags in the form and on the recipe
+- [ ] Client: search and tag filters on the list, kept in the URL
+- [ ] `npm run db:seed`; e2e of finding a recipe; end of milestone: UI review, observer
+      metrics, demo
 ## M4 — Pipeline without AI
 ## M5 — Gemini
 ## M6 — Instagram / Facebook

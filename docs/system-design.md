@@ -264,7 +264,11 @@ Queries:
 
 - **Filters only:** `{ ownerId, tags: { $all: [...] } }`, sorted by `createdAt: -1`, **cursor
   pagination** on `(createdAt, _id)`: the next page asks for items older than the last one seen.
-  (`skip` reads and throws away every skipped document, so it gets slower page by page.)
+  (`skip` reads and throws away every skipped document, so it gets slower page by page.) The
+  query also says `createdAt ≤ the cursor's`: without that plain range next to the `$or`,
+  Mongo's chosen plan scanned the index from the newest recipe and dropped the pages before
+  (`explain`: 101 documents read for a page of 51). Each page reads one recipe more than it
+  answers, so `nextCursor` is null on the last page instead of pointing at an empty one.
 - **Text search:** `{ ownerId, $text: { $search: q } }` plus the same tag filter, sorted by text
   score, first 50 results. At POC scale that is enough; no deep pagination for search.
 

@@ -28,7 +28,10 @@ and types used by both). MongoDB through the native driver + Zod. Gemini for ext
 - `npm run e2e` — Playwright: starts its own API (port 3100, a `pinch-test-<uuid>` database)
   and the client's production build (port 4173), runs `e2e/`, records a video of each test.
 
-The rest arrive with later slices (worker dev; db:indexes; db:seed).
+- `npm run db:indexes` — creates the indexes (`server/src/db/indexes.ts`) in the app's
+  database; run it once, and again when an index is added.
+
+The rest arrive with later slices (worker dev; db:seed).
 
 ## How work happens
 
