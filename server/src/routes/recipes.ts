@@ -88,7 +88,7 @@ export function recipesRouter(db: Db) {
 // it was given and never reads it (§7).
 const ListQuerySchema = z.object({
   tags: z
-    .string("Pick tags from the list.")
+    .string("Send the tags once, comma-separated.")
     .transform((text) => text.split(","))
     .pipe(z.array(TagSchema).max(20, "Filter by up to 20 tags."))
     .optional(),

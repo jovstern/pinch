@@ -2,7 +2,8 @@ import { RecipeSchema, type Recipe, type RecipeInput } from "@pinch/shared";
 import type { Collection, Db, Filter, ObjectId } from "mongodb";
 
 // A recipe as it is stored (design §6). A field added here that the form doesn't send must
-// also be kept by PUT /api/recipes/:id (routes/recipes.ts, design D20).
+// also be kept by PUT /api/recipes/:id (routes/recipes.ts, design D20). Recipes saved before
+// tags existed have no `tags` field; toRecipe reads them as [].
 export type RecipeDocument = RecipeInput & {
   _id: ObjectId;
   ownerId: ObjectId;

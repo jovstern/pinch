@@ -273,17 +273,18 @@ test("GET /api/recipes answers 400 for a tag filter not in the lists", async () 
   });
 });
 
-test("the list filtered by a tag reads the tags index, only the recipes it answers (§6)", async () => {
+test("the list filtered by tags reads the tags index, only the recipes it answers (§6)", async () => {
   const { ownerId } = await insertManyRecipes();
 
   const explain = ExplainSchema.parse(
     await findNewestRecipes(recipesCollection(db), ownerId, {
-      tags: ["cuisine:italian"],
+      tags: ["cuisine:italian", "meal:dinner"],
     }).explain("executionStats"),
   );
 
-  // Half the recipes are Italian: the tags index goes straight to them, in order; the other
-  // index would read the French ones too and drop them.
+  // Every recipe is a dinner and half are Italian. The scan starts at the first tag, so it goes
+  // straight to the Italian ones, in order, and checks "dinner" on each. (In the other order it
+  // would read the French dinners too and drop them: 101 read; design §7.)
   const plan = JSON.stringify(explain.queryPlanner.winningPlan);
   expect(plan).toContain('"indexName":"ownerId_1_tags_1_createdAt_-1__id_-1"');
   expect(plan).not.toMatch(/COLLSCAN|"SORT"/);
@@ -303,6 +304,7 @@ test("PUT /api/recipes/:id replaces what the user can edit and clears what they 
   const after = RecipeSchema.parse(response.body);
   expect(response.body).toEqual({
     ...edited,
+    // Left out, so cleared (PUT replaces).
     tags: [],
     id: before.id,
     source: before.source,

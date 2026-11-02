@@ -50,7 +50,8 @@ export const RecipeInputSchema = z.object({
   servings: optionalWholeNumber(1, 100, "Servings must be between 1 and 100."),
   prepMinutes: optionalWholeNumber(0, 1440, "Prep time must be between 0 and 1440 minutes."),
   cookMinutes: optionalWholeNumber(0, 1440, "Cook time must be between 0 and 1440 minutes."),
-  // Left out means none, so recipes stored before tags existed read as untagged. Each tag once.
+  // Left out means none: toRecipe parses stored recipes with this schema, so ones saved before
+  // tags existed read as []. Each tag once (the default comes first, so it's deduped too).
   tags: z
     .array(TagSchema)
     .max(20, "A recipe can have up to 20 tags.")

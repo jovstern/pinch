@@ -12,7 +12,8 @@ export type RecipeFormValues = {
   servings: string;
   prepMinutes: string;
   cookMinutes: string;
-  // Not shown yet (M3 adds the input): kept as they are, so saving doesn't erase them.
+  // No input yet ("tags in the form", a later M3 slice): kept as loaded, so saving doesn't
+  // erase them.
   tags: string[];
 };
 
