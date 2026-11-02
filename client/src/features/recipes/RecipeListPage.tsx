@@ -1,11 +1,45 @@
 import type { Recipe } from "@pinch/shared";
-import { useQuery } from "@tanstack/react-query";
+import { useInfiniteQuery } from "@tanstack/react-query";
+import { useEffect, useRef } from "react";
 import { Link } from "react-router";
 import { Button } from "../../components/Button.tsx";
 import { recipeListQuery } from "./recipeQueries.ts";
 
 export function RecipeListPage() {
-  const { status, data, refetch, isFetching } = useQuery(recipeListQuery);
+  const {
+    status,
+    data,
+    isLoadingError,
+    refetch,
+    isFetching,
+    hasNextPage,
+    fetchNextPage,
+    isFetchingNextPage,
+    isFetchNextPageError,
+  } = useInfiniteQuery(recipeListQuery);
+  const listRef = useRef<HTMLUListElement>(null);
+  // The first recipe of the page Show more asked for, to focus once it's drawn.
+  const firstNewRef = useRef<number | null>(null);
+  const recipes = data?.pages.flatMap((page) => page.items);
+
+  // Design §14: focus goes to the first new recipe, so the keyboard carries on from there rather
+  // than from the button below the new ones. In an effect that runs when a page arrives, because
+  // fetchNextPage resolves before React draws it. (One link per card, so link n is recipe n.)
+  useEffect(() => {
+    if (firstNewRef.current === null) return;
+    listRef.current?.querySelectorAll("a")[firstNewRef.current]?.focus();
+    firstNewRef.current = null;
+  }, [data]);
+
+  function showMore() {
+    // Not disabled while loading: a disabled button loses focus, and the keyboard with it.
+    if (isFetchingNextPage) return;
+    firstNewRef.current = recipes?.length ?? 0;
+    void fetchNextPage().then((result) => {
+      // Nothing new to focus; focus stays on the button, next to the alert.
+      if (result.isError) firstNewRef.current = null;
+    });
+  }
 
   return (
     <>
@@ -24,7 +58,8 @@ export function RecipeListPage() {
         </>
       )}
 
-      {status === "error" && (
+      {/* Only when nothing has loaded: a failed refetch or next page keeps the list on screen. */}
+      {isLoadingError && (
         <div role="alert" className="mt-6">
           <p>We couldn't load your recipes.</p>
           {/* The status stays "error" while it retries, so the button shows the wait. */}
@@ -40,7 +75,9 @@ export function RecipeListPage() {
         </div>
       )}
 
-      {status === "success" && data.items.length === 0 && (
+      {/* By the data, not the status: a failed next page or refetch turns the status to "error"
+          and keeps the list. */}
+      {recipes?.length === 0 && (
         <div className="mt-6">
           <p className="text-pretty text-text-muted">
             No recipes yet. Add one you love and it will live here.
@@ -54,9 +91,9 @@ export function RecipeListPage() {
         </div>
       )}
 
-      {status === "success" && data.items.length > 0 && (
-        <ul className="mt-6 grid gap-3">
-          {data.items.map((recipe) => (
+      {recipes !== undefined && recipes.length > 0 && (
+        <ul ref={listRef} className="mt-6 grid gap-3">
+          {recipes.map((recipe) => (
             <li key={recipe.id}>
               <Link
                 to={`/recipes/${recipe.id}`}
@@ -68,6 +105,17 @@ export function RecipeListPage() {
             </li>
           ))}
         </ul>
+      )}
+
+      {isFetchNextPageError && (
+        <p role="alert" className="mt-6 text-danger">
+          We couldn't load more recipes. Press Show more to try again.
+        </p>
+      )}
+      {hasNextPage && (
+        <Button type="button" variant="secondary" onClick={showMore} className="mt-6">
+          {isFetchingNextPage ? "Loading…" : "Show more"}
+        </Button>
       )}
     </>
   );
