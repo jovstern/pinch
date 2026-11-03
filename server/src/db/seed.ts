@@ -1,9 +1,10 @@
 import { RecipeInputSchema, type RecipeInput } from "@pinch/shared";
-import { ObjectId, type Db } from "mongodb";
-import { recipesCollection } from "./recipes.ts";
+import { ObjectId, type AnyBulkWriteOperation, type Db } from "mongodb";
+import { recipesCollection, type RecipeDocument } from "./recipes.ts";
 
 // Sample recipes, so the list, search and tag filters have something to find (design §6). Two
-// share a word ("lentils"), and one is in Hebrew, which the text index matches by whole word.
+// share a word ("lentils"); one is in Hebrew. A sample's place in the list is its id (below):
+// add new ones at the end.
 export const sampleRecipes: RecipeInput[] = [
   {
     title: "Red lentil soup",
@@ -141,32 +142,32 @@ export const sampleRecipes: RecipeInput[] = [
   },
 ];
 
-// Adds the samples that aren't there, for this owner. Each has a fixed id ("5eed" and its
-// number), and $setOnInsert writes only when the upsert inserts: running it again changes
-// nothing, and a sample the user edited stays edited (mongodb.md: the seed is idempotent).
+// Adds the samples that aren't there, as the dev user's (design §8.3). Each has a fixed id, so
+// they belong to one owner, and $setOnInsert writes only when the upsert inserts: running it
+// again leaves an edited sample as it is and puts back a deleted one (mongodb.md: idempotent).
 export async function seedRecipes(db: Db, ownerId: ObjectId) {
   const now = Date.now();
-  const result = await recipesCollection(db).bulkWrite(
-    sampleRecipes.map((sample, index) => {
-      // A minute apart, so the list shows them in this order.
-      const createdAt = new Date(now - index * 60_000);
-      return {
-        updateOne: {
-          filter: { _id: new ObjectId(`5eed${String(index).padStart(20, "0")}`) },
-          update: {
-            $setOnInsert: {
-              // Parsed like a POST body, so a sample with a typo in a tag fails here.
-              ...RecipeInputSchema.parse(sample),
-              ownerId,
-              source: { type: "manual" as const },
-              createdAt,
-              updatedAt: createdAt,
-            },
+  const writes: AnyBulkWriteOperation<RecipeDocument>[] = sampleRecipes.map((sample, index) => {
+    // A minute apart, so the list shows them in this order.
+    const createdAt = new Date(now - index * 60_000);
+    return {
+      updateOne: {
+        // "5eed" and the sample's number, padded to an ObjectId's 24 hex digits.
+        filter: { _id: new ObjectId(`5eed${String(index).padStart(20, "0")}`) },
+        update: {
+          $setOnInsert: {
+            // Parsed like a POST body, so a sample with a typo in a tag fails here.
+            ...RecipeInputSchema.parse(sample),
+            ownerId,
+            source: { type: "manual" },
+            createdAt,
+            updatedAt: createdAt,
           },
-          upsert: true,
         },
-      };
-    }),
-  );
+        upsert: true,
+      },
+    };
+  });
+  const result = await recipesCollection(db).bulkWrite(writes);
   return result.upsertedCount;
 }

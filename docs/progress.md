@@ -40,7 +40,7 @@ Slices for later milestones are filled in when the milestone starts.
 - [x] Client: Show more on the list (the cursor)
 - [x] Client: tags in the form and on the recipe
 - [x] Client: search and tag filters on the list, kept in the URL
-- [ ] `npm run db:seed`; e2e of finding a recipe; end of milestone: UI review, observer
+- [x] `npm run db:seed`; e2e of finding a recipe; end of milestone: UI review, observer
       metrics, demo
 ## M4 — Pipeline without AI
 ## M5 — Gemini
