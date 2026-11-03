@@ -13,6 +13,7 @@
     "dev": "npm run dev -w client",
     "dev:api": "npm run dev -w server",
     "db:indexes": "npm run db:indexes -w server",
+    "db:seed": "npm run db:seed -w server",
     "format": "prettier --write .",
     "check": "prettier --check . && npm run check --workspaces",
     "e2e": "playwright test"

@@ -3,10 +3,8 @@ import { expect, test } from "./fixtures.ts";
 
 test("the home page has no accessibility violations", async ({ page }) => {
   await page.goto("/");
-  // Scan the settled page, not the loading state. Empty or not: recipes.spec.ts runs alongside
-  // and may have added a recipe.
-  await expect(page.getByRole("heading", { name: "Your recipes" })).toBeVisible();
-  await expect(page.getByText("Loading your recipes…")).toHaveCount(0);
+  // Scan the settled page, with the sample recipes (playwright.config.ts), not the loading state.
+  await expect(page.getByRole("link", { name: /Red lentil soup/ })).toBeVisible();
   const results = await new AxeBuilder({ page }).analyze();
   expect(results.violations).toEqual([]);
 });
