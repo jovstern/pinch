@@ -39,7 +39,7 @@ Slices for later milestones are filled in when the milestone starts.
 - [x] Text search: `GET /api/recipes?q=` on the text index, first 50 by score, with the tags
 - [x] Client: Show more on the list (the cursor)
 - [x] Client: tags in the form and on the recipe
-- [ ] Client: search and tag filters on the list, kept in the URL
+- [x] Client: search and tag filters on the list, kept in the URL
 - [ ] `npm run db:seed`; e2e of finding a recipe; end of milestone: UI review, observer
       metrics, demo
 ## M4 — Pipeline without AI

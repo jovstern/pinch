@@ -4,7 +4,7 @@ import { useNavigate } from "react-router";
 import { sendJson } from "../../lib/api.ts";
 import { LazyRecipeForm } from "./LazyRecipeForm.tsx";
 import { emptyRecipe } from "./recipeFormValues.ts";
-import { recipeListQuery, recipeQuery } from "./recipeQueries.ts";
+import { recipeListsKey, recipeQuery } from "./recipeQueries.ts";
 
 export function NewRecipePage() {
   const queryClient = useQueryClient();
@@ -14,12 +14,11 @@ export function NewRecipePage() {
     onSuccess: (recipe) => {
       // The answer is the saved recipe: cached, its page shows at once, without a spinner.
       queryClient.setQueryData(recipeQuery(recipe.id).queryKey, recipe);
-      // The list isn't on screen, so it's refetched now ("all"; every page loaded so far), ready
-      // for when it is. Not
-      // awaited, unlike delete: this goes to the new recipe, not to the list.
+      // The lists aren't on screen, so they're refetched now ("all"; every filter and every page
+      // loaded so far), ready for when they are. Not awaited, unlike delete: this goes to the
+      // new recipe, not to the list.
       void queryClient.invalidateQueries({
-        queryKey: recipeListQuery.queryKey,
-        exact: true,
+        queryKey: recipeListsKey,
         refetchType: "all",
       });
       // replace: Back from the new recipe goes where the user was, not to a blank form.

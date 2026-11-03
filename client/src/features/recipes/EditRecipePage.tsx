@@ -5,7 +5,7 @@ import { sendJson } from "../../lib/api.ts";
 import { LazyRecipeForm } from "./LazyRecipeForm.tsx";
 import { toFormValues } from "./recipeFormValues.ts";
 import { RecipeLoadError } from "./RecipeLoadError.tsx";
-import { recipeListQuery, recipeQuery } from "./recipeQueries.ts";
+import { recipeListsKey, recipeQuery } from "./recipeQueries.ts";
 
 export function EditRecipePage() {
   // The route is "recipes/:id/edit", so the id is always there.
@@ -27,8 +27,7 @@ export function EditRecipePage() {
       // As for a new recipe (NewRecipePage): the answer is cached, the list refetched.
       queryClient.setQueryData(recipeQuery(id).queryKey, saved);
       void queryClient.invalidateQueries({
-        queryKey: recipeListQuery.queryKey,
-        exact: true,
+        queryKey: recipeListsKey,
         refetchType: "all",
       });
       // replace: Back never returns to the form; it goes to the recipe page Edit was opened from.

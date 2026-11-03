@@ -1,11 +1,21 @@
-import type { Recipe } from "@pinch/shared";
+import { isTag, type Recipe } from "@pinch/shared";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { useEffect, useRef } from "react";
-import { Link } from "react-router";
+import { Link, useSearchParams } from "react-router";
 import { Button } from "../../components/Button.tsx";
-import { recipeListQuery } from "./recipeQueries.ts";
+import { ListFilters } from "./ListFilters.tsx";
+import { filterParams, recipeListQuery, type RecipeFilters } from "./recipeQueries.ts";
 
 export function RecipeListPage() {
+  // The filters live in the address, so a reload, Back or a shared link keeps them (ui-craft).
+  // A tag not in the lists (a hand-edited link) is left out rather than sent: it's a 400.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const filters: RecipeFilters = {
+    q: searchParams.get("q")?.trim() ?? "",
+    tags: searchParams.get("tags")?.split(",").filter(isTag) ?? [],
+  };
+  const filtering = filters.q !== "" || filters.tags.length > 0;
+
   const {
     status,
     data,
@@ -16,7 +26,7 @@ export function RecipeListPage() {
     fetchNextPage,
     isFetchingNextPage,
     isFetchNextPageError,
-  } = useInfiniteQuery(recipeListQuery);
+  } = useInfiniteQuery(recipeListQuery(filters));
   const listRef = useRef<HTMLUListElement>(null);
   // The first recipe of the page Show more asked for, to focus once it's drawn.
   const firstNewRef = useRef<number | null>(null);
@@ -30,6 +40,14 @@ export function RecipeListPage() {
     listRef.current?.querySelectorAll("a")[firstNewRef.current]?.focus();
     firstNewRef.current = null;
   }, [data]);
+
+  function changeFilters(next: RecipeFilters) {
+    // A Show more still on its way belongs to the list being left: don't focus into the next.
+    firstNewRef.current = null;
+    // replace: each tick or search changes the address in place; Back leaves the list rather
+    // than undoing filters one by one.
+    setSearchParams(filterParams(next), { replace: true });
+  }
 
   function showMore() {
     // Not disabled while loading: a disabled button loses focus, and the keyboard with it.
@@ -45,6 +63,19 @@ export function RecipeListPage() {
     <>
       <title>Your recipes · Pinch</title>
       <h1 className="text-3xl font-bold tracking-tight text-balance">Your recipes</h1>
+
+      {/* Not before the first recipe: there's nothing to search yet. */}
+      {(filtering || recipes?.length !== 0) && (
+        <>
+          <ListFilters filters={filters} onChange={changeFilters} />
+          {/* Announced as results arrive (ui-craft: aria-live for async results). */}
+          <p role="status" className="mt-3 text-sm text-text-muted">
+            {filtering &&
+              recipes !== undefined &&
+              matches(recipes.length, hasNextPage, filters.q !== "")}
+          </p>
+        </>
+      )}
 
       {status === "pending" && (
         <>
@@ -77,7 +108,18 @@ export function RecipeListPage() {
 
       {/* By the data, not the status: a failed next page or refetch turns the status to "error"
           and keeps the list. */}
-      {recipes?.length === 0 && (
+      {filtering && recipes?.length === 0 && (
+        // replace, like every filter change. It goes as it's clicked, so focus falls to the page.
+        <Link
+          to="/"
+          replace
+          className="mt-3 inline-block font-semibold text-accent-strong underline"
+        >
+          Clear the search and filters
+        </Link>
+      )}
+
+      {!filtering && recipes?.length === 0 && (
         <div className="mt-6">
           <p className="text-pretty text-text-muted">
             No recipes yet. Add one you love and it will live here.
@@ -119,6 +161,18 @@ export function RecipeListPage() {
       )}
     </>
   );
+}
+
+// The API's page, and how many a search answers (design §7).
+const PAGE_SIZE = 50;
+
+// "3 recipes match". A page with more after it says so rather than count them all; a search
+// answers only its best 50 (design §7), so a full one says that.
+function matches(count: number, more: boolean, searching: boolean) {
+  if (count === 0) return "No recipes match.";
+  if (more) return `More than ${String(count)} recipes match.`;
+  if (searching && count === PAGE_SIZE) return `The ${String(PAGE_SIZE)} best matches.`;
+  return count === 1 ? "1 recipe matches." : `${String(count)} recipes match.`;
 }
 
 // "6 ingredients · 25 min": the two things that decide what to cook tonight.

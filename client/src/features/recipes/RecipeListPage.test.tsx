@@ -1,5 +1,5 @@
 import type { Recipe } from "@pinch/shared";
-import { screen } from "@testing-library/react";
+import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, test, vi } from "vitest";
 import { renderApp } from "../../test-utils.tsx";
@@ -54,6 +54,8 @@ test("with no recipes, it offers to add the first one", async () => {
     "href",
     "/recipes/new",
   );
+  // Nothing to search yet.
+  expect(screen.queryByRole("searchbox")).not.toBeInTheDocument();
 });
 
 test("when loading fails, Try again loads the list again", async () => {
@@ -104,4 +106,79 @@ test("when the next page fails, the list stays and says so", async () => {
   expect(await screen.findByRole("link", { name: /Toast/ })).toHaveFocus();
   expect(fetch).toHaveBeenLastCalledWith("/api/recipes?cursor=next-page");
   expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+});
+
+// A fake list API: the omelette, unless the request asks for something it doesn't have.
+function stubList() {
+  const fetch = vi.fn((path: string) => {
+    const found = path === "/api/recipes" || path.includes("egg") || path.includes("breakfast");
+    return Promise.resolve(Response.json({ items: found ? [omelette] : [], nextCursor: null }));
+  });
+  vi.stubGlobal("fetch", fetch);
+  return fetch;
+}
+
+test("a search asks the API, says how many match, and leaves focus in the box", async () => {
+  const fetch = stubList();
+  renderApp("/");
+
+  const search = await screen.findByRole("searchbox", { name: "Search your recipes" });
+  await userEvent.type(search, " eggs {Enter}");
+
+  expect(await screen.findByText("1 recipe matches.")).toHaveAttribute("role", "status");
+  expect(fetch).toHaveBeenLastCalledWith("/api/recipes?q=eggs");
+  expect(search).toHaveFocus();
+});
+
+test("tags in the address filter the list, open, and unticking the last one clears it", async () => {
+  const fetch = stubList();
+  renderApp("/?tags=meal:breakfast");
+
+  const breakfast = await screen.findByRole("checkbox", { name: "breakfast" });
+  expect(breakfast).toBeChecked();
+  expect(fetch).toHaveBeenCalledWith("/api/recipes?tags=meal%3Abreakfast");
+  expect(await screen.findByText("1 recipe matches.")).toHaveAttribute("role", "status");
+
+  await userEvent.click(breakfast);
+  await waitFor(() => {
+    expect(fetch).toHaveBeenLastCalledWith("/api/recipes");
+  });
+  // Still open: it doesn't fold away under the user's finger.
+  expect(screen.getByRole("checkbox", { name: "breakfast" })).toBeVisible();
+});
+
+test("when nothing matches, it says so and offers to clear the search and filters", async () => {
+  const fetch = stubList();
+  renderApp("/?q=soup&tags=cuisine:italian");
+
+  expect(await screen.findByText("No recipes match.")).toHaveAttribute("role", "status");
+  expect(screen.getByRole("searchbox")).toHaveValue("soup");
+
+  await userEvent.click(screen.getByRole("link", { name: "Clear the search and filters" }));
+
+  expect(await screen.findByRole("link", { name: /Omelette/ })).toBeInTheDocument();
+  expect(fetch).toHaveBeenLastCalledWith("/api/recipes");
+  expect(screen.getByRole("searchbox")).toHaveValue("");
+});
+
+test("Show more keeps the filter when it asks for the next page", async () => {
+  const fetch = vi
+    .fn()
+    .mockResolvedValueOnce(Response.json({ items: [omelette], nextCursor: "next-page" }))
+    .mockResolvedValueOnce(Response.json({ items: [toast], nextCursor: null }));
+  vi.stubGlobal("fetch", fetch);
+  renderApp("/?tags=meal:breakfast");
+
+  await userEvent.click(await screen.findByRole("button", { name: "Show more" }));
+
+  expect(await screen.findByRole("link", { name: /Toast/ })).toBeInTheDocument();
+  expect(fetch).toHaveBeenLastCalledWith("/api/recipes?tags=meal%3Abreakfast&cursor=next-page");
+});
+
+test("a tag in the address that isn't in the lists is left out", async () => {
+  const fetch = stubList();
+  renderApp("/?tags=meal:martian,meal:breakfast");
+
+  expect(await screen.findByText("1 recipe matches.")).toHaveAttribute("role", "status");
+  expect(fetch).toHaveBeenCalledWith("/api/recipes?tags=meal%3Abreakfast");
 });
