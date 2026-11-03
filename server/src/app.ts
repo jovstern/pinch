@@ -6,6 +6,7 @@ import type { Logger } from "pino";
 import { pinoHttp } from "pino-http";
 import { devUser } from "./devUser.ts";
 import { errorHandler, HttpError, notFound } from "./errors.ts";
+import { importsRouter } from "./routes/imports.ts";
 import { recipesRouter } from "./routes/recipes.ts";
 
 type AppDeps = { logger: Logger; db: Db; devUserId: string };
@@ -37,6 +38,7 @@ export function createApp({ logger, db, devUserId }: AppDeps) {
   });
 
   app.use("/api/recipes", recipesRouter(db));
+  app.use("/api/imports", importsRouter(db));
 
   app.use(notFound);
   app.use(errorHandler);

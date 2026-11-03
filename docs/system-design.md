@@ -238,7 +238,7 @@ them to Gemini, then removed from the document.
 | recipes | `{ ownerId: 1, title: "text", "ingredients.name": "text" }` | Text search inside my recipes |
 | recipes | `{ sourceImportId: 1 }` unique, sparse | Idempotent approve |
 | imports | `{ status: 1, nextAttemptAt: 1 }` | The worker's claim query |
-| imports | `{ ownerId: 1, createdAt: -1 }` | "My imports" list in the UI |
+| imports | `{ ownerId: 1, createdAt: -1, _id: -1 }` | "My imports" list in the UI |
 | imports | `{ expiresAt: 1 }` TTL (`expireAfterSeconds: 0`) | Automatic cleanup |
 
 Every index is checked with `.explain("executionStats")`: expect `IXSCAN`, and
