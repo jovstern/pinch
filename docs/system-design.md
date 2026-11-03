@@ -425,6 +425,9 @@ noise, and M5/M6 only swap the extractor.
 ## 13. Open for the coding stage
 
 - **Tests:** what gets tested first (the claim query, approve, Find queries).
+- **The daily cap (§1, §4.1): not built yet.** Imports are deleted once approved or discarded,
+  so counting them would undercount; the cap needs its own count (for example a per-user,
+  per-day counter). To decide before M5, when an import starts to cost money.
 - **The lighter kit:** how much of the agents setup to keep, given that you own the code and want small PRs.
 
 ## 14. Screens

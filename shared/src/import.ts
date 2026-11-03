@@ -6,14 +6,20 @@ export type Platform = z.infer<typeof PlatformSchema>;
 
 export const linkMessage = "Paste a link to an Instagram, Facebook or YouTube post.";
 
-// The body of POST /api/imports: a link to a post. Text and screenshots come in M6. Which site
-// it's from, the API checks (routes/imports.ts).
+// The body of POST /api/imports: a link to a post on one of the platforms (design §4.1), by its
+// host; "www." and "m." are the same site. Text and screenshots come in M6.
 export const ImportInputSchema = z.object({
   url: z
     .string(linkMessage)
     .trim()
     .max(2000, "Keep the link under 2000 characters.")
-    .pipe(z.url({ protocol: /^https?$/, error: linkMessage })),
+    .pipe(
+      z.url({
+        protocol: /^https?$/,
+        hostname: /^((www\.|m\.)?(instagram\.com|facebook\.com|youtube\.com)|youtu\.be|fb\.watch)$/,
+        error: linkMessage,
+      }),
+    ),
 });
 
 // An import as the API sends it (design §4.2, §6). The worker's own fields (the lease, when to
@@ -23,7 +29,12 @@ export const ImportSchema = z.object({
   status: z.enum(["pending", "processing", "ready", "failed"]),
   // How far a processing import has got, to show progress.
   step: z.enum(["fetching", "analyzing"]).optional(),
-  input: z.object({ type: z.literal("link"), url: z.url(), platform: PlatformSchema }),
+  // http(s) only, as a recipe's source: the client renders it as a link.
+  input: z.object({
+    type: z.literal("link"),
+    url: z.url({ protocol: /^https?$/ }),
+    platform: PlatformSchema,
+  }),
   attempts: z.int(),
   // Why it failed, in words the user can read.
   error: z.string().optional(),

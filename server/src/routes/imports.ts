@@ -1,8 +1,9 @@
-import { ImportInputSchema, linkMessage, type ImportList, type Platform } from "@pinch/shared";
+import { ImportInputSchema, type ImportList, type Platform } from "@pinch/shared";
 import express from "express";
 import { ObjectId, type Db } from "mongodb";
 import {
   IMPORT_LIFETIME_MS,
+  IMPORT_LIST_LIMIT,
   importsCollection,
   toImport,
   type ImportDocument,
@@ -18,16 +19,12 @@ export function importsRouter(db: Db) {
   // 202, not 201: the import is accepted and will be worked on later (§4.1).
   router.post("/", async (req, res) => {
     const { url } = parseInput(ImportInputSchema, req.body);
-    const platform = platformOf(url);
-    if (!platform) {
-      throw new HttpError(400, "invalid_input", "Some fields are not valid.", { url: linkMessage });
-    }
     const now = new Date();
     const job: ImportDocument = {
       _id: new ObjectId(),
       ownerId: req.userId,
       status: "pending",
-      input: { type: "link", url, platform },
+      input: { type: "link", url, platform: platformOf(url) },
       attempts: 0,
       nextAttemptAt: now,
       createdAt: now,
@@ -44,7 +41,7 @@ export function importsRouter(db: Db) {
     const found = await imports
       .find({ ownerId: req.userId })
       .sort({ createdAt: -1, _id: -1 })
-      .limit(50)
+      .limit(IMPORT_LIST_LIMIT)
       .toArray();
     res.json({ items: found.map(toImport) } satisfies ImportList);
   });
@@ -56,7 +53,7 @@ export function importsRouter(db: Db) {
   });
 
   // Discard a draft or dismiss a failure (§4.2). One still being worked on can go too: the
-  // worker's save then finds nothing to update.
+  // worker's save must then find nothing to update, and do nothing (§4.3).
   router.delete("/:id", async (req, res) => {
     const { deletedCount } = await imports.deleteOne({
       _id: parseId(req.params.id),
@@ -69,17 +66,12 @@ export function importsRouter(db: Db) {
   return router;
 }
 
-// Where a link is from, by its host (design §4.1); "www." and "m." are the same site.
-const platformByHost: Record<string, Platform> = {
-  "instagram.com": "instagram",
-  "facebook.com": "facebook",
-  "fb.watch": "facebook",
-  "youtube.com": "youtube",
-  "youtu.be": "youtube",
-};
-
-function platformOf(url: string): Platform | undefined {
-  return platformByHost[new URL(url).hostname.replace(/^(www|m)\./, "")];
+// Which platform a link is from. The schema has already checked its host is one of them.
+function platformOf(url: string): Platform {
+  const host = new URL(url).hostname;
+  if (host.endsWith("youtube.com") || host === "youtu.be") return "youtube";
+  if (host.endsWith("facebook.com") || host === "fb.watch") return "facebook";
+  return "instagram";
 }
 
 // As in routes/recipes.ts: an id that can't exist is simply not found.

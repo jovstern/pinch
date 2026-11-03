@@ -28,5 +28,9 @@ export function toImport(job: ImportDocument): Import {
   });
 }
 
-// An abandoned import is deleted after a week (§4.3).
+// An import is deleted 7 days after it was created, whatever its state: one left unreviewed or
+// failed is abandoned (§4.3). expiresAt is set once and never moved.
 export const IMPORT_LIFETIME_MS = 7 * 24 * 60 * 60 * 1000;
+
+// The most GET /api/imports answers: a guard, never reached in use.
+export const IMPORT_LIST_LIMIT = 50;

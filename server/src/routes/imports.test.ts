@@ -32,10 +32,9 @@ test("POST /api/imports accepts a link and answers 202 with a pending import", a
   // The worker's fields are stored, not sent: it may be claimed now, and expires in a week.
   expect(response.body).not.toHaveProperty("nextAttemptAt");
   const stored = await importsCollection(db).findOne({ _id: new ObjectId(job.id) });
-  expect(stored?.nextAttemptAt.getTime()).toBe(stored?.createdAt.getTime());
-  expect(stored && stored.expiresAt.getTime() - stored.createdAt.getTime()).toBe(
-    IMPORT_LIFETIME_MS,
-  );
+  if (!stored) throw new Error("The import wasn't stored.");
+  expect(stored.nextAttemptAt).toEqual(stored.createdAt);
+  expect(stored.expiresAt.getTime() - stored.createdAt.getTime()).toBe(IMPORT_LIFETIME_MS);
 });
 
 test.each([
@@ -91,7 +90,7 @@ test("another user's import is not found", async () => {
     nextAttemptAt: now,
     createdAt: now,
     updatedAt: now,
-    expiresAt: now,
+    expiresAt: new Date(now.getTime() + IMPORT_LIFETIME_MS),
   });
 
   expect((await request(app).get(`/api/imports/${theirs.toHexString()}`)).status).toBe(404);
