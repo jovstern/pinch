@@ -1,5 +1,5 @@
 import { RecipeListSchema, RecipeSchema } from "@pinch/shared";
-import { infiniteQueryOptions, queryOptions } from "@tanstack/react-query";
+import { infiniteQueryOptions, keepPreviousData, queryOptions } from "@tanstack/react-query";
 import { getJson } from "../../lib/api.ts";
 
 // Keys nest under "recipes": a list is ["recipes", "list", filters], one recipe
@@ -21,6 +21,9 @@ export function recipeListQuery(filters: RecipeFilters) {
     // The cursor's type comes from here: null alone would make every cursor null.
     initialPageParam: null as string | null,
     getNextPageParam: (lastPage) => lastPage.nextCursor,
+    // While a new search or tag loads, the list before it stays on screen, dimmed, instead of
+    // blinking to placeholder cards on every tick.
+    placeholderData: keepPreviousData,
   });
 }
 
