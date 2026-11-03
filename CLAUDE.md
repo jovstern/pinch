@@ -30,8 +30,10 @@ and types used by both). MongoDB through the native driver + Zod. Gemini for ext
 
 - `npm run db:indexes` — creates the indexes (`server/src/db/indexes.ts`) in the app's
   database; run it once, and again when an index is added.
+- `npm run db:seed` — adds the sample recipes (`server/src/db/seed.ts`) for the dev user in
+  the app's database; safe to run again.
 
-The rest arrive with later slices (worker dev; db:seed).
+The rest arrive with later slices (worker dev).
 
 ## How work happens
 

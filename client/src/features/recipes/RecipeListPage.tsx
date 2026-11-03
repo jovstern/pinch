@@ -26,6 +26,7 @@ export function RecipeListPage() {
     fetchNextPage,
     isFetchingNextPage,
     isFetchNextPageError,
+    isPlaceholderData,
   } = useInfiniteQuery(recipeListQuery(filters));
   const listRef = useRef<HTMLUListElement>(null);
   // The first recipe of the page Show more asked for, to focus once it's drawn.
@@ -68,10 +69,13 @@ export function RecipeListPage() {
       {(filtering || recipes?.length !== 0) && (
         <>
           <ListFilters filters={filters} onChange={changeFilters} />
-          {/* Announced as results arrive (ui-craft: aria-live for async results). */}
+          {/* Announced as results arrive (ui-craft: aria-live for async results); blank while
+              the list before them shows. Never hidden: a live region must be on the page before its
+              text changes, or screen readers may miss it. */}
           <p role="status" className="mt-3 text-sm text-text-muted">
             {filtering &&
               recipes !== undefined &&
+              !isPlaceholderData &&
               matches(recipes.length, hasNextPage, filters.q !== "")}
           </p>
         </>
@@ -108,7 +112,7 @@ export function RecipeListPage() {
 
       {/* By the data, not the status: a failed next page or refetch turns the status to "error"
           and keeps the list. */}
-      {filtering && recipes?.length === 0 && (
+      {filtering && !isPlaceholderData && recipes?.length === 0 && (
         // replace, like every filter change. It goes as it's clicked, so focus falls to the page.
         <Link
           to="/"
@@ -119,7 +123,7 @@ export function RecipeListPage() {
         </Link>
       )}
 
-      {!filtering && recipes?.length === 0 && (
+      {!filtering && !isPlaceholderData && recipes?.length === 0 && (
         <div className="mt-6">
           <p className="text-pretty text-text-muted">
             No recipes yet. Add one you love and it will live here.
@@ -134,7 +138,11 @@ export function RecipeListPage() {
       )}
 
       {recipes !== undefined && recipes.length > 0 && (
-        <ul ref={listRef} className="mt-6 grid gap-3">
+        <ul
+          ref={listRef}
+          aria-busy={isPlaceholderData}
+          className={`mt-6 grid gap-3 ${isPlaceholderData ? "opacity-60" : ""}`}
+        >
           {recipes.map((recipe) => (
             <li key={recipe.id}>
               <Link

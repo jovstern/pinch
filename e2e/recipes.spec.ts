@@ -1,11 +1,11 @@
 import { expect, test } from "./fixtures.ts";
 
-// M2's whole flow, and its demo (pr-demo skill): the pauses let a viewer follow the video. It
-// starts and ends with an empty list, so it's the only e2e test that writes recipes: files run
-// in parallel against one database.
+// M2's whole flow, and its demo (pr-demo skill): the pauses let a viewer follow the video. The
+// database holds the sample recipes (playwright.config.ts); this is the only e2e test that
+// writes, and it deletes what it wrote, because files run in parallel against one database.
 test("write a recipe, find it in the list, edit it, delete it", async ({ page }) => {
   await page.goto("/");
-  await page.getByRole("link", { name: "Add your first recipe" }).click();
+  await page.getByRole("link", { name: "New recipe" }).click();
 
   await page.getByLabel("Title").fill("Shakshuka");
   await page.getByLabel("Serves").fill("2");
@@ -41,6 +41,7 @@ test("write a recipe, find it in the list, edit it, delete it", async ({ page })
   await page.waitForTimeout(500);
   await dialog.getByRole("button", { name: "Delete" }).click();
 
-  await expect(page.getByRole("link", { name: "Add your first recipe" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Your recipes" })).toBeVisible();
+  await expect(page.getByRole("link", { name: /Green shakshuka/ })).toHaveCount(0);
   await page.waitForTimeout(1000);
 });

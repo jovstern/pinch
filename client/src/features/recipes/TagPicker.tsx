@@ -43,11 +43,12 @@ export function TagPicker({
             {tagFacets[facet].map((value) => {
               const tag = `${facet}:${value}`;
               return (
-                // The checkbox is hidden, so the chip shows its state and its focus ring. relative
-                // keeps the hidden checkbox inside its chip, so focusing it scrolls to the chip.
+                // The checkbox is hidden, so the chip shows its state (a fill and a ✓, not colour
+                // alone) and its focus ring, in the text colour so it shows on a filled chip too.
+                // relative keeps the hidden checkbox inside its chip, so focusing it scrolls there.
                 <label
                   key={tag}
-                  className="relative inline-flex min-h-11 cursor-pointer items-center rounded-full border border-border bg-surface-raised px-4 text-sm has-checked:border-accent-strong has-checked:bg-accent-strong has-checked:text-white has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-focus-visible:outline-accent-strong"
+                  className="group relative inline-flex min-h-11 cursor-pointer items-center rounded-full border border-border bg-surface-raised px-4 text-sm hover:border-accent has-checked:border-accent-strong has-checked:bg-accent-strong has-checked:text-white has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-focus-visible:outline-text"
                 >
                   <input
                     type="checkbox"
@@ -59,6 +60,9 @@ export function TagPicker({
                       toggle(tag, event.target.checked);
                     }}
                   />
+                  <span aria-hidden="true" className="hidden group-has-checked:inline">
+                    ✓&nbsp;
+                  </span>
                   {tagLabel(tag)}
                 </label>
               );

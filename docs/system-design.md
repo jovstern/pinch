@@ -244,6 +244,11 @@ them to Gemini, then removed from the document.
 Every index is checked with `.explain("executionStats")`: expect `IXSCAN`, and
 `totalDocsExamined` close to `nReturned`.
 
+**Sample data:** `npm run db:seed` adds ten sample recipes for the dev user (§8.3), so the
+list, search and filters have something to find; the e2e run seeds its own database the same
+way. Each sample has a fixed id and is written only when it's missing: running it again
+leaves an edited sample as it is, and puts back one that was deleted.
+
 ## 7. Find
 
 **Tags are one flat array of `facet:value` strings.** MongoDB can't put two array fields in one
