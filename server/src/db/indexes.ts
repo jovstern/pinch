@@ -18,8 +18,11 @@ export async function createIndexes(db: Db) {
   await importsCollection(db).createIndexes([
     // My imports, newest first; _id breaks ties, as for recipes (GET /api/imports).
     { key: { ownerId: 1, createdAt: -1, _id: -1 } },
+    // The worker's claim (claimNextImport): the waiting jobs whose time has come. Jobs held by a
+    // worker are few, so the lease half of the claim needs no index of its own.
+    { key: { status: 1, nextAttemptAt: 1 } },
     // TTL: Mongo deletes an import once its expiresAt has passed, checking about once a minute
-    // (design §4.3). The worker's claim index comes with the worker.
+    // (design §4.3).
     { key: { expiresAt: 1 }, expireAfterSeconds: 0 },
   ]);
 }

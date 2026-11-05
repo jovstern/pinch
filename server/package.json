@@ -4,6 +4,7 @@
   "type": "module",
   "scripts": {
     "dev": "node --watch --env-file-if-exists=../.env src/index.ts | pino-pretty",
+    "dev:worker": "node --watch --env-file-if-exists=../.env src/worker.ts | pino-pretty",
     "db:indexes": "node --env-file-if-exists=../.env src/dbIndexes.ts",
     "db:seed": "node --env-file-if-exists=../.env src/dbSeed.ts",
     "lint": "eslint .",
