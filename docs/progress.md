@@ -43,6 +43,17 @@ Slices for later milestones are filled in when the milestone starts.
 - [x] `npm run db:seed`; e2e of finding a recipe; end of milestone: UI review, observer
       metrics, demo
 ## M4 — Pipeline without AI
+
+- [x] Imports API: `POST /api/imports { url }` (platform from the link, 202), `GET` the list and
+      one, `DELETE`; the imports indexes, with the TTL
+- [ ] The worker: a second entry point, the atomic claim with a lease, 2 jobs at a time, the
+      fake extractor
+- [ ] Failures: retries with backoff, failed after 3, a deadline under the lease, a killed
+      worker's job claimed again
+- [ ] Approve (idempotent: unique `sourceImportId`), retry, discard
+- [ ] Client: paste a link on `/`, import status polled every 2 s
+- [ ] Client: review the draft in the recipe form and approve; retry or dismiss a failure
+- [ ] e2e of link → draft → recipe; end of milestone: UI review, observer metrics, demo
 ## M5 — Gemini
 ## M6 — Instagram / Facebook
 ## M7 — Polish

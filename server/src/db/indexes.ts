@@ -1,4 +1,5 @@
 import type { Db } from "mongodb";
+import { importsCollection } from "./imports.ts";
 import { recipesCollection } from "./recipes.ts";
 
 // Every query the app runs has its index here (design §6, mongodb.md); `npm run db:indexes`
@@ -13,5 +14,12 @@ export async function createIndexes(db: Db) {
     // Text search inside my recipes (searchRecipes). A collection has at most one text index;
     // ownerId before it means every search must name the owner, which it always does.
     { key: { ownerId: 1, title: "text", "ingredients.name": "text" } },
+  ]);
+  await importsCollection(db).createIndexes([
+    // My imports, newest first; _id breaks ties, as for recipes (GET /api/imports).
+    { key: { ownerId: 1, createdAt: -1, _id: -1 } },
+    // TTL: Mongo deletes an import once its expiresAt has passed, checking about once a minute
+    // (design §4.3). The worker's claim index comes with the worker.
+    { key: { expiresAt: 1 }, expireAfterSeconds: 0 },
   ]);
 }
