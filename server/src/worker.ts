@@ -9,13 +9,17 @@ import { workLoop } from "./worker/workLoop.ts";
 // The import worker: a process of its own, so a slow or crashing import never touches the API
 // (design D5). It shares nothing with the API but the database, where the jobs are (D4).
 const config = loadConfig(process.env);
-const logger = pino({ level: config.LOG_LEVEL });
+// Named, so its log lines can be told from the API's.
+const logger = pino({ level: config.LOG_LEVEL, name: "worker" });
 const client = await connectToMongo(config.MONGODB_URI);
 const imports = importsCollection(client.db(config.DB_NAME));
 
-// Two loops side by side: at most two jobs at a time, within Gemini's rate limits (§4.3).
+// Loops side by side, each a job at a time: at most two jobs at once, within Gemini's rate
+// limits (§4.3). A database error ends the process (an unhandled rejection), on purpose: it
+// can't work without Mongo, and the jobs it held are claimed again when their leases run out.
+const JOBS_AT_A_TIME = 2;
 const stop = new AbortController();
-const loops = [1, 2].map(() =>
+const loops = Array.from({ length: JOBS_AT_A_TIME }, () =>
   workLoop({ imports, extract: fakeExtract, logger, signal: stop.signal }),
 );
 logger.info("worker started");

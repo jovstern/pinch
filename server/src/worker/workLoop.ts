@@ -14,7 +14,7 @@ type WorkLoopDeps = {
   imports: Collection<ImportDocument>;
   extract: Extract;
   logger: Logger;
-  // Aborted on shutdown: the loop finishes the job in hand, then stops.
+  // Aborted on shutdown: the loop finishes the job in hand (or its idle wait), then stops.
   signal: AbortSignal;
 };
 
@@ -26,8 +26,7 @@ export async function workLoop({ imports, extract, logger, signal }: WorkLoopDep
     if (job) {
       await runImport(imports, job, extract, logger);
     } else {
-      // The wait ends early on shutdown; the abort is the only way it can fail.
-      await setTimeout(IDLE_MS, undefined, { signal }).catch(() => undefined);
+      await setTimeout(IDLE_MS);
     }
   }
 }
@@ -50,7 +49,8 @@ export async function runImport(
       { _id: job._id, status: "processing", attempts: job.attempts },
       { $set: { status: "ready", draft, updatedAt: new Date() }, $unset: { leaseUntil: "" } },
     );
-    log.info({ saved: matchedCount === 1 }, "import ready");
+    if (matchedCount === 0) log.warn("import deleted or claimed again: draft dropped");
+    else log.info("import ready");
   } catch (error) {
     // Retries with backoff come with §4.3's failure handling; until then a failed job stays
     // processing, and is claimed again once its lease runs out.

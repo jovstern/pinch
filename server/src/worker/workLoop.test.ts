@@ -1,7 +1,7 @@
 import type { RecipeInput } from "@pinch/shared";
 import { ObjectId } from "mongodb";
 import { pino } from "pino";
-import { expect, test } from "vitest";
+import { beforeEach, expect, test } from "vitest";
 import {
   claimNextImport,
   IMPORT_LIFETIME_MS,
@@ -26,8 +26,13 @@ const draft: RecipeInput = {
 };
 const extractNow = () => Promise.resolve(draft);
 
-// A job as POST /api/imports makes it, with any field changed. Each test clears the collection
-// first: the claim takes any owner's job, so jobs left by another test would be claimed too.
+// The claim takes any owner's job, so each test starts with none: one left by another test
+// would be claimed too.
+beforeEach(async () => {
+  await imports.deleteMany({});
+});
+
+// A job as POST /api/imports makes it, with any field changed.
 async function insertImport(fields: Partial<ImportDocument> = {}) {
   const now = new Date();
   const job: ImportDocument = {
@@ -47,7 +52,6 @@ async function insertImport(fields: Partial<ImportDocument> = {}) {
 }
 
 test("the claim takes the oldest waiting job, holds it for the lease and counts the attempt", async () => {
-  await imports.deleteMany({});
   const older = await insertImport({ createdAt: new Date(Date.now() - 1000) });
   await insertImport();
   const now = new Date();
@@ -63,7 +67,6 @@ test("the claim takes the oldest waiting job, holds it for the lease and counts 
 });
 
 test("two workers claiming at once never take the same job", async () => {
-  await imports.deleteMany({});
   await insertImport();
 
   const [first, second] = await Promise.all([
@@ -75,24 +78,26 @@ test("two workers claiming at once never take the same job", async () => {
 });
 
 test("a job waits until its time; a held job waits until its lease runs out", async () => {
-  await imports.deleteMany({});
   const now = new Date();
   await insertImport({ nextAttemptAt: new Date(now.getTime() + 10_000) });
   await insertImport({
     status: "processing",
     attempts: 1,
-    leaseUntil: new Date(now.getTime() + 1),
+    leaseUntil: new Date(now.getTime() + 10_000),
   });
   expect(await claimNextImport(imports, now)).toBeNull();
 
-  // A worker crashed holding this one: once the lease has passed, it's claimed again.
-  const crashed = await insertImport({ status: "processing", attempts: 1, leaseUntil: now });
-  const claimed = await claimNextImport(imports, new Date(now.getTime() + 1));
+  // A worker crashed holding this one: its lease has passed, so it's claimed again.
+  const crashed = await insertImport({
+    status: "processing",
+    attempts: 1,
+    leaseUntil: new Date(now.getTime() - 1000),
+  });
+  const claimed = await claimNextImport(imports, now);
   expect(claimed).toMatchObject({ _id: crashed._id, status: "processing", attempts: 2 });
 });
 
 test("a run saves the draft and lets go of the job", async () => {
-  await imports.deleteMany({});
   await insertImport();
   const job = await claimNextImport(imports, new Date());
   if (!job) throw new Error("Nothing claimed.");
@@ -104,27 +109,33 @@ test("a run saves the draft and lets go of the job", async () => {
   expect(saved).not.toHaveProperty("leaseUntil");
 });
 
-test("a run whose job was deleted, or claimed again by another worker, saves nothing", async () => {
-  await imports.deleteMany({});
+test("a run whose job another worker claimed again saves nothing", async () => {
   await insertImport();
   const job = await claimNextImport(imports, new Date());
   if (!job) throw new Error("Nothing claimed.");
   // This attempt outlived its lease, and another worker took the job.
-  const later = await claimNextImport(imports, new Date(Date.now() + LEASE_MS + 1));
+  await claimNextImport(imports, new Date(Date.now() + LEASE_MS + 1000));
 
   await runImport(imports, job, extractNow, logger);
+
   expect(await imports.findOne({ _id: job._id })).toMatchObject({
     status: "processing",
     attempts: 2,
   });
+});
 
+test("a run whose job the user deleted saves nothing", async () => {
+  await insertImport();
+  const job = await claimNextImport(imports, new Date());
+  if (!job) throw new Error("Nothing claimed.");
   await imports.deleteOne({ _id: job._id });
-  if (later) await runImport(imports, later, extractNow, logger);
+
+  await runImport(imports, job, extractNow, logger);
+
   expect(await imports.countDocuments()).toBe(0);
 });
 
 test("the loop runs waiting jobs until it's stopped", async () => {
-  await imports.deleteMany({});
   const job = await insertImport();
   const stop = new AbortController();
 
