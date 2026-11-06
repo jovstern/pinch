@@ -85,49 +85,6 @@ test("GET /api/imports/:id answers the import, and 404 for one that isn't there"
   expect((await request(app).get("/api/imports/not-an-id")).status).toBe(404);
 });
 
-test("another user's import is not found", async () => {
-  const theirs = new ObjectId();
-  const now = new Date();
-  await importsCollection(db).insertOne({
-    _id: theirs,
-    ownerId: new ObjectId(),
-    status: "pending",
-    input: { type: "link", url: reel, platform: "instagram" },
-    attempts: 0,
-    nextAttemptAt: now,
-    createdAt: now,
-    updatedAt: now,
-    expiresAt: new Date(now.getTime() + IMPORT_LIFETIME_MS),
-  });
-
-  expect((await request(app).get(`/api/imports/${theirs.toHexString()}`)).status).toBe(404);
-  expect((await request(app).delete(`/api/imports/${theirs.toHexString()}`)).status).toBe(404);
-  const approve = await request(app).post(`/api/imports/${theirs.toHexString()}/approve`).send({});
-  expect(approve.status).toBe(400);
-  expect((await request(app).post(`/api/imports/${theirs.toHexString()}/retry`)).status).toBe(404);
-  const list = ImportListSchema.parse((await request(app).get("/api/imports")).body);
-  expect(list.items.map((job) => job.id)).not.toContain(theirs.toHexString());
-});
-
-test("GET /api/imports lists my imports, newest first", async () => {
-  const first = await request(app).post("/api/imports").send({ url: reel });
-  const second = await request(app).post("/api/imports").send({ url: "https://youtu.be/xyz" });
-
-  const list = ImportListSchema.parse((await request(app).get("/api/imports")).body);
-  const ids = list.items.map((job) => job.id);
-  const newer = ids.indexOf(ImportSchema.parse(second.body).id);
-  expect(newer).toBeLessThan(ids.indexOf(ImportSchema.parse(first.body).id));
-});
-
-test("DELETE /api/imports/:id deletes it, then it's not found", async () => {
-  const created = await request(app).post("/api/imports").send({ url: reel });
-  const { id } = ImportSchema.parse(created.body);
-
-  expect((await request(app).delete(`/api/imports/${id}`)).status).toBe(204);
-  expect((await request(app).get(`/api/imports/${id}`)).status).toBe(404);
-  expect((await request(app).delete(`/api/imports/${id}`)).status).toBe(404);
-});
-
 // An import of mine the worker has got to: ready with a draft, or failed.
 async function insertDone(fields: Partial<ImportDocument>) {
   const now = new Date();
@@ -154,6 +111,49 @@ const draft: RecipeInput = {
   tags: [],
 };
 
+test("another user's import is not found", async () => {
+  const theirs = new ObjectId();
+  const now = new Date();
+  await importsCollection(db).insertOne({
+    _id: theirs,
+    ownerId: new ObjectId(),
+    status: "pending",
+    input: { type: "link", url: reel, platform: "instagram" },
+    attempts: 0,
+    nextAttemptAt: now,
+    createdAt: now,
+    updatedAt: now,
+    expiresAt: new Date(now.getTime() + IMPORT_LIFETIME_MS),
+  });
+
+  expect((await request(app).get(`/api/imports/${theirs.toHexString()}`)).status).toBe(404);
+  expect((await request(app).delete(`/api/imports/${theirs.toHexString()}`)).status).toBe(404);
+  const approve = request(app).post(`/api/imports/${theirs.toHexString()}/approve`);
+  expect((await approve.send(draft)).status).toBe(404);
+  expect((await request(app).post(`/api/imports/${theirs.toHexString()}/retry`)).status).toBe(404);
+  const list = ImportListSchema.parse((await request(app).get("/api/imports")).body);
+  expect(list.items.map((job) => job.id)).not.toContain(theirs.toHexString());
+});
+
+test("GET /api/imports lists my imports, newest first", async () => {
+  const first = await request(app).post("/api/imports").send({ url: reel });
+  const second = await request(app).post("/api/imports").send({ url: "https://youtu.be/xyz" });
+
+  const list = ImportListSchema.parse((await request(app).get("/api/imports")).body);
+  const ids = list.items.map((job) => job.id);
+  const newer = ids.indexOf(ImportSchema.parse(second.body).id);
+  expect(newer).toBeLessThan(ids.indexOf(ImportSchema.parse(first.body).id));
+});
+
+test("DELETE /api/imports/:id deletes it, then it's not found", async () => {
+  const created = await request(app).post("/api/imports").send({ url: reel });
+  const { id } = ImportSchema.parse(created.body);
+
+  expect((await request(app).delete(`/api/imports/${id}`)).status).toBe(204);
+  expect((await request(app).get(`/api/imports/${id}`)).status).toBe(404);
+  expect((await request(app).delete(`/api/imports/${id}`)).status).toBe(404);
+});
+
 test("POST /api/imports/:id/approve saves the edited draft as a recipe and deletes the import", async () => {
   const id = await insertDone({ draft });
 
@@ -170,7 +170,7 @@ test("POST /api/imports/:id/approve saves the edited draft as a recipe and delet
   });
   expect((await request(app).get(`/api/imports/${id}`)).status).toBe(404);
   // Editing the recipe keeps where it came from (design D20).
-  await request(app).put(`/api/recipes/${recipe.id}`).send(draft);
+  expect((await request(app).put(`/api/recipes/${recipe.id}`).send(draft)).status).toBe(200);
   const stored = await recipesCollection(db).findOne({ _id: new ObjectId(recipe.id) });
   expect(stored?.sourceImportId?.toHexString()).toBe(id);
 });

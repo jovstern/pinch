@@ -1,5 +1,5 @@
 import { RecipeSchema, type Recipe, type RecipeInput } from "@pinch/shared";
-import type { Collection, Db, Filter, ObjectId } from "mongodb";
+import { MongoServerError, type Collection, type Db, type Filter, type ObjectId } from "mongodb";
 
 // A recipe as it is stored (design §6). A field added here that the form doesn't send must
 // also be kept by PUT /api/recipes/:id (routes/recipes.ts, design D20). Recipes saved before
@@ -27,6 +27,28 @@ export function toRecipe(recipe: RecipeDocument): Recipe {
     createdAt: recipe.createdAt.toISOString(),
     updatedAt: recipe.updatedAt.toISOString(),
   });
+}
+
+// Saves a recipe approved from an import, or answers the one an earlier approve of the same
+// import already made: the unique sourceImportId index lets only one in (design §4.4).
+export async function insertRecipeOnce(
+  recipes: Collection<RecipeDocument>,
+  recipe: RecipeDocument,
+) {
+  try {
+    await recipes.insertOne(recipe);
+    return recipe;
+  } catch (error) {
+    // 11000 is Mongo's duplicate key.
+    if (!(error instanceof MongoServerError && error.code === 11000)) throw error;
+    const made = await recipes.findOne({
+      sourceImportId: recipe.sourceImportId,
+      ownerId: recipe.ownerId,
+    });
+    // Deleted since the insert failed: rare, and a 500 then, as any database error.
+    if (!made) throw error;
+    return made;
+  }
 }
 
 // A page of the list: never an unbounded list (node-api.md).

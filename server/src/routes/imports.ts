@@ -5,7 +5,7 @@ import {
   type Platform,
 } from "@pinch/shared";
 import express from "express";
-import { MongoServerError, ObjectId, type Db } from "mongodb";
+import { ObjectId, type Db } from "mongodb";
 import {
   IMPORT_LIFETIME_MS,
   IMPORT_LIST_LIMIT,
@@ -13,7 +13,7 @@ import {
   toImport,
   type ImportDocument,
 } from "../db/imports.ts";
-import { recipesCollection, toRecipe, type RecipeDocument } from "../db/recipes.ts";
+import { insertRecipeOnce, recipesCollection, toRecipe } from "../db/recipes.ts";
 import { HttpError, parseInput } from "../errors.ts";
 
 // Imports turn a link into a draft recipe (design §4). The API only records the job; the worker
@@ -62,7 +62,8 @@ export function importsRouter(db: Db) {
   // Saves the reviewed draft, as the user edited it, as a recipe, then deletes the import
   // (§4.1). Safe to repeat without a transaction (§4.4, D9): the recipe keeps the import's id
   // under a unique index, so after a crash between the two writes, approving again finds the
-  // recipe already made and only deletes the import.
+  // recipe already made and only deletes the import. Once both writes are done the import is
+  // gone, so approving again is a 404: the client keeps the button disabled while it saves.
   router.post("/:id/approve", async (req, res) => {
     const input = parseInput(RecipeInputSchema, req.body);
     const job = await imports.findOne({ _id: parseId(req.params.id), ownerId: req.userId });
@@ -71,7 +72,7 @@ export function importsRouter(db: Db) {
       throw new HttpError(409, "import_not_ready", "This import has no draft to save yet.");
     }
     const now = new Date();
-    let recipe: RecipeDocument | null = {
+    const recipe = await insertRecipeOnce(recipes, {
       ...input,
       _id: new ObjectId(),
       ownerId: req.userId,
@@ -79,20 +80,14 @@ export function importsRouter(db: Db) {
       sourceImportId: job._id,
       createdAt: now,
       updatedAt: now,
-    };
-    try {
-      await recipes.insertOne(recipe);
-    } catch (error) {
-      // 11000 is Mongo's duplicate key: an earlier approve of this import made the recipe.
-      if (!(error instanceof MongoServerError && error.code === 11000)) throw error;
-      recipe = await recipes.findOne({ sourceImportId: job._id, ownerId: req.userId });
-      if (!recipe) throw error;
-    }
-    await imports.deleteOne({ _id: job._id });
+    });
+    await imports.deleteOne({ _id: job._id, ownerId: req.userId });
     res.status(201).location(`/api/recipes/${recipe._id.toHexString()}`).json(toRecipe(recipe));
   });
 
-  // Tries a failed import again, from the start: three more tries, now (§4.2). 202, as POST.
+  // Tries a failed import again, from the start: three more tries, now (§4.2). 202: accepted,
+  // the worker will take it again. Attempt numbers, the worker's fence (§4.3), start over too:
+  // safe, because each earlier attempt ended at its deadline before the import could fail.
   router.post("/:id/retry", async (req, res) => {
     const filter = { _id: parseId(req.params.id), ownerId: req.userId };
     const now = new Date();
