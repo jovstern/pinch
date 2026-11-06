@@ -157,9 +157,9 @@ test("a failed attempt is tried again after 10 s, then 60 s, then the import is 
   const afterFirst = await imports.findOne({ _id });
   expect(afterFirst).toMatchObject({ status: "pending", attempts: 1 });
   expect(afterFirst).not.toHaveProperty("leaseUntil");
+  expect(afterFirst?.nextAttemptAt.getTime()).toBeGreaterThan(Date.now() + 9_000);
   // Not before its time: the claim finds nothing until the 10 s have passed.
   expect(await claimNextImport(imports, new Date())).toBeNull();
-  expect(afterFirst?.nextAttemptAt.getTime()).toBeGreaterThan(Date.now() + 9_000);
 
   const second = await claim(new Date(Date.now() + 11_000));
   await run(second, extractFails);

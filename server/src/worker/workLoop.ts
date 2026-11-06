@@ -1,5 +1,5 @@
 import { RecipeInputSchema, type RecipeInput } from "@pinch/shared";
-import type { Collection, Filter, UpdateFilter } from "mongodb";
+import type { Collection, UpdateFilter } from "mongodb";
 import { setTimeout } from "node:timers/promises";
 import type { Logger } from "pino";
 import { claimNextImport, LEASE_MS, type ImportDocument } from "../db/imports.ts";
@@ -15,10 +15,9 @@ const IDLE_MS = 1000;
 // (§4.3). Half a minute under it leaves time to save.
 const ATTEMPT_DEADLINE_MS = LEASE_MS - 30_000;
 
-// Three tries, then the import is failed (§4.2): the wait before the second is 10 s, before the
-// third 60 s. After the third there's no wait in the list, so no more tries.
-const RETRY_AFTER_MS = [10_000, 60_000];
-const MAX_ATTEMPTS = RETRY_AFTER_MS.length + 1;
+// Three tries, then the import is failed (§4.2). The wait before the second is 10 s, before
+// the third 60 s.
+const MAX_ATTEMPTS = 3;
 
 // What the user reads on a failed import. The cause is in the worker's log.
 export const FAILED_MESSAGE = "We couldn't turn this link into a recipe.";
@@ -45,58 +44,74 @@ export async function workLoop({ imports, extract, logger, signal }: WorkLoopDep
   }
 }
 
-type RunImportDeps = Omit<WorkLoopDeps, "signal"> & { job: ImportDocument; deadline: AbortSignal };
+type RunImportDeps = {
+  imports: Collection<ImportDocument>;
+  extract: Extract;
+  logger: Logger;
+  job: ImportDocument;
+  deadline: AbortSignal;
+};
 
-// Runs one claimed job: saves its draft for the user to review (§4.1), or, if it fails, leaves
-// it to be tried again later, or failed after the last try.
+// Runs one claimed job: saves its draft for the user to review (§4.1), or, if it fails, puts it
+// back to be tried again later, or fails it after the last try. Only the extraction is caught: a
+// database error ends the worker (worker.ts).
 export async function runImport({ imports, extract, logger, job, deadline }: RunImportDeps) {
   const log = logger.child({ importId: job._id.toHexString(), attempt: job.attempts });
+
   // Every write is only while the job is still this attempt's. The user may have deleted it,
   // or, had this attempt outlived its lease, another worker claimed it and attempts went up.
   // Either way the write updates nothing, and the job is left as it is.
-  const thisAttempt: Filter<ImportDocument> = {
-    _id: job._id,
-    status: "processing",
-    attempts: job.attempts,
-  };
+  async function save(update: UpdateFilter<ImportDocument>, done: string) {
+    const { matchedCount } = await imports.updateOne(
+      { _id: job._id, status: "processing", attempts: job.attempts },
+      update,
+    );
+    if (matchedCount === 0) log.warn("import deleted or claimed again: nothing saved");
+    else log.info(done);
+  }
 
   // Its worker died on the last try (claimed again after its lease ran out): no more tries.
   if (job.attempts > MAX_ATTEMPTS) {
-    log.error("import failed: its worker stopped on the last try");
-    await imports.updateOne(thisAttempt, failed());
+    await save(failedUpdate(), "import failed: its worker stopped on the last try");
     return;
   }
 
+  let draft: RecipeInput;
   try {
     // Checked like a POST body: what the extractor makes is never trusted as it is (§9).
-    const draft = RecipeInputSchema.parse(await extract(job.input, deadline));
-    const { matchedCount } = await imports.updateOne(thisAttempt, {
-      $set: { status: "ready", draft, updatedAt: new Date() },
-      $unset: { leaseUntil: "" },
-    });
-    if (matchedCount === 0) log.warn("import deleted or claimed again: draft dropped");
-    else log.info("import ready");
+    draft = RecipeInputSchema.parse(await extract(job.input, deadline));
   } catch (error) {
-    // A timeout at the deadline lands here too: it's a failed attempt like any other (§4.3).
+    // A timeout at the deadline lands here too: a failed attempt like any other (§4.3).
     log.error({ err: error }, "import attempt failed");
-    const retryAfter = RETRY_AFTER_MS[job.attempts - 1];
-    if (retryAfter === undefined) {
-      await imports.updateOne(thisAttempt, failed());
+    if (job.attempts === MAX_ATTEMPTS) {
+      await save(failedUpdate(), "import failed after its last try");
       return;
     }
     // Back in the queue; the claim takes it again once nextAttemptAt has passed.
-    await imports.updateOne(thisAttempt, {
-      $set: {
-        status: "pending",
-        nextAttemptAt: new Date(Date.now() + retryAfter),
-        updatedAt: new Date(),
+    const now = new Date();
+    const retryAfter = job.attempts === 1 ? 10_000 : 60_000;
+    await save(
+      {
+        $set: {
+          status: "pending",
+          nextAttemptAt: new Date(now.getTime() + retryAfter),
+          updatedAt: now,
+        },
+        $unset: { leaseUntil: "" },
       },
-      $unset: { leaseUntil: "" },
-    });
+      "import will be tried again",
+    );
+    return;
   }
+
+  await save(
+    { $set: { status: "ready", draft, updatedAt: new Date() }, $unset: { leaseUntil: "" } },
+    "import ready",
+  );
 }
 
-function failed(): UpdateFilter<ImportDocument> {
+// The update that fails an import, with the message the user reads (§4.2).
+function failedUpdate(): UpdateFilter<ImportDocument> {
   return {
     $set: { status: "failed", error: FAILED_MESSAGE, updatedAt: new Date() },
     $unset: { leaseUntil: "" },

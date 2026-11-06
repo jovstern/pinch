@@ -120,6 +120,7 @@ stateDiagram-v2
   processing --> pending: error, attempts < 3 (retry with backoff)
   processing --> failed: error, attempts = 3
   processing --> processing: lease expired (worker crashed), claimed again
+  processing --> failed: lease expired on the 3rd attempt
   failed --> pending: user clicks Retry
   ready --> [*]: approve → recipe created, import deleted
   ready --> [*]: discard → import deleted
