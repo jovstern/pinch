@@ -1,5 +1,6 @@
 import type { Import, Platform } from "@pinch/shared";
 import { useQuery } from "@tanstack/react-query";
+import { Link } from "react-router";
 import { importListQuery } from "./importQueries.ts";
 
 // The links being turned into recipes, each with how far it has got (design §1, §4.2).
@@ -23,9 +24,18 @@ export function ImportList() {
               <li key={job.id} className="rounded-xl border border-border bg-surface-raised p-4">
                 <p className="font-semibold">{platformNames[job.input.platform]}</p>
                 <p className="text-sm text-text-muted">{job.input.url}</p>
-                <p className={`mt-1 text-sm ${job.status === "failed" ? "text-danger" : ""}`}>
-                  {statusText(job)}
-                </p>
+                {job.status === "ready" ? (
+                  <Link
+                    to={`/imports/${job.id}`}
+                    className="mt-1 inline-block font-semibold text-accent-strong underline"
+                  >
+                    {statusText(job)}
+                  </Link>
+                ) : (
+                  <p className={`mt-1 text-sm ${job.status === "failed" ? "text-danger" : ""}`}>
+                    {statusText(job)}
+                  </p>
+                )}
               </li>
             ))}
           </ul>

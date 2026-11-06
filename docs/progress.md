@@ -53,7 +53,8 @@ Slices for later milestones are filled in when the milestone starts.
 - [x] Approve (idempotent: unique `sourceImportId`), retry (back to pending with `attempts`
       and `error` cleared), discard
 - [x] Client: paste a link on `/`, import status polled every 2 s
-- [ ] Client: review the draft in the recipe form and approve; retry or dismiss a failure
+- [x] Client: review the draft in the recipe form, approve or discard it
+- [ ] Client: retry or dismiss a failure
 - [ ] e2e of link → draft → recipe; end of milestone: UI review, observer metrics, demo
 ## M5 — Gemini
 ## M6 — Instagram / Facebook

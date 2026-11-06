@@ -102,13 +102,14 @@ test("when the link can't be sent, it says so and keeps the link", async () => {
   expect(box).toHaveValue(reel);
 });
 
-test("while a link is worked on, its status is asked again until it's ready", async () => {
+test("while a link is worked on, its status is asked again until it's ready to review", async () => {
   stubApi([[importOf({ status: "processing", attempts: 1 })], [importOf({ status: "ready" })]]);
   renderApp("/");
 
   expect(await screen.findByText("Working on it…")).toBeInTheDocument();
   // The 2 s poll, with time to spare.
-  expect(await screen.findByText("Ready to review", {}, { timeout: 3000 })).toBeInTheDocument();
+  const review = await screen.findByRole("link", { name: "Ready to review" }, { timeout: 3000 });
+  expect(review).toHaveAttribute("href", "/imports/6650a1b2c3d4e5f600000001");
 });
 
 test("a failed link says why", async () => {
