@@ -9,8 +9,11 @@ export function ImportList() {
 
   return (
     // Always on the page, so a new link and each change of status are announced (ui-craft: a
-    // live region must be there before its text changes).
+    // live region must be there before its text changes). The whole list is read when it first
+    // shows, links and all: there are only a few (done ones are deleted).
     <div aria-live="polite" className="mt-4">
+      {/* No Try again, unlike the recipes: the list is second to them, and sending a link
+          asks for it again. */}
       {isLoadingError && <p className="text-danger">We couldn't load your links.</p>}
       {imports.length > 0 && (
         <>
@@ -19,7 +22,7 @@ export function ImportList() {
             {imports.map((job) => (
               <li key={job.id} className="rounded-xl border border-border bg-surface-raised p-4">
                 <p className="font-semibold">{platformNames[job.input.platform]}</p>
-                <p className="truncate text-sm text-text-muted">{job.input.url}</p>
+                <p className="text-sm text-text-muted">{job.input.url}</p>
                 <p className={`mt-1 text-sm ${job.status === "failed" ? "text-danger" : ""}`}>
                   {statusText(job)}
                 </p>
@@ -51,6 +54,6 @@ function statusText(job: Import) {
     case "ready":
       return "Ready to review";
     case "failed":
-      return job.error;
+      return job.error ?? "That didn't work.";
   }
 }

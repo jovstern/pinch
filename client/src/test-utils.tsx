@@ -20,7 +20,7 @@ export function renderApp(path: string) {
 // Stubs fetch with this one, except GET /api/imports, which answers none: / asks for the
 // imports on every visit, and these tests are about something else.
 export function stubFetch(fetch: (...args: [string, RequestInit?]) => Promise<Response>) {
-  // The arguments go on as they came, so a test can check them exactly.
+  // Passed on untouched: toHaveBeenCalledWith tells fetch(path) from fetch(path, undefined).
   vi.stubGlobal("fetch", (...args: [string, RequestInit?]) =>
     args[0] === "/api/imports" ? Promise.resolve(Response.json({ items: [] })) : fetch(...args),
   );

@@ -14,13 +14,22 @@ type TextFieldProps = {
   label: string;
   multiline?: boolean;
   // "numeric" for numbers: a text input with the number keyboard, so nothing typed is lost.
-  inputMode?: "numeric";
+  // "url" for a link: the keyboard with "/" and ".com", and our message, not the browser's.
+  inputMode?: "numeric" | "url";
+  placeholder?: string;
   className?: string;
 };
 
 // A label, its input and its error, tied together (react-vite.md): the label names the input,
 // and the error is announced and linked to it.
-export function TextField({ field, label, multiline, inputMode, className = "" }: TextFieldProps) {
+export function TextField({
+  field,
+  label,
+  multiline,
+  inputMode,
+  placeholder,
+  className = "",
+}: TextFieldProps) {
   const id = useId();
   const errorId = `${id}-error`;
   const invalid = field.state.meta.errors.some((message) => typeof message === "string");
@@ -53,6 +62,7 @@ export function TextField({ field, label, multiline, inputMode, className = "" }
         <input
           type="text"
           inputMode={inputMode}
+          placeholder={placeholder}
           {...shared}
           className={`min-h-11 ${box}`}
           onChange={(event) => {

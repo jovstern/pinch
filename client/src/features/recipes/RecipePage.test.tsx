@@ -2,7 +2,7 @@ import type { Recipe } from "@pinch/shared";
 import { screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, test, vi } from "vitest";
-import { renderApp } from "../../test-utils.tsx";
+import { renderApp, stubFetch } from "../../test-utils.tsx";
 
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -34,7 +34,8 @@ function stubApi(deleteStatus = 204) {
       return Promise.resolve(Response.json({ items: [], nextCursor: null }));
     return Promise.resolve(Response.json(omelette));
   });
-  vi.stubGlobal("fetch", fetch);
+  // Delete goes to /, which asks for the imports too.
+  stubFetch(fetch);
   return fetch;
 }
 
