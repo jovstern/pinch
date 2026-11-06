@@ -48,7 +48,7 @@ Slices for later milestones are filled in when the milestone starts.
       one, `DELETE`; the imports indexes, with the TTL
 - [x] The worker: a second entry point, the atomic claim with a lease (a job whose lease ran
       out is claimed again), 2 jobs at a time, the fake extractor
-- [ ] Failures: retries with backoff, failed after 3, a deadline under the lease, a killed
+- [x] Failures: retries with backoff, failed after 3, a deadline under the lease, a killed
       worker's job finished by another
 - [ ] Approve (idempotent: unique `sourceImportId`), retry, discard
 - [ ] Client: paste a link on `/`, import status polled every 2 s
