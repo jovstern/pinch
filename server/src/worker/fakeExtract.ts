@@ -3,9 +3,15 @@ import { setTimeout } from "node:timers/promises";
 import type { ImportDocument } from "../db/imports.ts";
 
 // Stands in for Gemini until M5, so the queue is built and tested without AI (design §12). It
-// takes a few seconds, as the real one does, and makes the same draft for every link.
-export async function fakeExtract(input: ImportDocument["input"]): Promise<RecipeInput> {
-  await setTimeout(3000);
+// takes a few seconds, as the real one does, and makes the same draft for every link, except
+// one with "fail" in it: that one fails every try, to show retries and a failed import.
+export async function fakeExtract(
+  input: ImportDocument["input"],
+  signal: AbortSignal,
+): Promise<RecipeInput> {
+  // Stops at the attempt's deadline, as every call in a real extractor must (§4.3).
+  await setTimeout(3000, undefined, { signal });
+  if (input.url.includes("fail")) throw new Error("The fake extractor fails this link on purpose.");
   return {
     title: `Tomato pasta (from ${input.platform})`,
     ingredients: [

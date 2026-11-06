@@ -11,7 +11,7 @@ import {
 } from "../db/imports.ts";
 import { createIndexes } from "../db/indexes.ts";
 import { createTestDb } from "../testDb.ts";
-import { runImport, workLoop } from "./workLoop.ts";
+import { FAILED_MESSAGE, runImport, workLoop, type Extract } from "./workLoop.ts";
 
 const db = createTestDb();
 await createIndexes(db);
@@ -25,6 +25,23 @@ const draft: RecipeInput = {
   tags: [],
 };
 const extractNow = () => Promise.resolve(draft);
+const extractFails = () => Promise.reject(new Error("The site is down."));
+
+// Runs a claimed job, with no deadline unless one is given.
+function run(
+  job: ImportDocument,
+  extract: Extract = extractNow,
+  deadline = new AbortController().signal,
+) {
+  return runImport({ imports, extract, logger, job, deadline });
+}
+
+// Claims the one job waiting, as the loop does.
+async function claim(now = new Date()) {
+  const job = await claimNextImport(imports, now);
+  if (!job) throw new Error("Nothing claimed.");
+  return job;
+}
 
 // The claim takes any owner's job, so each test starts with none: one left by another test
 // would be claimed too.
@@ -99,10 +116,9 @@ test("a job waits until its time; a held job waits until its lease runs out", as
 
 test("a run saves the draft and lets go of the job", async () => {
   await insertImport();
-  const job = await claimNextImport(imports, new Date());
-  if (!job) throw new Error("Nothing claimed.");
+  const job = await claim();
 
-  await runImport(imports, job, extractNow, logger);
+  await run(job);
 
   const saved = await imports.findOne({ _id: job._id });
   expect(saved).toMatchObject({ status: "ready", draft });
@@ -111,12 +127,11 @@ test("a run saves the draft and lets go of the job", async () => {
 
 test("a run whose job another worker claimed again saves nothing", async () => {
   await insertImport();
-  const job = await claimNextImport(imports, new Date());
-  if (!job) throw new Error("Nothing claimed.");
+  const job = await claim();
   // This attempt outlived its lease, and another worker took the job.
   await claimNextImport(imports, new Date(Date.now() + LEASE_MS + 1000));
 
-  await runImport(imports, job, extractNow, logger);
+  await run(job);
 
   expect(await imports.findOne({ _id: job._id })).toMatchObject({
     status: "processing",
@@ -126,21 +141,86 @@ test("a run whose job another worker claimed again saves nothing", async () => {
 
 test("a run whose job the user deleted saves nothing", async () => {
   await insertImport();
-  const job = await claimNextImport(imports, new Date());
-  if (!job) throw new Error("Nothing claimed.");
+  const job = await claim();
   await imports.deleteOne({ _id: job._id });
 
-  await runImport(imports, job, extractNow, logger);
+  await run(job);
 
   expect(await imports.countDocuments()).toBe(0);
 });
 
-test("the loop runs waiting jobs until it's stopped", async () => {
-  const job = await insertImport();
+test("a failed attempt is tried again after 10 s, then 60 s, then the import is failed", async () => {
+  const { _id } = await insertImport();
+
+  const first = await claim();
+  await run(first, extractFails);
+  const afterFirst = await imports.findOne({ _id });
+  expect(afterFirst).toMatchObject({ status: "pending", attempts: 1 });
+  expect(afterFirst).not.toHaveProperty("leaseUntil");
+  expect(afterFirst?.nextAttemptAt.getTime()).toBeGreaterThan(Date.now() + 9_000);
+  // Not before its time: the claim finds nothing until the 10 s have passed.
+  expect(await claimNextImport(imports, new Date())).toBeNull();
+
+  const second = await claim(new Date(Date.now() + 11_000));
+  await run(second, extractFails);
+  const afterSecond = await imports.findOne({ _id });
+  expect(afterSecond?.nextAttemptAt.getTime()).toBeGreaterThan(Date.now() + 59_000);
+
+  const third = await claim(new Date(Date.now() + 61_000));
+  await run(third, extractFails);
+  expect(await imports.findOne({ _id })).toMatchObject({
+    status: "failed",
+    attempts: 3,
+    error: FAILED_MESSAGE,
+  });
+  expect(await claimNextImport(imports, new Date(Date.now() + 3_600_000))).toBeNull();
+});
+
+test("an attempt that reaches its deadline is stopped, and tried again", async () => {
+  const { _id } = await insertImport();
+  // As every call in a real extractor: it gives up when the attempt's deadline passes.
+  const extractHangs: Extract = (_, signal) =>
+    new Promise((_resolve, reject) => {
+      signal.addEventListener("abort", () => {
+        reject(new Error("Stopped at the deadline."));
+      });
+    });
+
+  await run(await claim(), extractHangs, AbortSignal.timeout(10));
+
+  expect(await imports.findOne({ _id })).toMatchObject({ status: "pending", attempts: 1 });
+});
+
+test("a job whose worker died on its last try is failed, not tried a fourth time", async () => {
+  const { _id } = await insertImport({
+    status: "processing",
+    attempts: 3,
+    leaseUntil: new Date(Date.now() - 1000),
+  });
+  let tried = false;
+
+  await run(await claim(), () => {
+    tried = true;
+    return extractNow();
+  });
+
+  expect(tried).toBe(false);
+  expect(await imports.findOne({ _id })).toMatchObject({ status: "failed", attempts: 4 });
+});
+
+test("the loop runs waiting jobs, and finishes a job whose worker died", async () => {
+  const waiting = await insertImport();
+  const crashed = await insertImport({
+    status: "processing",
+    attempts: 1,
+    leaseUntil: new Date(Date.now() - 1000),
+  });
   const stop = new AbortController();
 
   const loop = workLoop({ imports, extract: extractNow, logger, signal: stop.signal });
-  await expect.poll(async () => (await imports.findOne({ _id: job._id }))?.status).toBe("ready");
+  for (const { _id } of [waiting, crashed]) {
+    await expect.poll(async () => (await imports.findOne({ _id }))?.status).toBe("ready");
+  }
   stop.abort();
   await loop;
 });

@@ -120,6 +120,7 @@ stateDiagram-v2
   processing --> pending: error, attempts < 3 (retry with backoff)
   processing --> failed: error, attempts = 3
   processing --> processing: lease expired (worker crashed), claimed again
+  processing --> failed: lease expired on the 3rd attempt
   failed --> pending: user clicks Retry
   ready --> [*]: approve → recipe created, import deleted
   ready --> [*]: discard → import deleted
@@ -149,7 +150,8 @@ stateDiagram-v2
   and every external call in it (`yt-dlp`, upload, Gemini) has a timeout inside that. In the
   spike one Gemini call hung for 27 minutes. A timeout is a failed attempt and retries as usual.
 - **Retries with backoff.** A failed attempt goes back to `pending` with `nextAttemptAt` = now +
-  10 s, then 60 s. After 3 attempts → `failed` with a readable `error`.
+  10 s, then 60 s. After 3 attempts → `failed` with a readable `error`. A job whose worker died on
+  its third attempt is failed when it's claimed again, not run a fourth time.
 - **Back-pressure.** At most **2 jobs at a time** per worker, to stay within Gemini rate limits.
 - **Idle polling.** With nothing to do, the worker checks again after 1 s.
 - **Expiry.** Every import has `expiresAt` = 7 days; a **TTL index** makes Mongo delete abandoned
@@ -419,7 +421,8 @@ Each milestone is a few **small PRs** (roughly ≤ 300 changed lines each), whic
 | M7 | **Polish** — empty, loading and error states, share and comments placeholders, look and feel | It feels like a finished POC |
 | Later | Auth, share, comments, WhatsApp bot / PWA share target, nutrition database, semantic search | — |
 
-Doing M4 with a fake extractor first is deliberate: the queue lessons are learned without AI
+Doing M4 with a fake extractor first is deliberate (it takes 3 s, and fails every try of a link
+with "fail" in it, to show retries): the queue lessons are learned without AI
 noise, and M5/M6 only swap the extractor.
 
 ## 13. Open for the coding stage
