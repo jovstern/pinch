@@ -7,7 +7,7 @@ import { LazyRecipeForm } from "../recipes/LazyRecipeForm.tsx";
 import { toFormValues } from "../recipes/recipeFormValues.ts";
 import { RecipeLoadError } from "../recipes/RecipeLoadError.tsx";
 import { recipeListsKey, recipeQuery } from "../recipes/recipeQueries.ts";
-import { importQuery, importsKey } from "./importQueries.ts";
+import { importListQuery, importQuery } from "./importQueries.ts";
 
 // The draft the worker made, in the recipe form: nothing is saved until the user has checked it
 // and pressed Save (design D1). Save approves it (§4.4), Discard deletes it.
@@ -29,10 +29,14 @@ export function ReviewImportPage() {
     mutationFn: (input: RecipeInput) =>
       sendJson("POST", `/api/imports/${id}/approve`, input, RecipeSchema),
     onSuccess: (recipe) => {
-      // As for a new recipe (NewRecipePage); and the import is gone, so the imports are too.
+      // As for a new recipe (NewRecipePage); and the import is gone from the list. Only the
+      // list: this import would now answer 404 (as DeleteRecipeButton).
       queryClient.setQueryData(recipeQuery(recipe.id).queryKey, recipe);
       void queryClient.invalidateQueries({ queryKey: recipeListsKey, refetchType: "all" });
-      void queryClient.invalidateQueries({ queryKey: importsKey, refetchType: "all" });
+      void queryClient.invalidateQueries({
+        queryKey: importListQuery.queryKey,
+        refetchType: "all",
+      });
       // replace: Back from the recipe goes to the list, not to a draft that no longer exists.
       void navigate(`/recipes/${recipe.id}`, { replace: true });
     },
@@ -42,7 +46,10 @@ export function ReviewImportPage() {
     mutationFn: () => deleteResource(`/api/imports/${id}`),
     onSuccess: async () => {
       // As deleting a recipe: the list is fresh before it shows, so the draft never flashes there.
-      await queryClient.invalidateQueries({ queryKey: importsKey, refetchType: "all" });
+      await queryClient.invalidateQueries({
+        queryKey: importListQuery.queryKey,
+        refetchType: "all",
+      });
       void navigate("/", { replace: true });
     },
   });
@@ -51,13 +58,14 @@ export function ReviewImportPage() {
   if (isLoadingError) {
     return <RecipeLoadError error={error} retry={() => void refetch()} retrying={isFetching} />;
   }
-  // An address typed or kept from before: there's no draft to review (yet, or any more).
+  // An address typed or kept from before, of a link not done yet or failed. A draft is there
+  // exactly when the import is ready, and checking it tells TypeScript it's there.
   if (job.draft === undefined) {
     return (
       <>
         <title>Not ready · Pinch</title>
         <h1 className="text-3xl font-bold tracking-tight text-balance">Not ready to review</h1>
-        <p className="mt-3 text-pretty text-text-muted">This link has no recipe to review yet.</p>
+        <p className="mt-3 text-pretty text-text-muted">This link has no recipe to review.</p>
         <Link to="/" className="mt-3 inline-block font-semibold text-accent-strong underline">
           Back to your recipes
         </Link>
@@ -76,13 +84,15 @@ export function ReviewImportPage() {
         </a>
         . Fix anything that's wrong, then save it.
       </p>
+      {/* Discard deletes the draft; the form's Cancel leaves it for later. Not while saving: one
+          or the other would find the import gone. */}
       <Button
         type="button"
         variant="danger-quiet"
         onClick={() => {
           discard.mutate();
         }}
-        disabled={discard.isPending}
+        disabled={discard.isPending || approval.isPending}
         className="mt-3"
       >
         {discard.isPending ? "Discarding…" : "Discard"}

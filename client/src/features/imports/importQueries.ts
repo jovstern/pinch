@@ -2,9 +2,6 @@ import { ImportListSchema, ImportSchema, type ImportList } from "@pinch/shared";
 import { queryOptions } from "@tanstack/react-query";
 import { getJson } from "../../lib/api.ts";
 
-// Keys nest under "imports", as recipes' do: ["imports", "list"] and ["imports", "detail", id].
-export const importsKey = ["imports"];
-
 // My imports, newest first: few, as done ones are deleted (design §4.1). One request for all of
 // them, asked again every 2 s while the worker has any of them in hand, so each one's status
 // moves on screen; then it stops.
@@ -24,7 +21,7 @@ export function pollInterval(list: ImportList | undefined) {
 // One import, for its review page.
 export function importQuery(id: string) {
   return queryOptions({
-    queryKey: [...importsKey, "detail", id],
+    queryKey: ["imports", "detail", id],
     queryFn: () => getJson(`/api/imports/${id}`, ImportSchema),
   });
 }

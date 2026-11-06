@@ -9,7 +9,7 @@ type RecipeLoadErrorProps = {
 };
 
 // When a recipe doesn't load: "not found" if it doesn't exist (no retry would change that),
-// otherwise Try again. Shared by the recipe page and its edit page.
+// otherwise Try again. Shared by the recipe page, its edit page and an import's review page.
 export function RecipeLoadError({ error, retry, retrying }: RecipeLoadErrorProps) {
   if (error instanceof ApiError && error.status === 404) return <NotFoundPage />;
   return (

@@ -108,7 +108,8 @@ test("while a link is worked on, its status is asked again until it's ready to r
 
   expect(await screen.findByText("Working on it…")).toBeInTheDocument();
   // The 2 s poll, with time to spare.
-  const review = await screen.findByRole("link", { name: "Ready to review" }, { timeout: 3000 });
+  expect(await screen.findByText("Ready to review", {}, { timeout: 3000 })).toBeInTheDocument();
+  const review = screen.getByRole("link", { name: "Review the recipe" });
   expect(review).toHaveAttribute("href", "/imports/6650a1b2c3d4e5f600000001");
 });
 

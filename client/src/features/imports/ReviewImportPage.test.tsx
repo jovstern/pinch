@@ -36,10 +36,13 @@ const saved: Recipe = {
   updatedAt: "2026-11-01T10:01:00.000Z",
 };
 
-// A fake API: this import, the recipe approve makes, DELETE answering 204, and an empty /.
-function stubApi(job: Import = ready) {
+// A fake API: this import, the recipe approve makes, DELETE answering 204 (or the status
+// given), and an empty /.
+function stubApi(job: Import = ready, deleteStatus = 204) {
   const fetch = vi.fn((path: string, init?: RequestInit) => {
-    if (init?.method === "DELETE") return Promise.resolve(new Response(null, { status: 204 }));
+    if (init?.method === "DELETE") {
+      return Promise.resolve(new Response(null, { status: deleteStatus }));
+    }
     if (path.endsWith("/approve")) return Promise.resolve(Response.json(saved, { status: 201 }));
     if (path === `/api/imports/${job.id}`) return Promise.resolve(Response.json(job));
     if (path === `/api/recipes/${saved.id}`) return Promise.resolve(Response.json(saved));
@@ -80,6 +83,18 @@ test("Discard deletes the import and goes back to the recipes", async () => {
     await screen.findByRole("heading", { level: 1, name: "Your recipes" }),
   ).toBeInTheDocument();
   expect(fetch).toHaveBeenCalledWith(`/api/imports/${ready.id}`, { method: "DELETE" });
+});
+
+test("when Discard fails, it says so and keeps the draft", async () => {
+  stubApi(ready, 500);
+  renderApp(`/imports/${ready.id}`);
+
+  await userEvent.click(await screen.findByRole("button", { name: "Discard" }));
+
+  expect(await screen.findByRole("alert")).toHaveTextContent(
+    "It couldn't be discarded. Try again.",
+  );
+  expect(screen.getByLabelText("Title")).toHaveValue("Tomato pasta");
 });
 
 test("an import with no draft yet says it isn't ready", async () => {
