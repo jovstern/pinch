@@ -52,7 +52,7 @@ Slices for later milestones are filled in when the milestone starts.
       worker's job finished by another
 - [x] Approve (idempotent: unique `sourceImportId`), retry (back to pending with `attempts`
       and `error` cleared), discard
-- [ ] Client: paste a link on `/`, import status polled every 2 s
+- [x] Client: paste a link on `/`, import status polled every 2 s
 - [ ] Client: review the draft in the recipe form and approve; retry or dismiss a failure
 - [ ] e2e of link → draft → recipe; end of milestone: UI review, observer metrics, demo
 ## M5 — Gemini
