@@ -3,6 +3,8 @@ import { useInfiniteQuery } from "@tanstack/react-query";
 import { useEffect, useRef } from "react";
 import { Link, useSearchParams } from "react-router";
 import { Button } from "../../components/Button.tsx";
+import { ImportLinkForm } from "../imports/ImportLinkForm.tsx";
+import { ImportList } from "../imports/ImportList.tsx";
 import { ListFilters } from "./ListFilters.tsx";
 import { filterParams, recipeListQuery, type RecipeFilters } from "./recipeQueries.ts";
 
@@ -64,6 +66,8 @@ export function RecipeListPage() {
     <>
       <title>Your recipes · Pinch</title>
       <h1 className="text-3xl font-bold tracking-tight text-balance">Your recipes</h1>
+      <ImportLinkForm />
+      <ImportList />
 
       {/* Not before the first recipe: there's nothing to search yet. */}
       {(filtering || recipes?.length !== 0) && (

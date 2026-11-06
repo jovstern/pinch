@@ -2,7 +2,7 @@ import type { Recipe } from "@pinch/shared";
 import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, test, vi } from "vitest";
-import { renderApp } from "../../test-utils.tsx";
+import { renderApp, stubFetch } from "../../test-utils.tsx";
 
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -22,10 +22,7 @@ const omelette: Recipe = {
 };
 
 test("lists each recipe as a link to it, with what it needs", async () => {
-  vi.stubGlobal(
-    "fetch",
-    vi.fn().mockResolvedValue(Response.json({ items: [omelette], nextCursor: null })),
-  );
+  stubFetch(vi.fn().mockResolvedValue(Response.json({ items: [omelette], nextCursor: null })));
   renderApp("/");
 
   const link = await screen.findByRole("link", { name: /Omelette/ });
@@ -35,10 +32,7 @@ test("lists each recipe as a link to it, with what it needs", async () => {
 
 test("one ingredient is counted in the singular", async () => {
   const lemonade = { ...omelette, ingredients: [{ name: "lemons" }], prepMinutes: undefined };
-  vi.stubGlobal(
-    "fetch",
-    vi.fn().mockResolvedValue(Response.json({ items: [lemonade], nextCursor: null })),
-  );
+  stubFetch(vi.fn().mockResolvedValue(Response.json({ items: [lemonade], nextCursor: null })));
   renderApp("/");
 
   expect(await screen.findByRole("link", { name: /Omelette/ })).toHaveTextContent(
@@ -47,7 +41,7 @@ test("one ingredient is counted in the singular", async () => {
 });
 
 test("with no recipes, it offers to add the first one", async () => {
-  vi.stubGlobal("fetch", vi.fn().mockResolvedValue(Response.json({ items: [], nextCursor: null })));
+  stubFetch(vi.fn().mockResolvedValue(Response.json({ items: [], nextCursor: null })));
   renderApp("/");
 
   expect(await screen.findByRole("link", { name: "Add your first recipe" })).toHaveAttribute(
@@ -63,7 +57,7 @@ test("when loading fails, Try again loads the list again", async () => {
     .fn()
     .mockResolvedValueOnce(new Response(null, { status: 502 }))
     .mockResolvedValueOnce(Response.json({ items: [omelette], nextCursor: null }));
-  vi.stubGlobal("fetch", fetch);
+  stubFetch(fetch);
   renderApp("/");
 
   await userEvent.click(await screen.findByRole("button", { name: "Try again" }));
@@ -77,7 +71,7 @@ test("Show more adds the next page, focuses its first recipe, and disappears on 
     .fn()
     .mockResolvedValueOnce(Response.json({ items: [omelette], nextCursor: "next-page" }))
     .mockResolvedValueOnce(Response.json({ items: [toast], nextCursor: null }));
-  vi.stubGlobal("fetch", fetch);
+  stubFetch(fetch);
   renderApp("/");
 
   await userEvent.click(await screen.findByRole("button", { name: "Show more" }));
@@ -94,7 +88,7 @@ test("when the next page fails, the list stays and says so", async () => {
     .mockResolvedValueOnce(Response.json({ items: [omelette], nextCursor: "next-page" }))
     .mockResolvedValueOnce(new Response(null, { status: 502 }))
     .mockResolvedValueOnce(Response.json({ items: [toast], nextCursor: null }));
-  vi.stubGlobal("fetch", fetch);
+  stubFetch(fetch);
   renderApp("/");
 
   await userEvent.click(await screen.findByRole("button", { name: "Show more" }));
@@ -114,7 +108,7 @@ function stubList() {
     const found = path === "/api/recipes" || path.includes("egg") || path.includes("breakfast");
     return Promise.resolve(Response.json({ items: found ? [omelette] : [], nextCursor: null }));
   });
-  vi.stubGlobal("fetch", fetch);
+  stubFetch(fetch);
   return fetch;
 }
 
@@ -166,7 +160,7 @@ test("Show more keeps the filter when it asks for the next page", async () => {
     .fn()
     .mockResolvedValueOnce(Response.json({ items: [omelette], nextCursor: "next-page" }))
     .mockResolvedValueOnce(Response.json({ items: [toast], nextCursor: null }));
-  vi.stubGlobal("fetch", fetch);
+  stubFetch(fetch);
   renderApp("/?tags=meal:breakfast");
 
   await userEvent.click(await screen.findByRole("button", { name: "Show more" }));

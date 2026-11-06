@@ -105,8 +105,8 @@ Mongo is the only shared state. There is no Redis, no queue service and no objec
    schema (structured output). The worker **validates it with Zod**, makes the thumbnail
    (§5), saves `draft` on the import, sets `status: "ready"`.
 4. **Cleanup in `finally`**: delete the temp file and the Gemini file. Media lives for about a minute.
-5. The client polls `GET /api/imports/:id` every 2 s while anything is in progress, then opens
-   the draft for review.
+5. The client polls `GET /api/imports` (all of them in one request) every 2 s while any is
+   pending or processing, then stops; a ready one is opened for review.
 6. The user edits and approves → `POST /api/imports/:id/approve` → a recipe is created and the
    import is deleted (§4.4).
 
@@ -441,10 +441,13 @@ the content in a single readable column below it.
 
 | Address | Screen | Its job | States |
 |---|---|---|---|
-| `/` | Your recipes | Pick something to cook; each card shows the title, the number of ingredients and the total time. Search (on Enter) and tag filters (folded, applied as ticked) sit above the list and live in the address: `/?q=egg&tags=meal:dinner` | Loading (placeholder cards), empty (says what goes here, links to New recipe), error (Try again); 50 at a time, then Show more (focus moves to the first new recipe; a failed page says so and keeps the list); filtered: how many match (announced), or none and a link to clear them |
+| `/` | Your recipes | Paste a link to pinch a recipe (from M4, the box and Your links above the list, below). Pick something to cook; each card shows the title, the number of ingredients and the total time. Search (on Enter) and tag filters (folded, applied as ticked) sit above the list and live in the address: `/?q=egg&tags=meal:dinner` | Loading (placeholder cards), empty (says what goes here, links to New recipe), error (Try again); 50 at a time, then Show more (focus moves to the first new recipe; a failed page says so and keeps the list); filtered: how many match (announced), or none and a link to clear them |
 | `/recipes/new` | New recipe | Write a recipe by hand; tags are chips to tick, a group per facet (§7) | From the first Save: each error under its field (§8.1), updated as the user types; focus on the first; saving (button says so); failed (says so, keeps what was typed) |
 | `/recipes/:id` | A recipe | Read it while cooking (its tags under the title); Edit, Delete (asks first) | Loading, error (Try again), not found |
 | `/recipes/:id/edit` | Edit recipe | Change it; Cancel goes back to the recipe | Loading, error (Try again), not found; then as New recipe |
 | anything else | Page not found | Get back to the recipes | — |
 
-From M4 the paste-a-link box on `/` becomes the main action, and import status shows there.
+From M4 the paste-a-link box on `/` becomes the main action, and import status shows there:
+"Your links" under the box, each with its platform, its link and how far it has got (waiting,
+working on it, trying again soon, ready to review, or why it failed); announced as it changes.
+A link from another site is refused under the box before it's sent.
