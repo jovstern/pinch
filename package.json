@@ -12,6 +12,7 @@
   "scripts": {
     "dev": "npm run dev -w client",
     "dev:api": "npm run dev -w server",
+    "dev:worker": "npm run dev:worker -w server",
     "db:indexes": "npm run db:indexes -w server",
     "db:seed": "npm run db:seed -w server",
     "format": "prettier --write .",
