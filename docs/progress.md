@@ -50,7 +50,7 @@ Slices for later milestones are filled in when the milestone starts.
       out is claimed again), 2 jobs at a time, the fake extractor
 - [x] Failures: retries with backoff, failed after 3, a deadline under the lease, a killed
       worker's job finished by another
-- [ ] Approve (idempotent: unique `sourceImportId`), retry (back to pending with `attempts`
+- [x] Approve (idempotent: unique `sourceImportId`), retry (back to pending with `attempts`
       and `error` cleared), discard
 - [ ] Client: paste a link on `/`, import status polled every 2 s
 - [ ] Client: review the draft in the recipe form and approve; retry or dismiss a failure

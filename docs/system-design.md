@@ -164,7 +164,7 @@ create a duplicate recipe when the user clicks again.
 
 - The recipe stores `sourceImportId` under a **unique, sparse index**.
 - Approve: insert the recipe; on duplicate-key error (`11000`) treat it as "already done"; then
-  delete the import.
+  delete the import. The recipe's `source` is the import's link and platform.
 - Repeating approve always ends with exactly one recipe and no import. No transaction and no
   replica set needed. (Chosen over a transaction: §8, decision D9.)
 
@@ -311,8 +311,8 @@ GET    /api/recipes/:id/thumbnail      image/webp
 POST   /api/imports                    { url } | { text } | multipart images  → 202 import
 GET    /api/imports                    my imports that are not done yet
 GET    /api/imports/:id                status, step, error, draft
-POST   /api/imports/:id/approve        { draft (edited) } → 201 recipe
-POST   /api/imports/:id/retry          failed → pending
+POST   /api/imports/:id/approve        the edited draft, as POST /api/recipes → 201 recipe (409 if not ready)
+POST   /api/imports/:id/retry          failed → pending, attempts and error cleared → 202 (409 if not failed)
 DELETE /api/imports/:id                discard / dismiss
 ```
 
@@ -391,7 +391,7 @@ changes**. The planned design:
 | D17 | The server runs on Node 24's built-in TypeScript type stripping | One fewer dependency; the spike already runs this way | `tsx` (node-api.md's default) |
 | D18 | Schemas in an npm-workspace package `shared/`, used as TypeScript source with no build: its `exports` point at `src/index.ts`; Vite compiles it, and Node type-strips it because the workspace symlink resolves to a path outside `node_modules` | One copy for client and server, no build step | `server/src/schemas/` (node-api.md); a copy on each side; a built package |
 | D19 | MongoDB through the native driver; Zod checks every write, and every response is parsed with its schema, which drops stored fields like `ownerId` | You see the real queries, which suits learning indexes; one schema layer, shared with the client | Mongoose (a second schema layer next to Zod) |
-| D20 | Editing is `PUT`: it replaces what the user can edit and keeps the fields the server owns (`_id`, `ownerId`, `source`, `createdAt`, later `thumbnail` and `sourceImportId`), listed in the route | The form always sends the whole recipe, so a field the user clears is simply left out; no `null`/`""` rules | `PATCH` with `null` to clear a field |
+| D20 | Editing is `PUT`: it replaces what the user can edit and keeps the fields the server owns (`_id`, `ownerId`, `source`, `createdAt`, `sourceImportId`, later `thumbnail`), listed in the route | The form always sends the whole recipe, so a field the user clears is simply left out; no `null`/`""` rules | `PATCH` with `null` to clear a field |
 | D21 | React Router (declarative: `<Routes>` in `App.tsx`, `useParams`, `Link`) | A handful of screens; the most familiar API and the least setup, easy to read line by line | TanStack Router (type-safe routes and loaders, more concepts) |
 
 ## 11. Risks
