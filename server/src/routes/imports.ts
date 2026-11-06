@@ -1,6 +1,11 @@
-import { ImportInputSchema, type ImportList, type Platform } from "@pinch/shared";
+import {
+  ImportInputSchema,
+  RecipeInputSchema,
+  type ImportList,
+  type Platform,
+} from "@pinch/shared";
 import express from "express";
-import { ObjectId, type Db } from "mongodb";
+import { MongoServerError, ObjectId, type Db } from "mongodb";
 import {
   IMPORT_LIFETIME_MS,
   IMPORT_LIST_LIMIT,
@@ -8,12 +13,14 @@ import {
   toImport,
   type ImportDocument,
 } from "../db/imports.ts";
+import { recipesCollection, toRecipe, type RecipeDocument } from "../db/recipes.ts";
 import { HttpError, parseInput } from "../errors.ts";
 
 // Imports turn a link into a draft recipe (design §4). The API only records the job; the worker
 // does it. As with recipes, every query filters by ownerId.
 export function importsRouter(db: Db) {
   const imports = importsCollection(db);
+  const recipes = recipesCollection(db);
   const router = express.Router();
 
   // 202, not 201: the import is accepted and will be worked on later (§4.1).
@@ -50,6 +57,62 @@ export function importsRouter(db: Db) {
     const job = await imports.findOne({ _id: parseId(req.params.id), ownerId: req.userId });
     if (!job) throw importNotFound();
     res.json(toImport(job));
+  });
+
+  // Saves the reviewed draft, as the user edited it, as a recipe, then deletes the import
+  // (§4.1). Safe to repeat without a transaction (§4.4, D9): the recipe keeps the import's id
+  // under a unique index, so after a crash between the two writes, approving again finds the
+  // recipe already made and only deletes the import.
+  router.post("/:id/approve", async (req, res) => {
+    const input = parseInput(RecipeInputSchema, req.body);
+    const job = await imports.findOne({ _id: parseId(req.params.id), ownerId: req.userId });
+    if (!job) throw importNotFound();
+    if (job.status !== "ready") {
+      throw new HttpError(409, "import_not_ready", "This import has no draft to save yet.");
+    }
+    const now = new Date();
+    let recipe: RecipeDocument | null = {
+      ...input,
+      _id: new ObjectId(),
+      ownerId: req.userId,
+      source: { type: job.input.platform, url: job.input.url },
+      sourceImportId: job._id,
+      createdAt: now,
+      updatedAt: now,
+    };
+    try {
+      await recipes.insertOne(recipe);
+    } catch (error) {
+      // 11000 is Mongo's duplicate key: an earlier approve of this import made the recipe.
+      if (!(error instanceof MongoServerError && error.code === 11000)) throw error;
+      recipe = await recipes.findOne({ sourceImportId: job._id, ownerId: req.userId });
+      if (!recipe) throw error;
+    }
+    await imports.deleteOne({ _id: job._id });
+    res.status(201).location(`/api/recipes/${recipe._id.toHexString()}`).json(toRecipe(recipe));
+  });
+
+  // Tries a failed import again, from the start: three more tries, now (§4.2). 202, as POST.
+  router.post("/:id/retry", async (req, res) => {
+    const filter = { _id: parseId(req.params.id), ownerId: req.userId };
+    const now = new Date();
+    const job = await imports.findOneAndUpdate(
+      { ...filter, status: "failed" },
+      {
+        $set: { status: "pending", attempts: 0, nextAttemptAt: now, updatedAt: now },
+        $unset: { error: "" },
+      },
+      { returnDocument: "after" },
+    );
+    if (job) {
+      res.status(202).json(toImport(job));
+      return;
+    }
+    // Nothing updated: either it isn't failed, or it isn't there.
+    if (await imports.findOne(filter)) {
+      throw new HttpError(409, "import_not_failed", "Only a failed import can be tried again.");
+    }
+    throw importNotFound();
   });
 
   // Discard a draft or dismiss a failure (§4.2). One still being worked on can go too: the

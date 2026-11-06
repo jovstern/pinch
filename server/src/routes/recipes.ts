@@ -64,12 +64,13 @@ export function recipesRouter(db: Db) {
     const existing = await recipes.findOne(filter);
     if (!existing) throw recipeNotFound();
     // Every stored field the form doesn't send is kept here, or replaceOne erases it. When
-    // thumbnail and sourceImportId arrive (M4, M6), add them (design D20).
+    // thumbnail arrives (M6), add it (design D20).
     const recipe: RecipeDocument = {
       ...input,
       _id: existing._id,
       ownerId: existing.ownerId,
       source: existing.source,
+      sourceImportId: existing.sourceImportId,
       createdAt: existing.createdAt,
       updatedAt: new Date(),
     };

@@ -14,6 +14,9 @@ export async function createIndexes(db: Db) {
     // Text search inside my recipes (searchRecipes). A collection has at most one text index;
     // ownerId before it means every search must name the owner, which it always does.
     { key: { ownerId: 1, title: "text", "ingredients.name": "text" } },
+    // One recipe per import, so approve is safe to repeat (design §4.4). Sparse: recipes made by
+    // hand have no sourceImportId, and aren't in it.
+    { key: { sourceImportId: 1 }, unique: true, sparse: true },
   ]);
   await importsCollection(db).createIndexes([
     // My imports, newest first; _id breaks ties, as for recipes (GET /api/imports).

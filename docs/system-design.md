@@ -164,7 +164,7 @@ create a duplicate recipe when the user clicks again.
 
 - The recipe stores `sourceImportId` under a **unique, sparse index**.
 - Approve: insert the recipe; on duplicate-key error (`11000`) treat it as "already done"; then
-  delete the import.
+  delete the import. The recipe's `source` is the import's link and platform.
 - Repeating approve always ends with exactly one recipe and no import. No transaction and no
   replica set needed. (Chosen over a transaction: §8, decision D9.)
 
@@ -311,8 +311,8 @@ GET    /api/recipes/:id/thumbnail      image/webp
 POST   /api/imports                    { url } | { text } | multipart images  → 202 import
 GET    /api/imports                    my imports that are not done yet
 GET    /api/imports/:id                status, step, error, draft
-POST   /api/imports/:id/approve        { draft (edited) } → 201 recipe
-POST   /api/imports/:id/retry          failed → pending
+POST   /api/imports/:id/approve        the edited draft, as POST /api/recipes → 201 recipe (409 if not ready)
+POST   /api/imports/:id/retry          failed → pending, attempts and error cleared → 202 (409 if not failed)
 DELETE /api/imports/:id                discard / dismiss
 ```
 

@@ -8,6 +8,8 @@ export type RecipeDocument = RecipeInput & {
   _id: ObjectId;
   ownerId: ObjectId;
   source: Recipe["source"];
+  // The import it was approved from: unique, so approving twice can't make two (design §4.4).
+  sourceImportId?: ObjectId;
   createdAt: Date;
   updatedAt: Date;
 };
