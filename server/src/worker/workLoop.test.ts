@@ -1,7 +1,7 @@
 import type { RecipeInput } from "@pinch/shared";
 import { ObjectId } from "mongodb";
 import { pino } from "pino";
-import { beforeEach, expect, test, vi } from "vitest";
+import { beforeEach, expect, onTestFinished, test, vi } from "vitest";
 import {
   claimNextImport,
   IMPORT_LIFETIME_MS,
@@ -231,6 +231,10 @@ test("the loop goes on after a database error, and runs the job once it can", as
   const claim = vi
     .spyOn(imports, "findOneAndUpdate")
     .mockRejectedValueOnce(new Error("Mongo is restarting."));
+  // Put back even if the test fails: the collection is shared with the tests after it.
+  onTestFinished(() => {
+    claim.mockRestore();
+  });
   const stop = new AbortController();
 
   const loop = workLoop({ imports, extract: extractNow, logger, signal: stop.signal });
@@ -240,5 +244,4 @@ test("the loop goes on after a database error, and runs the job once it can", as
     .toBe("ready");
   stop.abort();
   await loop;
-  claim.mockRestore();
 });

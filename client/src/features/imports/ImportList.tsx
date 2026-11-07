@@ -59,11 +59,7 @@ export function ImportList({ focusLinkBox }: { focusLinkBox: () => void }) {
                 <p title={job.input.url} className="truncate text-sm text-text-muted">
                   {job.input.url}
                 </p>
-                <p
-                  className={`mt-1 text-sm ${job.stalled ? "text-danger" : statusColors[job.status]}`}
-                >
-                  {statusText(job)}
-                </p>
+                <p className={`mt-1 text-sm ${statusColor(job)}`}>{statusText(job)}</p>
                 {job.status === "ready" && (
                   <Button asChild variant="secondary" className="mt-3">
                     <Link to={`/imports/${job.id}`}>Review the recipe</Link>
@@ -81,13 +77,11 @@ export function ImportList({ focusLinkBox }: { focusLinkBox: () => void }) {
   );
 }
 
-// Ready stands out: it's the one waiting for the user.
-const statusColors: Record<Import["status"], string> = {
-  pending: "",
-  processing: "",
-  ready: "font-semibold text-accent-strong",
-  failed: "text-danger",
-};
+// Ready stands out: it's the one waiting for the user. Stuck is a problem, as failed.
+function statusColor(job: Import) {
+  if (job.stalled || job.status === "failed") return "text-danger";
+  return job.status === "ready" ? "font-semibold text-accent-strong" : "";
+}
 
 const platformNames: Record<Platform, string> = {
   instagram: "Instagram",
@@ -98,7 +92,9 @@ const platformNames: Record<Platform, string> = {
 // waiting → fetching → analyzing → ready to review, or why it failed (design §1).
 function statusText(job: Import) {
   // Not "working on it" forever when nothing is (§4.3).
-  if (job.stalled) return "Stuck: nothing is working on this link. Dismiss it and paste it again.";
+  if (job.stalled) {
+    return "Stuck: nothing has worked on this link for a while. Dismiss it and paste it again later.";
+  }
   switch (job.status) {
     case "pending":
       // Back in the queue after a failed try (§4.3).

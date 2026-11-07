@@ -34,17 +34,6 @@ export function toImport(job: ImportDocument): Import {
 // failed is abandoned (§4.3). expiresAt is set once and never moved.
 export const IMPORT_LIFETIME_MS = 7 * 24 * 60 * 60 * 1000;
 
-// A job is due at nextAttemptAt, or, held, again when its lease runs out. Running workers look
-// every second and an attempt ends within its deadline, so one still unclaimed this long after
-// it was due means no worker is running (§4.3).
-const STALLED_AFTER_MS = 5 * 60 * 1000;
-
-function isStalled(job: ImportDocument, now: Date) {
-  const dueAt = job.status === "processing" ? job.leaseUntil : job.nextAttemptAt;
-  const waiting = job.status === "pending" || job.status === "processing";
-  return waiting && dueAt !== undefined && now.getTime() - dueAt.getTime() > STALLED_AFTER_MS;
-}
-
 // The most GET /api/imports answers: a guard, never reached in use.
 export const IMPORT_LIST_LIMIT = 50;
 
@@ -73,4 +62,18 @@ export function claimNextImport(imports: Collection<ImportDocument>, now: Date) 
     },
     { sort: { createdAt: 1 }, returnDocument: "after" },
   );
+}
+
+// A job is due at nextAttemptAt, or, held, again when its lease runs out: what the claim's $or
+// above asks. Running workers look every second and an attempt ends within its deadline, so one
+// still unclaimed this long after it was due means no worker is running (§4.3). Not exact: with
+// more than about four links queued ahead of it (two at a time, up to 150 s each), a waiting one
+// shows as stalled though the workers are busy. Fine for one user; a worker heartbeat would be
+// the exact signal.
+const STALLED_AFTER_MS = 5 * 60 * 1000;
+
+function isStalled(job: ImportDocument, now: Date) {
+  if (job.status !== "pending" && job.status !== "processing") return false;
+  const dueAt = job.status === "processing" ? job.leaseUntil : job.nextAttemptAt;
+  return dueAt !== undefined && now.getTime() - dueAt.getTime() > STALLED_AFTER_MS;
 }

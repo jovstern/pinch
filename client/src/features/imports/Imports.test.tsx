@@ -198,7 +198,7 @@ test("a stalled link says nothing is working on it, and offers Dismiss, not Retr
   stubApi([[importOf({ status: "processing", attempts: 1, stalled: true })]]);
   renderApp("/");
 
-  expect(await screen.findByText(/Stuck: nothing is working on this link/)).toBeInTheDocument();
+  expect(await screen.findByText(/Stuck: nothing has worked on this link/)).toBeInTheDocument();
   expect(screen.queryByText("Working on it…")).not.toBeInTheDocument();
   expect(screen.getByRole("button", { name: "Dismiss" })).toBeInTheDocument();
   expect(screen.queryByRole("button", { name: "Retry" })).not.toBeInTheDocument();

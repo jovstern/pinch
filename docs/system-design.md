@@ -159,7 +159,9 @@ stateDiagram-v2
   job it held is claimed again when its lease runs out.
 - **Stalled.** An import still unclaimed 5 minutes after it was due (`nextAttemptAt`, or a
   held one's `leaseUntil`) means no worker is running: the API marks it `stalled`, and the
-  client says so and offers Dismiss instead of "working on it" forever.
+  client says so and offers Dismiss instead of "working on it" forever. Not exact: with more
+  than about four links queued ahead (two at a time, up to 150 s each), a waiting one shows as
+  stalled though the workers are busy. Fine for one user; a worker heartbeat would be exact.
 - **Expiry.** Every import has `expiresAt` = 7 days; a **TTL index** makes Mongo delete abandoned
   imports by itself.
 
