@@ -23,12 +23,14 @@ and types used by both). MongoDB through the native driver + Zod. Gemini for ext
 - `npm run dev` — the client (Vite) on http://localhost:5173; it proxies `/api` to the API.
 - `npm run dev:api` — the API on http://localhost:3000 (restarts on change, readable logs).
 - `npm run dev:worker` — the import worker (restarts on change, readable logs); it takes jobs
-  from the `imports` collection, so it needs no port.
+  from the `imports` collection, so it needs no port. It calls Gemini (`GEMINI_API_KEY` in
+  `.env`); `EXTRACTOR=fake` runs it with the fake extractor instead.
 - `npm run check` — every gate: Prettier, then per workspace ESLint, Vitest and the types
   (shared: lint + `tsc`; client: `tsc -b` + `vite build`; server: `tsc`).
 - `npm run format` — Prettier writes.
 - `npm run e2e` — Playwright: starts its own API (port 3110, a `pinch-test-<uuid>` database)
   and the client's production build (port 4173), runs `e2e/`, records a video of each test.
+  Its worker uses the fake extractor.
 
 - `npm run db:indexes` — creates the indexes (`server/src/db/indexes.ts`) in the app's
   database; run it once, and again when an index is added.

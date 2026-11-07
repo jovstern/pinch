@@ -40,7 +40,8 @@ export default defineConfig({
       command: "mkdir -p ../.metrics && node src/worker.ts | tee ../.metrics/e2e-worker.log",
       cwd: "server",
       wait: { stdout: /worker started/ },
-      env: { DB_NAME: process.env.E2E_DB_NAME },
+      // The fake extractor: e2e never calls Gemini (design §12).
+      env: { DB_NAME: process.env.E2E_DB_NAME, EXTRACTOR: "fake" },
       // Its own shutdown (server/src/worker.ts): it finishes the job in hand, a few seconds.
       gracefulShutdown: { signal: "SIGTERM", timeout: 5000 },
     },
