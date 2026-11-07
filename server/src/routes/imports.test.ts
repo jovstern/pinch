@@ -35,6 +35,7 @@ test("POST /api/imports accepts a link and answers 202 with a pending import", a
     status: "pending",
     input: { type: "link", url: reel, platform: "instagram" },
     attempts: 0,
+    stalled: false,
   });
   // The worker's fields are stored, not sent: it may be claimed now, and expires in a week.
   expect(response.body).not.toHaveProperty("nextAttemptAt");
@@ -152,6 +153,27 @@ test("DELETE /api/imports/:id deletes it, then it's not found", async () => {
   expect((await request(app).delete(`/api/imports/${id}`)).status).toBe(204);
   expect((await request(app).get(`/api/imports/${id}`)).status).toBe(404);
   expect((await request(app).delete(`/api/imports/${id}`)).status).toBe(404);
+});
+
+test("an import no worker has taken, long after it was due, is stalled", async () => {
+  const longAgo = new Date(Date.now() - 10 * 60 * 1000);
+  const recently = new Date(Date.now() - 60 * 1000);
+  const ids = {
+    // Its worker died, and no other took it when the lease ran out.
+    heldLongAgo: await insertDone({ status: "processing", leaseUntil: longAgo }),
+    dueLongAgo: await insertDone({ status: "pending", nextAttemptAt: longAgo }),
+    // Workers may just be busy: not yet.
+    dueRecently: await insertDone({ status: "pending", nextAttemptAt: recently }),
+    readyLongAgo: await insertDone({ nextAttemptAt: longAgo, draft }),
+  };
+
+  const stalled = async (id: string) =>
+    ImportSchema.parse((await request(app).get(`/api/imports/${id}`)).body).stalled;
+
+  expect(await stalled(ids.heldLongAgo)).toBe(true);
+  expect(await stalled(ids.dueLongAgo)).toBe(true);
+  expect(await stalled(ids.dueRecently)).toBe(false);
+  expect(await stalled(ids.readyLongAgo)).toBe(false);
 });
 
 test("POST /api/imports/:id/approve saves the edited draft as a recipe and deletes the import", async () => {

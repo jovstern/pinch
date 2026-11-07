@@ -34,11 +34,20 @@ type WorkLoopDeps = {
 // side, so at most two jobs at a time (§4.3).
 export async function workLoop({ imports, extract, logger, signal }: WorkLoopDeps) {
   while (!signal.aborted) {
-    const job = await claimNextImport(imports, new Date());
-    if (job) {
-      const deadline = AbortSignal.timeout(ATTEMPT_DEADLINE_MS);
-      await runImport({ imports, extract, logger, job, deadline });
-    } else {
+    try {
+      const job = await claimNextImport(imports, new Date());
+      if (job) {
+        const deadline = AbortSignal.timeout(ATTEMPT_DEADLINE_MS);
+        await runImport({ imports, extract, logger, job, deadline });
+      } else {
+        await setTimeout(IDLE_MS);
+      }
+    } catch (error) {
+      // A database error (Mongo restarting, say): the loop waits and goes on, rather than end
+      // the worker, which nothing would start again, leaving every import waiting (§4.3). A job
+      // it held is claimed again when its lease runs out; the fence keeps that safe. A bug lands
+      // here too, logged as an error each time.
+      logger.error({ err: error }, "worker loop failed, trying again");
       await setTimeout(IDLE_MS);
     }
   }
@@ -53,8 +62,8 @@ type RunImportDeps = {
 };
 
 // Runs one claimed job: saves its draft for the user to review (§4.1), or, if it fails, puts it
-// back to be tried again later, or fails it after the last try. Only the extraction is caught: a
-// database error ends the worker (worker.ts).
+// back to be tried again later, or fails it after the last try. Only the extraction is caught
+// here: a database error goes up to workLoop, which logs it and goes on.
 export async function runImport({ imports, extract, logger, job, deadline }: RunImportDeps) {
   const log = logger.child({ importId: job._id.toHexString(), attempt: job.attempts });
 

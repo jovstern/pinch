@@ -36,6 +36,9 @@ export const ImportSchema = z.object({
     platform: PlatformSchema,
   }),
   attempts: z.int(),
+  // No worker has taken it, long after it was due: none is running (design §4.3). The client
+  // then stops saying it's being worked on.
+  stalled: z.boolean(),
   // Why it failed, in words the user can read.
   error: z.string().optional(),
   // The recipe the worker made, for the user to review (design D1).

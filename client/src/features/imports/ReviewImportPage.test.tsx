@@ -22,6 +22,7 @@ const ready: Import = {
   status: "ready",
   input: { type: "link", url: reel, platform: "instagram" },
   attempts: 1,
+  stalled: false,
   draft,
   createdAt: "2026-11-01T10:00:00.000Z",
   updatedAt: "2026-11-01T10:00:00.000Z",

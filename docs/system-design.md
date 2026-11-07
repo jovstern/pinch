@@ -154,6 +154,14 @@ stateDiagram-v2
   its third attempt is failed when it's claimed again, not run a fourth time.
 - **Back-pressure.** At most **2 jobs at a time** per worker, to stay within Gemini rate limits.
 - **Idle polling.** With nothing to do, the worker checks again after 1 s.
+- **Errors don't stop it.** A database error (Mongo restarting) is logged, and the loop tries
+  again after 1 s, rather than end the worker: in development nothing would start it again. A
+  job it held is claimed again when its lease runs out.
+- **Stalled.** An import still unclaimed 5 minutes after it was due (`nextAttemptAt`, or a
+  held one's `leaseUntil`) means no worker is running: the API marks it `stalled`, and the
+  client says so and offers Dismiss instead of "working on it" forever. Not exact: with more
+  than about four links queued ahead (two at a time, up to 150 s each), a waiting one shows as
+  stalled though the workers are busy. Fine for one user; a worker heartbeat would be exact.
 - **Expiry.** Every import has `expiresAt` = 7 days; a **TTL index** makes Mongo delete abandoned
   imports by itself.
 
@@ -452,6 +460,7 @@ column below it.
 From M4 the paste-a-link box on `/` becomes the main action, and import status shows there:
 "Your links" under the box, each with its platform, its link and how far it has got (waiting,
 working on it, trying again soon, ready to review, or why it failed); announced as it changes.
-A ready one offers Review the recipe; a failed one, Retry (three more tries) and Dismiss
-(deleted, no question: the link can be pasted again). A link from another site is refused under
-the box before it's sent.
+A ready one offers Review the recipe; a failed one, Retry (three more tries) and Dismiss; a
+stalled one (§4.3) says nothing is working on it, and offers Dismiss. Dismiss deletes it, with
+no question: the link can be pasted again. A link from another site is refused under the box
+before it's sent.

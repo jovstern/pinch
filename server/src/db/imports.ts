@@ -3,8 +3,9 @@ import type { Collection, Db, ObjectId } from "mongodb";
 
 // An import as it is stored (design §6): the job the worker runs. nextAttemptAt says when it may
 // be claimed (now, or after a backoff); leaseUntil, how long the worker holding it may keep it
-// (§4.3); expiresAt, when the TTL index deletes it if it's abandoned.
-export type ImportDocument = Omit<Import, "id" | "createdAt" | "updatedAt"> & {
+// (§4.3); expiresAt, when the TTL index deletes it if it's abandoned. stalled isn't stored:
+// toImport works it out each time.
+export type ImportDocument = Omit<Import, "id" | "stalled" | "createdAt" | "updatedAt"> & {
   _id: ObjectId;
   ownerId: ObjectId;
   nextAttemptAt: Date;
@@ -23,6 +24,7 @@ export function toImport(job: ImportDocument): Import {
   return ImportSchema.parse({
     ...job,
     id: job._id.toHexString(),
+    stalled: isStalled(job, new Date()),
     createdAt: job.createdAt.toISOString(),
     updatedAt: job.updatedAt.toISOString(),
   });
@@ -60,4 +62,18 @@ export function claimNextImport(imports: Collection<ImportDocument>, now: Date) 
     },
     { sort: { createdAt: 1 }, returnDocument: "after" },
   );
+}
+
+// A job is due at nextAttemptAt, or, held, again when its lease runs out: what the claim's $or
+// above asks. Running workers look every second and an attempt ends within its deadline, so one
+// still unclaimed this long after it was due means no worker is running (§4.3). Not exact: with
+// more than about four links queued ahead of it (two at a time, up to 150 s each), a waiting one
+// shows as stalled though the workers are busy. Fine for one user; a worker heartbeat would be
+// the exact signal.
+const STALLED_AFTER_MS = 5 * 60 * 1000;
+
+function isStalled(job: ImportDocument, now: Date) {
+  if (job.status !== "pending" && job.status !== "processing") return false;
+  const dueAt = job.status === "processing" ? job.leaseUntil : job.nextAttemptAt;
+  return dueAt !== undefined && now.getTime() - dueAt.getTime() > STALLED_AFTER_MS;
 }
