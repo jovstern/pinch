@@ -22,6 +22,12 @@ const MAX_ATTEMPTS = 3;
 // What the user reads on a failed import. The cause is in the worker's log.
 export const FAILED_MESSAGE = "We couldn't turn this link into a recipe.";
 
+// A failure no retry can fix (not a recipe, too long): the import fails at once, and the
+// message is what the user reads (design §4.2, D23). Any other error is tried again.
+export class NoRetryError extends Error {
+  override name = "NoRetryError";
+}
+
 type WorkLoopDeps = {
   imports: Collection<ImportDocument>;
   extract: Extract;
@@ -62,7 +68,8 @@ type RunImportDeps = {
 };
 
 // Runs one claimed job: saves its draft for the user to review (§4.1), or, if it fails, puts it
-// back to be tried again later, or fails it after the last try. Only the extraction is caught
+// back to be tried again later, or fails it after the last try, or at once when no retry can fix
+// it (D23). Only the extraction is caught
 // here: a database error goes up to workLoop, which logs it and goes on.
 export async function runImport({ imports, extract, logger, job, deadline }: RunImportDeps) {
   const log = logger.child({ importId: job._id.toHexString(), attempt: job.attempts });
@@ -90,6 +97,10 @@ export async function runImport({ imports, extract, logger, job, deadline }: Run
     // Checked like a POST body: what the extractor makes is never trusted as it is (§9).
     draft = RecipeInputSchema.parse(await extract(job.input, deadline));
   } catch (error) {
+    if (error instanceof NoRetryError) {
+      await save(failedUpdate(error.message), `import failed: ${error.message}`);
+      return;
+    }
     // A timeout at the deadline lands here too: a failed attempt like any other (§4.3).
     log.error({ err: error }, "import attempt failed");
     if (job.attempts === MAX_ATTEMPTS) {
@@ -120,9 +131,9 @@ export async function runImport({ imports, extract, logger, job, deadline }: Run
 }
 
 // The update that fails an import, with the message the user reads (§4.2).
-function failedUpdate(): UpdateFilter<ImportDocument> {
+function failedUpdate(message = FAILED_MESSAGE): UpdateFilter<ImportDocument> {
   return {
-    $set: { status: "failed", error: FAILED_MESSAGE, updatedAt: new Date() },
+    $set: { status: "failed", error: message, updatedAt: new Date() },
     $unset: { leaseUntil: "" },
   };
 }
