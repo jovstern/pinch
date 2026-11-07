@@ -1,4 +1,5 @@
 import {
+  dailyLimitMessage,
   ImportInputSchema,
   RecipeInputSchema,
   type ImportList,
@@ -14,6 +15,7 @@ import {
   type ImportDocument,
 } from "../db/imports.ts";
 import { insertRecipeOnce, recipesCollection, toRecipe } from "../db/recipes.ts";
+import { countImport, usageCollection } from "../db/usage.ts";
 import { HttpError, parseInput } from "../errors.ts";
 
 // Imports turn a link into a draft recipe (design §4). The API only records the job; the worker
@@ -21,11 +23,13 @@ import { HttpError, parseInput } from "../errors.ts";
 export function importsRouter(db: Db) {
   const imports = importsCollection(db);
   const recipes = recipesCollection(db);
+  const usage = usageCollection(db);
   const router = express.Router();
 
   // 202, not 201: the import is accepted and will be worked on later (§4.1).
   router.post("/", async (req, res) => {
     const { url } = parseInput(ImportInputSchema, req.body);
+    if (!(await countImport(usage, req.userId))) throw dailyLimit();
     const now = new Date();
     const job: ImportDocument = {
       _id: new ObjectId(),
@@ -90,6 +94,11 @@ export function importsRouter(db: Db) {
   // safe, because each earlier attempt ended at its deadline before the import could fail.
   router.post("/:id/retry", async (req, res) => {
     const filter = { _id: parseId(req.params.id), ownerId: req.userId };
+    // Checked before it's counted: a retry that can't happen doesn't use one of the day's.
+    const found = await imports.findOne(filter);
+    if (!found) throw importNotFound();
+    if (found.status !== "failed") throw importNotFailed();
+    if (!(await countImport(usage, req.userId))) throw dailyLimit();
     const now = new Date();
     const job = await imports.findOneAndUpdate(
       { ...filter, status: "failed" },
@@ -99,15 +108,9 @@ export function importsRouter(db: Db) {
       },
       { returnDocument: "after" },
     );
-    if (job) {
-      res.status(202).json(toImport(job));
-      return;
-    }
-    // Nothing updated: either it isn't failed, or it isn't there.
-    if (await imports.findOne(filter)) {
-      throw new HttpError(409, "import_not_failed", "Only a failed import can be tried again.");
-    }
-    throw importNotFound();
+    // Changed since it was read (retried in another tab, or deleted).
+    if (!job) throw importNotFailed();
+    res.status(202).json(toImport(job));
   });
 
   // Discard a draft or dismiss a failure (§4.2). One still being worked on can go too: the
@@ -136,6 +139,15 @@ function platformOf(url: string): Platform {
 function parseId(id: string) {
   if (!ObjectId.isValid(id)) throw importNotFound();
   return new ObjectId(id);
+}
+
+function importNotFailed() {
+  return new HttpError(409, "import_not_failed", "Only a failed import can be tried again.");
+}
+
+// 429: too many for today (design §1).
+function dailyLimit() {
+  return new HttpError(429, "daily_limit", dailyLimitMessage);
 }
 
 function importNotFound() {

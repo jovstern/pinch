@@ -1,7 +1,7 @@
-import { ImportSchema, type Import } from "@pinch/shared";
+import { dailyLimitMessage, ImportSchema, type Import } from "@pinch/shared";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "../../components/Button.tsx";
-import { deleteResource, sendJson } from "../../lib/api.ts";
+import { ApiError, deleteResource, sendJson } from "../../lib/api.ts";
 import { importListQuery } from "./importQueries.ts";
 
 // What a failed link offers (design §4.2): Retry puts it back in the queue for three more
@@ -60,7 +60,9 @@ export function ImportActions({ job, focusLinkBox }: { job: Import; focusLinkBox
       </div>
       {retry.isError && (
         <p role="alert" className="mt-1 text-sm text-danger">
-          It couldn't be retried. Try again.
+          {retry.error instanceof ApiError && retry.error.status === 429
+            ? dailyLimitMessage
+            : "It couldn't be retried. Try again."}
         </p>
       )}
       {dismiss.isError && (
