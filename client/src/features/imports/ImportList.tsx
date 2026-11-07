@@ -2,6 +2,7 @@ import type { Import, Platform } from "@pinch/shared";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router";
 import { Button } from "../../components/Button.tsx";
+import { FailedImportActions } from "./FailedImportActions.tsx";
 import { importListQuery } from "./importQueries.ts";
 
 // The links being turned into recipes, each with how far it has got (design §1, §4.2).
@@ -33,6 +34,7 @@ export function ImportList() {
                     <Link to={`/imports/${job.id}`}>Review the recipe</Link>
                   </Button>
                 )}
+                {job.status === "failed" && <FailedImportActions job={job} />}
               </li>
             ))}
           </ul>
