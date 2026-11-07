@@ -29,6 +29,7 @@ export function importsRouter(db: Db) {
   // 202, not 201: the import is accepted and will be worked on later (§4.1).
   router.post("/", async (req, res) => {
     const { url } = parseInput(ImportInputSchema, req.body);
+    // After the link is checked: one refused as invalid doesn't count.
     if (!(await countImport(usage, req.userId))) throw dailyLimit();
     const now = new Date();
     const job: ImportDocument = {

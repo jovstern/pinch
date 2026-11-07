@@ -16,7 +16,7 @@ import { loadConfig } from "../config.ts";
 import { IMPORT_LIFETIME_MS, importsCollection, type ImportDocument } from "../db/imports.ts";
 import { createIndexes } from "../db/indexes.ts";
 import { recipesCollection } from "../db/recipes.ts";
-import { usageCollection } from "../db/usage.ts";
+import { usageCollection, utcDay } from "../db/usage.ts";
 import { createTestDb } from "../testDb.ts";
 
 const config = loadConfig(process.env);
@@ -27,7 +27,6 @@ const app = createApp({ logger: pino({ level: "silent" }), db, devUserId: config
 const reel = "https://www.instagram.com/p/DOxAbc123/";
 const usage = usageCollection(db);
 const devUserId = new ObjectId(config.DEV_USER_ID);
-const today = new Date().toISOString().slice(0, 10);
 
 // Every test here pinches as the dev user: each starts with none counted today, so the daily
 // cap never refuses one by accident.
@@ -35,9 +34,12 @@ beforeEach(async () => {
   await usage.deleteMany({});
 });
 
-// As if the dev user had pinched this many links on that day.
-async function setUsage(imports: number, day = today) {
-  await usage.insertOne({ ownerId: devUserId, day, imports, expiresAt: new Date() });
+// As if the dev user had pinched this many links on that day (today when not given, worked
+// out at the call, so a run across midnight UTC agrees with the route). Expiring tomorrow: the
+// TTL index would delete one already due.
+async function setUsage(imports: number, day = utcDay(new Date())) {
+  const tomorrow = new Date(Date.now() + 24 * 60 * 60 * 1000);
+  await usage.insertOne({ ownerId: devUserId, day, imports, expiresAt: tomorrow });
 }
 
 test("POST /api/imports accepts a link and answers 202 with a pending import", async () => {
@@ -305,8 +307,11 @@ test("each link and Retry counts once for today; one that can't happen doesn't c
   // Not failed: 409, not counted.
   const ready = await insertDone({ draft });
   expect((await request(app).post(`/api/imports/${ready}/retry`)).status).toBe(409);
+  // Not there: 404, not counted.
+  const missing = new ObjectId().toHexString();
+  expect((await request(app).post(`/api/imports/${missing}/retry`)).status).toBe(404);
 
-  const counted = await usage.findOne({ ownerId: devUserId, day: today });
+  const counted = await usage.findOne({ ownerId: devUserId, day: utcDay(new Date()) });
   expect(counted?.imports).toBe(2);
 });
 
