@@ -1,4 +1,6 @@
 import {
+  DAILY_IMPORT_CAP,
+  dailyLimitMessage,
   ImportListSchema,
   ImportSchema,
   linkMessage,
@@ -8,12 +10,13 @@ import {
 import { ObjectId } from "mongodb";
 import { pino } from "pino";
 import request from "supertest";
-import { expect, test } from "vitest";
+import { beforeEach, expect, test } from "vitest";
 import { createApp } from "../app.ts";
 import { loadConfig } from "../config.ts";
 import { IMPORT_LIFETIME_MS, importsCollection, type ImportDocument } from "../db/imports.ts";
 import { createIndexes } from "../db/indexes.ts";
 import { recipesCollection } from "../db/recipes.ts";
+import { usageCollection, utcDay } from "../db/usage.ts";
 import { createTestDb } from "../testDb.ts";
 
 const config = loadConfig(process.env);
@@ -22,6 +25,22 @@ await createIndexes(db);
 const app = createApp({ logger: pino({ level: "silent" }), db, devUserId: config.DEV_USER_ID });
 
 const reel = "https://www.instagram.com/p/DOxAbc123/";
+const usage = usageCollection(db);
+const devUserId = new ObjectId(config.DEV_USER_ID);
+
+// Every test here pinches as the dev user: each starts with none counted today, so the daily
+// cap never refuses one by accident.
+beforeEach(async () => {
+  await usage.deleteMany({});
+});
+
+// As if the dev user had pinched this many links on that day (today when not given, worked
+// out at the call, so a run across midnight UTC agrees with the route). Expiring tomorrow: the
+// TTL index would delete one already due.
+async function setUsage(imports: number, day = utcDay(new Date())) {
+  const tomorrow = new Date(Date.now() + 24 * 60 * 60 * 1000);
+  await usage.insertOne({ ownerId: devUserId, day, imports, expiresAt: tomorrow });
+}
 
 test("POST /api/imports accepts a link and answers 202 with a pending import", async () => {
   const response = await request(app)
@@ -255,4 +274,49 @@ test("retry refuses an import that isn't failed, and a missing one", async () =>
 
   const missing = new ObjectId().toHexString();
   expect((await request(app).post(`/api/imports/${missing}/retry`)).status).toBe(404);
+});
+
+test("past the daily cap, a new link is refused with 429, and nothing is stored", async () => {
+  await setUsage(DAILY_IMPORT_CAP);
+  const before = await importsCollection(db).countDocuments();
+
+  const response = await request(app).post("/api/imports").send({ url: reel });
+
+  expect(response.status).toBe(429);
+  expect(response.body).toMatchObject({
+    error: { code: "daily_limit", message: dailyLimitMessage },
+  });
+  expect(await importsCollection(db).countDocuments()).toBe(before);
+});
+
+test("past the daily cap, Retry is refused too, and the import stays failed", async () => {
+  const id = await insertDone({ status: "failed", attempts: 3, error: "No." });
+  await setUsage(DAILY_IMPORT_CAP);
+
+  const response = await request(app).post(`/api/imports/${id}/retry`);
+
+  expect(response.status).toBe(429);
+  const job = await importsCollection(db).findOne({ _id: new ObjectId(id) });
+  expect(job?.status).toBe("failed");
+});
+
+test("each link and Retry counts once for today; one that can't happen doesn't count", async () => {
+  await request(app).post("/api/imports").send({ url: reel });
+  const failed = await insertDone({ status: "failed", attempts: 3, error: "No." });
+  await request(app).post(`/api/imports/${failed}/retry`);
+  // Not failed: 409, not counted.
+  const ready = await insertDone({ draft });
+  expect((await request(app).post(`/api/imports/${ready}/retry`)).status).toBe(409);
+  // Not there: 404, not counted.
+  const missing = new ObjectId().toHexString();
+  expect((await request(app).post(`/api/imports/${missing}/retry`)).status).toBe(404);
+
+  const counted = await usage.findOne({ ownerId: devUserId, day: utcDay(new Date()) });
+  expect(counted?.imports).toBe(2);
+});
+
+test("yesterday's count doesn't count today", async () => {
+  await setUsage(DAILY_IMPORT_CAP, "2000-01-01");
+
+  expect((await request(app).post("/api/imports").send({ url: reel })).status).toBe(202);
 });

@@ -1,4 +1,4 @@
-import { fieldErrors, ImportInputSchema, ImportSchema } from "@pinch/shared";
+import { dailyLimitMessage, fieldErrors, ImportInputSchema, ImportSchema } from "@pinch/shared";
 import { revalidateLogic, useForm } from "@tanstack/react-form";
 import { useQueryClient } from "@tanstack/react-query";
 import type { Ref } from "react";
@@ -29,6 +29,8 @@ export function ImportLinkForm({ inputRef }: { inputRef: Ref<HTMLInputElement> }
           if (error instanceof ApiError && error.fields.url) {
             return { fields: { url: error.fields.url } };
           }
+          // Past the day's cap (design §1): the link is fine, so not on the field.
+          if (error instanceof ApiError && error.status === 429) return dailyLimitMessage;
           return "We couldn't send this link. Try again.";
         }
       },

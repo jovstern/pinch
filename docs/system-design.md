@@ -234,6 +234,12 @@ Import {
   draft?: RecipeDraft, draftThumbnail?: Binary,
   createdAt, updatedAt, expiresAt   // TTL
 }
+
+Usage {                            // the daily cap (D22)
+  ownerId, day: "2026-11-07",      // the UTC day
+  imports,                         // links pasted + Retry clicks that day
+  expiresAt                        // TTL: two days later
+}
 ```
 
 Uploaded screenshots for the fallback are held on the import only until the worker has sent
@@ -250,6 +256,8 @@ them to Gemini, then removed from the document.
 | imports | `{ status: 1, nextAttemptAt: 1 }` | The worker's claim query |
 | imports | `{ ownerId: 1, createdAt: -1, _id: -1 }` | "My imports" list in the UI |
 | imports | `{ expiresAt: 1 }` TTL (`expireAfterSeconds: 0`) | Automatic cleanup |
+| usage | `{ ownerId: 1, day: 1 }` unique | Today's count (the daily cap) |
+| usage | `{ expiresAt: 1 }` TTL | Old days go |
 
 Every index is checked with `.explain("executionStats")`: expect `IXSCAN`, and
 `totalDocsExamined` close to `nReturned`.
@@ -316,7 +324,7 @@ PUT    /api/recipes/:id                replace what the user can edit (the form 
 DELETE /api/recipes/:id
 GET    /api/recipes/:id/thumbnail      image/webp
 
-POST   /api/imports                    { url } | { text } | multipart images  → 202 import
+POST   /api/imports                    { url } | { text } | multipart images  → 202 import (429 past the daily cap)
 GET    /api/imports                    my imports that are not done yet
 GET    /api/imports/:id                status, step, error, draft
 POST   /api/imports/:id/approve        the edited draft, as POST /api/recipes → 201 recipe (409 if not ready)
@@ -401,6 +409,7 @@ changes**. The planned design:
 | D19 | MongoDB through the native driver; Zod checks every write, and every response is parsed with its schema, which drops stored fields like `ownerId` | You see the real queries, which suits learning indexes; one schema layer, shared with the client | Mongoose (a second schema layer next to Zod) |
 | D20 | Editing is `PUT`: it replaces what the user can edit and keeps the fields the server owns (`_id`, `ownerId`, `source`, `createdAt`, `sourceImportId`, later `thumbnail`), listed in the route | The form always sends the whole recipe, so a field the user clears is simply left out; no `null`/`""` rules | `PATCH` with `null` to clear a field |
 | D21 | React Router (declarative: `<Routes>` in `App.tsx`, `useParams`, `Link`) | A handful of screens; the most familiar API and the least setup, easy to read line by line | TanStack Router (type-safe routes and loaders, more concepts) |
+| D22 | The daily cap (20) counts links pasted and Retry clicks, in a per-user, per-UTC-day counter (`usage`) raised atomically by both routes; past it, 429 | Imports are deleted once done, so counting them would undercount; the unique `{ownerId, day}` index makes two first counts at once safe on a standalone Mongo (as D9); the routes are where a user asks for work; automatic retries (3 a link) aren't counted, so at most 60 Gemini calls a day | Counting each Gemini call in the worker (exact, but a link could be accepted and then fail with "limit reached") |
 
 ## 11. Risks
 
@@ -436,9 +445,6 @@ noise, and M5/M6 only swap the extractor.
 ## 13. Open for the coding stage
 
 - **Tests:** what gets tested first (the claim query, approve, Find queries).
-- **The daily cap (§1, §4.1): not built yet.** Imports are deleted once approved or discarded,
-  so counting them would undercount; the cap needs its own count (for example a per-user,
-  per-day counter). To decide before M5, when an import starts to cost money.
 - **The lighter kit:** how much of the agents setup to keep, given that you own the code and want small PRs.
 
 ## 14. Screens

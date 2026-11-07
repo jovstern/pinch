@@ -59,5 +59,14 @@ Slices for later milestones are filled in when the milestone starts.
 - [x] Follow-up: a worker that hits a database error goes on; an import no worker takes is shown
       as stalled, with Dismiss
 ## M5 — Gemini
+
+- [x] The daily cap: 20 links a day (pasted or retried), a per-user, per-day count; 429 past it
+- [ ] `extractRecipe` with Gemini (structured output from the Zod schema, a timeout); the worker
+      uses it, e2e keeps the fake
+- [ ] The post's caption and length with `yt-dlp` before Gemini; "This doesn't look like a
+      recipe"
+- [ ] Text fallback: paste the caption instead of a link
+- [ ] Nutrition per serving, shown as an estimate
+- [ ] End of milestone: a real YouTube link becomes a draft; UI review, observer metrics, demo
 ## M6 — Instagram / Facebook
 ## M7 — Polish

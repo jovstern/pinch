@@ -1,4 +1,4 @@
-import { linkMessage, type Import } from "@pinch/shared";
+import { dailyLimitMessage, linkMessage, type Import } from "@pinch/shared";
 import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, test, vi } from "vitest";
@@ -202,6 +202,30 @@ test("a stalled link says nothing is working on it, and offers Dismiss, not Retr
   expect(screen.queryByText("Working on it…")).not.toBeInTheDocument();
   expect(screen.getByRole("button", { name: "Dismiss" })).toBeInTheDocument();
   expect(screen.queryByRole("button", { name: "Retry" })).not.toBeInTheDocument();
+});
+
+test("past the daily cap, the box says so and keeps the link", async () => {
+  stubApi([[]], () =>
+    Response.json({ error: { code: "daily_limit", message: dailyLimitMessage } }, { status: 429 }),
+  );
+  renderApp("/");
+
+  const box = screen.getByRole("textbox", { name: "Pinch a recipe from a reel" });
+  await userEvent.type(box, `${reel}{Enter}`);
+
+  expect(await screen.findByRole("alert")).toHaveTextContent(dailyLimitMessage);
+  expect(box).toHaveValue(reel);
+});
+
+test("past the daily cap, Retry says so", async () => {
+  stubApi([[importOf({ status: "failed", attempts: 3, error: "No." })]], () =>
+    Response.json({ error: { code: "daily_limit", message: dailyLimitMessage } }, { status: 429 }),
+  );
+  renderApp("/");
+
+  await userEvent.click(await screen.findByRole("button", { name: "Retry" }));
+
+  expect(await screen.findByRole("alert")).toHaveTextContent(dailyLimitMessage);
 });
 
 test("polling runs only while the worker has a link in hand", () => {

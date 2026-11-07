@@ -1,6 +1,7 @@
 import type { Db } from "mongodb";
 import { importsCollection } from "./imports.ts";
 import { recipesCollection } from "./recipes.ts";
+import { usageCollection } from "./usage.ts";
 
 // Every query the app runs has its index here (design §6, mongodb.md); `npm run db:indexes`
 // creates them. One that already exists is left as it is, so it's safe to run again.
@@ -27,6 +28,12 @@ export async function createIndexes(db: Db) {
     { key: { status: 1, nextAttemptAt: 1 } },
     // TTL: Mongo deletes an import once its expiresAt has passed, checking about once a minute
     // (design §4.3).
+    { key: { expiresAt: 1 }, expireAfterSeconds: 0 },
+  ]);
+  await usageCollection(db).createIndexes([
+    // One count per user per day (countImport), unique so two firsts can't make two.
+    { key: { ownerId: 1, day: 1 }, unique: true },
+    // TTL: a day's count goes two days later.
     { key: { expiresAt: 1 }, expireAfterSeconds: 0 },
   ]);
 }
