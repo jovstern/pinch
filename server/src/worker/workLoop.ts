@@ -4,9 +4,9 @@ import { setTimeout } from "node:timers/promises";
 import type { Logger } from "pino";
 import { claimNextImport, LEASE_MS, type ImportDocument } from "../db/imports.ts";
 
-// Turns an import's input into a draft: fakeExtract now, Gemini from M5. It must stop when the
-// signal aborts: that's the attempt's deadline.
-export type Extract = (input: ImportDocument["input"], signal: AbortSignal) => Promise<RecipeInput>;
+// Turns an import's input into a draft: geminiExtract, or fakeExtract for e2e. It must stop when
+// the signal aborts: that's the attempt's deadline. Unknown: runImport checks what it makes.
+export type Extract = (input: ImportDocument["input"], signal: AbortSignal) => Promise<unknown>;
 
 // With nothing to do, look again after this long (design §4.3).
 const IDLE_MS = 1000;

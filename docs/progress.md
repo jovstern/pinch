@@ -61,7 +61,7 @@ Slices for later milestones are filled in when the milestone starts.
 ## M5 — Gemini
 
 - [x] The daily cap: 20 links a day (pasted or retried), a per-user, per-day count; 429 past it
-- [ ] `extractRecipe` with Gemini (structured output from the Zod schema, a timeout); the worker
+- [x] `extractRecipe` with Gemini (structured output from the Zod schema, a timeout); the worker
       uses it, e2e keeps the fake
 - [ ] The post's caption and length with `yt-dlp` before Gemini; "This doesn't look like a
       recipe"

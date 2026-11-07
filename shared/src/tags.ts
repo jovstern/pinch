@@ -28,16 +28,16 @@ export const tagFacets = {
   fit: ["quick", "weeknight", "meal-prep", "party", "kids", "healthy", "comfort"],
 };
 
-const allTags = new Set(
-  Object.entries(tagFacets).flatMap(([facet, values]) =>
-    values.map((value) => `${facet}:${value}`),
-  ),
+const allTags = Object.entries(tagFacets).flatMap(([facet, values]) =>
+  values.map((value) => `${facet}:${value}`),
 );
 
 export type TagFacet = keyof typeof tagFacets;
 
 export function isTag(tag: string) {
-  return allTags.has(tag);
+  return allTags.includes(tag);
 }
 
-export const TagSchema = z.string().refine(isTag, "Pick a tag from the list.");
+// An enum, not a check on a string: the JSON schema made from it lists every tag, so Gemini
+// can only pick from them (design §9).
+export const TagSchema = z.enum(allTags, "Pick a tag from the list.");

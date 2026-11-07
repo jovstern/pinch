@@ -2,9 +2,10 @@ import type { RecipeInput } from "@pinch/shared";
 import { setTimeout } from "node:timers/promises";
 import type { ImportDocument } from "../db/imports.ts";
 
-// Stands in for Gemini until M5, so the queue is built and tested without AI (design §12). It
-// takes a few seconds, as the real one does, and makes the same draft for every link, except
-// one with "fail" in it: that one fails every try, to show retries and a failed import.
+// Stands in for Gemini (EXTRACTOR=fake): the queue was built with it in M4, without AI (design
+// §12), and e2e runs with it, so no test calls Gemini. It takes a few seconds, as the real one
+// does, and makes the same draft for every link, except one with "fail" in it: that one fails
+// every try, to show retries and a failed import.
 export async function fakeExtract(
   input: ImportDocument["input"],
   signal: AbortSignal,

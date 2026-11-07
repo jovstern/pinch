@@ -14,6 +14,10 @@ const ConfigSchema = z.object({
     .string()
     .refine((id) => ObjectId.isValid(id), "must be a 24-character hex ObjectId")
     .default("000000000000000000000001"),
+  // The worker's: Gemini turns links into drafts (design §9); e2e uses the fake, which needs no
+  // key and costs nothing. The key is a secret, so it has no default: it's in .env.
+  EXTRACTOR: z.enum(["gemini", "fake"]).default("gemini"),
+  GEMINI_API_KEY: z.string().optional(),
 });
 
 export type Config = z.infer<typeof ConfigSchema>;

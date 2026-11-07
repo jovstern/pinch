@@ -8,6 +8,7 @@ test("every setting has a default for local development", () => {
     MONGODB_URI: "mongodb://localhost:27017",
     DB_NAME: "pinch",
     DEV_USER_ID: "000000000000000000000001",
+    EXTRACTOR: "gemini",
   });
 });
 
