@@ -24,12 +24,17 @@ function importOf(fields: Partial<Import>): Import {
 }
 
 // A fake API for /: no recipes; the imports each GET /api/imports answers, in turn (the last
-// one again and again); and what POST answers (a new Response each time: a body is read once).
-function stubApi(lists: Import[][], post = () => Response.json(importOf({}), { status: 202 })) {
+// one again and again); and what POST and DELETE answer (a new Response each time: a body is
+// read once).
+function stubApi(
+  lists: Import[][],
+  post = () => Response.json(importOf({}), { status: 202 }),
+  remove = () => new Response(null, { status: 204 }),
+) {
   let gets = 0;
   const fetch = vi.fn((path: string, init?: RequestInit) => {
     if (init?.method === "POST") return Promise.resolve(post());
-    if (init?.method === "DELETE") return Promise.resolve(new Response(null, { status: 204 }));
+    if (init?.method === "DELETE") return Promise.resolve(remove());
     if (path === "/api/imports") {
       const items = lists[Math.min(gets, lists.length - 1)];
       gets += 1;
@@ -160,7 +165,23 @@ test("when Retry fails, it says so and keeps the link", async () => {
 
   await userEvent.click(await screen.findByRole("button", { name: "Retry" }));
 
-  expect(await screen.findByRole("alert")).toHaveTextContent("That didn't go through. Try again.");
+  expect(await screen.findByRole("alert")).toHaveTextContent("It couldn't be retried. Try again.");
+  expect(screen.getByText("No.")).toBeInTheDocument();
+});
+
+test("when Dismiss fails, it says so and keeps the link", async () => {
+  stubApi(
+    [[importOf({ status: "failed", attempts: 3, error: "No." })]],
+    undefined,
+    () => new Response(null, { status: 502 }),
+  );
+  renderApp("/");
+
+  await userEvent.click(await screen.findByRole("button", { name: "Dismiss" }));
+
+  expect(await screen.findByRole("alert")).toHaveTextContent(
+    "It couldn't be dismissed. Try again.",
+  );
   expect(screen.getByText("No.")).toBeInTheDocument();
 });
 
