@@ -11,7 +11,7 @@ import {
 } from "../db/imports.ts";
 import { createIndexes } from "../db/indexes.ts";
 import { createTestDb } from "../testDb.ts";
-import { FAILED_MESSAGE, runImport, workLoop, type Extract } from "./workLoop.ts";
+import { FAILED_MESSAGE, NoRetryError, runImport, workLoop, type Extract } from "./workLoop.ts";
 
 const db = createTestDb();
 await createIndexes(db);
@@ -174,6 +174,19 @@ test("a failed attempt is tried again after 10 s, then 60 s, then the import is 
     error: FAILED_MESSAGE,
   });
   expect(await claimNextImport(imports, new Date(Date.now() + 3_600_000))).toBeNull();
+});
+
+test("a failure no retry can fix fails the import at once, with its message", async () => {
+  const { _id } = await insertImport();
+  const notARecipe = () => Promise.reject(new NoRetryError("This doesn't look like a recipe."));
+
+  await run(await claim(), notARecipe);
+
+  expect(await imports.findOne({ _id })).toMatchObject({
+    status: "failed",
+    attempts: 1,
+    error: "This doesn't look like a recipe.",
+  });
 });
 
 test("an attempt that reaches its deadline is stopped, and tried again", async () => {

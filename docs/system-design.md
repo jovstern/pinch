@@ -119,6 +119,7 @@ stateDiagram-v2
   processing --> ready: draft saved
   processing --> pending: error, attempts < 3 (retry with backoff)
   processing --> failed: error, attempts = 3
+  processing --> failed: not a recipe, or too long (no retry)
   processing --> processing: lease expired (worker crashed), claimed again
   processing --> failed: lease expired on the 3rd attempt
   failed --> pending: user clicks Retry
@@ -150,8 +151,10 @@ stateDiagram-v2
   and every external call in it (`yt-dlp`, upload, Gemini) has a timeout inside that. In the
   spike one Gemini call hung for 27 minutes. A timeout is a failed attempt and retries as usual.
 - **Retries with backoff.** A failed attempt goes back to `pending` with `nextAttemptAt` = now +
-  10 s, then 60 s. After 3 attempts → `failed` with a readable `error`. A job whose worker died on
-  its third attempt is failed when it's claimed again, not run a fourth time.
+  10 s, then 60 s. After 3 attempts → `failed` with a readable `error`. A failure no retry can
+  fix (not a recipe, a video over 3 minutes) fails the import at once, with its own message
+  (D23). A job whose worker died on its third attempt is failed when it's claimed again, not
+  run a fourth time.
 - **Back-pressure.** At most **2 jobs at a time** per worker, to stay within Gemini rate limits.
 - **Idle polling.** With nothing to do, the worker checks again after 1 s.
 - **Errors don't stop it.** A database error (Mongo restarting) is logged, and the loop tries
@@ -415,6 +418,7 @@ changes**. The planned design:
 | D20 | Editing is `PUT`: it replaces what the user can edit and keeps the fields the server owns (`_id`, `ownerId`, `source`, `createdAt`, `sourceImportId`, later `thumbnail`), listed in the route | The form always sends the whole recipe, so a field the user clears is simply left out; no `null`/`""` rules | `PATCH` with `null` to clear a field |
 | D21 | React Router (declarative: `<Routes>` in `App.tsx`, `useParams`, `Link`) | A handful of screens; the most familiar API and the least setup, easy to read line by line | TanStack Router (type-safe routes and loaders, more concepts) |
 | D22 | The daily cap (20) counts links pasted and Retry clicks, in a per-user, per-UTC-day counter (`usage`) raised atomically by both routes; past it, 429 | Imports are deleted once done, so counting them would undercount; the unique `{ownerId, day}` index makes two first counts at once safe on a standalone Mongo (as D9); the routes are where a user asks for work; automatic retries (3 a link) aren't counted, so at most 60 Gemini calls a day | Counting each Gemini call in the worker (exact, but a link could be accepted and then fail with "limit reached") |
+| D23 | "Not a recipe" and "too long" fail the import at once (`NoRetryError`, its message shown to the user); every other error is retried | Trying again gives the same answer and costs a Gemini call each time; the user learns why straight away | Retry everything (3 Gemini calls for a cat video, and a vague message) |
 
 ## 11. Risks
 

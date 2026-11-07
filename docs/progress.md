@@ -63,7 +63,7 @@ Slices for later milestones are filled in when the milestone starts.
 - [x] The daily cap: 20 links a day (pasted or retried), a per-user, per-day count; 429 past it
 - [x] `extractRecipe` with Gemini (structured output from the Zod schema, a timeout); the worker
       uses it, e2e keeps the fake
-- [ ] The post's caption and length with `yt-dlp` before Gemini; "This doesn't look like a
+- [x] The post's caption and length with `yt-dlp` before Gemini; "This doesn't look like a
       recipe"
 - [ ] Text fallback: paste the caption instead of a link
 - [ ] Nutrition per serving, shown as an estimate
