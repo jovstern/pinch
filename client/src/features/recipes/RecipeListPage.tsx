@@ -1,10 +1,11 @@
 import { isTag, type Recipe } from "@pinch/shared";
-import { useInfiniteQuery } from "@tanstack/react-query";
+import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { useEffect, useRef } from "react";
 import { Link, useSearchParams } from "react-router";
 import { Button } from "../../components/Button.tsx";
 import { ImportLinkForm } from "../imports/ImportLinkForm.tsx";
 import { ImportList } from "../imports/ImportList.tsx";
+import { importListQuery } from "../imports/importQueries.ts";
 import { ListFilters } from "./ListFilters.tsx";
 import { filterParams, recipeListQuery, type RecipeFilters } from "./recipeQueries.ts";
 
@@ -30,7 +31,10 @@ export function RecipeListPage() {
     isFetchNextPageError,
     isPlaceholderData,
   } = useInfiniteQuery(recipeListQuery(filters));
+  const importsPending = useQuery(importListQuery).isPending;
   const listRef = useRef<HTMLUListElement>(null);
+  // The paste box, where focus goes after a link is retried or dismissed.
+  const linkBoxRef = useRef<HTMLInputElement>(null);
   // The first recipe of the page Show more asked for, to focus once it's drawn.
   const firstNewRef = useRef<number | null>(null);
   const recipes = data?.pages.flatMap((page) => page.items);
@@ -62,12 +66,22 @@ export function RecipeListPage() {
     });
   }
 
-  return (
+  const top = (
     <>
       <title>Your recipes · Pinch</title>
       <h1 className="text-3xl font-bold tracking-tight text-balance">Your recipes</h1>
-      <ImportLinkForm />
-      <ImportList />
+      <ImportLinkForm inputRef={linkBoxRef} />
+      <ImportList focusLinkBox={() => linkBoxRef.current?.focus()} />
+    </>
+  );
+  // The recipes wait for the links (both are asked at once): drawn first, they'd be pushed
+  // down when Your links appears above them (a layout shift, docs/metrics/m04.md). In a
+  // fragment, as below, so React keeps the same link box (and what's typed) when they come.
+  if (importsPending) return <>{top}</>;
+
+  return (
+    <>
+      {top}
 
       {/* Not before the first recipe: there's nothing to search yet. */}
       {(filtering || recipes?.length !== 0) && (
@@ -130,13 +144,13 @@ export function RecipeListPage() {
       {!filtering && !isPlaceholderData && recipes?.length === 0 && (
         <div className="mt-6">
           <p className="text-pretty text-text-muted">
-            No recipes yet. Add one you love and it will live here.
+            No recipes yet. Paste a link above, or write one by hand.
           </p>
           <Link
             to="/recipes/new"
             className="mt-3 inline-block font-semibold text-accent-strong underline"
           >
-            Add your first recipe
+            Write a recipe
           </Link>
         </div>
       )}
@@ -167,7 +181,13 @@ export function RecipeListPage() {
         </p>
       )}
       {hasNextPage && (
-        <Button type="button" variant="secondary" onClick={showMore} className="mt-6">
+        <Button
+          type="button"
+          variant="secondary"
+          onClick={showMore}
+          aria-disabled={isFetchingNextPage}
+          className="mt-6"
+        >
           {isFetchingNextPage ? "Loading…" : "Show more"}
         </Button>
       )}

@@ -1,4 +1,4 @@
-import { useId } from "react";
+import { useId, type Ref } from "react";
 import { FieldError } from "./FieldError.tsx";
 
 // What TextField needs from a TanStack Form field, so it fits any text field of any form.
@@ -17,6 +17,10 @@ type TextFieldProps = {
   // "url" for a link: the keyboard with "/" and ".com", and our message, not the browser's.
   inputMode?: "numeric" | "url";
   placeholder?: string;
+  // Always shown under the input, and read with it.
+  hint?: string;
+  // The input itself (single-line only), to move focus to it.
+  inputRef?: Ref<HTMLInputElement>;
   className?: string;
 };
 
@@ -28,18 +32,24 @@ export function TextField({
   multiline,
   inputMode,
   placeholder,
+  hint,
+  inputRef,
   className = "",
 }: TextFieldProps) {
   const id = useId();
   const errorId = `${id}-error`;
+  const hintId = `${id}-hint`;
   const invalid = field.state.meta.errors.some((message) => typeof message === "string");
+  const describedBy = [];
+  if (hint) describedBy.push(hintId);
+  if (invalid) describedBy.push(errorId);
   const shared = {
     id,
     name: field.name,
     value: field.state.value,
     onBlur: field.handleBlur,
     "aria-invalid": invalid,
-    "aria-describedby": invalid ? errorId : undefined,
+    "aria-describedby": describedBy.length > 0 ? describedBy.join(" ") : undefined,
   };
   const box =
     "w-full rounded-lg border border-border bg-surface-raised px-3 py-2 aria-invalid:border-danger";
@@ -63,12 +73,18 @@ export function TextField({
           type="text"
           inputMode={inputMode}
           placeholder={placeholder}
+          ref={inputRef}
           {...shared}
           className={`min-h-11 ${box}`}
           onChange={(event) => {
             field.handleChange(event.target.value);
           }}
         />
+      )}
+      {hint && (
+        <p id={hintId} className="mt-1 text-sm text-text-muted">
+          {hint}
+        </p>
       )}
       <FieldError errors={field.state.meta.errors} id={errorId} />
     </div>

@@ -21,7 +21,7 @@ export function Button({ variant, asChild = false, className = "", ...props }: B
   const Component = asChild ? Slot.Root : "button";
   return (
     <Component
-      className={`inline-flex min-h-11 items-center justify-center rounded-lg px-4 font-semibold disabled:opacity-60 ${variants[variant]} ${className}`}
+      className={`inline-flex min-h-11 items-center justify-center rounded-lg px-4 font-semibold disabled:opacity-60 aria-disabled:cursor-not-allowed aria-disabled:opacity-60 ${variants[variant]} ${className}`}
       {...props}
     />
   );

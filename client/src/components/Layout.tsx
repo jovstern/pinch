@@ -1,10 +1,16 @@
-import { Link, NavLink, Outlet, useLocation } from "react-router";
+import { Link, Outlet, useLocation, useMatch } from "react-router";
 import { Button } from "./Button.tsx";
 import { ErrorBoundary } from "./ErrorBoundary.tsx";
 
-// Every screen sits in this frame: the name (home) and the one primary action (design §14).
+// Every screen sits in this frame: the name (home) and New recipe (design §14).
 export function Layout() {
   const { pathname } = useLocation();
+  // The recipe form's pages: there Save is the main action, and New recipe would compete.
+  const onForm = [
+    useMatch("/recipes/new"),
+    useMatch("/recipes/:id/edit"),
+    useMatch("/imports/:id"),
+  ].some((match) => match !== null);
   return (
     <>
       <header className="border-b border-border">
@@ -12,11 +18,12 @@ export function Layout() {
           <Link to="/" className="text-2xl font-bold tracking-tight text-accent">
             Pinch
           </Link>
-          {/* NavLink sets aria-current=page on /recipes/new, and that hides it there: Save is
-              the one primary action. */}
-          <Button asChild variant="primary" className="aria-[current=page]:hidden">
-            <NavLink to="/recipes/new">New recipe</NavLink>
-          </Button>
+          {/* Secondary: each screen's main action is on the page (on /, pasting a link). */}
+          {!onForm && (
+            <Button asChild variant="secondary">
+              <Link to="/recipes/new">New recipe</Link>
+            </Button>
+          )}
         </div>
       </header>
       {/* wrap-anywhere: a long URL or word in a recipe wraps instead of widening the page. */}

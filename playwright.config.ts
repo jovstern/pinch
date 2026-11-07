@@ -5,7 +5,7 @@ import { defineConfig, devices } from "@playwright/test";
 // the dev servers or the app's data. The name goes through an env var so e2e/teardown.ts can
 // drop it; `??=` keeps one name when Playwright loads this file again.
 process.env.E2E_DB_NAME ??= `pinch-test-${randomUUID()}`;
-const apiPort = 3100;
+const apiPort = 3110;
 const clientPort = 4173;
 
 export default defineConfig({
@@ -31,6 +31,18 @@ export default defineConfig({
       env: { PORT: String(apiPort), DB_NAME: process.env.E2E_DB_NAME },
       // Runs the API's own shutdown (server/src/index.ts) instead of killing it.
       gracefulShutdown: { signal: "SIGTERM", timeout: 2000 },
+    },
+    {
+      // The import worker, on the same database, so a pasted link becomes a draft (M4). It has
+      // no address to wait for: Playwright waits for its "worker started" line instead (it reads
+      // stdout, so tee, not >, keeps the log next to the API's for the observer). The lines after
+      // SIGTERM aren't kept: Playwright stops the whole process group, tee with it.
+      command: "mkdir -p ../.metrics && node src/worker.ts | tee ../.metrics/e2e-worker.log",
+      cwd: "server",
+      wait: { stdout: /worker started/ },
+      env: { DB_NAME: process.env.E2E_DB_NAME },
+      // Its own shutdown (server/src/worker.ts): it finishes the job in hand, a few seconds.
+      gracefulShutdown: { signal: "SIGTERM", timeout: 5000 },
     },
     {
       // The production build, as users get it; preview proxies /api like the dev server.
