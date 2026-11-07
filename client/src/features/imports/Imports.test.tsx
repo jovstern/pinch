@@ -71,7 +71,10 @@ test("a link from another site is refused before it's sent, until it's fixed", a
   await userEvent.type(box, "https://www.tiktok.com/@chef/video/1{Enter}");
 
   expect(await screen.findByRole("alert")).toHaveTextContent(linkMessage);
-  expect(box).toHaveAccessibleDescription(linkMessage);
+  // The hint, then the error.
+  expect(box).toHaveAccessibleDescription(
+    `A link to an Instagram, Facebook or YouTube post. ${linkMessage}`,
+  );
   expect(fetch).not.toHaveBeenCalledWith("/api/imports", expect.anything());
 
   await userEvent.clear(box);
@@ -116,6 +119,8 @@ test("while a link is worked on, its status is asked again until it's ready to r
   // The 2 s poll, with time to spare.
   expect(await screen.findByText("Ready to review", {}, { timeout: 3000 })).toBeInTheDocument();
   const review = screen.getByRole("link", { name: "Review the recipe" });
+  // Only the change is announced, not the whole list.
+  expect(screen.getByText("Instagram link: Ready to review")).toHaveAttribute("role", "status");
   expect(review).toHaveAttribute("href", "/imports/6650a1b2c3d4e5f600000001");
 });
 
@@ -136,6 +141,8 @@ test("Retry puts a failed link back in the queue", async () => {
   await userEvent.click(await screen.findByRole("button", { name: "Retry" }));
 
   expect(await screen.findByText("Waiting to start…")).toBeInTheDocument();
+  // The button is gone; focus is on the paste box, not lost to the page.
+  expect(screen.getByRole("textbox", { name: "Pinch a recipe from a reel" })).toHaveFocus();
   expect(fetch).toHaveBeenCalledWith("/api/imports/6650a1b2c3d4e5f600000001/retry", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -152,6 +159,7 @@ test("Dismiss deletes a failed link", async () => {
   await waitFor(() => {
     expect(screen.queryByText("No.")).not.toBeInTheDocument();
   });
+  expect(screen.getByRole("textbox", { name: "Pinch a recipe from a reel" })).toHaveFocus();
   expect(fetch).toHaveBeenCalledWith("/api/imports/6650a1b2c3d4e5f600000001", {
     method: "DELETE",
   });

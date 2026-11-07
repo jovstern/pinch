@@ -1,6 +1,6 @@
 import { fieldErrors, RecipeInputSchema, type RecipeInput } from "@pinch/shared";
 import { revalidateLogic, useForm } from "@tanstack/react-form";
-import { useRef } from "react";
+import { useRef, type ReactNode } from "react";
 import { Link } from "react-router";
 import { Button } from "../../components/Button.tsx";
 import { FieldError } from "../../components/FieldError.tsx";
@@ -13,11 +13,21 @@ type RecipeFormProps = {
   defaultValues: RecipeFormValues;
   submitLabel: string;
   cancelTo: string;
+  cancelLabel?: string;
+  // One more button at the end of the row, apart from Save and Cancel (an import's Discard).
+  extraAction?: ReactNode;
   // Sends the recipe; the page that owns the form decides where to go once it's saved.
   save: (input: RecipeInput) => Promise<unknown>;
 };
 
-export function RecipeForm({ defaultValues, submitLabel, cancelTo, save }: RecipeFormProps) {
+export function RecipeForm({
+  defaultValues,
+  submitLabel,
+  cancelTo,
+  cancelLabel = "Cancel",
+  extraAction,
+  save,
+}: RecipeFormProps) {
   const formRef = useRef<HTMLFormElement>(null);
   const form = useForm({
     defaultValues,
@@ -213,7 +223,7 @@ export function RecipeForm({ defaultValues, submitLabel, cancelTo, save }: Recip
         }
       </form.Subscribe>
 
-      <div className="flex gap-3">
+      <div className="flex flex-wrap gap-3">
         <form.Subscribe selector={(state) => state.isSubmitting}>
           {(isSubmitting) => (
             <Button type="submit" variant="primary" disabled={isSubmitting}>
@@ -224,9 +234,10 @@ export function RecipeForm({ defaultValues, submitLabel, cancelTo, save }: Recip
         <Button asChild variant="secondary">
           {/* replace, as after a save: Back never returns to the form. */}
           <Link to={cancelTo} replace>
-            Cancel
+            {cancelLabel}
           </Link>
         </Button>
+        {extraAction}
       </div>
     </form>
   );

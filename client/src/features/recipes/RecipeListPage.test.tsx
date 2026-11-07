@@ -44,7 +44,7 @@ test("with no recipes, it offers to add the first one", async () => {
   stubFetch(vi.fn().mockResolvedValue(Response.json({ items: [], nextCursor: null })));
   renderApp("/");
 
-  expect(await screen.findByRole("link", { name: "Add your first recipe" })).toHaveAttribute(
+  expect(await screen.findByRole("link", { name: "Write a recipe" })).toHaveAttribute(
     "href",
     "/recipes/new",
   );

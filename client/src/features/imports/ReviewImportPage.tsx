@@ -78,36 +78,47 @@ export function ReviewImportPage() {
       <title>{`Review ${job.draft.title} · Pinch`}</title>
       <h1 className="text-3xl font-bold tracking-tight text-balance">Review the recipe</h1>
       <p className="mt-3 text-sm text-pretty text-text-muted">
-        Made from{" "}
-        <a href={job.input.url} className="underline">
-          {job.input.url}
-        </a>
-        . Fix anything that's wrong, then save it.
+        Fix anything that's wrong, then save it. Made from:
       </p>
-      {/* Discard deletes the draft; the form's Cancel leaves it for later. Not while saving: one
-          or the other would find the import gone. */}
-      <Button
-        type="button"
-        variant="danger-quiet"
-        onClick={() => {
-          discard.mutate();
-        }}
-        disabled={discard.isPending || approval.isPending}
-        className="mt-3"
+      {/* A new tab: going to the post here would lose what was typed. One line, as in the list. */}
+      <a
+        href={job.input.url}
+        target="_blank"
+        rel="noreferrer"
+        title={job.input.url}
+        className="block truncate text-sm text-text-muted underline"
       >
-        {discard.isPending ? "Discarding…" : "Discard"}
-      </Button>
-      {discard.isError && (
-        <p role="alert" className="mt-1 text-danger">
-          It couldn't be discarded. Try again.
-        </p>
-      )}
+        {job.input.url}
+        <span className="sr-only"> (opens in a new tab)</span>
+      </a>
       <LazyRecipeForm
         defaultValues={toFormValues(job.draft)}
         submitLabel="Save recipe"
         cancelTo="/"
+        cancelLabel="Review later"
         save={approval.mutateAsync}
+        extraAction={
+          // Discard deletes the draft; Review later leaves it. Last in the row, apart: it's not
+          // the way forward. Not while saving (one or the other would find the import gone), and
+          // not disabled, so focus stays on it (as Show more).
+          <Button
+            type="button"
+            variant="danger-quiet"
+            onClick={() => {
+              if (!discard.isPending && !approval.isPending) discard.mutate();
+            }}
+            aria-disabled={discard.isPending || approval.isPending}
+            className="ml-auto"
+          >
+            {discard.isPending ? "Discarding…" : "Discard"}
+          </Button>
+        }
       />
+      {discard.isError && (
+        <p role="alert" className="mt-3 text-danger">
+          It couldn't be discarded. Try again.
+        </p>
+      )}
     </>
   );
 }

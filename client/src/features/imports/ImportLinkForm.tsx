@@ -1,6 +1,7 @@
 import { fieldErrors, ImportInputSchema, ImportSchema } from "@pinch/shared";
 import { revalidateLogic, useForm } from "@tanstack/react-form";
 import { useQueryClient } from "@tanstack/react-query";
+import type { Ref } from "react";
 import { Button } from "../../components/Button.tsx";
 import { TextField } from "../../components/TextField.tsx";
 import { ApiError, sendJson } from "../../lib/api.ts";
@@ -9,7 +10,7 @@ import { importListQuery } from "./importQueries.ts";
 // The main action on / (design §14): paste a link, and the worker turns it into a draft
 // (§4.1). Checked as the recipe form is (RecipeForm.tsx): on the first send, then on every
 // change, with the API's own schema.
-export function ImportLinkForm() {
+export function ImportLinkForm({ inputRef }: { inputRef: Ref<HTMLInputElement> }) {
   const queryClient = useQueryClient();
   const form = useForm({
     defaultValues: { url: "" },
@@ -44,6 +45,8 @@ export function ImportLinkForm() {
       noValidate
       onSubmit={(event) => {
         event.preventDefault();
+        // Not disabled while sending, so focus stays on the button (as Show more).
+        if (form.state.isSubmitting) return;
         void form.handleSubmit();
       }}
       className="mt-6"
@@ -54,7 +57,9 @@ export function ImportLinkForm() {
             field={field}
             label="Pinch a recipe from a reel"
             inputMode="url"
-            placeholder="Paste an Instagram, Facebook or YouTube link"
+            placeholder="https://…"
+            hint="A link to an Instagram, Facebook or YouTube post."
+            inputRef={inputRef}
           />
         )}
       </form.Field>
@@ -69,7 +74,7 @@ export function ImportLinkForm() {
       </form.Subscribe>
       <form.Subscribe selector={(state) => state.isSubmitting}>
         {(isSubmitting) => (
-          <Button type="submit" variant="primary" disabled={isSubmitting} className="mt-3">
+          <Button type="submit" variant="primary" aria-disabled={isSubmitting} className="mt-3">
             {isSubmitting ? "Sending…" : "Pinch it"}
           </Button>
         )}

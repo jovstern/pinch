@@ -31,6 +31,8 @@ export function RecipeListPage() {
     isPlaceholderData,
   } = useInfiniteQuery(recipeListQuery(filters));
   const listRef = useRef<HTMLUListElement>(null);
+  // The paste box, where focus goes after a link is retried or dismissed.
+  const linkBoxRef = useRef<HTMLInputElement>(null);
   // The first recipe of the page Show more asked for, to focus once it's drawn.
   const firstNewRef = useRef<number | null>(null);
   const recipes = data?.pages.flatMap((page) => page.items);
@@ -66,8 +68,8 @@ export function RecipeListPage() {
     <>
       <title>Your recipes · Pinch</title>
       <h1 className="text-3xl font-bold tracking-tight text-balance">Your recipes</h1>
-      <ImportLinkForm />
-      <ImportList />
+      <ImportLinkForm inputRef={linkBoxRef} />
+      <ImportList focusLinkBox={() => linkBoxRef.current?.focus()} />
 
       {/* Not before the first recipe: there's nothing to search yet. */}
       {(filtering || recipes?.length !== 0) && (
@@ -130,13 +132,13 @@ export function RecipeListPage() {
       {!filtering && !isPlaceholderData && recipes?.length === 0 && (
         <div className="mt-6">
           <p className="text-pretty text-text-muted">
-            No recipes yet. Add one you love and it will live here.
+            No recipes yet. Paste a link above, or write one by hand.
           </p>
           <Link
             to="/recipes/new"
             className="mt-3 inline-block font-semibold text-accent-strong underline"
           >
-            Add your first recipe
+            Write a recipe
           </Link>
         </div>
       )}
