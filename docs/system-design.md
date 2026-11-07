@@ -368,8 +368,9 @@ changes**. The planned design:
 
 ## 9. Gemini
 
-- One function: `extractRecipe(input) → RecipeDraft`. The worker doesn't know anything else
-  about Gemini, so the model or provider can change in one place.
+- One function, `geminiExtract` (`server/src/worker/geminiExtract.ts`): an import's input → the
+  model's JSON, which the worker checks with Zod. The worker doesn't know anything else about
+  Gemini, so the model or provider can change in one place.
 - The current Gemini Flash model (`gemini-3.5-flash`, checked in M5), with **structured
   output**: the response schema is generated from the Zod schema (`z.toJSONSchema`, input
   side), without `maxItems`, which Gemini refuses; Zod still checks those limits.
@@ -381,7 +382,7 @@ changes**. The planned design:
   the model says so and the import fails with "This doesn't look like a recipe".
 - The recipe is written **in the language of the post**; tags stay English codes (D16).
 - Every call has a **timeout** inside the attempt's deadline (§4.3), and no retries of its own
-  (the SDK's are turned off): the worker's retries are the only ones.
+  (the SDK only retries when asked): the worker's retries are the only ones.
 - The worker uses the fake extractor of M4 instead when `EXTRACTOR=fake`: e2e runs that way,
   so no test calls Gemini.
 - The output is validated with Zod anyway; invalid output counts as a failed attempt. The

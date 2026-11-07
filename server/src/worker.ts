@@ -6,16 +6,26 @@ import { connectToMongo } from "./db/client.ts";
 import { importsCollection } from "./db/imports.ts";
 import { fakeExtract } from "./worker/fakeExtract.ts";
 import { geminiExtract } from "./worker/geminiExtract.ts";
-import { workLoop } from "./worker/workLoop.ts";
+import { workLoop, type Extract } from "./worker/workLoop.ts";
 
 // The import worker: a process of its own, so a slow or crashing import never touches the API
 // (design D5). It shares nothing with the API but the database, where the jobs are (D4).
 const config = loadConfig(process.env);
 // Named, so its log lines can be told from the API's.
 const logger = pino({ level: config.LOG_LEVEL, name: "worker" });
+
+// Gemini, or the fake for e2e (design §9). Only the worker needs the key, so only the worker
+// asks for it: the API runs without one.
+let extract: Extract = fakeExtract;
+if (config.EXTRACTOR === "gemini") {
+  if (!config.GEMINI_API_KEY) {
+    throw new Error("GEMINI_API_KEY is missing: set it in .env, or run with EXTRACTOR=fake.");
+  }
+  extract = geminiExtract(new GoogleGenAI({ apiKey: config.GEMINI_API_KEY }));
+}
+
 const client = await connectToMongo(config.MONGODB_URI);
 const imports = importsCollection(client.db(config.DB_NAME));
-const extract = config.EXTRACTOR === "fake" ? fakeExtract : geminiExtract(geminiClient());
 
 // Loops side by side, each a job at a time: at most two jobs at once, within Gemini's rate
 // limits (§4.3). A database error doesn't end it: each loop logs it and tries again (workLoop).
@@ -33,11 +43,3 @@ logger.info("SIGTERM: finishing the jobs in hand");
 stop.abort();
 await Promise.all(loops);
 await client.close();
-
-// Only the worker needs the key, so only the worker asks for it: the API runs without one.
-function geminiClient() {
-  if (!config.GEMINI_API_KEY) {
-    throw new Error("GEMINI_API_KEY is missing: set it in .env, or run with EXTRACTOR=fake.");
-  }
-  return new GoogleGenAI({ apiKey: config.GEMINI_API_KEY });
-}

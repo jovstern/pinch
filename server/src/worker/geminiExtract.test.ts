@@ -40,20 +40,27 @@ test("a YouTube link is sent to Gemini with the recipe's schema, and its JSON co
   expect(JSON.stringify(request?.config?.responseJsonSchema)).toContain('"meal:dinner"');
 });
 
-test("the call stops at the attempt's deadline", async () => {
+test("the call is given the attempt's deadline, and a timeout of its own", async () => {
   const generate = vi.spyOn(ai.models, "generateContent").mockResolvedValue(answer("{}"));
-  const deadline = new AbortController();
+  const deadline = new AbortController().signal;
 
-  await extract(youtube, deadline.signal);
-  deadline.abort();
+  await extract(youtube, deadline);
 
-  expect(generate.mock.calls[0]?.[0].config?.abortSignal?.aborted).toBe(true);
+  const config = generate.mock.calls[0]?.[0].config;
+  expect(config?.abortSignal).toBe(deadline);
+  expect(config?.httpOptions?.timeout).toBe(120_000);
 });
 
 test("an empty answer is a failed attempt", async () => {
   vi.spyOn(ai.models, "generateContent").mockResolvedValue(answer(""));
 
-  await expect(extract(youtube, noDeadline)).rejects.toThrow("Gemini gave no answer.");
+  await expect(extract(youtube, noDeadline)).rejects.toThrow("Gemini gave no answer");
+});
+
+test("an answer cut off mid-JSON is a failed attempt", async () => {
+  vi.spyOn(ai.models, "generateContent").mockResolvedValue(answer('{"title": "Shaksh'));
+
+  await expect(extract(youtube, noDeadline)).rejects.toThrow(SyntaxError);
 });
 
 test("an Instagram link isn't sent: it needs a download first (M6)", async () => {
