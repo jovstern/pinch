@@ -1,5 +1,7 @@
 import type { Import, Platform } from "@pinch/shared";
 import { useQuery } from "@tanstack/react-query";
+import { Link } from "react-router";
+import { Button } from "../../components/Button.tsx";
 import { importListQuery } from "./importQueries.ts";
 
 // The links being turned into recipes, each with how far it has got (design §1, §4.2).
@@ -26,6 +28,11 @@ export function ImportList() {
                 <p className={`mt-1 text-sm ${job.status === "failed" ? "text-danger" : ""}`}>
                   {statusText(job)}
                 </p>
+                {job.status === "ready" && (
+                  <Button asChild variant="secondary" className="mt-3">
+                    <Link to={`/imports/${job.id}`}>Review the recipe</Link>
+                  </Button>
+                )}
               </li>
             ))}
           </ul>

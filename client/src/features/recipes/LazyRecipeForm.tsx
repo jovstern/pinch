@@ -1,8 +1,8 @@
 import { lazy, Suspense, type ComponentProps } from "react";
 
 // The form and its library load only when a form opens, while the page's heading shows at once:
-// in the first load they'd put the JS over its 150 kB budget (docs/metrics/m02.md). New and Edit
-// both use it.
+// in the first load they'd put the JS over its 150 kB budget (docs/metrics/m02.md). New, Edit
+// and an import's review use it.
 const RecipeForm = lazy(async () => ({
   default: (await import("./RecipeForm.tsx")).RecipeForm,
 }));

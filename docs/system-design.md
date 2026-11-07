@@ -445,6 +445,7 @@ the content in a single readable column below it.
 | `/recipes/new` | New recipe | Write a recipe by hand; tags are chips to tick, a group per facet (§7) | From the first Save: each error under its field (§8.1), updated as the user types; focus on the first; saving (button says so); failed (says so, keeps what was typed) |
 | `/recipes/:id` | A recipe | Read it while cooking (its tags under the title); Edit, Delete (asks first) | Loading, error (Try again), not found |
 | `/recipes/:id/edit` | Edit recipe | Change it; Cancel goes back to the recipe | Loading, error (Try again), not found; then as New recipe |
+| `/imports/:id` | Review the recipe | Check the draft the worker made, in the recipe form (D1); Save approves it and opens the new recipe, Discard deletes it and goes back to `/` | Loading, error (Try again), not found; no draft (not done yet, or failed): says so and links home; then as New recipe |
 | anything else | Page not found | Get back to the recipes | — |
 
 From M4 the paste-a-link box on `/` becomes the main action, and import status shows there:

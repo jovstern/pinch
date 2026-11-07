@@ -6,7 +6,8 @@ const variants = {
   primary: "bg-accent-strong text-white hover:bg-accent-strong/90 active:bg-accent-strong/80",
   secondary: "border border-border hover:bg-border/40 active:bg-border/60",
   danger: "bg-danger text-white hover:bg-danger/90 active:bg-danger/80",
-  // A destructive action that only opens a question: it shouldn't shout.
+  // A destructive action that isn't the page's main one (or only opens a question): it
+  // shouldn't shout.
   "danger-quiet": "text-danger hover:bg-danger/10 active:bg-danger/20",
 };
 

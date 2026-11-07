@@ -1,4 +1,4 @@
-import { isTag, type Recipe } from "@pinch/shared";
+import { isTag, type RecipeInput } from "@pinch/shared";
 
 // The form's values and how they map to and from a recipe. Apart from RecipeForm, so the pages
 // can use them without loading the form and its library (LazyRecipeForm).
@@ -29,8 +29,8 @@ export const emptyRecipe: RecipeFormValues = {
   tags: [],
 };
 
-// A saved recipe, as the inputs show it: what it doesn't set is a blank input.
-export function toFormValues(recipe: Recipe): RecipeFormValues {
+// A saved recipe or an import's draft, as the inputs show it: what it doesn't set is blank.
+export function toFormValues(recipe: RecipeInput): RecipeFormValues {
   return {
     title: recipe.title,
     description: recipe.description ?? "",

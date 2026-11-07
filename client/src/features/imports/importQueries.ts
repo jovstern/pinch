@@ -1,4 +1,4 @@
-import { ImportListSchema, type ImportList } from "@pinch/shared";
+import { ImportListSchema, ImportSchema, type ImportList } from "@pinch/shared";
 import { queryOptions } from "@tanstack/react-query";
 import { getJson } from "../../lib/api.ts";
 
@@ -16,4 +16,12 @@ export function pollInterval(list: ImportList | undefined) {
     (job) => job.status === "pending" || job.status === "processing",
   );
   return working ? 2000 : false;
+}
+
+// One import, for its review page.
+export function importQuery(id: string) {
+  return queryOptions({
+    queryKey: ["imports", "detail", id],
+    queryFn: () => getJson(`/api/imports/${id}`, ImportSchema),
+  });
 }
