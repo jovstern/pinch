@@ -78,6 +78,17 @@ test("a video over 3 minutes isn't sent, and isn't tried again", async () => {
   expect(generate).not.toHaveBeenCalled();
 });
 
+test("a video whose length isn't known is sent", async () => {
+  vi.mocked(readVideoInfo).mockResolvedValue({ caption: "" });
+  const generate = vi
+    .spyOn(ai.models, "generateContent")
+    .mockResolvedValue(answer(JSON.stringify(recipe)));
+
+  await extract(youtube, noDeadline);
+
+  expect(generate).toHaveBeenCalled();
+});
+
 test("a video that isn't a recipe isn't tried again", async () => {
   vi.spyOn(ai.models, "generateContent").mockResolvedValue(
     answer(JSON.stringify({ ...recipe, isRecipe: false })),

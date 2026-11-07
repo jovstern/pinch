@@ -24,7 +24,9 @@ export const FAILED_MESSAGE = "We couldn't turn this link into a recipe.";
 
 // A failure no retry can fix (not a recipe, too long): the import fails at once, and the
 // message is what the user reads (design §4.2, D23). Any other error is tried again.
-export class NoRetryError extends Error {}
+export class NoRetryError extends Error {
+  override name = "NoRetryError";
+}
 
 type WorkLoopDeps = {
   imports: Collection<ImportDocument>;
@@ -66,7 +68,8 @@ type RunImportDeps = {
 };
 
 // Runs one claimed job: saves its draft for the user to review (§4.1), or, if it fails, puts it
-// back to be tried again later, or fails it after the last try. Only the extraction is caught
+// back to be tried again later, or fails it after the last try, or at once when no retry can fix
+// it (D23). Only the extraction is caught
 // here: a database error goes up to workLoop, which logs it and goes on.
 export async function runImport({ imports, extract, logger, job, deadline }: RunImportDeps) {
   const log = logger.child({ importId: job._id.toHexString(), attempt: job.attempts });

@@ -7,6 +7,9 @@ const run = promisify(execFile);
 // Its own timeout inside the attempt's deadline (§4.3): a YouTube short takes about 4 s.
 const YTDLP_TIMEOUT_MS = 30_000;
 
+// yt-dlp's JSON lists every format of the video: often 0.5–2 MB.
+const YTDLP_MAX_OUTPUT = 20_000_000;
+
 // What yt-dlp says about a post. Instagram gives no length (design §4.1), so it can be missing.
 export type VideoInfo = { seconds?: number; caption: string };
 
@@ -21,8 +24,11 @@ const YtDlpInfoSchema = z.object({
 export async function readVideoInfo(url: string, signal: AbortSignal): Promise<VideoInfo> {
   const { stdout } = await run(
     "yt-dlp",
-    ["--no-warnings", "--playlist-items", "1", "--dump-json", url],
-    { signal, timeout: YTDLP_TIMEOUT_MS, maxBuffer: 20_000_000 },
+    // --no-playlist: the video in the link, not the playlist it may also name. --playlist-items 1:
+    // a link to a playlist or channel reads its first video, not all of them. "--": the link is
+    // never read as an option.
+    ["--no-warnings", "--no-playlist", "--playlist-items", "1", "--dump-json", "--", url],
+    { signal, timeout: YTDLP_TIMEOUT_MS, maxBuffer: YTDLP_MAX_OUTPUT },
   );
   return parseVideoInfo(stdout);
 }
