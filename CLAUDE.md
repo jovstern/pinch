@@ -27,7 +27,7 @@ and types used by both). MongoDB through the native driver + Zod. Gemini for ext
 - `npm run check` — every gate: Prettier, then per workspace ESLint, Vitest and the types
   (shared: lint + `tsc`; client: `tsc -b` + `vite build`; server: `tsc`).
 - `npm run format` — Prettier writes.
-- `npm run e2e` — Playwright: starts its own API (port 3100, a `pinch-test-<uuid>` database)
+- `npm run e2e` — Playwright: starts its own API (port 3110, a `pinch-test-<uuid>` database)
   and the client's production build (port 4173), runs `e2e/`, records a video of each test.
 
 - `npm run db:indexes` — creates the indexes (`server/src/db/indexes.ts`) in the app's
