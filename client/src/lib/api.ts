@@ -22,7 +22,8 @@ export async function getJson<T>(path: string, schema: z.ZodType<T>): Promise<T>
   return schema.parse(await response.json());
 }
 
-// Every write with a body: the same, plus the fields of a 400.
+// Every write that answers JSON: the same, plus the fields of a 400. The body may be undefined
+// (retry has none): then none is sent.
 export async function sendJson<T>(
   method: "POST" | "PUT",
   path: string,

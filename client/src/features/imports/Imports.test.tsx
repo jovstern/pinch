@@ -1,5 +1,5 @@
 import { linkMessage, type Import } from "@pinch/shared";
-import { screen } from "@testing-library/react";
+import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, test, vi } from "vitest";
 import { renderApp } from "../../test-utils.tsx";
@@ -29,6 +29,7 @@ function stubApi(lists: Import[][], post = () => Response.json(importOf({}), { s
   let gets = 0;
   const fetch = vi.fn((path: string, init?: RequestInit) => {
     if (init?.method === "POST") return Promise.resolve(post());
+    if (init?.method === "DELETE") return Promise.resolve(new Response(null, { status: 204 }));
     if (path === "/api/imports") {
       const items = lists[Math.min(gets, lists.length - 1)];
       gets += 1;
@@ -118,6 +119,49 @@ test("a failed link says why", async () => {
   renderApp("/");
 
   expect(await screen.findByText("We couldn't read it.")).toBeInTheDocument();
+});
+
+test("Retry puts a failed link back in the queue", async () => {
+  const fetch = stubApi([
+    [importOf({ status: "failed", attempts: 3, error: "No." })],
+    [importOf({})],
+  ]);
+  renderApp("/");
+
+  await userEvent.click(await screen.findByRole("button", { name: "Retry" }));
+
+  expect(await screen.findByText("Waiting to start…")).toBeInTheDocument();
+  expect(fetch).toHaveBeenCalledWith("/api/imports/6650a1b2c3d4e5f600000001/retry", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: undefined,
+  });
+});
+
+test("Dismiss deletes a failed link", async () => {
+  const fetch = stubApi([[importOf({ status: "failed", attempts: 3, error: "No." })], []]);
+  renderApp("/");
+
+  await userEvent.click(await screen.findByRole("button", { name: "Dismiss" }));
+
+  await waitFor(() => {
+    expect(screen.queryByText("No.")).not.toBeInTheDocument();
+  });
+  expect(fetch).toHaveBeenCalledWith("/api/imports/6650a1b2c3d4e5f600000001", {
+    method: "DELETE",
+  });
+});
+
+test("when Retry fails, it says so and keeps the link", async () => {
+  stubApi([[importOf({ status: "failed", attempts: 3, error: "No." })]], () => {
+    return new Response(null, { status: 502 });
+  });
+  renderApp("/");
+
+  await userEvent.click(await screen.findByRole("button", { name: "Retry" }));
+
+  expect(await screen.findByRole("alert")).toHaveTextContent("That didn't go through. Try again.");
+  expect(screen.getByText("No.")).toBeInTheDocument();
 });
 
 test("polling runs only while the worker has a link in hand", () => {

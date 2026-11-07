@@ -450,5 +450,7 @@ the content in a single readable column below it.
 
 From M4 the paste-a-link box on `/` becomes the main action, and import status shows there:
 "Your links" under the box, each with its platform, its link and how far it has got (waiting,
-working on it, trying again soon, ready to review, or why it failed); announced as it changes.
+working on it, trying again soon, ready to review, or why it failed); announced as it changes. A ready one offers Review the
+recipe; a failed one, Retry (three more tries) and Dismiss (deleted, no question: the link can be
+pasted again).
 A link from another site is refused under the box before it's sent.
