@@ -17,7 +17,7 @@ the budgets before its PR opens.
 | LCP | ≤ 2.0 s (Lighthouse mobile throttling) |
 | CLS | ≤ 0.05 |
 | TBT (lab proxy for INP) | ≤ 150 ms |
-| First-load JS per route | ≤ 130 kB gzip (Next.js) / ≤ 150 kB (SPA) |
+| First-load JS per route | ≤ 130 kB gzip (Next.js) / ≤ 165 kB (SPA; 150 until M4, raised by the user: the libraries the conventions require fill most of it, and LCP is set by round trips, not bytes — docs/metrics/m04.md) |
 | axe violations | 0 |
 | Browser console errors in e2e runs | 0 |
 | API p95 latency (local, warm) | ≤ 200 ms reads, ≤ 400 ms writes |
