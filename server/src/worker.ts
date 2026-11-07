@@ -15,8 +15,7 @@ const client = await connectToMongo(config.MONGODB_URI);
 const imports = importsCollection(client.db(config.DB_NAME));
 
 // Loops side by side, each a job at a time: at most two jobs at once, within Gemini's rate
-// limits (§4.3). A database error ends the process (an unhandled rejection), on purpose: it
-// can't work without Mongo, and the jobs it held are claimed again when their leases run out.
+// limits (§4.3). A database error doesn't end it: each loop logs it and tries again (workLoop).
 const JOBS_AT_A_TIME = 2;
 const stop = new AbortController();
 const loops = Array.from({ length: JOBS_AT_A_TIME }, () =>

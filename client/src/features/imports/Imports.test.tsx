@@ -17,6 +17,7 @@ function importOf(fields: Partial<Import>): Import {
     status: "pending",
     input: { type: "link", url: reel, platform: "instagram" },
     attempts: 0,
+    stalled: false,
     createdAt: "2026-11-01T10:00:00.000Z",
     updatedAt: "2026-11-01T10:00:00.000Z",
     ...fields,
@@ -191,6 +192,16 @@ test("when Dismiss fails, it says so and keeps the link", async () => {
     "It couldn't be dismissed. Try again.",
   );
   expect(screen.getByText("No.")).toBeInTheDocument();
+});
+
+test("a stalled link says nothing is working on it, and offers Dismiss, not Retry", async () => {
+  stubApi([[importOf({ status: "processing", attempts: 1, stalled: true })]]);
+  renderApp("/");
+
+  expect(await screen.findByText(/Stuck: nothing is working on this link/)).toBeInTheDocument();
+  expect(screen.queryByText("Working on it…")).not.toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Dismiss" })).toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: "Retry" })).not.toBeInTheDocument();
 });
 
 test("polling runs only while the worker has a link in hand", () => {

@@ -34,11 +34,19 @@ type WorkLoopDeps = {
 // side, so at most two jobs at a time (§4.3).
 export async function workLoop({ imports, extract, logger, signal }: WorkLoopDeps) {
   while (!signal.aborted) {
-    const job = await claimNextImport(imports, new Date());
-    if (job) {
-      const deadline = AbortSignal.timeout(ATTEMPT_DEADLINE_MS);
-      await runImport({ imports, extract, logger, job, deadline });
-    } else {
+    try {
+      const job = await claimNextImport(imports, new Date());
+      if (job) {
+        const deadline = AbortSignal.timeout(ATTEMPT_DEADLINE_MS);
+        await runImport({ imports, extract, logger, job, deadline });
+      } else {
+        await setTimeout(IDLE_MS);
+      }
+    } catch (error) {
+      // A database error (Mongo restarting, say): the loop waits and goes on, rather than end
+      // the worker, which nothing would start again, leaving every import waiting (§4.3). A job
+      // it held is claimed again when its lease runs out; the fence keeps that safe.
+      logger.error({ err: error }, "worker loop failed, trying again");
       await setTimeout(IDLE_MS);
     }
   }

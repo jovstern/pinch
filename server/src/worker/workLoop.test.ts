@@ -1,7 +1,7 @@
 import type { RecipeInput } from "@pinch/shared";
 import { ObjectId } from "mongodb";
 import { pino } from "pino";
-import { beforeEach, expect, test } from "vitest";
+import { beforeEach, expect, test, vi } from "vitest";
 import {
   claimNextImport,
   IMPORT_LIFETIME_MS,
@@ -223,4 +223,22 @@ test("the loop runs waiting jobs, and finishes a job whose worker died", async (
   }
   stop.abort();
   await loop;
+});
+
+test("the loop goes on after a database error, and runs the job once it can", async () => {
+  const { _id } = await insertImport();
+  // The first claim fails, as if Mongo were restarting; the next ones reach it.
+  const claim = vi
+    .spyOn(imports, "findOneAndUpdate")
+    .mockRejectedValueOnce(new Error("Mongo is restarting."));
+  const stop = new AbortController();
+
+  const loop = workLoop({ imports, extract: extractNow, logger, signal: stop.signal });
+  // It waits a second after the error, as when idle.
+  await expect
+    .poll(async () => (await imports.findOne({ _id }))?.status, { timeout: 3000 })
+    .toBe("ready");
+  stop.abort();
+  await loop;
+  claim.mockRestore();
 });

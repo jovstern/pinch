@@ -56,6 +56,9 @@ Slices for later milestones are filled in when the milestone starts.
 - [x] Client: review the draft in the recipe form, approve or discard it
 - [x] Client: retry or dismiss a failure
 - [x] e2e of link → draft → recipe; end of milestone: UI review, observer metrics, demo
+- [x] Follow-up: a worker that hits a database error goes on; an import no worker takes is shown
+      as stalled, with Dismiss
+
 ## M5 — Gemini
 ## M6 — Instagram / Facebook
 ## M7 — Polish

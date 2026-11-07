@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { Link } from "react-router";
 import { Button } from "../../components/Button.tsx";
-import { FailedImportActions } from "./FailedImportActions.tsx";
+import { ImportActions } from "./ImportActions.tsx";
 import { importListQuery } from "./importQueries.ts";
 
 // The links being turned into recipes, each with how far it has got (design §1, §4.2). After
@@ -59,14 +59,18 @@ export function ImportList({ focusLinkBox }: { focusLinkBox: () => void }) {
                 <p title={job.input.url} className="truncate text-sm text-text-muted">
                   {job.input.url}
                 </p>
-                <p className={`mt-1 text-sm ${statusColors[job.status]}`}>{statusText(job)}</p>
+                <p
+                  className={`mt-1 text-sm ${job.stalled ? "text-danger" : statusColors[job.status]}`}
+                >
+                  {statusText(job)}
+                </p>
                 {job.status === "ready" && (
                   <Button asChild variant="secondary" className="mt-3">
                     <Link to={`/imports/${job.id}`}>Review the recipe</Link>
                   </Button>
                 )}
-                {job.status === "failed" && (
-                  <FailedImportActions job={job} focusLinkBox={focusLinkBox} />
+                {(job.status === "failed" || job.stalled) && (
+                  <ImportActions job={job} focusLinkBox={focusLinkBox} />
                 )}
               </li>
             ))}
@@ -93,6 +97,8 @@ const platformNames: Record<Platform, string> = {
 
 // waiting → fetching → analyzing → ready to review, or why it failed (design §1).
 function statusText(job: Import) {
+  // Not "working on it" forever when nothing is (§4.3).
+  if (job.stalled) return "Stuck: nothing is working on this link. Dismiss it and paste it again.";
   switch (job.status) {
     case "pending":
       // Back in the queue after a failed try (§4.3).

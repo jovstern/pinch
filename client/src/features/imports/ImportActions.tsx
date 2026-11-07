@@ -5,16 +5,11 @@ import { deleteResource, sendJson } from "../../lib/api.ts";
 import { importListQuery } from "./importQueries.ts";
 
 // What a failed link offers (design §4.2): Retry puts it back in the queue for three more
-// tries; Dismiss deletes it. Either way the list is asked again, and a retried link is polled.
+// tries; Dismiss deletes it. A stalled one (no worker is taking it, §4.3) offers only Dismiss:
+// Retry is for a failed import. Either way the list is asked again, and a retried link is polled.
 // Once it's done the buttons are gone, so focus moves to the link box (focusLinkBox) rather than
 // falling to the page.
-export function FailedImportActions({
-  job,
-  focusLinkBox,
-}: {
-  job: Import;
-  focusLinkBox: () => void;
-}) {
+export function ImportActions({ job, focusLinkBox }: { job: Import; focusLinkBox: () => void }) {
   const queryClient = useQueryClient();
   // Also after a failure: the link may have changed or gone since the list loaded (another tab),
   // and the list then shows it as it is. Awaited, so "Retrying…" lasts until the list is fresh
@@ -40,16 +35,18 @@ export function FailedImportActions({
   return (
     <>
       <div className="mt-3 flex gap-3">
-        <Button
-          type="button"
-          variant="secondary"
-          onClick={() => {
-            if (!busy) retry.mutate();
-          }}
-          aria-disabled={busy}
-        >
-          {retry.isPending ? "Retrying…" : "Retry"}
-        </Button>
+        {job.status === "failed" && (
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={() => {
+              if (!busy) retry.mutate();
+            }}
+            aria-disabled={busy}
+          >
+            {retry.isPending ? "Retrying…" : "Retry"}
+          </Button>
+        )}
         <Button
           type="button"
           variant="danger-quiet"
