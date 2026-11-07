@@ -34,8 +34,9 @@ export default defineConfig({
     },
     {
       // The import worker, on the same database, so a pasted link becomes a draft (M4). It has
-      // no address to wait for: Playwright waits for its "worker started" line instead, and tee
-      // keeps its log next to the API's for the observer.
+      // no address to wait for: Playwright waits for its "worker started" line instead (it reads
+      // stdout, so tee, not >, keeps the log next to the API's for the observer). The lines after
+      // SIGTERM aren't kept: Playwright stops the whole process group, tee with it.
       command: "mkdir -p ../.metrics && node src/worker.ts | tee ../.metrics/e2e-worker.log",
       cwd: "server",
       wait: { stdout: /worker started/ },

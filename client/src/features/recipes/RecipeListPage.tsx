@@ -169,7 +169,13 @@ export function RecipeListPage() {
         </p>
       )}
       {hasNextPage && (
-        <Button type="button" variant="secondary" onClick={showMore} className="mt-6">
+        <Button
+          type="button"
+          variant="secondary"
+          onClick={showMore}
+          aria-disabled={isFetchingNextPage}
+          className="mt-6"
+        >
           {isFetchingNextPage ? "Loading…" : "Show more"}
         </Button>
       )}

@@ -14,16 +14,18 @@ export function ImportList({ focusLinkBox }: { focusLinkBox: () => void }) {
 
   // What a screen reader hears: only what just changed, one link at a time, not the whole list
   // (ui-craft: aria-live for async results). Worked out as each new list arrives, from the one
-  // before: React docs, "Storing information from previous renders" (as ListFilters).
-  const [previous, setPrevious] = useState(data);
-  const [news, setNews] = useState("");
-  if (data !== previous) {
-    setPrevious(data);
+  // before: React docs, "Storing information from previous renders" (as ListFilters). Kept
+  // simple: one change per poll is said, and the same words twice in a row aren't said again.
+  const [prevData, setPrevData] = useState(data);
+  const [announcement, setAnnouncement] = useState("");
+  if (data !== prevData) {
+    setPrevData(data);
     // The first list isn't news: it's what the page shows.
-    if (previous !== undefined && data !== undefined) {
-      const before = new Map(previous.items.map((job) => [job.id, job.status]));
+    if (prevData !== undefined && data !== undefined) {
+      const before = new Map(prevData.items.map((job) => [job.id, job.status]));
       const changed = data.items.find((job) => before.get(job.id) !== job.status);
-      if (changed) setNews(`${platformNames[changed.input.platform]} link: ${statusText(changed)}`);
+      if (changed)
+        setAnnouncement(`${platformNames[changed.input.platform]} link: ${statusText(changed)}`);
     }
   }
 
@@ -31,11 +33,15 @@ export function ImportList({ focusLinkBox }: { focusLinkBox: () => void }) {
     <div className="mt-4">
       {/* Always on the page: a live region must be there before its text changes. */}
       <p role="status" className="sr-only">
-        {news}
+        {announcement}
       </p>
       {/* No Try again, unlike the recipes: the list is second to them, and sending a link
           asks for it again. */}
-      {isLoadingError && <p className="text-danger">We couldn't load your links.</p>}
+      {isLoadingError && (
+        <p role="alert" className="text-danger">
+          We couldn't load your links.
+        </p>
+      )}
       {imports.length > 0 && (
         <>
           <h2 className="text-lg font-semibold">Your links</h2>

@@ -437,16 +437,16 @@ noise, and M5/M6 only swap the extractor.
 
 Phone first (§1). Every screen sits in one frame: a header with the name (a link home) and
 **New recipe**, a secondary button (from M4 the main action of `/` is pasting a link; hidden on
-its own page and on a review, where Save is the main action); the content in a single readable
+the recipe form's pages, new, edit and review, where Save is the main action); the content in a single readable
 column below it.
 
 | Address | Screen | Its job | States |
 |---|---|---|---|
-| `/` | Your recipes | Paste a link to pinch a recipe (from M4, the box and Your links above the list, below). Pick something to cook; each card shows the title, the number of ingredients and the total time. Search (on Enter) and tag filters (folded, applied as ticked) sit above the list and live in the address: `/?q=egg&tags=meal:dinner` | Loading (placeholder cards), empty (says what goes here, links to New recipe), error (Try again); 50 at a time, then Show more (focus moves to the first new recipe; a failed page says so and keeps the list); filtered: how many match (announced), or none and a link to clear them |
+| `/` | Your recipes | Paste a link to pinch a recipe (from M4, the box and Your links above the list, below). Pick something to cook; each card shows the title, the number of ingredients and the total time. Search (on Enter) and tag filters (folded, applied as ticked) sit above the list and live in the address: `/?q=egg&tags=meal:dinner` | Loading (placeholder cards), empty (points to the paste box, and links to New recipe: "Write a recipe"), error (Try again); 50 at a time, then Show more (focus moves to the first new recipe; a failed page says so and keeps the list); filtered: how many match (announced), or none and a link to clear them |
 | `/recipes/new` | New recipe | Write a recipe by hand; tags are chips to tick, a group per facet (§7) | From the first Save: each error under its field (§8.1), updated as the user types; focus on the first; saving (button says so); failed (says so, keeps what was typed) |
 | `/recipes/:id` | A recipe | Read it while cooking (its tags under the title); Edit, Delete (asks first) | Loading, error (Try again), not found |
 | `/recipes/:id/edit` | Edit recipe | Change it; Cancel goes back to the recipe | Loading, error (Try again), not found; then as New recipe |
-| `/imports/:id` | Review the recipe | Check the draft the worker made, in the recipe form (D1); Save approves it and opens the new recipe, Discard deletes it and goes back to `/` | Loading, error (Try again), not found; no draft (not done yet, or failed): says so and links home; then as New recipe |
+| `/imports/:id` | Review the recipe | Check the draft the worker made, in the recipe form (D1); Save approves it and opens the new recipe; Review later (the form's Cancel) keeps it; Discard, last in the form's buttons, deletes it and goes back to `/` | Loading, error (Try again), not found; no draft (not done yet, or failed): says so and links home; then as New recipe |
 | anything else | Page not found | Get back to the recipes | — |
 
 From M4 the paste-a-link box on `/` becomes the main action, and import status shows there:

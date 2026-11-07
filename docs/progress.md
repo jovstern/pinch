@@ -55,7 +55,7 @@ Slices for later milestones are filled in when the milestone starts.
 - [x] Client: paste a link on `/`, import status polled every 2 s
 - [x] Client: review the draft in the recipe form, approve or discard it
 - [x] Client: retry or dismiss a failure
-- [ ] e2e of link → draft → recipe; end of milestone: UI review, observer metrics, demo
+- [x] e2e of link → draft → recipe; end of milestone: UI review, observer metrics, demo
 ## M5 — Gemini
 ## M6 — Instagram / Facebook
 ## M7 — Polish

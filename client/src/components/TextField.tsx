@@ -19,6 +19,7 @@ type TextFieldProps = {
   placeholder?: string;
   // Always shown under the input, and read with it.
   hint?: string;
+  // The input itself (single-line only), to move focus to it.
   inputRef?: Ref<HTMLInputElement>;
   className?: string;
 };
@@ -39,13 +40,16 @@ export function TextField({
   const errorId = `${id}-error`;
   const hintId = `${id}-hint`;
   const invalid = field.state.meta.errors.some((message) => typeof message === "string");
+  const describedBy = [];
+  if (hint) describedBy.push(hintId);
+  if (invalid) describedBy.push(errorId);
   const shared = {
     id,
     name: field.name,
     value: field.state.value,
     onBlur: field.handleBlur,
     "aria-invalid": invalid,
-    "aria-describedby": [hint && hintId, invalid && errorId].filter(Boolean).join(" ") || undefined,
+    "aria-describedby": describedBy.length > 0 ? describedBy.join(" ") : undefined,
   };
   const box =
     "w-full rounded-lg border border-border bg-surface-raised px-3 py-2 aria-invalid:border-danger";

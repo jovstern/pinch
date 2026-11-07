@@ -114,6 +114,7 @@ export function ReviewImportPage() {
           </Button>
         }
       />
+      {/* Under the buttons, by Discard; the form's own save error is its own, above them. */}
       {discard.isError && (
         <p role="alert" className="mt-3 text-danger">
           It couldn't be discarded. Try again.

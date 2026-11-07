@@ -6,7 +6,8 @@ import { importListQuery } from "./importQueries.ts";
 
 // What a failed link offers (design §4.2): Retry puts it back in the queue for three more
 // tries; Dismiss deletes it. Either way the list is asked again, and a retried link is polled.
-// Done, the buttons are gone, so focus goes to the link box (focusLinkBox), not to the page.
+// Once it's done the buttons are gone, so focus moves to the link box (focusLinkBox) rather than
+// falling to the page.
 export function FailedImportActions({
   job,
   focusLinkBox,
