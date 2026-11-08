@@ -69,6 +69,6 @@ Slices for later milestones are filled in when the milestone starts.
       the worker sends it to Gemini alone; the list and the review page show it
 - [x] Text fallback, the box: one textarea on `/` takes a link or the text (auto-detected)
 - [x] Nutrition per serving, shown as an estimate
-- [ ] End of milestone: a real YouTube link becomes a draft; UI review, observer metrics, demo
+- [x] End of milestone: a real YouTube link becomes a draft; UI review, observer metrics, demo
 ## M6 — Instagram / Facebook
 ## M7 — Polish
