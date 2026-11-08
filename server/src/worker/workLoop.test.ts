@@ -243,7 +243,11 @@ test("a job whose worker died on its last try is failed, not tried a fourth time
   });
 
   expect(tried).toBe(false);
-  expect(await imports.findOne({ _id })).toMatchObject({ status: "failed", attempts: 4 });
+  expect(await imports.findOne({ _id })).toMatchObject({
+    status: "failed",
+    attempts: 4,
+    noRetry: false,
+  });
 });
 
 test("the loop runs waiting jobs, and finishes a job whose worker died", async () => {

@@ -110,7 +110,7 @@ export function importsRouter(db: Db) {
     if (found.status !== "failed") throw importNotFailed();
     // Not a recipe, too long: it would fail again, and use one of the day's for nothing (D23).
     if (found.noRetry) {
-      throw new HttpError(409, "import_no_retry", "Trying again won't change this one.");
+      throw new HttpError(409, "import_no_retry", "This import would fail the same way again.");
     }
     if (!(await countImport(usage, req.userId))) throw dailyLimit();
     const now = new Date();
@@ -118,7 +118,7 @@ export function importsRouter(db: Db) {
       { ...filter, status: "failed" },
       {
         $set: { status: "pending", attempts: 0, nextAttemptAt: now, updatedAt: now },
-        $unset: { error: "" },
+        $unset: { error: "", noRetry: "" },
       },
       { returnDocument: "after" },
     );

@@ -159,8 +159,9 @@ of an attempt clears it.
 - **Retries with backoff.** A failed attempt goes back to `pending` with `nextAttemptAt` = now +
   10 s, then 60 s. After 3 attempts → `failed` with a readable `error`. A failure no retry can
   fix (not a recipe, a video over 3 minutes) fails the import at once, with its own message
-  and `noRetry: true` (D23): the list offers only Dismiss, and the API refuses its retry. A job whose worker died on its third attempt is failed when it's claimed again, not
-  run a fourth time.
+  and `noRetry: true` (D23): the list offers only Dismiss, and the API refuses its retry. A
+  job whose worker died on its third attempt is failed when it's claimed again, not run a
+  fourth time.
 - **Back-pressure.** At most **2 jobs at a time** per worker, to stay within Gemini rate limits.
 - **Idle polling.** With nothing to do, the worker checks again after 1 s.
 - **Errors don't stop it.** A database error (Mongo restarting) is logged, and the loop tries
@@ -337,7 +338,7 @@ POST   /api/imports                    { type: "link", url } | { type: "text", t
 GET    /api/imports                    my imports that are not done yet
 GET    /api/imports/:id                status, step, error, draft
 POST   /api/imports/:id/approve        the edited draft, as POST /api/recipes; nutritionPerServing from the stored draft (D20) → 201 recipe (409 if not ready)
-POST   /api/imports/:id/retry          failed → pending, attempts and error cleared → 202 (409 if not failed, or noRetry)
+POST   /api/imports/:id/retry          failed → pending, attempts, error and noRetry cleared → 202 (409 if not failed, or noRetry)
 DELETE /api/imports/:id                discard / dismiss
 ```
 
@@ -482,8 +483,8 @@ column below it.
 From M4 the paste-a-link box on `/` becomes the main action, and import status shows there:
 "Your imports" under the box, each with its platform, its link and how far it has got (waiting,
 working on it, trying again soon, ready to review, or why it failed); announced as it changes.
-A ready one offers Review the recipe; a failed one, Retry (three more tries) and Dismiss; a
-stalled one (§4.3) says nothing is working on it, and offers Dismiss. Dismiss deletes it, with
+A ready one offers Review the recipe; a failed one, Retry (three more tries) and Dismiss, or
+only Dismiss when no retry can fix it (D23); a stalled one (§4.3) says nothing is working on it, and offers Dismiss. Dismiss deletes it, with
 no question: the link can be pasted again. A link from another site is refused under the box
 before it's sent.
 

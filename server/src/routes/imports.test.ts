@@ -309,7 +309,12 @@ test("approve refuses an import with no draft yet, an invalid recipe and a missi
 });
 
 test("POST /api/imports/:id/retry puts a failed import back in the queue, from the start", async () => {
-  const id = await insertDone({ status: "failed", attempts: 3, error: "We couldn't." });
+  const id = await insertDone({
+    status: "failed",
+    attempts: 3,
+    error: "We couldn't.",
+    noRetry: false,
+  });
 
   const response = await request(app).post(`/api/imports/${id}/retry`);
 
@@ -317,6 +322,7 @@ test("POST /api/imports/:id/retry puts a failed import back in the queue, from t
   const job = ImportSchema.parse(response.body);
   expect(job).toMatchObject({ status: "pending", attempts: 0 });
   expect(job).not.toHaveProperty("error");
+  expect(job).not.toHaveProperty("noRetry");
   // The worker may take it now.
   const stored = await importsCollection(db).findOne({ _id: new ObjectId(id) });
   expect(stored?.nextAttemptAt.getTime()).toBeLessThanOrEqual(Date.now());

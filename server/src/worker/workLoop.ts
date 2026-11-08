@@ -74,8 +74,8 @@ type RunImportDeps = {
 
 // Runs one claimed job: saves its draft for the user to review (§4.1), or, if it fails, puts it
 // back to be tried again later, or fails it after the last try, or at once when no retry can fix
-// it (D23). Only the extraction (and its step
-// updates) is caught here: a database error after it goes up to workLoop, which logs it and goes on.
+// it (D23). Only the extraction (and its step updates) is caught here: a database error after it
+// goes up to workLoop, which logs it and goes on.
 export async function runImport({ imports, extract, logger, job, deadline }: RunImportDeps) {
   const log = logger.child({ importId: job._id.toHexString(), attempt: job.attempts });
 
