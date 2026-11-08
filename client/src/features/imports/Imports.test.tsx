@@ -129,6 +129,16 @@ test("a text too short to be a recipe is refused before it's sent", async () => 
   expect(fetch).not.toHaveBeenCalledWith("/api/imports", expect.anything());
 });
 
+test("an empty box asks for either, and focus goes back to it", async () => {
+  stubApi([[]]);
+  renderApp("/");
+
+  await userEvent.click(screen.getByRole("button", { name: "Pinch it" }));
+
+  expect(await screen.findByRole("alert")).toHaveTextContent("Paste a link or the recipe's text.");
+  expect(screen.getByRole("textbox", { name: "Pinch a recipe from a reel" })).toHaveFocus();
+});
+
 test("a link from another site is refused before it's sent, until it's fixed", async () => {
   const fetch = stubApi([[]]);
   renderApp("/");

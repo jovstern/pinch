@@ -43,6 +43,7 @@ export function ImportActions({ job, focusPasteBox }: { job: Import; focusPasteB
               if (!busy) retry.mutate();
             }}
             aria-disabled={busy}
+            aria-describedby={`import-${job.id}`}
           >
             {retry.isPending ? "Retrying…" : "Retry"}
           </Button>
@@ -54,6 +55,7 @@ export function ImportActions({ job, focusPasteBox }: { job: Import; focusPasteB
             if (!busy) dismiss.mutate();
           }}
           aria-disabled={busy}
+          aria-describedby={`import-${job.id}`}
         >
           {dismiss.isPending ? "Dismissing…" : "Dismiss"}
         </Button>

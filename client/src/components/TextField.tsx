@@ -44,6 +44,8 @@ export function TextField({
     id,
     name: field.name,
     value: field.state.value,
+    // Hebrew reads right to left, English left to right: each box follows what's typed in it.
+    dir: "auto",
     onBlur: field.handleBlur,
     "aria-invalid": invalid,
     "aria-describedby": describedBy.length > 0 ? describedBy.join(" ") : undefined,
@@ -57,12 +59,12 @@ export function TextField({
         {label}
       </label>
       {multiline ? (
-        // Grows with its text (field-sizing), so a long step or a pasted text is read whole, not
-        // scrolled.
+        // Grows with its text (field-sizing), so a long step is read whole; up to a limit, so a long
+        // pasted caption doesn't push the button below it far off the screen.
         <textarea
           ref={inputRef}
           {...shared}
-          className={`field-sizing-content min-h-24 ${box}`}
+          className={`field-sizing-content max-h-80 min-h-24 ${box}`}
           onChange={(event) => {
             field.handleChange(event.target.value);
           }}

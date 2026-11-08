@@ -1,7 +1,7 @@
 import { dailyLimitMessage, ImportInputSchema, ImportSchema } from "@pinch/shared";
 import { revalidateLogic, useForm } from "@tanstack/react-form";
 import { useQueryClient } from "@tanstack/react-query";
-import type { Ref } from "react";
+import { useRef, type Ref } from "react";
 import { Button } from "../../components/Button.tsx";
 import { TextField } from "../../components/TextField.tsx";
 import { ApiError, sendJson } from "../../lib/api.ts";
@@ -12,6 +12,7 @@ import { importListQuery } from "./importQueries.ts";
 // (RecipeForm.tsx): on the first send, then on every change, with the API's own schema.
 export function ImportForm({ inputRef }: { inputRef: Ref<HTMLTextAreaElement> }) {
   const queryClient = useQueryClient();
+  const formRef = useRef<HTMLFormElement>(null);
   const form = useForm({
     defaultValues: { pasted: "" },
     validationLogic: revalidateLogic(),
@@ -44,14 +45,21 @@ export function ImportForm({ inputRef }: { inputRef: Ref<HTMLTextAreaElement> })
     },
   });
 
+  async function submit() {
+    await form.handleSubmit();
+    // Refused: focus goes back to the box, to fix it (ui-craft; as RecipeForm).
+    formRef.current?.querySelector<HTMLElement>("[aria-invalid=true]")?.focus();
+  }
+
   return (
     <form
+      ref={formRef}
       noValidate
       onSubmit={(event) => {
         event.preventDefault();
         // Not disabled while sending, so focus stays on the button (as Show more).
         if (form.state.isSubmitting) return;
-        void form.handleSubmit();
+        void submit();
       }}
       className="mt-6"
     >

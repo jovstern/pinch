@@ -37,7 +37,13 @@ export function RecipePage() {
       {(recipeDetails || recipe.nutritionPerServing) && (
         <div className="mt-3 grid gap-1 text-sm text-text-muted">
           {recipeDetails && <p>{recipeDetails}</p>}
-          {recipe.nutritionPerServing && <p>{nutritionLine(recipe.nutritionPerServing)}</p>}
+          {recipe.nutritionPerServing && (
+            // Kept together, so a phone wraps between the amounts, not inside "per serving".
+            <p className="tabular-nums">
+              {nutritionLine(recipe.nutritionPerServing)}{" "}
+              <span className="whitespace-nowrap">per serving (estimate)</span>
+            </p>
+          )}
         </div>
       )}
       {recipe.tags.length > 0 && (
@@ -95,7 +101,7 @@ function details(recipe: Recipe) {
   return parts.join(" · ");
 }
 
-// "≈ 520 kcal · 18 g protein · 92 g carbs · 8 g fat per serving (estimate)": Gemini's guess from
+// "≈ 520 kcal · 18 g protein · 92 g carbs · 8 g fat", per serving: Gemini's guess from
 // the ingredients (design D14), so said to be one, and rounded: a decimal would look exact.
 function nutritionLine({ calories, proteinG, carbsG, fatG }: Nutrition) {
   const round = (amount: number) => String(Math.round(amount));
@@ -105,7 +111,7 @@ function nutritionLine({ calories, proteinG, carbsG, fatG }: Nutrition) {
     `${round(carbsG)} g carbs`,
     `${round(fatG)} g fat`,
   ];
-  return `${amounts.join(" · ")} per serving (estimate)`;
+  return amounts.join(" · ");
 }
 
 // "2 tbsp olive oil", or just "salt" when the recipe gives no amount.

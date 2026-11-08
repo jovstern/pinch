@@ -24,6 +24,8 @@ export const ImportInputSchema = z.discriminatedUnion(
       url: z
         .string(linkMessage)
         .trim()
+        // An empty box is one word, so a link: but it may have been for either.
+        .min(1, "Paste a link or the recipe's text.")
         .max(2000, "Keep the link under 2000 characters.")
         .pipe(
           z.url({
