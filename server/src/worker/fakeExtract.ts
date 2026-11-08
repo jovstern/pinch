@@ -1,4 +1,4 @@
-import type { RecipeInput } from "@pinch/shared";
+import type { RecipeDraft } from "@pinch/shared";
 import { setTimeout } from "node:timers/promises";
 import type { ImportDocument } from "../db/imports.ts";
 
@@ -9,7 +9,7 @@ import type { ImportDocument } from "../db/imports.ts";
 export async function fakeExtract(
   input: ImportDocument["input"],
   signal: AbortSignal,
-): Promise<RecipeInput> {
+): Promise<RecipeDraft> {
   // Stops at the attempt's deadline, as every call in a real extractor must (§4.3).
   await setTimeout(3000, undefined, { signal });
   const sent = input.type === "link" ? input.url : input.text;
@@ -25,5 +25,6 @@ export async function fakeExtract(
     servings: 2,
     cookMinutes: 20,
     tags: ["cuisine:italian", "meal:dinner"],
+    nutritionPerServing: { calories: 520, proteinG: 18, carbsG: 92, fatG: 8 },
   };
 }

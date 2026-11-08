@@ -25,7 +25,7 @@ export const IngredientSchema = z.object({
 });
 
 // What the user writes: the body of POST /api/recipes (design §6). Every limit has a message
-// the form can show (§8.1). Nutrition comes with Gemini (M5).
+// the form can show (§8.1).
 export const RecipeInputSchema = z.object({
   title: z
     .string()
@@ -59,6 +59,21 @@ export const RecipeInputSchema = z.object({
     .transform((tags) => [...new Set(tags)]),
 });
 
+// Per serving, estimated by Gemini from the ingredients (design D14): always an estimate, and
+// shown as one. Calories in kcal, the rest in grams. Not in the form: the user doesn't write it (D20).
+export const NutritionSchema = z.object({
+  calories: z.number().min(0).max(10_000),
+  proteinG: z.number().min(0).max(1000),
+  carbsG: z.number().min(0).max(1000),
+  fatG: z.number().min(0).max(1000),
+});
+
+// What the worker makes (§4.1): a recipe as the user would write it, and the nutrition
+// estimate, which only the model gives.
+export const RecipeDraftSchema = RecipeInputSchema.extend({
+  nutritionPerServing: NutritionSchema.optional(),
+});
+
 export const SourceSchema = z.object({
   type: z.enum(["instagram", "facebook", "youtube", "text", "image", "manual"]),
   // http(s) only: the client renders it as a link, and a javascript: URL would run code.
@@ -68,6 +83,7 @@ export const SourceSchema = z.object({
 // A recipe as the API sends it: the ids and dates are strings (mongodb.md).
 export const RecipeSchema = RecipeInputSchema.extend({
   id: z.string(),
+  nutritionPerServing: NutritionSchema.optional(),
   source: SourceSchema,
   createdAt: z.iso.datetime(),
   updatedAt: z.iso.datetime(),
@@ -82,5 +98,7 @@ export const RecipeListSchema = z.object({
 
 export type Ingredient = z.infer<typeof IngredientSchema>;
 export type RecipeInput = z.infer<typeof RecipeInputSchema>;
+export type Nutrition = z.infer<typeof NutritionSchema>;
+export type RecipeDraft = z.infer<typeof RecipeDraftSchema>;
 export type Recipe = z.infer<typeof RecipeSchema>;
 export type RecipeList = z.infer<typeof RecipeListSchema>;

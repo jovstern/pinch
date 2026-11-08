@@ -109,8 +109,8 @@ Mongo is the only shared state. There is no Redis, no queue service and no objec
 4. **Cleanup in `finally`**: delete the temp file and the Gemini file. Media lives for about a minute.
 5. The client polls `GET /api/imports` (all of them in one request) every 2 s while any is
    pending or processing, then stops; a ready one is opened for review.
-6. The user edits and approves → `POST /api/imports/:id/approve` → a recipe is created and the
-   import is deleted (§4.4).
+6. The user edits and approves → `POST /api/imports/:id/approve` → a recipe is created (with
+   the draft's nutrition estimate, which the form doesn't edit) and the import is deleted (§4.4).
 
 ### 4.2 States
 
@@ -223,7 +223,7 @@ Recipe {
   steps: [string],
   tags: [string],                  // "cuisine:italian", "flavor:spicy" — see §7
   servings?, prepMinutes?, cookMinutes?,
-  nutritionPerServing?: { calories, proteinG, carbsG, fatG, isEstimate: true },
+  nutritionPerServing?: { calories, proteinG, carbsG, fatG },   // always Gemini's estimate (D14)
   thumbnail?: Binary,              // excluded from list queries
   source: { type: "instagram" | "facebook" | "youtube" | "text" | "image" | "manual", url? },
   sourceImportId?,                 // unique + sparse (§4.4)
@@ -332,7 +332,7 @@ GET    /api/recipes/:id/thumbnail      image/webp
 POST   /api/imports                    { type: "link", url } | { type: "text", text } | multipart images  → 202 import (429 past the daily cap)
 GET    /api/imports                    my imports that are not done yet
 GET    /api/imports/:id                status, step, error, draft
-POST   /api/imports/:id/approve        the edited draft, as POST /api/recipes → 201 recipe (409 if not ready)
+POST   /api/imports/:id/approve        the edited draft, as POST /api/recipes; nutritionPerServing from the stored draft (D20) → 201 recipe (409 if not ready)
 POST   /api/imports/:id/retry          failed → pending, attempts and error cleared → 202 (409 if not failed)
 DELETE /api/imports/:id                discard / dismiss
 ```
@@ -417,7 +417,7 @@ changes**. The planned design:
 | D17 | The server runs on Node 24's built-in TypeScript type stripping | One fewer dependency; the spike already runs this way | `tsx` (node-api.md's default) |
 | D18 | Schemas in an npm-workspace package `shared/`, used as TypeScript source with no build: its `exports` point at `src/index.ts`; Vite compiles it, and Node type-strips it because the workspace symlink resolves to a path outside `node_modules` | One copy for client and server, no build step | `server/src/schemas/` (node-api.md); a copy on each side; a built package |
 | D19 | MongoDB through the native driver; Zod checks every write, and every response is parsed with its schema, which drops stored fields like `ownerId` | You see the real queries, which suits learning indexes; one schema layer, shared with the client | Mongoose (a second schema layer next to Zod) |
-| D20 | Editing is `PUT`: it replaces what the user can edit and keeps the fields the server owns (`_id`, `ownerId`, `source`, `createdAt`, `sourceImportId`, later `thumbnail`), listed in the route | The form always sends the whole recipe, so a field the user clears is simply left out; no `null`/`""` rules | `PATCH` with `null` to clear a field |
+| D20 | Editing is `PUT`: it replaces what the user can edit and keeps the fields the server owns (`_id`, `ownerId`, `source`, `createdAt`, `sourceImportId`, `nutritionPerServing`, later `thumbnail`), listed in the route | The form always sends the whole recipe, so a field the user clears is simply left out; no `null`/`""` rules | `PATCH` with `null` to clear a field |
 | D21 | React Router (declarative: `<Routes>` in `App.tsx`, `useParams`, `Link`) | A handful of screens; the most familiar API and the least setup, easy to read line by line | TanStack Router (type-safe routes and loaders, more concepts) |
 | D22 | The daily cap (20) counts links pasted and Retry clicks, in a per-user, per-UTC-day counter (`usage`) raised atomically by both routes; past it, 429 | Imports are deleted once done, so counting them would undercount; the unique `{ownerId, day}` index makes two first counts at once safe on a standalone Mongo (as D9); the routes are where a user asks for work; automatic retries (3 a link) aren't counted, so at most 60 Gemini calls a day | Counting each Gemini call in the worker (exact, but a link could be accepted and then fail with "limit reached") |
 | D23 | "Not a recipe" and "too long" fail the import at once (`NoRetryError`, its message shown to the user); every other error is retried | Trying again gives the same answer and costs a Gemini call each time; the user learns why straight away | Retry everything (3 Gemini calls for a cat video, and a vague message) |
@@ -429,6 +429,7 @@ changes**. The planned design:
 | Instagram/Facebook block `yt-dlp` | The spike first; fallback to text or screenshots; keep `yt-dlp` updated |
 | Gemini invents ingredients or quantities | The caption as a second source (D15); draft review; Zod validation; a prompt that allows "unknown" |
 | Nutrition numbers are wrong | Shown as "≈ estimate" |
+| The estimate isn't redone when servings or ingredients are edited: it's Gemini's, for the draft as it came | Shown as "≈ estimate"; a nutrition database later (D14) |
 | Gemini cost or rate limits | Daily cap per user; 2 jobs at a time; videos ≤ 3 min |
 | Long or non-recipe videos | Length check before download (right after it when the platform doesn't report a length); "not a recipe" failure |
 | A Gemini call hangs | A deadline per attempt under the lease, a timeout on every call (§4.3); then the normal retry |
@@ -469,7 +470,7 @@ column below it.
 |---|---|---|---|
 | `/` | Your recipes | Paste a link, or a post's text, to pinch a recipe (from M4, the box and Your imports above the list, below). Pick something to cook; each card shows the title, the number of ingredients and the total time. Search (on Enter) and tag filters (folded, applied as ticked) sit above the list and live in the address: `/?q=egg&tags=meal:dinner` | Loading (placeholder cards), empty (points to the paste box, and links to New recipe: "Write a recipe"), error (Try again); 50 at a time, then Show more (focus moves to the first new recipe; a failed page says so and keeps the list); filtered: how many match (announced), or none and a link to clear them |
 | `/recipes/new` | New recipe | Write a recipe by hand; tags are chips to tick, a group per facet (§7) | From the first Save: each error under its field (§8.1), updated as the user types; focus on the first; saving (button says so); failed (says so, keeps what was typed) |
-| `/recipes/:id` | A recipe | Read it while cooking (its tags under the title); Edit, Delete (asks first) | Loading, error (Try again), not found |
+| `/recipes/:id` | A recipe | Read it while cooking (its tags under the title; from M5 the nutrition per serving, marked ≈ estimate); Edit, Delete (asks first) | Loading, error (Try again), not found |
 | `/recipes/:id/edit` | Edit recipe | Change it; Cancel goes back to the recipe | Loading, error (Try again), not found; then as New recipe |
 | `/imports/:id` | Review the recipe | Check the draft the worker made, in the recipe form (D1); Save approves it and opens the new recipe; Review later (the form's Cancel) keeps it; Discard, last in the form's buttons, deletes it and goes back to `/` | Loading, error (Try again), not found; no draft (not done yet, or failed): says so and links home; then as New recipe |
 | anything else | Page not found | Get back to the recipes | — |

@@ -232,24 +232,32 @@ test("an import no worker has taken, long after it was due, is stalled", async (
 });
 
 test("POST /api/imports/:id/approve saves the edited draft as a recipe and deletes the import", async () => {
-  const id = await insertDone({ draft });
+  const nutritionPerServing = { calories: 520, proteinG: 18, carbsG: 92, fatG: 8 };
+  const id = await insertDone({ draft: { ...draft, nutritionPerServing } });
 
+  // The form never sends nutrition; one sent anyway is dropped: the draft's is the model's.
   const response = await request(app)
     .post(`/api/imports/${id}/approve`)
-    .send({ ...draft, title: "Nonna's tomato pasta" });
+    .send({
+      ...draft,
+      title: "Nonna's tomato pasta",
+      nutritionPerServing: { calories: 1, proteinG: 1, carbsG: 1, fatG: 1 },
+    });
 
   expect(response.status).toBe(201);
   const recipe = RecipeSchema.parse(response.body);
   expect(response.headers.location).toBe(`/api/recipes/${recipe.id}`);
   expect(recipe).toMatchObject({
     title: "Nonna's tomato pasta",
+    nutritionPerServing,
     source: { type: "instagram", url: reel },
   });
   expect((await request(app).get(`/api/imports/${id}`)).status).toBe(404);
-  // Editing the recipe keeps where it came from (design D20).
+  // Editing the recipe keeps where it came from, and its nutrition (design D20).
   expect((await request(app).put(`/api/recipes/${recipe.id}`).send(draft)).status).toBe(200);
   const stored = await recipesCollection(db).findOne({ _id: new ObjectId(recipe.id) });
   expect(stored?.sourceImportId?.toHexString()).toBe(id);
+  expect(stored?.nutritionPerServing).toEqual(nutritionPerServing);
 });
 
 test("a recipe from pasted text has text as its source, and no link", async () => {

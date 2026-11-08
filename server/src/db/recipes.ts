@@ -1,4 +1,4 @@
-import { RecipeSchema, type Recipe, type RecipeInput } from "@pinch/shared";
+import { RecipeSchema, type Nutrition, type Recipe, type RecipeInput } from "@pinch/shared";
 import { MongoServerError, type Collection, type Db, type Filter, type ObjectId } from "mongodb";
 
 // A recipe as it is stored (design §6). A field added here that the form doesn't send must
@@ -7,6 +7,8 @@ import { MongoServerError, type Collection, type Db, type Filter, type ObjectId 
 export type RecipeDocument = RecipeInput & {
   _id: ObjectId;
   ownerId: ObjectId;
+  // Gemini's estimate, from the import's draft (design D14).
+  nutritionPerServing?: Nutrition;
   source: Recipe["source"];
   // The import it was approved from: unique, so approving twice can't make two (design §4.4).
   sourceImportId?: ObjectId;

@@ -69,6 +69,7 @@ export function recipesRouter(db: Db) {
       ...input,
       _id: existing._id,
       ownerId: existing.ownerId,
+      nutritionPerServing: existing.nutritionPerServing,
       source: existing.source,
       sourceImportId: existing.sourceImportId,
       createdAt: existing.createdAt,

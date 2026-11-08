@@ -1,4 +1,4 @@
-import { RecipeInputSchema, type RecipeInput } from "@pinch/shared";
+import { RecipeDraftSchema, type RecipeDraft } from "@pinch/shared";
 import type { Collection, UpdateFilter } from "mongodb";
 import { setTimeout } from "node:timers/promises";
 import type { Logger } from "pino";
@@ -92,10 +92,10 @@ export async function runImport({ imports, extract, logger, job, deadline }: Run
     return;
   }
 
-  let draft: RecipeInput;
+  let draft: RecipeDraft;
   try {
     // Checked like a POST body: what the extractor makes is never trusted as it is (§9).
-    draft = RecipeInputSchema.parse(await extract(job.input, deadline));
+    draft = RecipeDraftSchema.parse(await extract(job.input, deadline));
   } catch (error) {
     if (error instanceof NoRetryError) {
       await save(failedUpdate(error.message), `import failed: ${error.message}`);

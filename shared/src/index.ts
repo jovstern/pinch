@@ -18,12 +18,16 @@ export {
 } from "./import.ts";
 export {
   IngredientSchema,
+  NutritionSchema,
+  RecipeDraftSchema,
   RecipeInputSchema,
   RecipeListSchema,
   RecipeSchema,
   SourceSchema,
   type Ingredient,
+  type Nutrition,
   type Recipe,
+  type RecipeDraft,
   type RecipeInput,
   type RecipeList,
 } from "./recipe.ts";

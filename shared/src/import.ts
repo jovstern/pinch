@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { RecipeInputSchema } from "./recipe.ts";
+import { RecipeDraftSchema } from "./recipe.ts";
 
 export const PlatformSchema = z.enum(["instagram", "facebook", "youtube"]);
 export type Platform = z.infer<typeof PlatformSchema>;
@@ -70,7 +70,7 @@ export const ImportSchema = z.object({
   // Why it failed, in words the user can read.
   error: z.string().optional(),
   // The recipe the worker made, for the user to review (design D1).
-  draft: RecipeInputSchema.optional(),
+  draft: RecipeDraftSchema.optional(),
   createdAt: z.iso.datetime(),
   updatedAt: z.iso.datetime(),
 });
