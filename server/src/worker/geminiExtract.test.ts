@@ -12,6 +12,7 @@ vi.mock("./videoInfo.ts");
 const ai = new GoogleGenAI({ apiKey: "test" });
 const extract = geminiExtract(ai);
 const noDeadline = new AbortController().signal;
+const noStep = () => Promise.resolve();
 
 beforeEach(() => {
   vi.mocked(readVideoInfo).mockResolvedValue({ seconds: 60, caption: "2 eggs, 1 can tomatoes" });
@@ -46,7 +47,7 @@ test("a YouTube link is sent to Gemini with its caption and the recipe's schema,
     .spyOn(ai.models, "generateContent")
     .mockResolvedValue(answer(JSON.stringify(recipe)));
 
-  expect(await extract(youtube, noDeadline)).toEqual(recipe);
+  expect(await extract(youtube, noDeadline, noStep)).toEqual(recipe);
 
   const request = generate.mock.calls[0]?.[0];
   expect(request?.model).toBe(GEMINI_MODEL);
@@ -58,12 +59,26 @@ test("a YouTube link is sent to Gemini with its caption and the recipe's schema,
   expect(JSON.stringify(request?.config?.responseJsonSchema)).toContain('"nutritionPerServing"');
 });
 
+test("a link is fetched, then analyzed; a text is only analyzed", async () => {
+  vi.spyOn(ai.models, "generateContent").mockResolvedValue(answer(JSON.stringify(recipe)));
+  const steps: string[] = [];
+  const setStep = (step: string) => {
+    steps.push(step);
+    return Promise.resolve();
+  };
+
+  await extract(youtube, noDeadline, setStep);
+  await extract({ type: "text", text: "Shakshuka: 4 eggs, 1 can tomatoes." }, noDeadline, setStep);
+
+  expect(steps).toEqual(["fetching", "analyzing", "analyzing"]);
+});
+
 test("pasted text is sent alone, fenced as data: no video, so no yt-dlp", async () => {
   const generate = vi
     .spyOn(ai.models, "generateContent")
     .mockResolvedValue(answer(JSON.stringify(recipe)));
 
-  await extract({ type: "text", text: "Shakshuka: 4 eggs, 1 can tomatoes." }, noDeadline);
+  await extract({ type: "text", text: "Shakshuka: 4 eggs, 1 can tomatoes." }, noDeadline, noStep);
 
   expect(readVideoInfo).not.toHaveBeenCalled();
   expect(generate.mock.calls[0]?.[0].contents).toEqual([
@@ -77,7 +92,7 @@ test("the calls are given the attempt's deadline, and Gemini's a timeout of its 
     .mockResolvedValue(answer(JSON.stringify(recipe)));
   const deadline = new AbortController().signal;
 
-  await extract(youtube, deadline);
+  await extract(youtube, deadline, noStep);
 
   expect(readVideoInfo).toHaveBeenCalledWith(youtube.url, deadline);
   const config = generate.mock.calls[0]?.[0].config;
@@ -89,7 +104,7 @@ test("a video over 3 minutes isn't sent, and isn't tried again", async () => {
   vi.mocked(readVideoInfo).mockResolvedValue({ seconds: 181, caption: "" });
   const generate = vi.spyOn(ai.models, "generateContent");
 
-  await expect(extract(youtube, noDeadline)).rejects.toThrow(new NoRetryError(TOO_LONG));
+  await expect(extract(youtube, noDeadline, noStep)).rejects.toThrow(new NoRetryError(TOO_LONG));
   expect(generate).not.toHaveBeenCalled();
 });
 
@@ -99,7 +114,7 @@ test("a video whose length isn't known is sent", async () => {
     .spyOn(ai.models, "generateContent")
     .mockResolvedValue(answer(JSON.stringify(recipe)));
 
-  await extract(youtube, noDeadline);
+  await extract(youtube, noDeadline, noStep);
 
   expect(generate).toHaveBeenCalled();
 });
@@ -109,19 +124,21 @@ test("a video that isn't a recipe isn't tried again", async () => {
     answer(JSON.stringify({ ...recipe, isRecipe: false })),
   );
 
-  await expect(extract(youtube, noDeadline)).rejects.toThrow(new NoRetryError(NOT_A_RECIPE));
+  await expect(extract(youtube, noDeadline, noStep)).rejects.toThrow(
+    new NoRetryError(NOT_A_RECIPE),
+  );
 });
 
 test("an empty answer is a failed attempt", async () => {
   vi.spyOn(ai.models, "generateContent").mockResolvedValue(answer(""));
 
-  await expect(extract(youtube, noDeadline)).rejects.toThrow("Gemini gave no answer");
+  await expect(extract(youtube, noDeadline, noStep)).rejects.toThrow("Gemini gave no answer");
 });
 
 test("an answer cut off mid-JSON is a failed attempt", async () => {
   vi.spyOn(ai.models, "generateContent").mockResolvedValue(answer('{"title": "Shaksh'));
 
-  await expect(extract(youtube, noDeadline)).rejects.toThrow(SyntaxError);
+  await expect(extract(youtube, noDeadline, noStep)).rejects.toThrow(SyntaxError);
 });
 
 test("an Instagram link isn't sent: it needs a download first (M6)", async () => {
@@ -132,6 +149,6 @@ test("an Instagram link isn't sent: it needs a download first (M6)", async () =>
     platform: "instagram",
   };
 
-  await expect(extract(reel, noDeadline)).rejects.toThrow("instagram links come in M6.");
+  await expect(extract(reel, noDeadline, noStep)).rejects.toThrow("instagram links come in M6.");
   expect(generate).not.toHaveBeenCalled();
 });

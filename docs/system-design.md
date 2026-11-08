@@ -130,7 +130,10 @@ stateDiagram-v2
   failed --> [*]: dismiss → import deleted
 ```
 
-`step` (`fetching | analyzing`) is shown inside `processing` for progress.
+`step` (`fetching | analyzing`) is shown inside `processing` for progress. The extractor sets
+it as each part starts (a link is fetched, then analyzed; a text is only analyzed), only while
+the attempt still holds the job, as every worker write. A claim starts it empty, and every end
+of an attempt clears it.
 
 ### 4.3 Worker mechanics (the queue lessons)
 
@@ -142,7 +145,8 @@ stateDiagram-v2
         { status: "pending", nextAttemptAt: { $lte: now } },
         { status: "processing", leaseUntil: { $lt: now } },   // a crashed worker's job
     ] },
-    { $set: { status: "processing", leaseUntil: now + 3min }, $inc: { attempts: 1 } },
+    { $set: { status: "processing", leaseUntil: now + 3min }, $inc: { attempts: 1 },
+      $unset: { step: "" } },                                   // a crashed attempt's step
     { sort: { createdAt: 1 } },
   )
   ```
@@ -450,7 +454,7 @@ Each milestone is a few **small PRs** (roughly ≤ 300 changed lines each), whic
 | M7 | **Polish** — empty, loading and error states, share and comments placeholders, look and feel | It feels like a finished POC |
 | Later | Auth, share, comments, WhatsApp bot / PWA share target, nutrition database, semantic search | — |
 
-Doing M4 with a fake extractor first is deliberate (it takes 3 s, and fails every try of a link
+Doing M4 with a fake extractor first is deliberate (it takes 1.5 s a step, and fails every try of a link
 with "fail" in it, to show retries): the queue lessons are learned without AI
 noise, and M5/M6 only swap the extractor.
 

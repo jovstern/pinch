@@ -1,12 +1,17 @@
-import { RecipeDraftSchema, type RecipeDraft } from "@pinch/shared";
+import { RecipeDraftSchema, type ImportStep, type RecipeDraft } from "@pinch/shared";
 import type { Collection, UpdateFilter } from "mongodb";
 import { setTimeout } from "node:timers/promises";
 import type { Logger } from "pino";
 import { claimNextImport, LEASE_MS, type ImportDocument } from "../db/imports.ts";
 
 // Turns an import's input into a draft: geminiExtract, or fakeExtract for e2e. It must stop when
-// the signal aborts: that's the attempt's deadline. Unknown: runImport checks what it makes.
-export type Extract = (input: ImportDocument["input"], signal: AbortSignal) => Promise<unknown>;
+// the signal aborts: that's the attempt's deadline. It says each step as it starts it. Unknown:
+// runImport checks what it makes.
+export type Extract = (
+  input: ImportDocument["input"],
+  signal: AbortSignal,
+  setStep: (step: ImportStep) => Promise<void>,
+) => Promise<unknown>;
 
 // With nothing to do, look again after this long (design §4.3).
 const IDLE_MS = 1000;
@@ -69,21 +74,23 @@ type RunImportDeps = {
 
 // Runs one claimed job: saves its draft for the user to review (§4.1), or, if it fails, puts it
 // back to be tried again later, or fails it after the last try, or at once when no retry can fix
-// it (D23). Only the extraction is caught
-// here: a database error goes up to workLoop, which logs it and goes on.
+// it (D23). Only the extraction (and its step
+// updates) is caught here: a database error after it goes up to workLoop, which logs it and goes on.
 export async function runImport({ imports, extract, logger, job, deadline }: RunImportDeps) {
   const log = logger.child({ importId: job._id.toHexString(), attempt: job.attempts });
 
   // Every write is only while the job is still this attempt's. The user may have deleted it,
   // or, had this attempt outlived its lease, another worker claimed it and attempts went up.
   // Either way the write updates nothing, and the job is left as it is.
+  const ours = { _id: job._id, status: "processing" as const, attempts: job.attempts };
   async function save(update: UpdateFilter<ImportDocument>, done: string) {
-    const { matchedCount } = await imports.updateOne(
-      { _id: job._id, status: "processing", attempts: job.attempts },
-      update,
-    );
+    const { matchedCount } = await imports.updateOne(ours, update);
     if (matchedCount === 0) log.warn("import deleted or claimed again: nothing saved");
     else log.info(done);
+  }
+  // Progress, not an outcome: not logged. Each end below unsets it.
+  async function setStep(step: ImportStep) {
+    await imports.updateOne(ours, { $set: { step, updatedAt: new Date() } });
   }
 
   // Its worker died on the last try (claimed again after its lease ran out): no more tries.
@@ -95,7 +102,7 @@ export async function runImport({ imports, extract, logger, job, deadline }: Run
   let draft: RecipeDraft;
   try {
     // Checked like a POST body: what the extractor makes is never trusted as it is (§9).
-    draft = RecipeDraftSchema.parse(await extract(job.input, deadline));
+    draft = RecipeDraftSchema.parse(await extract(job.input, deadline, setStep));
   } catch (error) {
     if (error instanceof NoRetryError) {
       await save(failedUpdate(error.message), `import failed: ${error.message}`);
@@ -117,7 +124,7 @@ export async function runImport({ imports, extract, logger, job, deadline }: Run
           nextAttemptAt: new Date(now.getTime() + retryAfter),
           updatedAt: now,
         },
-        $unset: { leaseUntil: "" },
+        $unset: { leaseUntil: "", step: "" },
       },
       "import will be tried again",
     );
@@ -125,7 +132,10 @@ export async function runImport({ imports, extract, logger, job, deadline }: Run
   }
 
   await save(
-    { $set: { status: "ready", draft, updatedAt: new Date() }, $unset: { leaseUntil: "" } },
+    {
+      $set: { status: "ready", draft, updatedAt: new Date() },
+      $unset: { leaseUntil: "", step: "" },
+    },
     "import ready",
   );
 }
@@ -134,6 +144,6 @@ export async function runImport({ imports, extract, logger, job, deadline }: Run
 function failedUpdate(message = FAILED_MESSAGE): UpdateFilter<ImportDocument> {
   return {
     $set: { status: "failed", error: message, updatedAt: new Date() },
-    $unset: { leaseUntil: "" },
+    $unset: { leaseUntil: "", step: "" },
   };
 }

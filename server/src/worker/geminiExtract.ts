@@ -48,14 +48,19 @@ export const TOO_LONG = "This video is over 3 minutes. Pinch reads shorter ones.
 // The one place that knows about Gemini (§9): the worker hands it an import's input and gets a
 // draft back, which it checks with Zod as it would any other.
 export function geminiExtract(ai: GoogleGenAI): Extract {
-  return async (input, signal) => {
+  return async (input, signal, setStep) => {
     // Pasted text: there's no video, so only the text (§4.1).
-    if (input.type === "text") return askGemini(ai, [postText(input.text)], signal);
+    if (input.type === "text") {
+      await setStep("analyzing");
+      return askGemini(ai, [postText(input.text)], signal);
+    }
     // Instagram and Facebook are downloaded and uploaded first: M6.
     if (input.platform !== "youtube") throw new Error(`${input.platform} links come in M6.`);
+    await setStep("fetching");
     const { seconds, caption } = await readVideoInfo(input.url, signal);
     if (seconds !== undefined && seconds > MAX_VIDEO_SECONDS) throw new NoRetryError(TOO_LONG);
     // Gemini watches a public YouTube video from its link (§4.1), with its caption (D15).
+    await setStep("analyzing");
     return askGemini(ai, [{ fileData: { fileUri: input.url } }, postText(caption)], signal);
   };
 }

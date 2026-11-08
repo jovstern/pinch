@@ -4,6 +4,10 @@ import { RecipeDraftSchema } from "./recipe.ts";
 export const PlatformSchema = z.enum(["instagram", "facebook", "youtube"]);
 export type Platform = z.infer<typeof PlatformSchema>;
 
+// How far a processing import has got, to show progress (design §4.2).
+export const ImportStepSchema = z.enum(["fetching", "analyzing"]);
+export type ImportStep = z.infer<typeof ImportStepSchema>;
+
 export const linkMessage = "Paste a link to an Instagram, Facebook or YouTube post.";
 
 // Imports (links or texts) a user may send (or retry) a day: each costs Gemini calls (design §1).
@@ -53,8 +57,7 @@ export const ImportInputSchema = z.discriminatedUnion(
 export const ImportSchema = z.object({
   id: z.string(),
   status: z.enum(["pending", "processing", "ready", "failed"]),
-  // How far a processing import has got, to show progress.
-  step: z.enum(["fetching", "analyzing"]).optional(),
+  step: ImportStepSchema.optional(),
   // As it was sent, and a link's platform. http(s) only, as a recipe's source: the client
   // renders it as a link.
   input: z.discriminatedUnion("type", [
