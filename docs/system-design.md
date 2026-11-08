@@ -130,7 +130,9 @@ stateDiagram-v2
   failed --> [*]: dismiss → import deleted
 ```
 
-`step` (`fetching | analyzing`) is shown inside `processing` for progress.
+`step` (`fetching | analyzing`) is shown inside `processing` for progress. The extractor sets
+it as each part starts (a link is fetched, then analyzed; a text is only analyzed), under the
+same fence as every write (§4.3); the attempt's end clears it.
 
 ### 4.3 Worker mechanics (the queue lessons)
 

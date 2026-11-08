@@ -125,6 +125,20 @@ test("a run saves the draft and lets go of the job", async () => {
   expect(saved).not.toHaveProperty("leaseUntil");
 });
 
+test("a run shows its step while it's working, and clears it when it's done", async () => {
+  const { _id } = await insertImport();
+  let stepWhileWorking: unknown;
+
+  await run(await claim(), async (_input, _signal, setStep) => {
+    await setStep("analyzing");
+    stepWhileWorking = (await imports.findOne({ _id }))?.step;
+    return draft;
+  });
+
+  expect(stepWhileWorking).toBe("analyzing");
+  expect(await imports.findOne({ _id })).not.toHaveProperty("step");
+});
+
 test("a run whose job another worker claimed again saves nothing", async () => {
   await insertImport();
   const job = await claim();

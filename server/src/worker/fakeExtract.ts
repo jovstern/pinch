@@ -1,6 +1,7 @@
 import type { RecipeDraft } from "@pinch/shared";
 import { setTimeout } from "node:timers/promises";
 import type { ImportDocument } from "../db/imports.ts";
+import type { ImportStep } from "./workLoop.ts";
 
 // Stands in for Gemini (EXTRACTOR=fake): the queue was built with it in M4, without AI (design
 // §12), and e2e runs with it, so no test calls Gemini. It takes a few seconds, as the real one
@@ -9,9 +10,16 @@ import type { ImportDocument } from "../db/imports.ts";
 export async function fakeExtract(
   input: ImportDocument["input"],
   signal: AbortSignal,
+  setStep: (step: ImportStep) => Promise<void>,
 ): Promise<RecipeDraft> {
-  // Stops at the attempt's deadline, as every call in a real extractor must (§4.3).
-  await setTimeout(3000, undefined, { signal });
+  // The steps as the real one goes through them: a link is fetched first, a text isn't. Stops
+  // at the attempt's deadline, as every call in a real extractor must (§4.3).
+  if (input.type === "link") {
+    await setStep("fetching");
+    await setTimeout(1500, undefined, { signal });
+  }
+  await setStep("analyzing");
+  await setTimeout(input.type === "link" ? 1500 : 3000, undefined, { signal });
   const sent = input.type === "link" ? input.url : input.text;
   if (sent.includes("fail")) throw new Error("The fake extractor fails this one on purpose.");
   return {
