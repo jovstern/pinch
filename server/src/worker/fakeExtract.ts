@@ -12,9 +12,10 @@ export async function fakeExtract(
 ): Promise<RecipeInput> {
   // Stops at the attempt's deadline, as every call in a real extractor must (§4.3).
   await setTimeout(3000, undefined, { signal });
-  if (input.url.includes("fail")) throw new Error("The fake extractor fails this link on purpose.");
+  const sent = input.type === "link" ? input.url : input.text;
+  if (sent.includes("fail")) throw new Error("The fake extractor fails this one on purpose.");
   return {
-    title: `Tomato pasta (from ${input.platform})`,
+    title: `Tomato pasta (from ${input.type === "link" ? input.platform : "text"})`,
     ingredients: [
       { name: "spaghetti", quantity: "200", unit: "g" },
       { name: "tomatoes", quantity: "400", unit: "g", note: "crushed" },

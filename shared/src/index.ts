@@ -10,6 +10,7 @@ export {
   ImportSchema,
   linkMessage,
   PlatformSchema,
+  textMessage,
   type Import,
   type ImportInput,
   type ImportList,

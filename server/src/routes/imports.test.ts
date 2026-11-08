@@ -5,6 +5,7 @@ import {
   ImportSchema,
   linkMessage,
   RecipeSchema,
+  textMessage,
   type RecipeInput,
 } from "@pinch/shared";
 import { ObjectId } from "mongodb";
@@ -45,7 +46,7 @@ async function setUsage(imports: number, day = utcDay(new Date())) {
 test("POST /api/imports accepts a link and answers 202 with a pending import", async () => {
   const response = await request(app)
     .post("/api/imports")
-    .send({ url: ` ${reel} ` });
+    .send({ type: "link", url: ` ${reel} ` });
 
   expect(response.status).toBe(202);
   const job = ImportSchema.parse(response.body);
@@ -71,10 +72,43 @@ test.each([
   ["https://www.facebook.com/reel/123456", "facebook"],
   ["https://fb.watch/abc123/", "facebook"],
 ])("POST /api/imports knows %s is from %s", async (url, platform) => {
-  const response = await request(app).post("/api/imports").send({ url });
+  const response = await request(app).post("/api/imports").send({ type: "link", url });
 
   expect(response.status).toBe(202);
-  expect(ImportSchema.parse(response.body).input.platform).toBe(platform);
+  expect(ImportSchema.parse(response.body).input).toMatchObject({ platform });
+});
+
+test("POST /api/imports accepts a post's pasted text", async () => {
+  const text = " Shakshuka: 4 eggs, 1 can of tomatoes, 1 onion. Simmer, then crack in the eggs. ";
+
+  const response = await request(app).post("/api/imports").send({ type: "text", text });
+
+  expect(response.status).toBe(202);
+  expect(ImportSchema.parse(response.body)).toMatchObject({
+    status: "pending",
+    input: { type: "text", text: text.trim() },
+  });
+});
+
+test.each([
+  ["too short to be a recipe", "eggs", textMessage],
+  ["too long", "a".repeat(10_001), "Keep the text under 10,000 characters."],
+])("POST /api/imports refuses a text %s, under its field", async (_, text, message) => {
+  const response = await request(app).post("/api/imports").send({ type: "text", text });
+
+  expect(response.status).toBe(400);
+  expect(response.body).toMatchObject({
+    error: { code: "invalid_input", fields: { text: message } },
+  });
+});
+
+test("POST /api/imports refuses a body that doesn't say if it's a link or a text", async () => {
+  const response = await request(app).post("/api/imports").send({ url: reel });
+
+  expect(response.status).toBe(400);
+  expect(response.body).toMatchObject({
+    error: { code: "invalid_input", fields: { type: "Send a link or a text." } },
+  });
 });
 
 test.each([
@@ -83,7 +117,7 @@ test.each([
   ["a link that isn't http", "javascript:alert(1)"],
   ["nothing", undefined],
 ])("POST /api/imports refuses %s with a 400 that names the field", async (_, url) => {
-  const response = await request(app).post("/api/imports").send({ url });
+  const response = await request(app).post("/api/imports").send({ type: "link", url });
 
   expect(response.status).toBe(400);
   expect(response.body).toMatchObject({
@@ -92,7 +126,7 @@ test.each([
 });
 
 test("GET /api/imports/:id answers the import, and 404 for one that isn't there", async () => {
-  const created = await request(app).post("/api/imports").send({ url: reel });
+  const created = await request(app).post("/api/imports").send({ type: "link", url: reel });
   const { id } = ImportSchema.parse(created.body);
 
   const found = await request(app).get(`/api/imports/${id}`);
@@ -156,8 +190,10 @@ test("another user's import is not found", async () => {
 });
 
 test("GET /api/imports lists my imports, newest first", async () => {
-  const first = await request(app).post("/api/imports").send({ url: reel });
-  const second = await request(app).post("/api/imports").send({ url: "https://youtu.be/xyz" });
+  const first = await request(app).post("/api/imports").send({ type: "link", url: reel });
+  const second = await request(app)
+    .post("/api/imports")
+    .send({ type: "link", url: "https://youtu.be/xyz" });
 
   const list = ImportListSchema.parse((await request(app).get("/api/imports")).body);
   const ids = list.items.map((job) => job.id);
@@ -166,7 +202,7 @@ test("GET /api/imports lists my imports, newest first", async () => {
 });
 
 test("DELETE /api/imports/:id deletes it, then it's not found", async () => {
-  const created = await request(app).post("/api/imports").send({ url: reel });
+  const created = await request(app).post("/api/imports").send({ type: "link", url: reel });
   const { id } = ImportSchema.parse(created.body);
 
   expect((await request(app).delete(`/api/imports/${id}`)).status).toBe(204);
@@ -216,6 +252,18 @@ test("POST /api/imports/:id/approve saves the edited draft as a recipe and delet
   expect(stored?.sourceImportId?.toHexString()).toBe(id);
 });
 
+test("a recipe from pasted text has text as its source, and no link", async () => {
+  const id = await insertDone({
+    draft,
+    input: { type: "text", text: "Tomato pasta: spaghetti, tomatoes, garlic." },
+  });
+
+  const response = await request(app).post(`/api/imports/${id}/approve`).send(draft);
+
+  expect(response.status).toBe(201);
+  expect(RecipeSchema.parse(response.body).source).toEqual({ type: "text" });
+});
+
 test("approving again after a crash between the two writes still makes one recipe", async () => {
   const id = await insertDone({ draft });
   const first = await request(app).post(`/api/imports/${id}/approve`).send(draft);
@@ -233,7 +281,7 @@ test("approving again after a crash between the two writes still makes one recip
 
 test("approve refuses an import with no draft yet, an invalid recipe and a missing import", async () => {
   const pending = ImportSchema.parse(
-    (await request(app).post("/api/imports").send({ url: reel })).body,
+    (await request(app).post("/api/imports").send({ type: "link", url: reel })).body,
   );
   const notReady = await request(app).post(`/api/imports/${pending.id}/approve`).send(draft);
   expect(notReady.status).toBe(409);
@@ -280,7 +328,7 @@ test("past the daily cap, a new link is refused with 429, and nothing is stored"
   await setUsage(DAILY_IMPORT_CAP);
   const before = await importsCollection(db).countDocuments();
 
-  const response = await request(app).post("/api/imports").send({ url: reel });
+  const response = await request(app).post("/api/imports").send({ type: "link", url: reel });
 
   expect(response.status).toBe(429);
   expect(response.body).toMatchObject({
@@ -301,7 +349,7 @@ test("past the daily cap, Retry is refused too, and the import stays failed", as
 });
 
 test("each link and Retry counts once for today; one that can't happen doesn't count", async () => {
-  await request(app).post("/api/imports").send({ url: reel });
+  await request(app).post("/api/imports").send({ type: "link", url: reel });
   const failed = await insertDone({ status: "failed", attempts: 3, error: "No." });
   await request(app).post(`/api/imports/${failed}/retry`);
   // Not failed: 409, not counted.
@@ -318,5 +366,7 @@ test("each link and Retry counts once for today; one that can't happen doesn't c
 test("yesterday's count doesn't count today", async () => {
   await setUsage(DAILY_IMPORT_CAP, "2000-01-01");
 
-  expect((await request(app).post("/api/imports").send({ url: reel })).status).toBe(202);
+  const response = await request(app).post("/api/imports").send({ type: "link", url: reel });
+
+  expect(response.status).toBe(202);
 });

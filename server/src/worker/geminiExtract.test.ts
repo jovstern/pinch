@@ -56,6 +56,19 @@ test("a YouTube link is sent to Gemini with its caption and the recipe's schema,
   expect(JSON.stringify(request?.config?.responseJsonSchema)).toContain('"meal:dinner"');
 });
 
+test("pasted text is sent alone, fenced as data: no video, so no yt-dlp", async () => {
+  const generate = vi
+    .spyOn(ai.models, "generateContent")
+    .mockResolvedValue(answer(JSON.stringify(recipe)));
+
+  await extract({ type: "text", text: "Shakshuka: 4 eggs, 1 can tomatoes." }, noDeadline);
+
+  expect(readVideoInfo).not.toHaveBeenCalled();
+  expect(generate.mock.calls[0]?.[0].contents).toEqual([
+    expect.stringContaining("<post-text>\nShakshuka: 4 eggs, 1 can tomatoes.\n</post-text>"),
+  ]);
+});
+
 test("the calls are given the attempt's deadline, and Gemini's a timeout of its own", async () => {
   const generate = vi
     .spyOn(ai.models, "generateContent")

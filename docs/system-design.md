@@ -89,8 +89,9 @@ Mongo is the only shared state. There is no Redis, no queue service and no objec
 
 ### 4.1 Flow
 
-1. The client sends `POST /api/imports { url }`. The API validates the URL, detects the
-   platform (`instagram | facebook | youtube`), checks the daily cap, creates an import with
+1. The client sends `POST /api/imports` with `{ type: "link", url }` or `{ type: "text", text }`.
+   The API validates it, finds a link's platform (`instagram | facebook | youtube`), checks the
+   daily cap, creates an import with
    `status: "pending"` and answers **202** with the import.
 2. The worker **claims** the job, then:
    - **Every link** → read the post's info with `yt-dlp` (no download): its length, checked
@@ -100,7 +101,8 @@ Mongo is the only shared state. There is no Redis, no queue service and no objec
    - **Instagram / Facebook** → download to a temp folder, upload to the **Gemini Files API**.
      Instagram doesn't report a length, so for it the length is checked after the download
      with `ffprobe` (the spike found reels of 3–11 MB).
-   - **Text / screenshots** (fallback) → send them to Gemini as they are.
+   - **Text / screenshots** (fallback) → send them to Gemini as they are: no `yt-dlp`, no
+     video. Pasted text is the post's text, so it's fenced as data like a caption (§9).
 3. Gemini gets the video and the caption together and returns JSON that matches our recipe
    schema (structured output). The worker **validates it with Zod**, makes the thumbnail
    (§5), saves `draft` on the import, sets `status: "ready"`.
@@ -327,7 +329,7 @@ PUT    /api/recipes/:id                replace what the user can edit (the form 
 DELETE /api/recipes/:id
 GET    /api/recipes/:id/thumbnail      image/webp
 
-POST   /api/imports                    { url } | { text } | multipart images  → 202 import (429 past the daily cap)
+POST   /api/imports                    { type: "link", url } | { type: "text", text } | multipart images  → 202 import (429 past the daily cap)
 GET    /api/imports                    my imports that are not done yet
 GET    /api/imports/:id                status, step, error, draft
 POST   /api/imports/:id/approve        the edited draft, as POST /api/recipes → 201 recipe (409 if not ready)

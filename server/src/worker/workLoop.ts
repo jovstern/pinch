@@ -20,7 +20,7 @@ const ATTEMPT_DEADLINE_MS = LEASE_MS - 30_000;
 const MAX_ATTEMPTS = 3;
 
 // What the user reads on a failed import. The cause is in the worker's log.
-export const FAILED_MESSAGE = "We couldn't turn this link into a recipe.";
+export const FAILED_MESSAGE = "We couldn't turn this into a recipe.";
 
 // A failure no retry can fix (not a recipe, too long): the import fails at once, and the
 // message is what the user reads (design §4.2, D23). Any other error is tried again.
