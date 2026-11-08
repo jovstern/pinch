@@ -28,7 +28,7 @@ test("paste a link, review the draft, save it as a recipe", async ({ page }) => 
   await page.waitForTimeout(1000);
   await page.getByRole("link", { name: "Pinch" }).click();
   await expect(page.getByRole("link", { name: /Weeknight tomato pasta/ })).toBeVisible();
-  // Approved: the import is deleted, so the link has left Your links.
+  // Approved: the import is deleted, so the link has left Your imports.
   await expect(link).toHaveCount(0);
   await page.waitForTimeout(1000);
 

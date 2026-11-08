@@ -3,7 +3,7 @@ import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { useEffect, useRef } from "react";
 import { Link, useSearchParams } from "react-router";
 import { Button } from "../../components/Button.tsx";
-import { ImportLinkForm } from "../imports/ImportLinkForm.tsx";
+import { ImportForm } from "../imports/ImportForm.tsx";
 import { ImportList } from "../imports/ImportList.tsx";
 import { importListQuery } from "../imports/importQueries.ts";
 import { ListFilters } from "./ListFilters.tsx";
@@ -33,8 +33,8 @@ export function RecipeListPage() {
   } = useInfiniteQuery(recipeListQuery(filters));
   const importsPending = useQuery(importListQuery).isPending;
   const listRef = useRef<HTMLUListElement>(null);
-  // The paste box, where focus goes after a link is retried or dismissed.
-  const linkBoxRef = useRef<HTMLInputElement>(null);
+  // The paste box, where focus goes after an import is retried or dismissed.
+  const pasteBoxRef = useRef<HTMLTextAreaElement>(null);
   // The first recipe of the page Show more asked for, to focus once it's drawn.
   const firstNewRef = useRef<number | null>(null);
   const recipes = data?.pages.flatMap((page) => page.items);
@@ -70,13 +70,13 @@ export function RecipeListPage() {
     <>
       <title>Your recipes · Pinch</title>
       <h1 className="text-3xl font-bold tracking-tight text-balance">Your recipes</h1>
-      <ImportLinkForm inputRef={linkBoxRef} />
-      <ImportList focusLinkBox={() => linkBoxRef.current?.focus()} />
+      <ImportForm inputRef={pasteBoxRef} />
+      <ImportList focusPasteBox={() => pasteBoxRef.current?.focus()} />
     </>
   );
-  // The recipes wait for the links (both are asked at once): drawn first, they'd be pushed
-  // down when Your links appears above them (a layout shift, docs/metrics/m04.md). In a
-  // fragment, as below, so React keeps the same link box (and what's typed) when they come.
+  // The recipes wait for the imports (both are asked at once): drawn first, they'd be pushed
+  // down when Your imports appears above them (a layout shift, docs/metrics/m04.md). In a
+  // fragment, as below, so React keeps the same paste box (and what's typed) when they come.
   if (importsPending) return <>{top}</>;
 
   return (

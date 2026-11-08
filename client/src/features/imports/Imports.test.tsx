@@ -1,4 +1,4 @@
-import { dailyLimitMessage, linkMessage, type Import } from "@pinch/shared";
+import { dailyLimitMessage, linkMessage, textMessage, type Import } from "@pinch/shared";
 import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, test, vi } from "vitest";
@@ -52,7 +52,8 @@ test("a pasted link is sent trimmed, the box empties, and the link shows as wait
   renderApp("/");
 
   const box = screen.getByRole("textbox", { name: "Pinch a recipe from a reel" });
-  await userEvent.type(box, ` ${reel}{Enter}`);
+  await userEvent.type(box, ` ${reel}`);
+  await userEvent.click(screen.getByRole("button", { name: "Pinch it" }));
 
   expect(fetch).toHaveBeenCalledWith("/api/imports", {
     method: "POST",
@@ -64,17 +65,47 @@ test("a pasted link is sent trimmed, the box empties, and the link shows as wait
   expect(box).toHaveValue("");
 });
 
+test("a pasted text, anything with a space in it, is sent as text", async () => {
+  const fetch = stubApi([[]]);
+  renderApp("/");
+
+  const box = screen.getByRole("textbox", { name: "Pinch a recipe from a reel" });
+  await userEvent.type(box, "Shakshuka: 4 eggs, 1 can of tomatoes.");
+  await userEvent.click(screen.getByRole("button", { name: "Pinch it" }));
+
+  expect(fetch).toHaveBeenCalledWith("/api/imports", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ type: "text", text: "Shakshuka: 4 eggs, 1 can of tomatoes." }),
+  });
+});
+
+test("a text too short to be a recipe is refused before it's sent", async () => {
+  const fetch = stubApi([[]]);
+  renderApp("/");
+
+  await userEvent.type(
+    screen.getByRole("textbox", { name: "Pinch a recipe from a reel" }),
+    "2 eggs",
+  );
+  await userEvent.click(screen.getByRole("button", { name: "Pinch it" }));
+
+  expect(await screen.findByRole("alert")).toHaveTextContent(textMessage);
+  expect(fetch).not.toHaveBeenCalledWith("/api/imports", expect.anything());
+});
+
 test("a link from another site is refused before it's sent, until it's fixed", async () => {
   const fetch = stubApi([[]]);
   renderApp("/");
 
   const box = screen.getByRole("textbox", { name: "Pinch a recipe from a reel" });
-  await userEvent.type(box, "https://www.tiktok.com/@chef/video/1{Enter}");
+  await userEvent.type(box, "https://www.tiktok.com/@chef/video/1");
+  await userEvent.click(screen.getByRole("button", { name: "Pinch it" }));
 
   expect(await screen.findByRole("alert")).toHaveTextContent(linkMessage);
   // The hint, then the error.
   expect(box).toHaveAccessibleDescription(
-    `A link to an Instagram, Facebook or YouTube post. ${linkMessage}`,
+    `A link to an Instagram, Facebook or YouTube post, or the recipe's text. ${linkMessage}`,
   );
   expect(fetch).not.toHaveBeenCalledWith("/api/imports", expect.anything());
 
@@ -93,7 +124,8 @@ test("the API's message for a link shows under the box", async () => {
   renderApp("/");
 
   const box = screen.getByRole("textbox", { name: "Pinch a recipe from a reel" });
-  await userEvent.type(box, `${reel}{Enter}`);
+  await userEvent.type(box, reel);
+  await userEvent.click(screen.getByRole("button", { name: "Pinch it" }));
 
   expect(await screen.findByRole("alert")).toHaveTextContent("Not this one.");
   expect(box).toHaveValue(reel);
@@ -104,11 +136,10 @@ test("when the link can't be sent, it says so and keeps the link", async () => {
   renderApp("/");
 
   const box = screen.getByRole("textbox", { name: "Pinch a recipe from a reel" });
-  await userEvent.type(box, `${reel}{Enter}`);
+  await userEvent.type(box, reel);
+  await userEvent.click(screen.getByRole("button", { name: "Pinch it" }));
 
-  expect(await screen.findByRole("alert")).toHaveTextContent(
-    "We couldn't send this link. Try again.",
-  );
+  expect(await screen.findByRole("alert")).toHaveTextContent("We couldn't send this. Try again.");
   expect(box).toHaveValue(reel);
 });
 
@@ -207,7 +238,7 @@ test("a stalled link says nothing is working on it, and offers Dismiss, not Retr
   stubApi([[importOf({ status: "processing", attempts: 1, stalled: true })]]);
   renderApp("/");
 
-  expect(await screen.findByText(/Stuck: nothing has worked on this link/)).toBeInTheDocument();
+  expect(await screen.findByText(/Stuck: nothing has worked on this/)).toBeInTheDocument();
   expect(screen.queryByText("Working on it…")).not.toBeInTheDocument();
   expect(screen.getByRole("button", { name: "Dismiss" })).toBeInTheDocument();
   expect(screen.queryByRole("button", { name: "Retry" })).not.toBeInTheDocument();
@@ -220,7 +251,8 @@ test("past the daily cap, the box says so and keeps the link", async () => {
   renderApp("/");
 
   const box = screen.getByRole("textbox", { name: "Pinch a recipe from a reel" });
-  await userEvent.type(box, `${reel}{Enter}`);
+  await userEvent.type(box, reel);
+  await userEvent.click(screen.getByRole("button", { name: "Pinch it" }));
 
   expect(await screen.findByRole("alert")).toHaveTextContent(dailyLimitMessage);
   expect(box).toHaveValue(reel);

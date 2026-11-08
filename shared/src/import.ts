@@ -6,10 +6,10 @@ export type Platform = z.infer<typeof PlatformSchema>;
 
 export const linkMessage = "Paste a link to an Instagram, Facebook or YouTube post.";
 
-// Links a user may pinch (or retry) a day: each costs Gemini calls (design §1). The API answers
-// 429 with this message past it, and the client shows it.
+// Imports (links or texts) a user may send (or retry) a day: each costs Gemini calls (design §1).
+// The API answers 429 with this message past it, and the client shows it.
 export const DAILY_IMPORT_CAP = 20;
-export const dailyLimitMessage = `You've pinched ${String(DAILY_IMPORT_CAP)} links today. Try again tomorrow.`;
+export const dailyLimitMessage = `You've pinched ${String(DAILY_IMPORT_CAP)} times today. Try again tomorrow.`;
 
 export const textMessage = "Paste more of the recipe: a line or two at least.";
 

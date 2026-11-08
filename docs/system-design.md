@@ -467,7 +467,7 @@ column below it.
 
 | Address | Screen | Its job | States |
 |---|---|---|---|
-| `/` | Your recipes | Paste a link to pinch a recipe (from M4, the box and Your links above the list, below). Pick something to cook; each card shows the title, the number of ingredients and the total time. Search (on Enter) and tag filters (folded, applied as ticked) sit above the list and live in the address: `/?q=egg&tags=meal:dinner` | Loading (placeholder cards), empty (points to the paste box, and links to New recipe: "Write a recipe"), error (Try again); 50 at a time, then Show more (focus moves to the first new recipe; a failed page says so and keeps the list); filtered: how many match (announced), or none and a link to clear them |
+| `/` | Your recipes | Paste a link, or a post's text, to pinch a recipe (from M4, the box and Your imports above the list, below). Pick something to cook; each card shows the title, the number of ingredients and the total time. Search (on Enter) and tag filters (folded, applied as ticked) sit above the list and live in the address: `/?q=egg&tags=meal:dinner` | Loading (placeholder cards), empty (points to the paste box, and links to New recipe: "Write a recipe"), error (Try again); 50 at a time, then Show more (focus moves to the first new recipe; a failed page says so and keeps the list); filtered: how many match (announced), or none and a link to clear them |
 | `/recipes/new` | New recipe | Write a recipe by hand; tags are chips to tick, a group per facet (§7) | From the first Save: each error under its field (§8.1), updated as the user types; focus on the first; saving (button says so); failed (says so, keeps what was typed) |
 | `/recipes/:id` | A recipe | Read it while cooking (its tags under the title); Edit, Delete (asks first) | Loading, error (Try again), not found |
 | `/recipes/:id/edit` | Edit recipe | Change it; Cancel goes back to the recipe | Loading, error (Try again), not found; then as New recipe |
@@ -475,9 +475,14 @@ column below it.
 | anything else | Page not found | Get back to the recipes | — |
 
 From M4 the paste-a-link box on `/` becomes the main action, and import status shows there:
-"Your links" under the box, each with its platform, its link and how far it has got (waiting,
+"Your imports" under the box, each with its platform, its link and how far it has got (waiting,
 working on it, trying again soon, ready to review, or why it failed); announced as it changes.
 A ready one offers Review the recipe; a failed one, Retry (three more tries) and Dismiss; a
 stalled one (§4.3) says nothing is working on it, and offers Dismiss. Dismiss deletes it, with
 no question: the link can be pasted again. A link from another site is refused under the box
 before it's sent.
+
+From M5 the box is a textarea and takes either, with nothing to choose (§1's text fallback):
+one word is a link; anything with a space in it is the recipe's text ("Pasted text" in Your
+imports, with its first line). Too short a text (under 20 characters) is refused as a link
+from another site is. Enter makes a new line, as in any textarea: Pinch it sends.
