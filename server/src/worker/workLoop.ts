@@ -1,11 +1,8 @@
-import { RecipeDraftSchema, type Import, type RecipeDraft } from "@pinch/shared";
+import { RecipeDraftSchema, type ImportStep, type RecipeDraft } from "@pinch/shared";
 import type { Collection, UpdateFilter } from "mongodb";
 import { setTimeout } from "node:timers/promises";
 import type { Logger } from "pino";
 import { claimNextImport, LEASE_MS, type ImportDocument } from "../db/imports.ts";
-
-// How far an attempt has got, shown in the list while it's processing (design §1, §4.2).
-export type ImportStep = NonNullable<Import["step"]>;
 
 // Turns an import's input into a draft: geminiExtract, or fakeExtract for e2e. It must stop when
 // the signal aborts: that's the attempt's deadline. It says each step as it starts it. Unknown:
@@ -77,8 +74,8 @@ type RunImportDeps = {
 
 // Runs one claimed job: saves its draft for the user to review (§4.1), or, if it fails, puts it
 // back to be tried again later, or fails it after the last try, or at once when no retry can fix
-// it (D23). Only the extraction is caught
-// here: a database error goes up to workLoop, which logs it and goes on.
+// it (D23). Only the extraction (and its step
+// updates) is caught here: a database error after it goes up to workLoop, which logs it and goes on.
 export async function runImport({ imports, extract, logger, job, deadline }: RunImportDeps) {
   const log = logger.child({ importId: job._id.toHexString(), attempt: job.attempts });
 

@@ -25,7 +25,11 @@ const draft: RecipeInput = {
   tags: [],
 };
 const extractNow = () => Promise.resolve(draft);
-const extractFails = () => Promise.reject(new Error("The site is down."));
+// Fails after its first step, as a real attempt would: the step is left to be cleared.
+const extractFails: Extract = async (_input, _signal, setStep) => {
+  await setStep("fetching");
+  throw new Error("The site is down.");
+};
 
 // Runs a claimed job, with no deadline unless one is given.
 function run(
@@ -104,14 +108,17 @@ test("a job waits until its time; a held job waits until its lease runs out", as
   });
   expect(await claimNextImport(imports, now)).toBeNull();
 
-  // A worker crashed holding this one: its lease has passed, so it's claimed again.
+  // A worker crashed holding this one: its lease has passed, so it's claimed again, without
+  // the step the crashed attempt had got to.
   const crashed = await insertImport({
     status: "processing",
+    step: "analyzing",
     attempts: 1,
     leaseUntil: new Date(now.getTime() - 1000),
   });
   const claimed = await claimNextImport(imports, now);
   expect(claimed).toMatchObject({ _id: crashed._id, status: "processing", attempts: 2 });
+  expect(claimed).not.toHaveProperty("step");
 });
 
 test("a run saves the draft and lets go of the job", async () => {
@@ -171,6 +178,7 @@ test("a failed attempt is tried again after 10 s, then 60 s, then the import is 
   const afterFirst = await imports.findOne({ _id });
   expect(afterFirst).toMatchObject({ status: "pending", attempts: 1 });
   expect(afterFirst).not.toHaveProperty("leaseUntil");
+  expect(afterFirst).not.toHaveProperty("step");
   expect(afterFirst?.nextAttemptAt.getTime()).toBeGreaterThan(Date.now() + 9_000);
   // Not before its time: the claim finds nothing until the 10 s have passed.
   expect(await claimNextImport(imports, new Date())).toBeNull();
@@ -187,6 +195,7 @@ test("a failed attempt is tried again after 10 s, then 60 s, then the import is 
     attempts: 3,
     error: FAILED_MESSAGE,
   });
+  expect(await imports.findOne({ _id })).not.toHaveProperty("step");
   expect(await claimNextImport(imports, new Date(Date.now() + 3_600_000))).toBeNull();
 });
 

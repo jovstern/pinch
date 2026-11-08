@@ -8,12 +8,14 @@ export {
   ImportInputSchema,
   ImportListSchema,
   ImportSchema,
+  ImportStepSchema,
   linkMessage,
   PlatformSchema,
   textMessage,
   type Import,
   type ImportInput,
   type ImportList,
+  type ImportStep,
   type Platform,
 } from "./import.ts";
 export {

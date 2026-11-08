@@ -43,7 +43,8 @@ export const LEASE_MS = 3 * 60 * 1000;
 // Takes the oldest job that's ready to run, in one atomic step: find it and mark it as ours
 // together, so two workers can never take the same one (design §4.3). Ready means waiting with
 // its time come, or held by a worker whose lease ran out: that worker crashed. Each claim
-// counts an attempt, and that count also tells this attempt from a later one (runImport).
+// counts an attempt, and that count also tells this attempt from a later one (runImport). The
+// step starts empty: a crashed attempt's is left on the job.
 export function claimNextImport(imports: Collection<ImportDocument>, now: Date) {
   return imports.findOneAndUpdate(
     {
@@ -59,6 +60,7 @@ export function claimNextImport(imports: Collection<ImportDocument>, now: Date) 
         updatedAt: now,
       },
       $inc: { attempts: 1 },
+      $unset: { step: "" },
     },
     { sort: { createdAt: 1 }, returnDocument: "after" },
   );
