@@ -1,10 +1,10 @@
-import { RecipeSchema, type Recipe, type RecipeInput } from "@pinch/shared";
+import { RecipeSchema, type Recipe, type RecipeDraft } from "@pinch/shared";
 import { MongoServerError, type Collection, type Db, type Filter, type ObjectId } from "mongodb";
 
 // A recipe as it is stored (design §6). A field added here that the form doesn't send must
 // also be kept by PUT /api/recipes/:id (routes/recipes.ts, design D20). Recipes saved before
 // tags existed have no `tags` field; toRecipe reads them as [].
-export type RecipeDocument = RecipeInput & {
+export type RecipeDocument = RecipeDraft & {
   _id: ObjectId;
   ownerId: ObjectId;
   source: Recipe["source"];

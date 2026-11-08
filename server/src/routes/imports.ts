@@ -84,6 +84,8 @@ export function importsRouter(db: Db) {
       ...input,
       _id: new ObjectId(),
       ownerId: req.userId,
+      // The model's estimate, not in the form (D14, D20): from the draft, never from the body.
+      nutritionPerServing: job.draft?.nutritionPerServing,
       source:
         job.input.type === "link"
           ? { type: job.input.platform, url: job.input.url }

@@ -1,5 +1,5 @@
 import { GoogleGenAI, type PartUnion } from "@google/genai";
-import { RecipeInputSchema } from "@pinch/shared";
+import { RecipeDraftSchema } from "@pinch/shared";
 import { z } from "zod";
 import { readVideoInfo } from "./videoInfo.ts";
 import { NoRetryError, type Extract } from "./workLoop.ts";
@@ -20,7 +20,7 @@ const MAX_VIDEO_SECONDS = 3 * 60;
 const IsRecipeSchema = z.object({ isRecipe: z.boolean() });
 
 // isRecipe first, so the model decides it before writing a recipe (§9).
-const AnswerSchema = z.object({ ...IsRecipeSchema.shape, ...RecipeInputSchema.shape });
+const AnswerSchema = z.object({ ...IsRecipeSchema.shape, ...RecipeDraftSchema.shape });
 
 // The answer's shape, made from the schema the draft is then checked with, so the two can't
 // drift apart (§9). The input side: what the model writes, before the schema trims it and turns
@@ -38,7 +38,9 @@ with quantities and units, the steps in order, the servings, and the prep and co
 minutes, and tags from the allowed list. Use the post's text, and its video when there is one
 (the speech and the text on screen); the text often has the quantities. Write the recipe in the
 language of the post; tags are codes, so keep them as they are. Leave out anything you can't
-tell rather than guessing. If the post is not a recipe, set isRecipe to false.`;
+tell rather than guessing. The one estimate: the calories and the grams of protein, carbs and
+fat in one serving, worked out from the ingredients and the servings. If the post is not a
+recipe, set isRecipe to false.`;
 
 export const NOT_A_RECIPE = "This doesn't look like a recipe.";
 export const TOO_LONG = "This video is over 3 minutes. Pinch reads shorter ones.";

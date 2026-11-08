@@ -54,6 +54,8 @@ test("a YouTube link is sent to Gemini with its caption and the recipe's schema,
   expect(JSON.stringify(request?.contents)).toContain("2 eggs, 1 can tomatoes");
   // The tags are listed, so the model can only pick from them.
   expect(JSON.stringify(request?.config?.responseJsonSchema)).toContain('"meal:dinner"');
+  // And the nutrition estimate, which only the model gives (D14).
+  expect(JSON.stringify(request?.config?.responseJsonSchema)).toContain('"nutritionPerServing"');
 });
 
 test("pasted text is sent alone, fenced as data: no video, so no yt-dlp", async () => {

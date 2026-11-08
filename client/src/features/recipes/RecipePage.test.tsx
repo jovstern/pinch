@@ -19,6 +19,7 @@ const omelette: Recipe = {
   servings: 1,
   prepMinutes: 5,
   tags: ["meal:breakfast", "cuisine:middle-eastern"],
+  nutritionPerServing: { calories: 251.4, proteinG: 13, carbsG: 0.6, fatG: 21.5 },
   source: { type: "manual" },
   createdAt: "2026-11-01T10:00:00.000Z",
   updatedAt: "2026-11-01T10:00:00.000Z",
@@ -39,12 +40,15 @@ function stubApi(deleteStatus = 204) {
   return fetch;
 }
 
-test("shows the recipe: its details, tags, ingredients and steps", async () => {
+test("shows the recipe: its details, nutrition, tags, ingredients and steps", async () => {
   stubApi();
   renderApp(`/recipes/${omelette.id}`);
 
   expect(await screen.findByRole("heading", { level: 1, name: "Omelette" })).toBeInTheDocument();
   expect(screen.getByText("Serves 1 · Prep 5 min")).toBeInTheDocument();
+  expect(
+    screen.getByText("≈ 251 kcal · 13 g protein · 1 g carbs · 22 g fat per serving (estimate)"),
+  ).toBeInTheDocument();
   const tags = screen.getByRole("list", { name: "Tags" });
   expect(
     within(tags)
