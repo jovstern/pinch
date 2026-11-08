@@ -109,8 +109,8 @@ Mongo is the only shared state. There is no Redis, no queue service and no objec
 4. **Cleanup in `finally`**: delete the temp file and the Gemini file. Media lives for about a minute.
 5. The client polls `GET /api/imports` (all of them in one request) every 2 s while any is
    pending or processing, then stops; a ready one is opened for review.
-6. The user edits and approves → `POST /api/imports/:id/approve` → a recipe is created and the
-   import is deleted (§4.4).
+6. The user edits and approves → `POST /api/imports/:id/approve` → a recipe is created (with
+   the draft's nutrition estimate, which the form doesn't edit) and the import is deleted (§4.4).
 
 ### 4.2 States
 
@@ -332,7 +332,7 @@ GET    /api/recipes/:id/thumbnail      image/webp
 POST   /api/imports                    { type: "link", url } | { type: "text", text } | multipart images  → 202 import (429 past the daily cap)
 GET    /api/imports                    my imports that are not done yet
 GET    /api/imports/:id                status, step, error, draft
-POST   /api/imports/:id/approve        the edited draft, as POST /api/recipes → 201 recipe (409 if not ready)
+POST   /api/imports/:id/approve        the edited draft, as POST /api/recipes; nutritionPerServing from the stored draft (D20) → 201 recipe (409 if not ready)
 POST   /api/imports/:id/retry          failed → pending, attempts and error cleared → 202 (409 if not failed)
 DELETE /api/imports/:id                discard / dismiss
 ```
@@ -429,6 +429,7 @@ changes**. The planned design:
 | Instagram/Facebook block `yt-dlp` | The spike first; fallback to text or screenshots; keep `yt-dlp` updated |
 | Gemini invents ingredients or quantities | The caption as a second source (D15); draft review; Zod validation; a prompt that allows "unknown" |
 | Nutrition numbers are wrong | Shown as "≈ estimate" |
+| The estimate isn't redone when servings or ingredients are edited: it's Gemini's, for the draft as it came | Shown as "≈ estimate"; a nutrition database later (D14) |
 | Gemini cost or rate limits | Daily cap per user; 2 jobs at a time; videos ≤ 3 min |
 | Long or non-recipe videos | Length check before download (right after it when the platform doesn't report a length); "not a recipe" failure |
 | A Gemini call hangs | A deadline per attempt under the lease, a timeout on every call (§4.3); then the normal retry |

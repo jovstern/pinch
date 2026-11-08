@@ -238,7 +238,11 @@ test("POST /api/imports/:id/approve saves the edited draft as a recipe and delet
   // The form never sends nutrition; one sent anyway is dropped: the draft's is the model's.
   const response = await request(app)
     .post(`/api/imports/${id}/approve`)
-    .send({ ...draft, title: "Nonna's tomato pasta", nutritionPerServing: { calories: 1 } });
+    .send({
+      ...draft,
+      title: "Nonna's tomato pasta",
+      nutritionPerServing: { calories: 1, proteinG: 1, carbsG: 1, fatG: 1 },
+    });
 
   expect(response.status).toBe(201);
   const recipe = RecipeSchema.parse(response.body);

@@ -38,9 +38,9 @@ with quantities and units, the steps in order, the servings, and the prep and co
 minutes, and tags from the allowed list. Use the post's text, and its video when there is one
 (the speech and the text on screen); the text often has the quantities. Write the recipe in the
 language of the post; tags are codes, so keep them as they are. Leave out anything you can't
-tell rather than guessing. The one estimate: the calories and the grams of protein, carbs and
-fat in one serving, worked out from the ingredients and the servings. If the post is not a
-recipe, set isRecipe to false.`;
+tell rather than guessing. The exception: estimate the calories and the grams of protein, carbs
+and fat in one serving, from the ingredients and the servings. If the post is not a recipe, set
+isRecipe to false.`;
 
 export const NOT_A_RECIPE = "This doesn't look like a recipe.";
 export const TOO_LONG = "This video is over 3 minutes. Pinch reads shorter ones.";

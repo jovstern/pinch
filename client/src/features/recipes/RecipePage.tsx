@@ -33,9 +33,12 @@ export function RecipePage() {
       <title>{`${recipe.title} · Pinch`}</title>
       <h1 className="text-3xl font-bold tracking-tight text-balance">{recipe.title}</h1>
       {recipe.description && <p className="mt-3 max-w-prose text-pretty">{recipe.description}</p>}
-      {recipeDetails && <p className="mt-3 text-sm text-text-muted">{recipeDetails}</p>}
-      {recipe.nutritionPerServing && (
-        <p className="mt-1 text-sm text-text-muted">{nutritionLine(recipe.nutritionPerServing)}</p>
+      {/* One block, so the nutrition sits close under the details, or alone in their place. */}
+      {(recipeDetails || recipe.nutritionPerServing) && (
+        <div className="mt-3 grid gap-1 text-sm text-text-muted">
+          {recipeDetails && <p>{recipeDetails}</p>}
+          {recipe.nutritionPerServing && <p>{nutritionLine(recipe.nutritionPerServing)}</p>}
+        </div>
       )}
       {recipe.tags.length > 0 && (
         // No heading above it, so it's named here (screen readers, tests).
@@ -94,9 +97,15 @@ function details(recipe: Recipe) {
 
 // "≈ 520 kcal · 18 g protein · 92 g carbs · 8 g fat per serving (estimate)": Gemini's guess from
 // the ingredients (design D14), so said to be one, and rounded: a decimal would look exact.
-function nutritionLine(nutrition: Nutrition) {
-  const { calories, proteinG, carbsG, fatG } = nutrition;
-  return `≈ ${String(Math.round(calories))} kcal · ${String(Math.round(proteinG))} g protein · ${String(Math.round(carbsG))} g carbs · ${String(Math.round(fatG))} g fat per serving (estimate)`;
+function nutritionLine({ calories, proteinG, carbsG, fatG }: Nutrition) {
+  const round = (amount: number) => String(Math.round(amount));
+  const amounts = [
+    `≈ ${round(calories)} kcal`,
+    `${round(proteinG)} g protein`,
+    `${round(carbsG)} g carbs`,
+    `${round(fatG)} g fat`,
+  ];
+  return `${amounts.join(" · ")} per serving (estimate)`;
 }
 
 // "2 tbsp olive oil", or just "salt" when the recipe gives no amount.

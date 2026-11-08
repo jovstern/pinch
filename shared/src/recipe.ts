@@ -60,7 +60,7 @@ export const RecipeInputSchema = z.object({
 });
 
 // Per serving, estimated by Gemini from the ingredients (design D14): always an estimate, and
-// shown as one. Grams, but calories. Not in the form: the user doesn't write it (D20).
+// shown as one. Calories in kcal, the rest in grams. Not in the form: the user doesn't write it (D20).
 export const NutritionSchema = z.object({
   calories: z.number().min(0).max(10_000),
   proteinG: z.number().min(0).max(1000),
@@ -81,8 +81,9 @@ export const SourceSchema = z.object({
 });
 
 // A recipe as the API sends it: the ids and dates are strings (mongodb.md).
-export const RecipeSchema = RecipeDraftSchema.extend({
+export const RecipeSchema = RecipeInputSchema.extend({
   id: z.string(),
+  nutritionPerServing: NutritionSchema.optional(),
   source: SourceSchema,
   createdAt: z.iso.datetime(),
   updatedAt: z.iso.datetime(),
