@@ -46,9 +46,9 @@ test("shows the recipe: its details, nutrition, tags, ingredients and steps", as
 
   expect(await screen.findByRole("heading", { level: 1, name: "Omelette" })).toBeInTheDocument();
   expect(screen.getByText("Serves 1 · Prep 5 min")).toBeInTheDocument();
-  expect(
-    screen.getByText("≈ 251 kcal · 13 g protein · 1 g carbs · 22 g fat per serving (estimate)"),
-  ).toBeInTheDocument();
+  expect(screen.getByText(/≈ 251 kcal/)).toHaveTextContent(
+    "≈ 251 kcal · 13 g protein · 1 g carbs · 22 g fat per serving (estimate)",
+  );
   const tags = screen.getByRole("list", { name: "Tags" });
   expect(
     within(tags)

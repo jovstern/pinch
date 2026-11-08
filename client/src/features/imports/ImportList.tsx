@@ -53,10 +53,16 @@ export function ImportList({ focusPasteBox }: { focusPasteBox: () => void }) {
                 key={job.id}
                 className="min-w-0 rounded-lg border border-dashed border-border p-3"
               >
-                <p className="font-semibold">{inputName(job.input)}</p>
+                {/* Names the item's buttons and link too (aria-describedby), so a screen
+                    reader's list of them says which import each is for. */}
+                <p id={`import-${job.id}`} className="font-semibold">
+                  {inputName(job.input)}
+                </p>
                 {/* One line: shared links carry long tracking codes, and a pasted text is long.
-                    A link whole on hover; a text, up to 10,000 characters, isn't. */}
+                    A link whole on hover; a text, up to 10,000 characters, isn't. dir="auto": a
+                    Hebrew text reads right to left, so it's cut at its end, not its start. */}
                 <p
+                  dir="auto"
                   title={job.input.type === "link" ? job.input.url : undefined}
                   className="truncate text-sm text-text-muted"
                 >
@@ -65,7 +71,9 @@ export function ImportList({ focusPasteBox }: { focusPasteBox: () => void }) {
                 <p className={`mt-1 text-sm ${statusColor(job)}`}>{statusText(job)}</p>
                 {job.status === "ready" && (
                   <Button asChild variant="secondary" className="mt-3">
-                    <Link to={`/imports/${job.id}`}>Review the recipe</Link>
+                    <Link to={`/imports/${job.id}`} aria-describedby={`import-${job.id}`}>
+                      Review the recipe
+                    </Link>
                   </Button>
                 )}
                 {(job.status === "failed" || job.stalled) && (
