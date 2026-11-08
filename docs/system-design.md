@@ -89,8 +89,9 @@ Mongo is the only shared state. There is no Redis, no queue service and no objec
 
 ### 4.1 Flow
 
-1. The client sends `POST /api/imports { url }`. The API validates the URL, detects the
-   platform (`instagram | facebook | youtube`), checks the daily cap, creates an import with
+1. The client sends `POST /api/imports` with `{ type: "link", url }` or `{ type: "text", text }`.
+   The API validates it, finds a link's platform (`instagram | facebook | youtube`), checks the
+   daily cap, creates an import with
    `status: "pending"` and answers **202** with the import.
 2. The worker **claims** the job, then:
    - **Every link** → read the post's info with `yt-dlp` (no download): its length, checked

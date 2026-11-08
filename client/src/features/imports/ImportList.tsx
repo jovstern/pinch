@@ -55,8 +55,11 @@ export function ImportList({ focusLinkBox }: { focusLinkBox: () => void }) {
               >
                 <p className="font-semibold">{inputName(job.input)}</p>
                 {/* One line: shared links carry long tracking codes, and a pasted text is long.
-                    The whole of it on hover. */}
-                <p title={inputText(job.input)} className="truncate text-sm text-text-muted">
+                    A link whole on hover; a text, up to 10,000 characters, isn't. */}
+                <p
+                  title={job.input.type === "link" ? job.input.url : undefined}
+                  className="truncate text-sm text-text-muted"
+                >
                   {inputText(job.input)}
                 </p>
                 <p className={`mt-1 text-sm ${statusColor(job)}`}>{statusText(job)}</p>

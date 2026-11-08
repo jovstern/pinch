@@ -77,28 +77,22 @@ export function ReviewImportPage() {
     <>
       <title>{`Review ${job.draft.title} · Pinch`}</title>
       <h1 className="text-3xl font-bold tracking-tight text-balance">Review the recipe</h1>
-      {job.input.type === "link" ? (
-        <>
-          <p className="mt-3 text-sm text-pretty text-text-muted">
-            Fix anything that's wrong, then save it. Made from:
-          </p>
-          {/* A new tab: going to the post here would lose what was typed. One line, as in the
-              list. */}
-          <a
-            href={job.input.url}
-            target="_blank"
-            rel="noreferrer"
-            title={job.input.url}
-            className="block truncate text-sm text-text-muted underline"
-          >
-            {job.input.url}
-            <span className="sr-only"> (opens in a new tab)</span>
-          </a>
-        </>
-      ) : (
-        <p className="mt-3 text-sm text-pretty text-text-muted">
-          Fix anything that's wrong, then save it. Made from the text you pasted.
-        </p>
+      <p className="mt-3 text-sm text-pretty text-text-muted">
+        Fix anything that's wrong, then save it. Made from
+        {job.input.type === "link" ? ":" : " the text you pasted."}
+      </p>
+      {/* A new tab: going to the post here would lose what was typed. One line, as in the list. */}
+      {job.input.type === "link" && (
+        <a
+          href={job.input.url}
+          target="_blank"
+          rel="noreferrer"
+          title={job.input.url}
+          className="block truncate text-sm text-text-muted underline"
+        >
+          {job.input.url}
+          <span className="sr-only"> (opens in a new tab)</span>
+        </a>
       )}
       <LazyRecipeForm
         defaultValues={toFormValues(job.draft)}

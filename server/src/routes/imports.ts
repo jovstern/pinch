@@ -18,8 +18,8 @@ import { insertRecipeOnce, recipesCollection, toRecipe } from "../db/recipes.ts"
 import { countImport, usageCollection } from "../db/usage.ts";
 import { HttpError, parseInput } from "../errors.ts";
 
-// Imports turn a link, or a post's text, into a draft recipe (design §4). The API only records the job; the worker
-// does it. As with recipes, every query filters by ownerId.
+// Imports turn a link, or a post's text, into a draft recipe (design §4). The API only records
+// the job; the worker does it. As with recipes, every query filters by ownerId.
 export function importsRouter(db: Db) {
   const imports = importsCollection(db);
   const recipes = recipesCollection(db);
@@ -36,7 +36,10 @@ export function importsRouter(db: Db) {
       _id: new ObjectId(),
       ownerId: req.userId,
       status: "pending",
-      input: sent.type === "link" ? { ...sent, platform: platformOf(sent.url) } : sent,
+      input:
+        sent.type === "link"
+          ? { type: "link", url: sent.url, platform: platformOf(sent.url) }
+          : sent,
       attempts: 0,
       nextAttemptAt: now,
       createdAt: now,

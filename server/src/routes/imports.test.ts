@@ -90,12 +90,24 @@ test("POST /api/imports accepts a post's pasted text", async () => {
   });
 });
 
-test("POST /api/imports refuses a text too short to be a recipe, under its field", async () => {
-  const response = await request(app).post("/api/imports").send({ type: "text", text: "eggs" });
+test.each([
+  ["too short to be a recipe", "eggs", textMessage],
+  ["too long", "a".repeat(10_001), "Keep the text under 10,000 characters."],
+])("POST /api/imports refuses a text %s, under its field", async (_, text, message) => {
+  const response = await request(app).post("/api/imports").send({ type: "text", text });
 
   expect(response.status).toBe(400);
   expect(response.body).toMatchObject({
-    error: { code: "invalid_input", fields: { text: textMessage } },
+    error: { code: "invalid_input", fields: { text: message } },
+  });
+});
+
+test("POST /api/imports refuses a body that doesn't say if it's a link or a text", async () => {
+  const response = await request(app).post("/api/imports").send({ url: reel });
+
+  expect(response.status).toBe(400);
+  expect(response.body).toMatchObject({
+    error: { code: "invalid_input", fields: { type: "Send a link or a text." } },
   });
 });
 
@@ -354,7 +366,7 @@ test("each link and Retry counts once for today; one that can't happen doesn't c
 test("yesterday's count doesn't count today", async () => {
   await setUsage(DAILY_IMPORT_CAP, "2000-01-01");
 
-  expect((await request(app).post("/api/imports").send({ type: "link", url: reel })).status).toBe(
-    202,
-  );
+  const response = await request(app).post("/api/imports").send({ type: "link", url: reel });
+
+  expect(response.status).toBe(202);
 });

@@ -16,31 +16,35 @@ export const textMessage = "Paste more of the recipe: a line or two at least.";
 // The body of POST /api/imports (design §4.1, §8): a link to a post on one of the platforms, by
 // its host ("www." and "m." are the same site), or the post's text, pasted when its link can't
 // be read (§1). The type says which, so each field has its own message. Screenshots come in M6.
-export const ImportInputSchema = z.discriminatedUnion("type", [
-  z.object({
-    type: z.literal("link"),
-    url: z
-      .string(linkMessage)
-      .trim()
-      .max(2000, "Keep the link under 2000 characters.")
-      .pipe(
-        z.url({
-          protocol: /^https?$/,
-          hostname:
-            /^((www\.|m\.)?(instagram\.com|facebook\.com|youtube\.com)|youtu\.be|fb\.watch)$/,
-          error: linkMessage,
-        }),
-      ),
-  }),
-  z.object({
-    type: z.literal("text"),
-    text: z
-      .string(textMessage)
-      .trim()
-      .min(20, textMessage)
-      .max(10_000, "Keep the text under 10,000 characters."),
-  }),
-]);
+export const ImportInputSchema = z.discriminatedUnion(
+  "type",
+  [
+    z.object({
+      type: z.literal("link"),
+      url: z
+        .string(linkMessage)
+        .trim()
+        .max(2000, "Keep the link under 2000 characters.")
+        .pipe(
+          z.url({
+            protocol: /^https?$/,
+            hostname:
+              /^((www\.|m\.)?(instagram\.com|facebook\.com|youtube\.com)|youtu\.be|fb\.watch)$/,
+            error: linkMessage,
+          }),
+        ),
+    }),
+    z.object({
+      type: z.literal("text"),
+      text: z
+        .string(textMessage)
+        .trim()
+        .min(20, textMessage)
+        .max(10_000, "Keep the text under 10,000 characters."),
+    }),
+  ],
+  { error: "Send a link or a text." },
+);
 
 // An import as the API sends it (design §4.2, §6). The worker's own fields (the lease, when to
 // try next, when it expires) stay on the server.
