@@ -16,6 +16,7 @@ export function ImportForm({ inputRef }: { inputRef: Ref<HTMLTextAreaElement> })
     defaultValues: { pasted: "" },
     validationLogic: revalidateLogic(),
     validators: {
+      // One field for both inputs, so its first message, whichever input it is.
       onDynamic: ({ value }) => {
         const result = ImportInputSchema.safeParse(importInput(value.pasted));
         return result.success ? undefined : { fields: { pasted: result.error.issues[0]?.message } };
@@ -26,10 +27,12 @@ export function ImportForm({ inputRef }: { inputRef: Ref<HTMLTextAreaElement> })
           await sendJson("POST", "/api/imports", input, ImportSchema);
           return null;
         } catch (error) {
-          const message = error instanceof ApiError && (error.fields.url ?? error.fields.text);
-          if (message) return { fields: { pasted: message } };
-          // Past the day's cap (design §1): what was pasted is fine, so not on the field.
-          if (error instanceof ApiError && error.status === 429) return dailyLimitMessage;
+          if (error instanceof ApiError) {
+            const message = error.fields.url ?? error.fields.text;
+            if (message) return { fields: { pasted: message } };
+            // Past the day's cap (design §1): what was pasted is fine, so not on the field.
+            if (error.status === 429) return dailyLimitMessage;
+          }
           return "We couldn't send this. Try again.";
         }
       },
@@ -84,8 +87,8 @@ export function ImportForm({ inputRef }: { inputRef: Ref<HTMLTextAreaElement> })
 }
 
 // One box for both (design §14), so there's nothing to choose: a link is one word, and anything
-// with a space in it is the recipe's text. A link from another site is still a link, and is
-// refused as one.
+// with a space or a new line in it is the recipe's text. A link from another site is still a
+// link, and is refused as one.
 function importInput(pasted: string) {
   return /\s/.test(pasted.trim())
     ? { type: "text" as const, text: pasted }

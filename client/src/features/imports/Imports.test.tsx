@@ -65,7 +65,7 @@ test("a pasted link is sent trimmed, the box empties, and the link shows as wait
   expect(box).toHaveValue("");
 });
 
-test("a pasted text, anything with a space in it, is sent as text", async () => {
+test("a pasted text, anything with a space or a new line in it, is sent as text", async () => {
   const fetch = stubApi([[]]);
   renderApp("/");
 
@@ -78,6 +78,41 @@ test("a pasted text, anything with a space in it, is sent as text", async () => 
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ type: "text", text: "Shakshuka: 4 eggs, 1 can of tomatoes." }),
   });
+});
+
+test("Enter after a link makes a new line, and the link is still sent as a link", async () => {
+  const fetch = stubApi([[]]);
+  renderApp("/");
+
+  const box = screen.getByRole("textbox", { name: "Pinch a recipe from a reel" });
+  await userEvent.type(box, `${reel}{Enter}`);
+  expect(box).toHaveValue(`${reel}\n`);
+  expect(fetch).not.toHaveBeenCalledWith("/api/imports", expect.anything());
+
+  await userEvent.click(screen.getByRole("button", { name: "Pinch it" }));
+  expect(fetch).toHaveBeenCalledWith("/api/imports", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ type: "link", url: reel }),
+  });
+});
+
+test("the API's message for a text shows under the box", async () => {
+  stubApi([[]], () =>
+    Response.json(
+      { error: { code: "invalid_input", message: "", fields: { text: "Not this one." } } },
+      { status: 400 },
+    ),
+  );
+  renderApp("/");
+
+  await userEvent.type(
+    screen.getByRole("textbox", { name: "Pinch a recipe from a reel" }),
+    "Shakshuka: 4 eggs, 1 can of tomatoes.",
+  );
+  await userEvent.click(screen.getByRole("button", { name: "Pinch it" }));
+
+  expect(await screen.findByRole("alert")).toHaveTextContent("Not this one.");
 });
 
 test("a text too short to be a recipe is refused before it's sent", async () => {

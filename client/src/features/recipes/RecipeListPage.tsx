@@ -144,7 +144,7 @@ export function RecipeListPage() {
       {!filtering && !isPlaceholderData && recipes?.length === 0 && (
         <div className="mt-6">
           <p className="text-pretty text-text-muted">
-            No recipes yet. Paste a link above, or write one by hand.
+            No recipes yet. Paste a link or a post's text above, or write one by hand.
           </p>
           <Link
             to="/recipes/new"

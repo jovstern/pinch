@@ -35,7 +35,7 @@ beforeEach(async () => {
   await usage.deleteMany({});
 });
 
-// As if the dev user had pinched this many links on that day (today when not given, worked
+// As if the dev user had sent this many imports on that day (today when not given, worked
 // out at the call, so a run across midnight UTC agrees with the route). Expiring tomorrow: the
 // TTL index would delete one already due.
 async function setUsage(imports: number, day = utcDay(new Date())) {

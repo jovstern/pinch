@@ -483,6 +483,8 @@ no question: the link can be pasted again. A link from another site is refused u
 before it's sent.
 
 From M5 the box is a textarea and takes either, with nothing to choose (§1's text fallback):
-one word is a link; anything with a space in it is the recipe's text ("Pasted text" in Your
-imports, with its first line). Too short a text (under 20 characters) is refused as a link
-from another site is. Enter makes a new line, as in any textarea: Pinch it sends.
+one word is a link; anything with a space or a new line in it is the recipe's text ("Pasted
+text" in Your imports, with its start). So a link with words around it is a text, and Gemini
+finds no recipe in it: kept that simple on purpose. Too short a text (under 20 characters) is
+refused as a link from another site is. Enter makes a new line, as in any textarea: Pinch it
+sends.
