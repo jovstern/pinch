@@ -14,13 +14,11 @@ type TextFieldProps = {
   label: string;
   multiline?: boolean;
   // "numeric" for numbers: a text input with the number keyboard, so nothing typed is lost.
-  // "url" for a link: the keyboard with "/" and ".com", and our message, not the browser's.
-  inputMode?: "numeric" | "url";
-  placeholder?: string;
+  inputMode?: "numeric";
   // Always shown under the input, and read with it.
   hint?: string;
-  // The input itself (single-line only), to move focus to it.
-  inputRef?: Ref<HTMLInputElement>;
+  // The textarea itself (multiline only: the paste box on /), to move focus to it.
+  inputRef?: Ref<HTMLTextAreaElement>;
   className?: string;
 };
 
@@ -31,7 +29,6 @@ export function TextField({
   label,
   multiline,
   inputMode,
-  placeholder,
   hint,
   inputRef,
   className = "",
@@ -60,8 +57,10 @@ export function TextField({
         {label}
       </label>
       {multiline ? (
-        // Grows with its text (field-sizing), so a long step is read whole, not scrolled.
+        // Grows with its text (field-sizing), so a long step or a pasted text is read whole, not
+        // scrolled.
         <textarea
+          ref={inputRef}
           {...shared}
           className={`field-sizing-content min-h-24 ${box}`}
           onChange={(event) => {
@@ -72,8 +71,6 @@ export function TextField({
         <input
           type="text"
           inputMode={inputMode}
-          placeholder={placeholder}
-          ref={inputRef}
           {...shared}
           className={`min-h-11 ${box}`}
           onChange={(event) => {

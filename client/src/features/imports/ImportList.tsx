@@ -6,13 +6,13 @@ import { Button } from "../../components/Button.tsx";
 import { ImportActions } from "./ImportActions.tsx";
 import { importListQuery } from "./importQueries.ts";
 
-// The links being turned into recipes, each with how far it has got (design §1, §4.2). After
-// Retry or Dismiss, focusLinkBox moves focus to the paste box (the buttons are gone).
-export function ImportList({ focusLinkBox }: { focusLinkBox: () => void }) {
+// The links and texts being turned into recipes, each with how far it has got (design §1, §4.2).
+// After Retry or Dismiss, focusPasteBox moves focus to the paste box (the buttons are gone).
+export function ImportList({ focusPasteBox }: { focusPasteBox: () => void }) {
   const { data, isLoadingError } = useQuery(importListQuery);
   const imports = data?.items ?? [];
 
-  // What a screen reader hears: only what just changed, one link at a time, not the whole list
+  // What a screen reader hears: only what just changed, one import at a time, not the whole list
   // (ui-craft: aria-live for async results). Worked out as each new list arrives, from the one
   // before: React docs, "Storing information from previous renders" (as ListFilters). Kept
   // simple: one change per poll is said, and the same words twice in a row aren't said again.
@@ -34,16 +34,16 @@ export function ImportList({ focusLinkBox }: { focusLinkBox: () => void }) {
       <p role="status" className="sr-only">
         {announcement}
       </p>
-      {/* No Try again, unlike the recipes: the list is second to them, and sending a link
+      {/* No Try again, unlike the recipes: the list is second to them, and sending an import
           asks for it again. */}
       {isLoadingError && (
         <p role="alert" className="text-danger">
-          We couldn't load your links.
+          We couldn't load your imports.
         </p>
       )}
       {imports.length > 0 && (
         <>
-          <h2 className="text-lg font-semibold">Your links</h2>
+          <h2 className="text-lg font-semibold">Your imports</h2>
           {/* Dashed and flat: on their way to being recipes, so they don't look like the
               recipe cards below. */}
           <ul className="mt-2 grid gap-2">
@@ -69,7 +69,7 @@ export function ImportList({ focusLinkBox }: { focusLinkBox: () => void }) {
                   </Button>
                 )}
                 {(job.status === "failed" || job.stalled) && (
-                  <ImportActions job={job} focusLinkBox={focusLinkBox} />
+                  <ImportActions job={job} focusPasteBox={focusPasteBox} />
                 )}
               </li>
             ))}
@@ -105,7 +105,7 @@ function inputText(input: Import["input"]) {
 function statusText(job: Import) {
   // Not "working on it" forever when nothing is (§4.3).
   if (job.stalled) {
-    return "Stuck: nothing has worked on this link for a while. Dismiss it and paste it again later.";
+    return "Stuck: nothing has worked on this for a while. Dismiss it and paste it again later.";
   }
   switch (job.status) {
     case "pending":

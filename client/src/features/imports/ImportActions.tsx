@@ -4,29 +4,29 @@ import { Button } from "../../components/Button.tsx";
 import { ApiError, deleteResource, sendJson } from "../../lib/api.ts";
 import { importListQuery } from "./importQueries.ts";
 
-// What a failed link offers (design §4.2): Retry puts it back in the queue for three more
+// What a failed import offers (design §4.2): Retry puts it back in the queue for three more
 // tries; Dismiss deletes it. A stalled one (no worker is taking it, §4.3) offers only Dismiss:
-// Retry is for a failed import. Either way the list is asked again, and a retried link is polled.
-// Once it's done the buttons are gone, so focus moves to the link box (focusLinkBox) rather than
-// falling to the page.
-export function ImportActions({ job, focusLinkBox }: { job: Import; focusLinkBox: () => void }) {
+// Retry is for a failed import. Either way the list is asked again, and a retried one is polled.
+// Once it's done the buttons are gone, so focus moves to the paste box (focusPasteBox) rather
+// than falling to the page.
+export function ImportActions({ job, focusPasteBox }: { job: Import; focusPasteBox: () => void }) {
   const queryClient = useQueryClient();
-  // Also after a failure: the link may have changed or gone since the list loaded (another tab),
+  // Also after a failure: the import may have changed or gone since the list loaded (another tab),
   // and the list then shows it as it is. Awaited, so "Retrying…" lasts until the list is fresh
-  // and the failed link never flashes back (as DeleteRecipeButton).
+  // and the failed import never flashes back (as DeleteRecipeButton).
   async function refreshList() {
     await queryClient.invalidateQueries({ queryKey: importListQuery.queryKey });
   }
   const retry = useMutation({
     // No body: the address says which import.
     mutationFn: () => sendJson("POST", `/api/imports/${job.id}/retry`, undefined, ImportSchema),
-    onSuccess: focusLinkBox,
+    onSuccess: focusPasteBox,
     onSettled: refreshList,
   });
-  // No question first, as Discard on the review page: pasting the link again brings it back.
+  // No question first, as Discard on the review page: pasting it again brings it back.
   const dismiss = useMutation({
     mutationFn: () => deleteResource(`/api/imports/${job.id}`),
-    onSuccess: focusLinkBox,
+    onSuccess: focusPasteBox,
     onSettled: refreshList,
   });
   // Not disabled while busy: a disabled button drops focus to the page (as Show more).

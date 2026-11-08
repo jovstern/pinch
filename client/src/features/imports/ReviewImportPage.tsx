@@ -41,7 +41,7 @@ export function ReviewImportPage() {
       void navigate(`/recipes/${recipe.id}`, { replace: true });
     },
   });
-  // No question first, unlike deleting a recipe: pasting the link again makes the draft again.
+  // No question first, unlike deleting a recipe: pasting it again makes the draft again.
   const discard = useMutation({
     mutationFn: () => deleteResource(`/api/imports/${id}`),
     onSuccess: async () => {
@@ -58,14 +58,14 @@ export function ReviewImportPage() {
   if (isLoadingError) {
     return <RecipeLoadError error={error} retry={() => void refetch()} retrying={isFetching} />;
   }
-  // An address typed or kept from before, of a link not done yet or failed. A draft is there
+  // An address typed or kept from before, of an import not done yet or failed. A draft is there
   // exactly when the import is ready, and checking it tells TypeScript it's there.
   if (job.draft === undefined) {
     return (
       <>
         <title>Not ready · Pinch</title>
         <h1 className="text-3xl font-bold tracking-tight text-balance">Not ready to review</h1>
-        <p className="mt-3 text-pretty text-text-muted">This link has no recipe to review.</p>
+        <p className="mt-3 text-pretty text-text-muted">This import has no recipe to review.</p>
         <Link to="/" className="mt-3 inline-block font-semibold text-accent-strong underline">
           Back to your recipes
         </Link>

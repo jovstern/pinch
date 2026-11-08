@@ -1,7 +1,7 @@
 import { DAILY_IMPORT_CAP } from "@pinch/shared";
 import type { Collection, Db, ObjectId } from "mongodb";
 
-// How many links a user has pinched (or retried) on a day: each one costs Gemini calls, so
+// How many imports a user has sent (or retried) on a day: each one costs Gemini calls, so
 // there's a daily cap (design §1, §4.1). A count of its own, because imports are deleted once
 // done and counting them would undercount.
 export type UsageDocument = {

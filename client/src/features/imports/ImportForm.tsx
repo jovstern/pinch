@@ -1,4 +1,4 @@
-import { dailyLimitMessage, fieldErrors, ImportInputSchema, ImportSchema } from "@pinch/shared";
+import { dailyLimitMessage, ImportInputSchema, ImportSchema } from "@pinch/shared";
 import { revalidateLogic, useForm } from "@tanstack/react-form";
 import { useQueryClient } from "@tanstack/react-query";
 import type { Ref } from "react";
@@ -7,38 +7,38 @@ import { TextField } from "../../components/TextField.tsx";
 import { ApiError, sendJson } from "../../lib/api.ts";
 import { importListQuery } from "./importQueries.ts";
 
-// The main action on / (design §14): paste a link, and the worker turns it into a draft
-// (§4.1). Checked as the recipe form is (RecipeForm.tsx): on the first send, then on every
-// change, with the API's own schema.
-export function ImportLinkForm({ inputRef }: { inputRef: Ref<HTMLInputElement> }) {
+// The main action on / (design §14): paste a link, or a post's text when its link can't be read
+// (§1), and the worker turns it into a draft (§4.1). Checked as the recipe form is
+// (RecipeForm.tsx): on the first send, then on every change, with the API's own schema.
+export function ImportForm({ inputRef }: { inputRef: Ref<HTMLTextAreaElement> }) {
   const queryClient = useQueryClient();
   const form = useForm({
-    // Always a link here. The type is what the API reads to tell it from pasted text, and it's
-    // in the form's values because they're checked with the API's schema.
-    defaultValues: { type: "link" as const, url: "" },
+    defaultValues: { pasted: "" },
     validationLogic: revalidateLogic(),
     validators: {
+      // One field for both inputs, so its first message, whichever input it is.
       onDynamic: ({ value }) => {
-        const result = ImportInputSchema.safeParse(value);
-        return result.success ? undefined : { fields: fieldErrors(result.error) };
+        const result = ImportInputSchema.safeParse(importInput(value.pasted));
+        return result.success ? undefined : { fields: { pasted: result.error.issues[0]?.message } };
       },
       onSubmitAsync: async ({ value }) => {
         try {
-          const input = ImportInputSchema.parse(value);
+          const input = ImportInputSchema.parse(importInput(value.pasted));
           await sendJson("POST", "/api/imports", input, ImportSchema);
           return null;
         } catch (error) {
-          if (error instanceof ApiError && error.fields.url) {
-            return { fields: { url: error.fields.url } };
+          if (error instanceof ApiError) {
+            const message = error.fields.url ?? error.fields.text;
+            if (message) return { fields: { pasted: message } };
+            // Past the day's cap (design §1): what was pasted is fine, so not on the field.
+            if (error.status === 429) return dailyLimitMessage;
           }
-          // Past the day's cap (design §1): the link is fine, so not on the field.
-          if (error instanceof ApiError && error.status === 429) return dailyLimitMessage;
-          return "We couldn't send this link. Try again.";
+          return "We couldn't send this. Try again.";
         }
       },
     },
     onSubmit: () => {
-      // Empty for the next link; the new one shows in the list, which starts polling.
+      // Empty for the next one; the new import shows in the list, which starts polling.
       form.reset();
       void queryClient.invalidateQueries({ queryKey: importListQuery.queryKey });
     },
@@ -55,14 +55,13 @@ export function ImportLinkForm({ inputRef }: { inputRef: Ref<HTMLInputElement> }
       }}
       className="mt-6"
     >
-      <form.Field name="url">
+      <form.Field name="pasted">
         {(field) => (
           <TextField
             field={field}
             label="Pinch a recipe from a reel"
-            inputMode="url"
-            placeholder="https://…"
-            hint="A link to an Instagram, Facebook or YouTube post."
+            multiline
+            hint="A link to an Instagram, Facebook or YouTube post, or the recipe's text."
             inputRef={inputRef}
           />
         )}
@@ -85,4 +84,13 @@ export function ImportLinkForm({ inputRef }: { inputRef: Ref<HTMLInputElement> }
       </form.Subscribe>
     </form>
   );
+}
+
+// One box for both (design §14), so there's nothing to choose: a link is one word, and anything
+// with a space or a new line in it is the recipe's text. A link from another site is still a
+// link, and is refused as one.
+function importInput(pasted: string) {
+  return /\s/.test(pasted.trim())
+    ? { type: "text" as const, text: pasted }
+    : { type: "link" as const, url: pasted };
 }
