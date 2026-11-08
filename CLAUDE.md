@@ -45,9 +45,13 @@ and types used by both). MongoDB through the native driver + Zod. Gemini for ext
 - **Simplicity and consistency above all.** The most obvious code that works; one pattern per
   problem across the repo; comments explain *why* and point to the design doc.
 - No planning ceremony: the design doc is the plan. No Superpowers flow, no worktrees.
-- Every agent runs on Opus (`opus`).
-- End of each milestone: `ui-reviewer` (if UI changed), `observer`, `npm run e2e` and a demo
-  GIF (`pr-demo`) in that milestone's last PR.
+- Every agent runs on Opus (`opus`), except `designer`, which runs on Fable (`fable`).
+- End of each milestone: `designer` (plan mode: revises `docs/ux/`), `ui-reviewer` (if UI
+  changed), `observer`, `npm run e2e` and a demo GIF (`pr-demo`) in that milestone's last PR.
+- **UX plan:** `docs/ux/plan.md` (personas, principles, numbered proposals `U1`, `U2`, ...),
+  written by the `designer` agent (`.claude/agents/designer.md`, method in
+  `.claude/skills/ux-strategy/`). Only the user approves a proposal; the designer implements
+  only approved ones, through `/ship`.
 
 ## This machine
 
