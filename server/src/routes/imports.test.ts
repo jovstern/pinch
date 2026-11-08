@@ -363,6 +363,18 @@ test("each link and Retry counts once for today; one that can't happen doesn't c
   // Not failed: 409, not counted.
   const ready = await insertDone({ draft });
   expect((await request(app).post(`/api/imports/${ready}/retry`)).status).toBe(409);
+  // A failure no retry can fix (D23): 409, not counted, and it stays failed.
+  const notARecipe = await insertDone({
+    status: "failed",
+    attempts: 1,
+    error: "This doesn't look like a recipe.",
+    noRetry: true,
+  });
+  const refused = await request(app).post(`/api/imports/${notARecipe}/retry`);
+  expect(refused.status).toBe(409);
+  expect(refused.body).toMatchObject({ error: { code: "import_no_retry" } });
+  const still = await importsCollection(db).findOne({ _id: new ObjectId(notARecipe) });
+  expect(still?.status).toBe("failed");
   // Not there: 404, not counted.
   const missing = new ObjectId().toHexString();
   expect((await request(app).post(`/api/imports/${missing}/retry`)).status).toBe(404);

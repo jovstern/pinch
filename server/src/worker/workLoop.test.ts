@@ -194,6 +194,7 @@ test("a failed attempt is tried again after 10 s, then 60 s, then the import is 
     status: "failed",
     attempts: 3,
     error: FAILED_MESSAGE,
+    noRetry: false,
   });
   expect(await imports.findOne({ _id })).not.toHaveProperty("step");
   expect(await claimNextImport(imports, new Date(Date.now() + 3_600_000))).toBeNull();
@@ -209,6 +210,7 @@ test("a failure no retry can fix fails the import at once, with its message", as
     status: "failed",
     attempts: 1,
     error: "This doesn't look like a recipe.",
+    noRetry: true,
   });
 });
 

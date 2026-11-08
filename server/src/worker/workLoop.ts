@@ -105,7 +105,7 @@ export async function runImport({ imports, extract, logger, job, deadline }: Run
     draft = RecipeDraftSchema.parse(await extract(job.input, deadline, setStep));
   } catch (error) {
     if (error instanceof NoRetryError) {
-      await save(failedUpdate(error.message), `import failed: ${error.message}`);
+      await save(failedUpdate(error.message, true), `import failed: ${error.message}`);
       return;
     }
     // A timeout at the deadline lands here too: a failed attempt like any other (§4.3).
@@ -140,10 +140,11 @@ export async function runImport({ imports, extract, logger, job, deadline }: Run
   );
 }
 
-// The update that fails an import, with the message the user reads (§4.2).
-function failedUpdate(message = FAILED_MESSAGE): UpdateFilter<ImportDocument> {
+// The update that fails an import, with the message the user reads (§4.2), and whether a retry
+// could ever fix it (D23).
+function failedUpdate(message = FAILED_MESSAGE, noRetry = false): UpdateFilter<ImportDocument> {
   return {
-    $set: { status: "failed", error: message, updatedAt: new Date() },
+    $set: { status: "failed", error: message, noRetry, updatedAt: new Date() },
     $unset: { leaseUntil: "", step: "" },
   };
 }

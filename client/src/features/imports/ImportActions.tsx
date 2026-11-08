@@ -5,8 +5,8 @@ import { ApiError, deleteResource, sendJson } from "../../lib/api.ts";
 import { importListQuery } from "./importQueries.ts";
 
 // What a failed import offers (design §4.2): Retry puts it back in the queue for three more
-// tries; Dismiss deletes it. A stalled one (no worker is taking it, §4.3) offers only Dismiss:
-// Retry is for a failed import. Either way the list is asked again, and a retried one is polled.
+// tries; Dismiss deletes it. A stalled one (no worker is taking it, §4.3), and a failure no retry
+// can fix (D23), offer only Dismiss. Either way the list is asked again, and a retried one is polled.
 // Once it's done the buttons are gone, so focus moves to the paste box (focusPasteBox) rather
 // than falling to the page.
 export function ImportActions({ job, focusPasteBox }: { job: Import; focusPasteBox: () => void }) {
@@ -35,7 +35,7 @@ export function ImportActions({ job, focusPasteBox }: { job: Import; focusPasteB
   return (
     <>
       <div className="mt-3 flex gap-3">
-        {job.status === "failed" && (
+        {job.status === "failed" && !job.noRetry && (
           <Button
             type="button"
             variant="secondary"

@@ -217,6 +217,23 @@ test("a failed link says why", async () => {
   expect(await screen.findByText("We couldn't read it.")).toBeInTheDocument();
 });
 
+test("a failure no retry can fix offers Dismiss, not Retry", async () => {
+  stubApi([
+    [
+      importOf({
+        status: "failed",
+        attempts: 1,
+        error: "This doesn't look like a recipe.",
+        noRetry: true,
+      }),
+    ],
+  ]);
+  renderApp("/");
+
+  expect(await screen.findByRole("button", { name: "Dismiss" })).toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: "Retry" })).not.toBeInTheDocument();
+});
+
 test("Retry puts a failed link back in the queue", async () => {
   const fetch = stubApi([
     [importOf({ status: "failed", attempts: 3, error: "No." })],
