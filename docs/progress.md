@@ -65,7 +65,9 @@ Slices for later milestones are filled in when the milestone starts.
       uses it, e2e keeps the fake
 - [x] The post's caption and length with `yt-dlp` before Gemini; "This doesn't look like a
       recipe"
-- [ ] Text fallback: paste the caption instead of a link
+- [x] Text fallback, the pipeline: an import can be a post's pasted text (`{ type: "text" }`);
+      the worker sends it to Gemini alone; the list and the review page show it
+- [ ] Text fallback, the box: one textarea on `/` takes a link or the text (auto-detected)
 - [ ] Nutrition per serving, shown as an estimate
 - [ ] End of milestone: a real YouTube link becomes a draft; UI review, observer metrics, demo
 ## M6 — Instagram / Facebook

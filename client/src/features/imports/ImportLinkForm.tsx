@@ -13,7 +13,8 @@ import { importListQuery } from "./importQueries.ts";
 export function ImportLinkForm({ inputRef }: { inputRef: Ref<HTMLInputElement> }) {
   const queryClient = useQueryClient();
   const form = useForm({
-    defaultValues: { url: "" },
+    // Always a link here; the type is what the API reads to tell it from pasted text.
+    defaultValues: { type: "link" as const, url: "" },
     validationLogic: revalidateLogic(),
     validators: {
       onDynamic: ({ value }) => {

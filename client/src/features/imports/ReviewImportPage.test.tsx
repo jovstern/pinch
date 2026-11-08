@@ -98,6 +98,14 @@ test("when Discard fails, it says so and keeps the draft", async () => {
   expect(screen.getByLabelText("Title")).toHaveValue("Tomato pasta");
 });
 
+test("a draft from pasted text says so, with no link to a post", async () => {
+  stubApi({ ...ready, input: { type: "text", text: "Tomato pasta: spaghetti, tomatoes." } });
+  renderApp(`/imports/${ready.id}`);
+
+  expect(await screen.findByText(/Made from the text you pasted/)).toBeInTheDocument();
+  expect(screen.queryByRole("link", { name: /opens in a new tab/ })).not.toBeInTheDocument();
+});
+
 test("an import with no draft yet says it isn't ready", async () => {
   stubApi({ ...ready, status: "processing", draft: undefined });
   renderApp(`/imports/${ready.id}`);

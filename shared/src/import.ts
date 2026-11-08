@@ -11,21 +11,36 @@ export const linkMessage = "Paste a link to an Instagram, Facebook or YouTube po
 export const DAILY_IMPORT_CAP = 20;
 export const dailyLimitMessage = `You've pinched ${String(DAILY_IMPORT_CAP)} links today. Try again tomorrow.`;
 
-// The body of POST /api/imports: a link to a post on one of the platforms (design §4.1), by its
-// host; "www." and "m." are the same site. Text and screenshots come in M6.
-export const ImportInputSchema = z.object({
-  url: z
-    .string(linkMessage)
-    .trim()
-    .max(2000, "Keep the link under 2000 characters.")
-    .pipe(
-      z.url({
-        protocol: /^https?$/,
-        hostname: /^((www\.|m\.)?(instagram\.com|facebook\.com|youtube\.com)|youtu\.be|fb\.watch)$/,
-        error: linkMessage,
-      }),
-    ),
-});
+export const textMessage = "Paste more of the recipe: a line or two at least.";
+
+// The body of POST /api/imports (design §4.1, §8): a link to a post on one of the platforms, by
+// its host ("www." and "m." are the same site), or the post's text, pasted when its link can't
+// be read (§1). The type says which, so each field has its own message. Screenshots come in M6.
+export const ImportInputSchema = z.discriminatedUnion("type", [
+  z.object({
+    type: z.literal("link"),
+    url: z
+      .string(linkMessage)
+      .trim()
+      .max(2000, "Keep the link under 2000 characters.")
+      .pipe(
+        z.url({
+          protocol: /^https?$/,
+          hostname:
+            /^((www\.|m\.)?(instagram\.com|facebook\.com|youtube\.com)|youtu\.be|fb\.watch)$/,
+          error: linkMessage,
+        }),
+      ),
+  }),
+  z.object({
+    type: z.literal("text"),
+    text: z
+      .string(textMessage)
+      .trim()
+      .min(20, textMessage)
+      .max(10_000, "Keep the text under 10,000 characters."),
+  }),
+]);
 
 // An import as the API sends it (design §4.2, §6). The worker's own fields (the lease, when to
 // try next, when it expires) stay on the server.
@@ -34,12 +49,16 @@ export const ImportSchema = z.object({
   status: z.enum(["pending", "processing", "ready", "failed"]),
   // How far a processing import has got, to show progress.
   step: z.enum(["fetching", "analyzing"]).optional(),
-  // http(s) only, as a recipe's source: the client renders it as a link.
-  input: z.object({
-    type: z.literal("link"),
-    url: z.url({ protocol: /^https?$/ }),
-    platform: PlatformSchema,
-  }),
+  // As it was sent, and a link's platform. http(s) only, as a recipe's source: the client
+  // renders it as a link.
+  input: z.discriminatedUnion("type", [
+    z.object({
+      type: z.literal("link"),
+      url: z.url({ protocol: /^https?$/ }),
+      platform: PlatformSchema,
+    }),
+    z.object({ type: z.literal("text"), text: z.string() }),
+  ]),
   attempts: z.int(),
   // No worker has taken it, long after it was due: none is running (design §4.3). The client
   // then stops saying it's being worked on.

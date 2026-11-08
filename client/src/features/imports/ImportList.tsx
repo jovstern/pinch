@@ -24,8 +24,7 @@ export function ImportList({ focusLinkBox }: { focusLinkBox: () => void }) {
     if (prevData !== undefined && data !== undefined) {
       const before = new Map(prevData.items.map((job) => [job.id, job.status]));
       const changed = data.items.find((job) => before.get(job.id) !== job.status);
-      if (changed)
-        setAnnouncement(`${platformNames[changed.input.platform]} link: ${statusText(changed)}`);
+      if (changed) setAnnouncement(`${inputName(changed.input)}: ${statusText(changed)}`);
     }
   }
 
@@ -54,10 +53,11 @@ export function ImportList({ focusLinkBox }: { focusLinkBox: () => void }) {
                 key={job.id}
                 className="min-w-0 rounded-lg border border-dashed border-border p-3"
               >
-                <p className="font-semibold">{platformNames[job.input.platform]}</p>
-                {/* One line: shared links carry long tracking codes. The whole link on hover. */}
-                <p title={job.input.url} className="truncate text-sm text-text-muted">
-                  {job.input.url}
+                <p className="font-semibold">{inputName(job.input)}</p>
+                {/* One line: shared links carry long tracking codes, and a pasted text is long.
+                    The whole of it on hover. */}
+                <p title={inputText(job.input)} className="truncate text-sm text-text-muted">
+                  {inputText(job.input)}
                 </p>
                 <p className={`mt-1 text-sm ${statusColor(job)}`}>{statusText(job)}</p>
                 {job.status === "ready" && (
@@ -88,6 +88,15 @@ const platformNames: Record<Platform, string> = {
   facebook: "Facebook",
   youtube: "YouTube",
 };
+
+// What an import was made from: a link (by its site) or a post's text, pasted (design §1).
+function inputName(input: Import["input"]) {
+  return input.type === "link" ? `${platformNames[input.platform]} link` : "Pasted text";
+}
+
+function inputText(input: Import["input"]) {
+  return input.type === "link" ? input.url : input.text;
+}
 
 // waiting → fetching → analyzing → ready to review, or why it failed (design §1).
 function statusText(job: Import) {

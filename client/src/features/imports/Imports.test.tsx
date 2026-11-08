@@ -57,10 +57,10 @@ test("a pasted link is sent trimmed, the box empties, and the link shows as wait
   expect(fetch).toHaveBeenCalledWith("/api/imports", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ url: reel }),
+    body: JSON.stringify({ type: "link", url: reel }),
   });
   expect(await screen.findByText("Waiting to start…")).toBeInTheDocument();
-  expect(screen.getByText("Instagram")).toBeInTheDocument();
+  expect(screen.getByText("Instagram link")).toBeInTheDocument();
   expect(box).toHaveValue("");
 });
 
@@ -123,6 +123,15 @@ test("while a link is worked on, its status is asked again until it's ready to r
   // Only the change is announced, not the whole list.
   expect(screen.getByText("Instagram link: Ready to review")).toHaveAttribute("role", "status");
   expect(review).toHaveAttribute("href", "/imports/6650a1b2c3d4e5f600000001");
+});
+
+test("a pasted text shows as such, with its text", async () => {
+  const text = "Shakshuka: 4 eggs, 1 can of tomatoes.";
+  stubApi([[importOf({ input: { type: "text", text } })]]);
+  renderApp("/");
+
+  expect(await screen.findByText("Pasted text")).toBeInTheDocument();
+  expect(screen.getByText(text)).toBeInTheDocument();
 });
 
 test("a failed link says why", async () => {

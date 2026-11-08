@@ -18,7 +18,7 @@ import { insertRecipeOnce, recipesCollection, toRecipe } from "../db/recipes.ts"
 import { countImport, usageCollection } from "../db/usage.ts";
 import { HttpError, parseInput } from "../errors.ts";
 
-// Imports turn a link into a draft recipe (design §4). The API only records the job; the worker
+// Imports turn a link, or a post's text, into a draft recipe (design §4). The API only records the job; the worker
 // does it. As with recipes, every query filters by ownerId.
 export function importsRouter(db: Db) {
   const imports = importsCollection(db);
@@ -28,15 +28,15 @@ export function importsRouter(db: Db) {
 
   // 202, not 201: the import is accepted and will be worked on later (§4.1).
   router.post("/", async (req, res) => {
-    const { url } = parseInput(ImportInputSchema, req.body);
-    // After the link is checked: one refused as invalid doesn't count.
+    const sent = parseInput(ImportInputSchema, req.body);
+    // After the input is checked: one refused as invalid doesn't count.
     if (!(await countImport(usage, req.userId))) throw dailyLimit();
     const now = new Date();
     const job: ImportDocument = {
       _id: new ObjectId(),
       ownerId: req.userId,
       status: "pending",
-      input: { type: "link", url, platform: platformOf(url) },
+      input: sent.type === "link" ? { ...sent, platform: platformOf(sent.url) } : sent,
       attempts: 0,
       nextAttemptAt: now,
       createdAt: now,
@@ -81,7 +81,10 @@ export function importsRouter(db: Db) {
       ...input,
       _id: new ObjectId(),
       ownerId: req.userId,
-      source: { type: job.input.platform, url: job.input.url },
+      source:
+        job.input.type === "link"
+          ? { type: job.input.platform, url: job.input.url }
+          : { type: "text" },
       sourceImportId: job._id,
       createdAt: now,
       updatedAt: now,
