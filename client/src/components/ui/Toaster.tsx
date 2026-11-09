@@ -1,7 +1,7 @@
 import { CircleCheck, TriangleAlert } from "lucide-react";
 import type { CSSProperties } from "react";
-import { useSyncExternalStore } from "react";
 import { Toaster as Sonner } from "sonner";
+import { useMediaQuery } from "../../lib/useMediaQuery.ts";
 
 // md: Tailwind's 768 px, where the toasts move from the top to the bottom right (design §14).
 const wide = "(min-width: 48rem)";
@@ -11,20 +11,12 @@ const belowHeader = { top: "4.5rem" };
 const focusRing =
   "focus-visible:outline-2! focus-visible:outline-offset-2! focus-visible:outline-ring!";
 
-function subscribe(onChange: () => void) {
-  const media = matchMedia(wide);
-  media.addEventListener("change", onChange);
-  return () => {
-    media.removeEventListener("change", onChange);
-  };
-}
-
 // shadcn's Sonner (its toast), on Pinch's tokens. Mounted once, in the Layout.
 // Placed by width in JS, not CSS: Sonner takes one position, and its own phone rule (under
 // 600 px) keeps it, so a bottom-right Toaster would sit at the bottom on a phone, over the
 // floating button and the thumb. The media query is read as it changes: a turned phone follows.
 export function Toaster() {
-  const isWide = useSyncExternalStore(subscribe, () => matchMedia(wide).matches);
+  const isWide = useMediaQuery(wide);
   return (
     <Sonner
       position={isWide ? "bottom-right" : "top-center"}

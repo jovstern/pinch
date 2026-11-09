@@ -23,8 +23,8 @@ export function Layout() {
   useImportToasts();
   // The two tabs' own pages, where Write a recipe floats on a phone.
   const onTabPage = pathname === "/" || pathname === "/recipes";
-  // A recipe's own page, /recipes/<id>: not /recipes/new, nor its cook and edit pages.
-  const onRecipe = /^\/recipes\/[^/]+$/.test(pathname) && pathname !== "/recipes/new";
+  // A recipe's own page, /recipes/<id>, and its cook mode: not /recipes/new, nor its edit page.
+  const onRecipe = /^\/recipes\/[^/]+(\/cook)?$/.test(pathname) && pathname !== "/recipes/new";
   return (
     <>
       <Header onTabPage={onTabPage} />
@@ -34,7 +34,7 @@ export function Layout() {
         className={cn(
           "mx-auto max-w-3xl px-4 py-8 wrap-anywhere sm:px-6",
           // From 1024 px My recipes has a panel beside its grid, and a recipe its picture beside
-          // the title and its ingredients beside the steps: they take the width.
+          // the title and its ingredients beside the steps (in cook mode too): they take the width.
           (pathname === "/recipes" || onRecipe) && "max-w-7xl",
           // An inner page starts with its breadcrumbs (D24), close under the header: their
           // 44 px rows have room in them.

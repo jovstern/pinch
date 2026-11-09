@@ -205,3 +205,19 @@ test("a timer pressed again while it runs isn't started twice, and shows it's ru
     "true",
   );
 });
+
+test("from 1024 px the whole checklist is a panel beside the steps, not folded", async () => {
+  stubApi();
+  renderApp(`/recipes/${omelette.id}/cook`);
+  // A wide screen from here on: cook mode reads it once the recipe has come.
+  vi.stubGlobal("matchMedia", () => ({
+    matches: true,
+    addEventListener: vi.fn(),
+    removeEventListener: vi.fn(),
+  }));
+
+  expect(
+    await screen.findByRole("heading", { level: 2, name: "All ingredients (2)" }),
+  ).toBeInTheDocument();
+  expect(screen.getByRole("list", { name: "All ingredients (2)" })).toBeVisible();
+});
