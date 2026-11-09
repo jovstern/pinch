@@ -13,6 +13,8 @@ const AFTER_LOAD_MS = 1500;
 export function loadDisplayFont() {
   const font = new FontFace("Fraunces", 'url("/fonts/fraunces.woff2") format("woff2")', {
     weight: "500 700",
+    // It's added once loaded, so it never blocks text; said anyway, for audits that look.
+    display: "swap",
   });
   window.addEventListener(
     "load",
