@@ -31,7 +31,7 @@ export function DeleteRecipeDialog({ recipe, onClose, focusOnClose }: DeleteReci
         queryKey: recipeListsKey,
         refetchType: "all",
       });
-      void navigate("/");
+      void navigate("/recipes");
     },
   });
 

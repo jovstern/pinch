@@ -74,15 +74,13 @@ test("the draft opens in the form; Save approves it as edited and shows the reci
   });
 });
 
-test("Discard deletes the import and goes back to the recipes", async () => {
+test("Discard deletes the import and goes back to New recipe", async () => {
   const fetch = stubApi();
   renderApp(`/imports/${ready.id}`);
 
   await userEvent.click(await screen.findByRole("button", { name: "Discard" }));
 
-  expect(
-    await screen.findByRole("heading", { level: 1, name: "Your recipes" }),
-  ).toBeInTheDocument();
+  expect(await screen.findByRole("heading", { level: 1, name: "New recipe" })).toBeInTheDocument();
   expect(fetch).toHaveBeenCalledWith(`/api/imports/${ready.id}`, { method: "DELETE" });
 });
 

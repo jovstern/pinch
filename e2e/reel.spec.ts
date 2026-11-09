@@ -38,7 +38,7 @@ test("paste a reel, review the draft with its picture, save it, cook it", async 
   await expect(title).toBeVisible();
   await page.getByRole("button", { name: "Delete" }).click();
   await page.getByRole("alertdialog").getByRole("button", { name: "Delete" }).click();
-  await expect(page.getByRole("heading", { level: 1, name: "Your recipes" })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: "My recipes" })).toBeVisible();
 });
 
 // The fallback: screenshots chosen on / become a draft, the first one its picture.
@@ -61,5 +61,5 @@ test("add screenshots, review the draft made from them", async ({ page }) => {
   await expect(page.getByLabel("Title")).toHaveValue("Tomato pasta (from images)");
   await expect(page.getByRole("presentation")).toBeVisible();
   await page.getByRole("button", { name: "Discard" }).click();
-  await expect(page.getByRole("heading", { level: 1, name: "Your recipes" })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: "New recipe" })).toBeVisible();
 });

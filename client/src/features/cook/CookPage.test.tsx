@@ -45,7 +45,6 @@ test("Cook on a recipe opens cook mode at its first step", async () => {
 
   expect(await screen.findByText("Step 1 of 2")).toBeInTheDocument();
   expect(screen.getByText("Beat the eggs.")).toBeInTheDocument();
-  expect(screen.queryByRole("link", { name: "New recipe" })).not.toBeInTheDocument();
 });
 
 test("Next and Back go through the steps; Done on the last goes back to the recipe", async () => {

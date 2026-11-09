@@ -107,14 +107,14 @@ Slices for later milestones are filled in when the milestone starts.
 The UI first, on the API as it is (where they disagree, the API wins for now):
 
 - [x] R1 shadcn/ui base on Pinch's tokens: `cn`, Button, Input, Badge (D26)
-- [ ] R2 The frame: the two tabs, the avatar, Write a recipe, breadcrumbs; `/` New recipe,
-      `/recipes` My recipes (D24)
+- [x] R2 The frame: the two tabs, the avatar, Write a recipe; `/` New recipe, `/recipes` My
+      recipes (D24). Breadcrumbs go with each inner page (R6–R8)
 - [ ] R3 New recipe: the one-line input that grows, the queue as cards
 - [ ] R4 Toasts for every status change
 - [ ] R5 My recipes: search, tag chips, Filters (sheet / panel), its states
 - [ ] R6 A recipe: breadcrumbs, the source in the subtitle, Cook and ⋯
 - [ ] R7 Cook mode: swipe between steps, breadcrumbs instead of Exit
-- [ ] R8 The editor: one page for review, writing by hand and editing
+- [ ] R8 The editor: one page for review, writing by hand and editing, with its breadcrumbs
 - [ ] End of the UI: UI review, observer, e2e, demo
 
 Then the features the design asks the API for, one PR each:

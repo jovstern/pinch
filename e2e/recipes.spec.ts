@@ -5,7 +5,7 @@ import { expect, test } from "./fixtures.ts";
 // and each deletes what it wrote, because files run in parallel against one database.
 test("write a recipe, find it in the list, edit it, delete it", async ({ page }) => {
   await page.goto("/");
-  await page.getByRole("link", { name: "New recipe" }).click();
+  await page.getByRole("link", { name: "Write a recipe" }).click();
 
   await page.getByLabel("Title").fill("Shakshuka");
   await page.getByLabel("Serves").fill("2");
@@ -25,7 +25,7 @@ test("write a recipe, find it in the list, edit it, delete it", async ({ page })
   await expect(page.getByText("400 g tomatoes")).toBeVisible();
   await page.waitForTimeout(1000);
 
-  await page.getByRole("link", { name: "Pinch" }).click();
+  await page.getByRole("link", { name: "My recipes" }).click();
   await expect(page.getByRole("link", { name: /Shakshuka/ })).toBeVisible();
   await page.waitForTimeout(1000);
   await page.getByRole("link", { name: /Shakshuka/ }).click();
@@ -41,7 +41,7 @@ test("write a recipe, find it in the list, edit it, delete it", async ({ page })
   await page.waitForTimeout(500);
   await dialog.getByRole("button", { name: "Delete" }).click();
 
-  await expect(page.getByRole("heading", { name: "Your recipes" })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: "My recipes" })).toBeVisible();
   await expect(page.getByRole("link", { name: /Green shakshuka/ })).toHaveCount(0);
   await page.waitForTimeout(1000);
 });

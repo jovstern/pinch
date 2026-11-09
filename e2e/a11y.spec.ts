@@ -1,8 +1,8 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test } from "./fixtures.ts";
 
-test("the home page has no accessibility violations", async ({ page }) => {
-  await page.goto("/");
+test("My recipes has no accessibility violations", async ({ page }) => {
+  await page.goto("/recipes");
   // Scan the settled page, with the sample recipes (playwright.config.ts), not the loading state.
   await expect(page.getByRole("link", { name: /Red lentil soup/ })).toBeVisible();
   const results = await new AxeBuilder({ page }).analyze();
@@ -26,7 +26,7 @@ for (const colorScheme of ["light", "dark"] as const) {
     page,
   }) => {
     await page.emulateMedia({ colorScheme });
-    await page.goto("/");
+    await page.goto("/recipes");
     await page.getByRole("link", { name: /Red lentil soup/ }).click();
     await expect(page.getByRole("heading", { level: 1, name: "Red lentil soup" })).toBeVisible();
     expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
@@ -53,6 +53,6 @@ for (const colorScheme of ["light", "dark"] as const) {
     await expect(page.getByRole("presentation")).toBeVisible();
     expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
     await page.getByRole("button", { name: "Discard" }).click();
-    await expect(page.getByRole("heading", { level: 1, name: "Your recipes" })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: "New recipe" })).toBeVisible();
   });
 }

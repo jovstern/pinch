@@ -487,8 +487,9 @@ noise, and M5/M6 only swap the extractor.
 
 Phone first (§1); the wireframes in `docs/ux/wireframes/` (pass 02, revision 2) show each
 screen at 360 and 1440 px. Every page sits in one frame (D24): a header of two tabs, **New
-recipe** (its badge counts drafts ready to review) and **My recipes**, then an avatar (its menu
-holds the theme until auth arrives, §8.3). **Write a recipe** is on both tabs: in the header from
+recipe** (its badge counts drafts ready to review) and **My recipes**, then an avatar (a "coming
+soon" placeholder until auth arrives, §8.3; a menu waits for something to put in it: the
+theme follows the system). **Write a recipe** is on both tabs: in the header from
 768 px, a floating button at the bottom right on a phone. No logo for now. Inner pages have
 breadcrumbs under the header, and the tab they belong to stays selected. Every async change to
 a recipe's status confirms itself in a toast, with the next step when there is one: sent,

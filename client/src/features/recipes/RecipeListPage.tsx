@@ -1,16 +1,13 @@
 import { isTag, type Recipe } from "@pinch/shared";
-import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
+import { useInfiniteQuery } from "@tanstack/react-query";
 import { useEffect, useRef } from "react";
 import { Link, useSearchParams } from "react-router";
 import { Button } from "../../components/ui/Button.tsx";
 import { Thumbnail } from "../../components/Thumbnail.tsx";
-import { ImportForm } from "../imports/ImportForm.tsx";
-import { ImportList } from "../imports/ImportList.tsx";
-import { ScreenshotsUpload } from "../imports/ScreenshotsUpload.tsx";
-import { importListQuery } from "../imports/importQueries.ts";
 import { ListFilters } from "./ListFilters.tsx";
 import { filterParams, recipeListQuery, type RecipeFilters } from "./recipeQueries.ts";
 
+// The My recipes tab, at /recipes (design §14, D24).
 export function RecipeListPage() {
   // The filters live in the address, so a reload, Back or a shared link keeps them (ui-craft).
   // A tag not in the lists (a hand-edited link) is left out rather than sent: it's a 400.
@@ -33,10 +30,7 @@ export function RecipeListPage() {
     isFetchNextPageError,
     isPlaceholderData,
   } = useInfiniteQuery(recipeListQuery(filters));
-  const importsPending = useQuery(importListQuery).isPending;
   const listRef = useRef<HTMLUListElement>(null);
-  // The paste box, where focus goes after an import is retried or dismissed.
-  const pasteBoxRef = useRef<HTMLTextAreaElement>(null);
   // The first recipe of the page Show more asked for, to focus once it's drawn.
   const firstNewRef = useRef<number | null>(null);
   const recipes = data?.pages.flatMap((page) => page.items);
@@ -68,23 +62,11 @@ export function RecipeListPage() {
     });
   }
 
-  const top = (
-    <>
-      <title>Your recipes · Pinch</title>
-      <h1 className="text-3xl font-bold tracking-tight text-balance">Your recipes</h1>
-      <ImportForm inputRef={pasteBoxRef} />
-      <ScreenshotsUpload />
-      <ImportList focusPasteBox={() => pasteBoxRef.current?.focus()} />
-    </>
-  );
-  // The recipes wait for the imports (both are asked at once): drawn first, they'd be pushed
-  // down when Your imports appears above them (a layout shift, docs/metrics/m04.md). In a
-  // fragment, as below, so React keeps the same paste box (and what's typed) when they come.
-  if (importsPending) return <>{top}</>;
-
   return (
     <>
-      {top}
+      <title>My recipes · Pinch</title>
+      {/* The selected tab names the page on screen; the heading names it for screen readers. */}
+      <h1 className="sr-only">My recipes</h1>
 
       {/* Not before the first recipe: there's nothing to search yet. */}
       {(filtering || recipes?.length !== 0) && (
@@ -136,7 +118,7 @@ export function RecipeListPage() {
       {filtering && !isPlaceholderData && recipes?.length === 0 && (
         // replace, like every filter change. It goes as it's clicked, so focus falls to the page.
         <Link
-          to="/"
+          to="/recipes"
           replace
           className="mt-3 inline-block font-semibold text-accent-strong underline"
         >
@@ -147,13 +129,11 @@ export function RecipeListPage() {
       {!filtering && !isPlaceholderData && recipes?.length === 0 && (
         <div className="mt-6">
           <p className="text-pretty text-text-muted">
-            No recipes yet. Paste a link or a post's text above, or write one by hand.
+            No recipes yet. Pinch one from a reel, or write one by hand.
           </p>
-          <Link
-            to="/recipes/new"
-            className="mt-3 inline-block font-semibold text-accent-strong underline"
-          >
-            Write a recipe
+          {/* Write a recipe is already on the page (Header). */}
+          <Link to="/" className="mt-3 inline-block font-semibold text-accent-strong underline">
+            Pinch a recipe
           </Link>
         </div>
       )}

@@ -28,14 +28,15 @@ test("paste a link, review the draft, save it as a recipe", async ({ page }) => 
   // The draft's nutrition estimate came with it, though the form doesn't show it (D14).
   await expect(page.getByText(/≈ 520 kcal/)).toBeVisible();
   await page.waitForTimeout(1000);
-  await page.getByRole("link", { name: "Pinch" }).click();
-  await expect(page.getByRole("link", { name: /Weeknight tomato pasta/ })).toBeVisible();
-  // Approved: the import is deleted, so the link has left Your imports.
+  // Approved: the import is deleted, so the link has left the queue.
+  await page.getByRole("link", { name: /^New recipe/ }).click();
   await expect(link).toHaveCount(0);
+  await page.getByRole("link", { name: "My recipes" }).click();
+  await expect(page.getByRole("link", { name: /Weeknight tomato pasta/ })).toBeVisible();
   await page.waitForTimeout(1000);
 
   await page.getByRole("link", { name: /Weeknight tomato pasta/ }).click();
   await page.getByRole("button", { name: "Delete" }).click();
   await page.getByRole("alertdialog").getByRole("button", { name: "Delete" }).click();
-  await expect(page.getByRole("heading", { level: 1, name: "Your recipes" })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: "My recipes" })).toBeVisible();
 });

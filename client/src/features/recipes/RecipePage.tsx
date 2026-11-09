@@ -70,7 +70,7 @@ export function RecipePage() {
         <ul aria-label="Tags" className="mt-3 flex flex-wrap gap-2">
           {recipe.tags.map((tag) => (
             <li key={tag}>
-              <Badge>{tagLabel(tag)}</Badge>
+              <Badge variant="secondary">{tagLabel(tag)}</Badge>
             </li>
           ))}
         </ul>

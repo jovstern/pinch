@@ -87,7 +87,7 @@ test("Delete asks first, then deletes the recipe and goes back to the list", asy
   const dialog = await screen.findByRole("alertdialog", { name: "Delete this recipe?" });
   await userEvent.click(within(dialog).getByRole("button", { name: "Delete" }));
 
-  expect(await screen.findByRole("heading", { name: "Your recipes" })).toBeInTheDocument();
+  expect(await screen.findByRole("heading", { level: 1, name: "My recipes" })).toBeInTheDocument();
   expect(fetch).toHaveBeenCalledWith(`/api/recipes/${omelette.id}`, { method: "DELETE" });
 });
 
@@ -115,7 +115,7 @@ test("a failed delete keeps the question open and says so", async () => {
   await userEvent.click(within(dialog).getByRole("button", { name: "Delete" }));
 
   expect(await within(dialog).findByRole("alert")).toHaveTextContent("It couldn't be deleted.");
-  expect(screen.queryByRole("heading", { name: "Your recipes" })).not.toBeInTheDocument();
+  expect(screen.queryByRole("heading", { level: 1, name: "My recipes" })).not.toBeInTheDocument();
 });
 
 test("shows the post's picture at the top, at its size, when the recipe has one", async () => {

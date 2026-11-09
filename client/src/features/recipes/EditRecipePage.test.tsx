@@ -2,7 +2,7 @@ import type { Recipe } from "@pinch/shared";
 import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, test, vi } from "vitest";
-import { renderApp } from "../../test-utils.tsx";
+import { renderApp, stubFetch } from "../../test-utils.tsx";
 
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -94,7 +94,7 @@ test("a failed refetch keeps the form and what was typed", async () => {
     .fn()
     .mockResolvedValueOnce(Response.json(omelette))
     .mockResolvedValue(new Response(null, { status: 500 }));
-  vi.stubGlobal("fetch", fetch);
+  stubFetch(fetch);
   renderApp(`/recipes/${omelette.id}/edit`);
 
   const title = await screen.findByLabelText("Title");

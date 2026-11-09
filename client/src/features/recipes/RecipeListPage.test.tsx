@@ -23,7 +23,7 @@ const omelette: Recipe = {
 
 test("lists each recipe as a link to it, with what it needs", async () => {
   stubFetch(vi.fn().mockResolvedValue(Response.json({ items: [omelette], nextCursor: null })));
-  renderApp("/");
+  renderApp("/recipes");
 
   const link = await screen.findByRole("link", { name: /Omelette/ });
   expect(link).toHaveAttribute("href", `/recipes/${omelette.id}`);
@@ -33,7 +33,7 @@ test("lists each recipe as a link to it, with what it needs", async () => {
 test("a recipe from a post shows its picture as a tile in its card", async () => {
   const fromReel = { ...omelette, thumbnail: { width: 281, height: 500 } };
   stubFetch(vi.fn().mockResolvedValue(Response.json({ items: [fromReel], nextCursor: null })));
-  renderApp("/");
+  renderApp("/recipes");
 
   const link = await screen.findByRole("link", { name: /Omelette/ });
   expect(within(link).getByRole("presentation")).toHaveAttribute(
@@ -47,21 +47,18 @@ test("a recipe from a post shows its picture as a tile in its card", async () =>
 test("one ingredient is counted in the singular", async () => {
   const lemonade = { ...omelette, ingredients: [{ name: "lemons" }], prepMinutes: undefined };
   stubFetch(vi.fn().mockResolvedValue(Response.json({ items: [lemonade], nextCursor: null })));
-  renderApp("/");
+  renderApp("/recipes");
 
   expect(await screen.findByRole("link", { name: /Omelette/ })).toHaveTextContent(
     "1 ingredient · 5 min",
   );
 });
 
-test("with no recipes, it offers to add the first one", async () => {
+test("with no recipes, it offers to pinch the first one", async () => {
   stubFetch(vi.fn().mockResolvedValue(Response.json({ items: [], nextCursor: null })));
-  renderApp("/");
+  renderApp("/recipes");
 
-  expect(await screen.findByRole("link", { name: "Write a recipe" })).toHaveAttribute(
-    "href",
-    "/recipes/new",
-  );
+  expect(await screen.findByRole("link", { name: "Pinch a recipe" })).toHaveAttribute("href", "/");
   // Nothing to search yet.
   expect(screen.queryByRole("searchbox")).not.toBeInTheDocument();
 });
@@ -72,7 +69,7 @@ test("when loading fails, Try again loads the list again", async () => {
     .mockResolvedValueOnce(new Response(null, { status: 502 }))
     .mockResolvedValueOnce(Response.json({ items: [omelette], nextCursor: null }));
   stubFetch(fetch);
-  renderApp("/");
+  renderApp("/recipes");
 
   await userEvent.click(await screen.findByRole("button", { name: "Try again" }));
   expect(await screen.findByRole("link", { name: /Omelette/ })).toBeInTheDocument();
@@ -86,7 +83,7 @@ test("Show more adds the next page, focuses its first recipe, and disappears on 
     .mockResolvedValueOnce(Response.json({ items: [omelette], nextCursor: "next-page" }))
     .mockResolvedValueOnce(Response.json({ items: [toast], nextCursor: null }));
   stubFetch(fetch);
-  renderApp("/");
+  renderApp("/recipes");
 
   await userEvent.click(await screen.findByRole("button", { name: "Show more" }));
 
@@ -103,7 +100,7 @@ test("when the next page fails, the list stays and says so", async () => {
     .mockResolvedValueOnce(new Response(null, { status: 502 }))
     .mockResolvedValueOnce(Response.json({ items: [toast], nextCursor: null }));
   stubFetch(fetch);
-  renderApp("/");
+  renderApp("/recipes");
 
   await userEvent.click(await screen.findByRole("button", { name: "Show more" }));
   expect(await screen.findByRole("alert")).toHaveTextContent("We couldn't load more recipes.");
@@ -128,7 +125,7 @@ function stubList() {
 
 test("a search asks the API, says how many match, and leaves focus in the box", async () => {
   const fetch = stubList();
-  renderApp("/");
+  renderApp("/recipes");
 
   const search = await screen.findByRole("searchbox", { name: "Search your recipes" });
   await userEvent.type(search, " eggs {Enter}");
@@ -140,7 +137,7 @@ test("a search asks the API, says how many match, and leaves focus in the box", 
 
 test("tags in the address filter the list, open, and unticking the last one clears it", async () => {
   const fetch = stubList();
-  renderApp("/?tags=meal:breakfast");
+  renderApp("/recipes?tags=meal:breakfast");
 
   const breakfast = await screen.findByRole("checkbox", { name: "breakfast" });
   expect(breakfast).toBeChecked();
@@ -157,7 +154,7 @@ test("tags in the address filter the list, open, and unticking the last one clea
 
 test("when nothing matches, it says so and offers to clear the search and filters", async () => {
   const fetch = stubList();
-  renderApp("/?q=soup&tags=cuisine:italian");
+  renderApp("/recipes?q=soup&tags=cuisine:italian");
 
   expect(await screen.findByText("No recipes match.")).toHaveAttribute("role", "status");
   expect(screen.getByRole("searchbox")).toHaveValue("soup");
@@ -175,7 +172,7 @@ test("Show more keeps the filter when it asks for the next page", async () => {
     .mockResolvedValueOnce(Response.json({ items: [omelette], nextCursor: "next-page" }))
     .mockResolvedValueOnce(Response.json({ items: [toast], nextCursor: null }));
   stubFetch(fetch);
-  renderApp("/?tags=meal:breakfast");
+  renderApp("/recipes?tags=meal:breakfast");
 
   await userEvent.click(await screen.findByRole("button", { name: "Show more" }));
 
@@ -185,7 +182,7 @@ test("Show more keeps the filter when it asks for the next page", async () => {
 
 test("a tag in the address that isn't in the lists is left out", async () => {
   const fetch = stubList();
-  renderApp("/?tags=meal:martian,meal:breakfast");
+  renderApp("/recipes?tags=meal:martian,meal:breakfast");
 
   expect(await screen.findByText("1 recipe matches.")).toHaveAttribute("role", "status");
   expect(fetch).toHaveBeenCalledWith("/api/recipes?tags=meal%3Abreakfast");

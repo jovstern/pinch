@@ -34,5 +34,5 @@ test("paste a recipe's text, review the draft, save it with its nutrition", asyn
 
   await page.getByRole("button", { name: "Delete" }).click();
   await page.getByRole("alertdialog").getByRole("button", { name: "Delete" }).click();
-  await expect(page.getByRole("heading", { level: 1, name: "Your recipes" })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: "My recipes" })).toBeVisible();
 });
