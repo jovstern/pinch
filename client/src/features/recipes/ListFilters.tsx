@@ -1,5 +1,6 @@
 import { useId, useState } from "react";
-import { Button } from "../../components/Button.tsx";
+import { Button } from "../../components/ui/Button.tsx";
+import { Input } from "../../components/ui/Input.tsx";
 import type { RecipeFilters } from "./recipeQueries.ts";
 import { TagPicker } from "./TagPicker.tsx";
 
@@ -38,7 +39,7 @@ export function ListFilters({ filters, onChange }: ListFiltersProps) {
         <label htmlFor={searchId} className="sr-only">
           Search your recipes
         </label>
-        <input
+        <Input
           id={searchId}
           type="search"
           value={text}
@@ -46,7 +47,6 @@ export function ListFilters({ filters, onChange }: ListFiltersProps) {
             setText(event.target.value);
           }}
           placeholder="Title or ingredient"
-          className="min-h-11 w-full rounded-control border border-border-field bg-surface-raised px-3 py-2"
         />
         <Button type="submit" variant="secondary" className="shrink-0">
           Search

@@ -1,4 +1,4 @@
-import { Button } from "../../components/Button.tsx";
+import { Button } from "../../components/ui/Button.tsx";
 import { NotFoundPage } from "../../components/NotFoundPage.tsx";
 import { ApiError } from "../../lib/api.ts";
 

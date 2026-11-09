@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useId, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router";
-import { Button } from "../../components/Button.tsx";
+import { Button } from "../../components/ui/Button.tsx";
 import { RecipeLoadError } from "../recipes/RecipeLoadError.tsx";
 import { keepRangesTogether } from "../recipes/ranges.ts";
 import { recipeQuery } from "../recipes/recipeQueries.ts";
@@ -157,7 +157,6 @@ export function CookPage() {
         </Button>
         <Button
           type="button"
-          variant="primary"
           className="min-h-14 text-lg"
           onClick={() => {
             if (current < last) setIndex(current + 1);

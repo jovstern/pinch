@@ -2,7 +2,7 @@ import { dailyLimitMessage, ImportInputSchema, ImportSchema } from "@pinch/share
 import { revalidateLogic, useForm } from "@tanstack/react-form";
 import { useQueryClient } from "@tanstack/react-query";
 import { useRef, type Ref } from "react";
-import { Button } from "../../components/Button.tsx";
+import { Button } from "../../components/ui/Button.tsx";
 import { TextField } from "../../components/TextField.tsx";
 import { ApiError, sendJson } from "../../lib/api.ts";
 import { importListQuery } from "./importQueries.ts";
@@ -85,7 +85,7 @@ export function ImportForm({ inputRef }: { inputRef: Ref<HTMLTextAreaElement> })
       </form.Subscribe>
       <form.Subscribe selector={(state) => state.isSubmitting}>
         {(isSubmitting) => (
-          <Button type="submit" variant="primary" aria-disabled={isSubmitting} className="mt-3">
+          <Button type="submit" aria-disabled={isSubmitting} className="mt-3">
             {isSubmitting ? "Sending…" : "Pinch it"}
           </Button>
         )}

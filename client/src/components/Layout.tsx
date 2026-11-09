@@ -1,5 +1,5 @@
 import { Link, Outlet, useLocation, useMatch } from "react-router";
-import { Button } from "./Button.tsx";
+import { Button } from "./ui/Button.tsx";
 import { ErrorBoundary } from "./ErrorBoundary.tsx";
 
 // Every screen sits in this frame: the name (home) and New recipe (design §14).

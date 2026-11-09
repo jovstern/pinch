@@ -1,6 +1,6 @@
 import { dailyLimitMessage, ImportSchema, type Import } from "@pinch/shared";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Button } from "../../components/Button.tsx";
+import { Button } from "../../components/ui/Button.tsx";
 import { ApiError, deleteResource, sendJson } from "../../lib/api.ts";
 import { importListQuery } from "./importQueries.ts";
 
@@ -51,7 +51,7 @@ export function ImportActions({ job, focusPasteBox }: { job: Import; focusPasteB
         )}
         <Button
           type="button"
-          variant="danger-quiet"
+          variant="destructive-ghost"
           onClick={() => {
             if (!busy) dismiss.mutate();
           }}

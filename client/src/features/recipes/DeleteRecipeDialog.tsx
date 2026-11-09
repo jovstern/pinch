@@ -2,7 +2,7 @@ import type { Recipe } from "@pinch/shared";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { AlertDialog } from "radix-ui";
 import { useNavigate } from "react-router";
-import { Button } from "../../components/Button.tsx";
+import { Button } from "../../components/ui/Button.tsx";
 import { deleteResource } from "../../lib/api.ts";
 import { recipeListsKey } from "./recipeQueries.ts";
 
@@ -71,7 +71,7 @@ export function DeleteRecipeDialog({ recipe, onClose, focusOnClose }: DeleteReci
                 this one stays open until the delete is done or shows its error. */}
             <Button
               type="button"
-              variant="danger"
+              variant="destructive"
               onClick={() => {
                 deletion.mutate();
               }}

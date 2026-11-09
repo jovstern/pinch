@@ -106,7 +106,7 @@ Slices for later milestones are filled in when the milestone starts.
 
 The UI first, on the API as it is (where they disagree, the API wins for now):
 
-- [ ] R1 shadcn/ui base on Pinch's tokens: `cn`, Button, Input, Badge (D26)
+- [x] R1 shadcn/ui base on Pinch's tokens: `cn`, Button, Input, Badge (D26)
 - [ ] R2 The frame: the two tabs, the avatar, Write a recipe, breadcrumbs; `/` New recipe,
       `/recipes` My recipes (D24)
 - [ ] R3 New recipe: the one-line input that grows, the queue as cards

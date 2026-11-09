@@ -2,7 +2,7 @@ import { isTag, type Recipe } from "@pinch/shared";
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { useEffect, useRef } from "react";
 import { Link, useSearchParams } from "react-router";
-import { Button } from "../../components/Button.tsx";
+import { Button } from "../../components/ui/Button.tsx";
 import { Thumbnail } from "../../components/Thumbnail.tsx";
 import { ImportForm } from "../imports/ImportForm.tsx";
 import { ImportList } from "../imports/ImportList.tsx";

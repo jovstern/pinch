@@ -8,7 +8,7 @@ import {
 } from "@pinch/shared";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useId, useState } from "react";
-import { Button } from "../../components/Button.tsx";
+import { Button } from "../../components/ui/Button.tsx";
 import { ApiError, sendForm } from "../../lib/api.ts";
 import { importListQuery } from "./importQueries.ts";
 

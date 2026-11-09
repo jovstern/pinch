@@ -2,7 +2,7 @@ import type { Import, Platform } from "@pinch/shared";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { Link } from "react-router";
-import { Button } from "../../components/Button.tsx";
+import { Button } from "../../components/ui/Button.tsx";
 import { ImportActions } from "./ImportActions.tsx";
 import { importListQuery } from "./importQueries.ts";
 

@@ -61,6 +61,27 @@
   --text-3xl--line-height: 1.2;
 }
 
+/* shadcn/ui's names (D26), so its components (components/ui/) read Pinch's tokens. Aliases only,
+   no new colours: each follows its token in both themes, so contrast is as above. Not `accent`:
+   shadcn's is a hover fill, Pinch's the brand colour; copied components use `fill` for it. */
+@theme {
+  --color-background: var(--color-surface);
+  --color-foreground: var(--color-text);
+  --color-card: var(--color-surface-raised);
+  --color-card-foreground: var(--color-text);
+  --color-popover: var(--color-surface-raised);
+  --color-popover-foreground: var(--color-text);
+  --color-primary: var(--color-accent-strong);
+  --color-primary-foreground: var(--color-on-accent);
+  --color-secondary: var(--color-fill);
+  --color-secondary-foreground: var(--color-text);
+  --color-muted: var(--color-fill);
+  --color-muted-foreground: var(--color-text-muted);
+  --color-destructive: var(--color-danger);
+  --color-input: var(--color-border-field);
+  --color-ring: var(--color-accent-strong);
+}
+
 /* Dark follows the system, with no toggle (plan §6): the same names, other values. */
 @media (prefers-color-scheme: dark) {
   :root {
@@ -103,6 +124,6 @@ body {
 
 /* One focus ring for every link, button and field (ui-craft: every control shows focus). */
 :focus-visible {
-  outline: 2px solid var(--color-accent-strong);
+  outline: 2px solid var(--color-ring);
   outline-offset: 2px;
 }

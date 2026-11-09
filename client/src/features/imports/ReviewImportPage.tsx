@@ -1,7 +1,7 @@
 import { RecipeSchema, type Import, type RecipeInput } from "@pinch/shared";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate, useParams } from "react-router";
-import { Button } from "../../components/Button.tsx";
+import { Button } from "../../components/ui/Button.tsx";
 import { Thumbnail } from "../../components/Thumbnail.tsx";
 import { deleteResource, sendJson } from "../../lib/api.ts";
 import { LazyRecipeForm, usePreloadRecipeForm } from "../recipes/LazyRecipeForm.tsx";
@@ -117,7 +117,7 @@ export function ReviewImportPage() {
           // not disabled, so focus stays on it (as Show more).
           <Button
             type="button"
-            variant="danger-quiet"
+            variant="destructive-ghost"
             onClick={() => {
               if (!discard.isPending && !approval.isPending) discard.mutate();
             }}

@@ -1,5 +1,6 @@
 import { useId, type Ref } from "react";
 import { FieldError } from "./FieldError.tsx";
+import { Input } from "./ui/Input.tsx";
 
 // What TextField needs from a TanStack Form field, so it fits any text field of any form.
 type TextFieldApi = {
@@ -50,8 +51,6 @@ export function TextField({
     "aria-invalid": invalid,
     "aria-describedby": describedBy.length > 0 ? describedBy.join(" ") : undefined,
   };
-  const box =
-    "w-full rounded-control border border-border-field bg-surface-raised px-3 py-2 aria-invalid:border-danger";
 
   return (
     <div className={className}>
@@ -64,17 +63,15 @@ export function TextField({
         <textarea
           ref={inputRef}
           {...shared}
-          className={`field-sizing-content max-h-80 min-h-24 ${box}`}
+          className="field-sizing-content max-h-80 min-h-24 w-full rounded-control border border-input bg-card px-3 py-2 aria-invalid:border-destructive"
           onChange={(event) => {
             field.handleChange(event.target.value);
           }}
         />
       ) : (
-        <input
-          type="text"
+        <Input
           inputMode={inputMode}
           {...shared}
-          className={`min-h-11 ${box}`}
           onChange={(event) => {
             field.handleChange(event.target.value);
           }}

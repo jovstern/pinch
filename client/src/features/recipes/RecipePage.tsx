@@ -1,7 +1,8 @@
 import type { Nutrition, Recipe } from "@pinch/shared";
 import { useQuery } from "@tanstack/react-query";
 import { Link, useParams } from "react-router";
-import { Button } from "../../components/Button.tsx";
+import { Badge } from "../../components/ui/Badge.tsx";
+import { Button } from "../../components/ui/Button.tsx";
 import { Thumbnail } from "../../components/Thumbnail.tsx";
 import { ingredientLine } from "./ingredientLine.ts";
 import { keepRangesTogether } from "./ranges.ts";
@@ -68,8 +69,8 @@ export function RecipePage() {
         // No heading above it, so it's named here (screen readers, tests).
         <ul aria-label="Tags" className="mt-3 flex flex-wrap gap-2">
           {recipe.tags.map((tag) => (
-            <li key={tag} className="rounded-full bg-fill px-3 py-1 text-sm">
-              {tagLabel(tag)}
+            <li key={tag}>
+              <Badge variant="secondary">{tagLabel(tag)}</Badge>
             </li>
           ))}
         </ul>
@@ -77,7 +78,7 @@ export function RecipePage() {
 
       {/* Cook is the page's one main action (docs/ux/plan.md U2). */}
       <div className="mt-4 flex flex-wrap gap-3">
-        <Button asChild variant="primary">
+        <Button asChild>
           <Link to={`/recipes/${recipe.id}/cook`}>Cook</Link>
         </Button>
         <Button asChild variant="secondary">

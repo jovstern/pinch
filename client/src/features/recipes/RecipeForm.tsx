@@ -2,7 +2,7 @@ import { fieldErrors, RecipeInputSchema, type RecipeInput } from "@pinch/shared"
 import { revalidateLogic, useForm } from "@tanstack/react-form";
 import { useRef, type ReactNode } from "react";
 import { Link } from "react-router";
-import { Button } from "../../components/Button.tsx";
+import { Button } from "../../components/ui/Button.tsx";
 import { FieldError } from "../../components/FieldError.tsx";
 import { TextField } from "../../components/TextField.tsx";
 import { ApiError } from "../../lib/api.ts";
@@ -226,7 +226,7 @@ export function RecipeForm({
       <div className="flex flex-wrap gap-3">
         <form.Subscribe selector={(state) => state.isSubmitting}>
           {(isSubmitting) => (
-            <Button type="submit" variant="primary" disabled={isSubmitting}>
+            <Button type="submit" disabled={isSubmitting}>
               {isSubmitting ? "Saving…" : submitLabel}
             </Button>
           )}

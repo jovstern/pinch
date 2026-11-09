@@ -1,4 +1,4 @@
-import { Button } from "../../components/Button.tsx";
+import { Button } from "../../components/ui/Button.tsx";
 import type { Timer } from "./useTimers.ts";
 
 type TimerBarProps = {

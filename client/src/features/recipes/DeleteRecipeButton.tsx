@@ -1,6 +1,6 @@
 import type { Recipe } from "@pinch/shared";
 import { lazy, Suspense, useRef, useState } from "react";
-import { Button } from "../../components/Button.tsx";
+import { Button } from "../../components/ui/Button.tsx";
 
 // The dialog (Radix, ~14 kB) is its own chunk, fetched only when Delete is about to be pressed
 // (pointer over it, or focus on it) or is pressed: in a recipe's first load it put the page over
@@ -22,7 +22,7 @@ export function DeleteRecipeButton({ recipe }: { recipe: Recipe }) {
       <Button
         ref={buttonRef}
         type="button"
-        variant="danger-quiet"
+        variant="destructive-ghost"
         aria-haspopup="dialog"
         // While its dialog is on its way (a slow link): the button says it's working. Once the
         // dialog is open it covers the button anyway.
