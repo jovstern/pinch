@@ -96,14 +96,16 @@ Mongo is the only shared state. There is no Redis, no queue service and no objec
    daily cap, creates an import with
    `status: "pending"` and answers **202** with the import.
 2. The worker **claims** the job, then:
-   - **Every link** → read the post's info with `yt-dlp` (no download): its length, checked
-     against the limit, and its **caption**, which often holds the full recipe with
-     quantities (D15).
-   - **YouTube** → send the URL to Gemini directly (Gemini can watch public YouTube videos).
-   - **Instagram / Facebook** → download to a temp folder, upload to the **Gemini Files API**.
-     One `yt-dlp` call reads the info and downloads (at most 100 MB; past it, "too big", not
-     retried). Instagram doesn't report a length, so for it the length is checked after the
-     download with `ffprobe` (the spike found reels of 3–11 MB).
+   - **Every link** → read the post's info with `yt-dlp`: its length, checked against the
+     limit, and its **caption**, which often holds the full recipe with quantities (D15).
+   - **YouTube** → no download: send the URL to Gemini directly (Gemini can watch public
+     YouTube videos).
+   - **Instagram / Facebook** → one `yt-dlp` call reads the info and downloads to a temp
+     folder (100 MB at most, when the platform says the size); upload to the **Gemini Files
+     API**. Instagram doesn't report a length, so for it the length is checked after the
+     download with `ffprobe` (the spike found reels of 3–11 MB); a long Facebook video is
+     downloaded before it's turned down. A post with no video (a photo post) is read from its
+     caption alone.
    - **Text / screenshots** (fallback) → send them to Gemini as they are: no `yt-dlp`, no
      video. Pasted text is the post's text, so it's fenced as data like a caption (§9).
 3. Gemini gets the video and the caption together and returns JSON that matches our recipe
@@ -394,8 +396,9 @@ changes**. The planned design:
   from the fixed lists only, and a nutrition estimate per serving. If the video isn't a recipe,
   the model says so and the import fails with "This doesn't look like a recipe".
 - The recipe is written **in the language of the post**; tags stay English codes (D16).
-- Every call has a **timeout** inside the attempt's deadline (§4.3), and no retries of its own
-  (the SDK only retries when asked): the worker's retries are the only ones.
+- Every call has a **timeout** (the client's: 120 s a request), and the attempt's deadline
+  (§4.3) cuts the whole attempt. No retries of its own (the SDK only retries when asked), except
+  an upload's chunks, which the SDK tries up to 3 times: the worker's retries are the others.
 - The worker uses the fake extractor of M4 instead when `EXTRACTOR=fake`: e2e runs that way,
   so no test calls Gemini.
 - The output is validated with Zod anyway; invalid output counts as a failed attempt. The

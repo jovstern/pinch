@@ -3,7 +3,6 @@ import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { promisify } from "node:util";
 import { z } from "zod";
-import { NoRetryError } from "./workLoop.ts";
 
 const run = promisify(execFile);
 
@@ -27,10 +26,20 @@ const YtDlpInfoSchema = z.object({
 export async function readVideoInfo(url: string, signal: AbortSignal): Promise<VideoInfo> {
   const { stdout } = await run(
     "yt-dlp",
-    // --no-playlist: the video in the link, not the playlist it may also name. --playlist-items 1:
-    // a link to a playlist or channel reads its first video, not all of them. "--": the link is
-    // never read as an option.
-    ["--no-warnings", "--no-playlist", "--playlist-items", "1", "--dump-json", "--", url],
+    // --ignore-config: no config file on the machine changes what it does. --no-playlist: the
+    // video in the link, not the playlist it may also name. --playlist-items 1: a link to a
+    // playlist or channel reads its first video, not all of them. "--": the link is never read
+    // as an option.
+    [
+      "--no-warnings",
+      "--ignore-config",
+      "--no-playlist",
+      "--playlist-items",
+      "1",
+      "--dump-json",
+      "--",
+      url,
+    ],
     { signal, timeout: YTDLP_TIMEOUT_MS, maxBuffer: YTDLP_MAX_OUTPUT },
   );
   return parseVideoInfo(stdout);
@@ -45,45 +54,52 @@ export function parseVideoInfo(json: string): VideoInfo {
 // took a few seconds each.
 const DOWNLOAD_TIMEOUT_MS = 60_000;
 
-// Reels are small (the spike's were 3–11 MB): a bigger file isn't a short recipe video.
+// Reels are small (the spike's were 3–11 MB): a bigger file isn't a short recipe video. Only
+// checked when the platform says the size; otherwise the download's timeout bounds it.
 const MAX_DOWNLOAD = "100M";
 
-export const TOO_BIG = "This video is too big. Pinch reads short ones.";
+// ffprobe reads a local file: quick.
+const FFPROBE_TIMEOUT_MS = 10_000;
 
 // Downloads an Instagram or Facebook post's video into `dir` and reads its info in the same
-// call (§4.1): one request to the platform, not two. Returns where the .mp4 is; the caller
-// deletes the folder.
+// call (§4.1): one request to the platform, not two. The caller deletes the folder. The path
+// is missing when there's no video to have: a photo post (--ignore-no-formats-error prints its
+// info anyway), or one over the size limit (skipped, and still a success).
 export async function downloadVideo(
   url: string,
   dir: string,
   signal: AbortSignal,
-): Promise<VideoInfo & { path: string }> {
+): Promise<VideoInfo & { path?: string }> {
   const { stdout } = await run(
     "yt-dlp",
-    // As readVideoInfo, plus: --no-simulate downloads even though the info is printed;
-    // --remux-video mp4 makes it an .mp4 without re-encoding, as video.mp4.
+    // As readVideoInfo, plus: --no-simulate downloads although the info is printed;
+    // --ignore-config, so no config file changes where it goes or what; -P is the folder and
+    // -o the name, kept apart so the folder's path is never read as a template;
+    // --remux-video mp4 makes it an .mp4 without re-encoding.
     [
       "--no-warnings",
+      "--ignore-config",
       "--no-playlist",
       "--playlist-items",
       "1",
       "--dump-json",
       "--no-simulate",
+      "--ignore-no-formats-error",
       "--max-filesize",
       MAX_DOWNLOAD,
       "--remux-video",
       "mp4",
+      "-P",
+      dir,
       "-o",
-      join(dir, "video.%(ext)s"),
+      "video.%(ext)s",
       "--",
       url,
     ],
     { signal, timeout: DOWNLOAD_TIMEOUT_MS, maxBuffer: YTDLP_MAX_OUTPUT },
   );
   const path = join(dir, "video.mp4");
-  // Past --max-filesize, yt-dlp skips the download and still succeeds: no file.
-  if (!existsSync(path)) throw new NoRetryError(TOO_BIG);
-  return { ...parseVideoInfo(stdout), path };
+  return { ...parseVideoInfo(stdout), path: existsSync(path) ? path : undefined };
 }
 
 // The length of a downloaded video, with ffprobe: Instagram doesn't say it before (§4.1).
@@ -91,9 +107,10 @@ export async function measureSeconds(path: string, signal: AbortSignal): Promise
   const { stdout } = await run(
     "ffprobe",
     ["-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", path],
-    { signal, timeout: YTDLP_TIMEOUT_MS },
+    { signal, timeout: FFPROBE_TIMEOUT_MS },
   );
   const seconds = Number(stdout.trim());
-  if (!Number.isFinite(seconds)) throw new Error(`ffprobe gave no length: "${stdout.trim()}"`);
+  // Not "": Number("") is 0, which would pass any length check.
+  if (!(seconds > 0)) throw new Error(`ffprobe gave no length: "${stdout.trim()}"`);
   return seconds;
 }

@@ -149,28 +149,29 @@ const reel: ImportDocument["input"] = {
   platform: "instagram",
 };
 
-// yt-dlp downloads a reel into the folder it's given; Instagram says no length. Returns the
-// folder, to check it's deleted.
-function downloadsReel() {
+// yt-dlp downloads a reel into the folder it's given, with the length the platform says (none
+// for Instagram). Returns the folder, to check it's deleted.
+function downloadsReel(seconds?: number) {
   const folder = { path: "" };
   vi.mocked(downloadVideo).mockImplementation((_url, dir) => {
     folder.path = dir;
     writeFileSync(join(dir, "video.mp4"), "a video");
-    return Promise.resolve({ caption: "2 eggs", path: join(dir, "video.mp4") });
+    return Promise.resolve({ seconds, caption: "2 eggs", path: join(dir, "video.mp4") });
   });
   return folder;
 }
 
-// The Files API takes the video and has it ready at once.
-function filesApi() {
-  const upload = vi.spyOn(ai.files, "upload").mockResolvedValue({
+// The Files API takes the video, in this state at first (ready at once, unless said).
+function filesApi(state = FileState.ACTIVE) {
+  const file = {
     name: "files/reel",
     uri: "https://gemini/files/reel",
     mimeType: "video/mp4",
-    state: FileState.ACTIVE,
-  });
+  };
+  const upload = vi.spyOn(ai.files, "upload").mockResolvedValue({ ...file, state });
+  const get = vi.spyOn(ai.files, "get").mockResolvedValue({ ...file, state: FileState.ACTIVE });
   const remove = vi.spyOn(ai.files, "delete").mockResolvedValue({});
-  return { upload, remove };
+  return { upload, get, remove };
 }
 
 test("an Instagram reel is downloaded, measured, uploaded and asked about; then both copies are deleted", async () => {
@@ -193,6 +194,36 @@ test("an Instagram reel is downloaded, measured, uploaded and asked about; then 
   expect(existsSync(folder.path)).toBe(false);
 });
 
+test("a Facebook reel's length is the one Facebook gives: nothing to measure", async () => {
+  downloadsReel(40);
+  filesApi();
+  vi.spyOn(ai.models, "generateContent").mockResolvedValue(answer(JSON.stringify(recipe)));
+
+  await extract({ ...reel, platform: "facebook" }, noDeadline, noStep);
+
+  expect(measureSeconds).not.toHaveBeenCalled();
+});
+
+test("a video Gemini is still processing is asked about once it's ready", async () => {
+  downloadsReel(30);
+  const { get } = filesApi(FileState.PROCESSING);
+  vi.spyOn(ai.models, "generateContent").mockResolvedValue(answer(JSON.stringify(recipe)));
+
+  // Checked again after 2 s: the test waits that long.
+  expect(await extract(reel, noDeadline, noStep)).toEqual(recipe);
+
+  expect(get).toHaveBeenCalledWith(expect.objectContaining({ name: "files/reel" }));
+});
+
+test("a video Gemini can't read is a failed attempt, and the upload is still deleted", async () => {
+  downloadsReel(30);
+  const { remove } = filesApi(FileState.FAILED);
+
+  await expect(extract(reel, noDeadline, noStep)).rejects.toThrow("Gemini couldn't read");
+
+  expect(remove).toHaveBeenCalledWith({ name: "files/reel" });
+});
+
 test("a reel over 3 minutes, measured once it's here, isn't uploaded, and isn't tried again", async () => {
   const folder = downloadsReel();
   vi.mocked(measureSeconds).mockResolvedValue(200);
@@ -204,9 +235,23 @@ test("a reel over 3 minutes, measured once it's here, isn't uploaded, and isn't 
   expect(existsSync(folder.path)).toBe(false);
 });
 
+test("a post with no video (a photo post) is read from its caption alone", async () => {
+  vi.mocked(downloadVideo).mockResolvedValue({ caption: "Shakshuka: 4 eggs" });
+  const { upload } = filesApi();
+  const generate = vi
+    .spyOn(ai.models, "generateContent")
+    .mockResolvedValue(answer(JSON.stringify(recipe)));
+
+  expect(await extract(reel, noDeadline, noStep)).toEqual(recipe);
+
+  expect(upload).not.toHaveBeenCalled();
+  expect(generate.mock.calls[0]?.[0].contents).toEqual([
+    expect.stringContaining("<post-text>\nShakshuka: 4 eggs\n</post-text>"),
+  ]);
+});
+
 test("the uploaded video is deleted even when Gemini fails", async () => {
-  downloadsReel();
-  vi.mocked(measureSeconds).mockResolvedValue(30);
+  downloadsReel(30);
   const { remove } = filesApi();
   vi.spyOn(ai.models, "generateContent").mockRejectedValue(new Error("Gemini is down."));
 

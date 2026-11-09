@@ -1,5 +1,5 @@
-import { FileState, GoogleGenAI, type PartUnion } from "@google/genai";
-import { RecipeDraftSchema } from "@pinch/shared";
+import { FileState, GoogleGenAI, type File, type PartUnion } from "@google/genai";
+import { RecipeDraftSchema, type ImportStep } from "@pinch/shared";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -11,10 +11,10 @@ import { NoRetryError, type Extract } from "./workLoop.ts";
 // The current Gemini Flash model, the one the spike was run with (design §9, M0).
 export const GEMINI_MODEL = "gemini-3.5-flash";
 
-// Each call has its own timeout inside the attempt's deadline (§4.3): in the spike one call hung
-// for 27 minutes. The attempt's 150 s deadline bounds the whole of it, download and upload
-// included. The SDK doesn't retry unless asked, so a call is one request, and the worker's retries
-// are the only ones.
+// Each call has its own timeout, to catch a hang (in the spike one call hung for 27 minutes).
+// On the Instagram path they add up to more than the attempt's 150 s: the deadline is what
+// cuts an attempt (§4.3). The SDK doesn't retry a call unless asked, so the worker's retries
+// are the only ones; the exception is an upload, whose chunks the SDK tries up to 3 times.
 const GEMINI_TIMEOUT_MS = 120_000;
 
 // Longer videos cost more and are rarely one recipe (design §1).
@@ -69,51 +69,58 @@ export function geminiExtract(ai: GoogleGenAI): Extract {
 }
 
 // Instagram and Facebook: Gemini can't open their links, so the video is downloaded, uploaded to
-// the Gemini Files API and asked about there (§4.1). Media lives only for this attempt: the
-// folder and the uploaded file are deleted in finally, whatever happened.
+// the Gemini Files API and asked about there (§4.1). A post with no video to have (a photo
+// post, or a video too big to fetch) is read from its caption alone. Media lives only for this
+// attempt: the uploaded file and the folder are deleted in finally, whatever happened.
 async function fromDownload(
   ai: GoogleGenAI,
   url: string,
   signal: AbortSignal,
-  setStep: Parameters<Extract>[2],
+  setStep: (step: ImportStep) => Promise<void>,
 ) {
   const dir = await mkdtemp(join(tmpdir(), "pinch-"));
   let uploaded: string | undefined;
   try {
     const { seconds: told, caption, path } = await downloadVideo(url, dir, signal);
-    // Instagram doesn't say a post's length: it's measured once the video is here.
+    if (!path) {
+      await setStep("analyzing");
+      return await askGemini(ai, [postText(caption)], signal);
+    }
+    // Instagram doesn't say a post's length: it's measured once the video is here. (Facebook
+    // does, but the one call has downloaded a long one by then: 100 MB at most.)
     const seconds = told ?? (await measureSeconds(path, signal));
     if (seconds > MAX_VIDEO_SECONDS) throw new NoRetryError(TOO_LONG);
     await setStep("analyzing");
-    const file = await uploadVideo(ai, path, signal);
+    // The SDK passes no signal to an upload: the client's timeout (worker.ts) bounds each
+    // request of it. Its name is kept at once, so finally deletes it even if the wait fails.
+    const file = await ai.files.upload({ file: path, config: { mimeType: "video/mp4" } });
     uploaded = file.name;
+    const ready = await waitUntilActive(ai, file, signal);
     return await askGemini(
       ai,
-      [{ fileData: { fileUri: file.uri, mimeType: file.mimeType } }, postText(caption)],
+      [{ fileData: { fileUri: ready.uri, mimeType: ready.mimeType } }, postText(caption)],
       signal,
     );
   } finally {
-    await rm(dir, { recursive: true, force: true });
-    // A failed delete mustn't hide what happened; Gemini deletes files after 48 h anyway.
+    // Not logged: Extract has no logger, a failed delete mustn't hide what happened, and
+    // Gemini deletes files after 48 h anyway. Before rm, which then can't skip it.
     if (uploaded) await ai.files.delete({ name: uploaded }).catch(() => undefined);
+    await rm(dir, { recursive: true, force: true });
   }
 }
 
-// Uploads the video and waits while Gemini processes it (a few seconds for a reel): it can only
-// be asked about once it's ACTIVE.
-async function uploadVideo(ai: GoogleGenAI, path: string, signal: AbortSignal) {
-  let file = await ai.files.upload({
-    file: path,
-    config: { mimeType: "video/mp4", abortSignal: signal },
-  });
+// Gemini processes an uploaded video (a few seconds for a reel): it can be asked about only
+// once it's ACTIVE. Checked every 2 s until then, or until the attempt's deadline.
+async function waitUntilActive(ai: GoogleGenAI, uploaded: File, signal: AbortSignal) {
+  let file = uploaded;
   while (file.state === FileState.PROCESSING && file.name) {
     await setTimeout(2000, undefined, { signal });
     file = await ai.files.get({ name: file.name, config: { abortSignal: signal } });
   }
-  if (file.state !== FileState.ACTIVE || !file.name || !file.uri || !file.mimeType) {
+  if (file.state !== FileState.ACTIVE || !file.uri || !file.mimeType) {
     throw new Error(`Gemini couldn't read the video: ${file.state ?? "no state"}`);
   }
-  return { name: file.name, uri: file.uri, mimeType: file.mimeType };
+  return { uri: file.uri, mimeType: file.mimeType };
 }
 
 // A stranger's text: fenced, and apart from the instructions, which are in systemInstruction:
