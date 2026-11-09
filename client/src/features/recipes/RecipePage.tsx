@@ -33,12 +33,13 @@ export function RecipePage() {
   return (
     <article>
       <title>{`${recipe.title} · Pinch`}</title>
-      {/* At the top, at its own shape, no taller than a third of a phone's screen. */}
+      {/* At the top, at its own shape. */}
       {recipe.thumbnail && (
         <Thumbnail
           src={`/api/recipes/${recipe.id}/thumbnail`}
           size={recipe.thumbnail}
-          className="mb-4 h-auto max-h-64 w-auto"
+          shape="full"
+          className="mb-4"
         />
       )}
       <h1 className="text-3xl font-bold tracking-tight text-balance">{recipe.title}</h1>

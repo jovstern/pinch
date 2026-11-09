@@ -82,7 +82,8 @@ export function ReviewImportPage() {
         <Thumbnail
           src={`/api/imports/${job.id}/thumbnail`}
           size={job.thumbnail}
-          className="mb-4 h-auto max-h-64 w-auto"
+          shape="full"
+          className="mb-4"
         />
       )}
       <h1 className="text-3xl font-bold tracking-tight text-balance">Review the recipe</h1>

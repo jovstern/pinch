@@ -173,8 +173,7 @@ export function RecipeListPage() {
                   <Thumbnail
                     src={`/api/recipes/${recipe.id}/thumbnail`}
                     size={recipe.thumbnail}
-                    loading="lazy"
-                    className="h-20 w-16 shrink-0"
+                    shape="tile"
                   />
                 )}
                 <div className="min-w-0">

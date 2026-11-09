@@ -121,8 +121,8 @@ test("shows the post's picture at the top, at its size, when the recipe has one"
   renderApp(`/recipes/${omelette.id}`);
 
   await screen.findByRole("heading", { level: 1, name: "Omelette" });
-  // Decorative (alt=""): no role to find it by.
-  const picture = document.querySelector("img");
+  // Decorative (alt=""), so a presentation, not an image.
+  const picture = screen.getByRole("presentation");
   expect(picture).toHaveAttribute("src", `/api/recipes/${omelette.id}/thumbnail`);
   expect(picture).toHaveAttribute("width", "281");
   expect(picture).toHaveAttribute("height", "500");
@@ -133,5 +133,5 @@ test("a recipe with no picture shows none", async () => {
   renderApp(`/recipes/${omelette.id}`);
 
   await screen.findByRole("heading", { level: 1, name: "Omelette" });
-  expect(document.querySelector("img")).toBeNull();
+  expect(screen.queryByRole("presentation")).not.toBeInTheDocument();
 });
