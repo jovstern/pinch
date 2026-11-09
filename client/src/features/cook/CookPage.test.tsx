@@ -110,9 +110,11 @@ test("shows the step's ingredients, ticked off in both lists at once", async () 
   ).toEqual(["2 eggs"]);
   await userEvent.click(within(forStep).getByRole("checkbox", { name: "2 eggs" }));
 
-  const all = screen.getByRole("list", { name: "All ingredients" });
+  const all = screen.getByRole("list", { name: "All ingredients (2)" });
   expect(within(all).getByRole("checkbox", { name: "2 eggs" })).toBeChecked();
   expect(within(all).getByRole("checkbox", { name: "1 tbsp butter" })).not.toBeChecked();
+  await userEvent.click(within(all).getByRole("checkbox", { name: "2 eggs" }));
+  expect(within(forStep).getByRole("checkbox", { name: "2 eggs" })).not.toBeChecked();
 
   await userEvent.click(screen.getByRole("button", { name: "Next" }));
   expect(

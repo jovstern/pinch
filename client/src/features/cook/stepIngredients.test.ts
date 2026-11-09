@@ -7,18 +7,27 @@ const ingredients: Ingredient[] = [
   { name: "olive oil", quantity: "2", unit: "tbsp" },
   { name: "garlic", quantity: "2", unit: "cloves" },
   { name: "קמח", quantity: "320", unit: "גרם" },
+  { name: "שמן זית", quantity: "2", unit: "כפות" },
+  { name: "egg" },
 ];
 
 test("finds an ingredient a step names, in any case, and not inside another word (oil in boil)", () => {
   expect(stepIngredients("Boil the spaghetti in salted water.", ingredients)).toEqual([0]);
 });
 
-test("finds an ingredient by its last word", () => {
+test("finds an ingredient by its noun: the last word in English, the first in Hebrew", () => {
   expect(stepIngredients("Warm the oil, then fry the garlic.", ingredients)).toEqual([1, 2]);
+  expect(stepIngredients("מחממים את השמן במחבת.", ingredients)).toEqual([4]);
 });
 
-test("finds a Hebrew ingredient with a prefix attached", () => {
+test("finds a Hebrew ingredient with one or two prefix letters attached", () => {
   expect(stepIngredients("מנפים את הקמח לקערה.", ingredients)).toEqual([3]);
+  expect(stepIngredients("מוסיפים מים והקמח.", ingredients)).toEqual([3]);
+});
+
+test("finds a word that goes on: eggs, and eggplant too (a guess, not a parse)", () => {
+  expect(stepIngredients("Beat the eggs.", ingredients)).toEqual([5]);
+  expect(stepIngredients("Slice the eggplant.", ingredients)).toEqual([5]);
 });
 
 test("finds none in a step that names none", () => {

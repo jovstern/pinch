@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { useState } from "react";
+import { useId, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router";
 import { Button } from "../../components/Button.tsx";
 import { RecipeLoadError } from "../recipes/RecipeLoadError.tsx";
@@ -25,6 +25,8 @@ export function CookPage() {
   // The ingredients ticked off, by their place in the list: the same ticks in the step's list
   // and the full one. Kept while the page is open, not saved.
   const [ticked, setTicked] = useState<number[]>([]);
+  const forThisStepId = useId();
+  const allId = useId();
   const wakeLock = useWakeLock();
   const navigate = useNavigate();
 
@@ -41,11 +43,10 @@ export function CookPage() {
   const forThisStep = stepIngredients(step, recipe.ingredients);
   const all = recipe.ingredients.map((_, position) => position);
 
-  function toggle(position: number) {
+  // As TagPicker's toggle: in the order ticked.
+  function toggle(position: number, on: boolean) {
     setTicked((before) =>
-      before.includes(position)
-        ? before.filter((other) => other !== position)
-        : [...before, position],
+      on ? [...before, position] : before.filter((other) => other !== position),
     );
   }
 
@@ -81,9 +82,12 @@ export function CookPage() {
       {/* Outside the status: ticking one isn't a new step to announce. */}
       {forThisStep.length > 0 && (
         <div className="mt-6">
-          <h2 className="font-sans text-sm font-semibold text-text-muted">For this step</h2>
+          {/* A label like "Step 2 of 6" above, not a section title. */}
+          <p id={forThisStepId} className="text-sm font-semibold text-text-muted">
+            For this step
+          </p>
           <IngredientChecklist
-            label="For this step"
+            labelledBy={forThisStepId}
             ingredients={recipe.ingredients}
             shown={forThisStep}
             ticked={ticked}
@@ -122,11 +126,11 @@ export function CookPage() {
 
       {/* Folded: the step is what matters at the stove; the whole list is one tap away. */}
       <details className="mt-8">
-        <summary className="cursor-pointer py-2.5 font-semibold">
+        <summary id={allId} className="cursor-pointer py-2.5 font-semibold">
           All ingredients ({recipe.ingredients.length})
         </summary>
         <IngredientChecklist
-          label="All ingredients"
+          labelledBy={allId}
           ingredients={recipe.ingredients}
           shown={all}
           ticked={ticked}
