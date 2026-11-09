@@ -105,7 +105,10 @@ export function RecipeListPage() {
           {/* Placeholders the size of the cards, so nothing jumps when they arrive. */}
           <ul aria-hidden="true" className="mt-6 grid gap-3">
             {[1, 2, 3].map((n) => (
-              <li key={n} className="h-20 rounded-xl bg-border/60 motion-safe:animate-pulse" />
+              <li
+                key={n}
+                className="h-20 rounded-card bg-surface-sunken motion-safe:animate-pulse"
+              />
             ))}
           </ul>
         </>
@@ -165,7 +168,7 @@ export function RecipeListPage() {
             <li key={recipe.id}>
               <Link
                 to={`/recipes/${recipe.id}`}
-                className="block rounded-xl border border-border bg-surface-raised p-4 hover:border-accent"
+                className="block rounded-card border border-border bg-surface-raised p-4 hover:border-accent"
               >
                 <h2 className="text-lg font-semibold">{recipe.title}</h2>
                 <p className="mt-1 text-sm text-text-muted">{summary(recipe)}</p>

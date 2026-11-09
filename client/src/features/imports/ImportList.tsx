@@ -51,7 +51,7 @@ export function ImportList({ focusPasteBox }: { focusPasteBox: () => void }) {
               // min-w-0: a grid item is as wide as its content, and the link is one long line.
               <li
                 key={job.id}
-                className="min-w-0 rounded-lg border border-dashed border-border p-3"
+                className="min-w-0 rounded-card border border-dashed border-border p-3"
               >
                 {/* Names the item's buttons and link too (aria-describedby), so a screen
                     reader's list of them says which import each is for. */}

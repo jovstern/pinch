@@ -214,7 +214,11 @@ display font is the one new download and must fit the 165 kB SPA budget with the
 (`docs/metrics/m04.md`); if it doesn't, ship it only on the recipe and cook routes.
 
 **Shape.** Cards 16 px radius, controls 12 px, chips full; one soft shadow token for sheets
-and the toast only; borders only where two raised surfaces meet.
+and the toast only; borders only where two raised surfaces meet. Built (U4 PR 2): fields keep a
+border, `--color-border-field`, at 3:1 against the page (WCAG 1.4.11: an empty field must be
+seen); secondary buttons and chips at rest are `surface-sunken` fills; the recipe cards keep
+their line until U5 gives them a face; imports stay dashed (a sunken row would hide its
+sunken button).
 
 **Imagery.** Thumbnails (M6, §5) shown **4:5 portrait**, the reel's own shape, on cards and at
 the top of a recipe; a text or manual recipe gets a tinted tile (`--color-accent-soft` and

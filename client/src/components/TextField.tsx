@@ -51,7 +51,7 @@ export function TextField({
     "aria-describedby": describedBy.length > 0 ? describedBy.join(" ") : undefined,
   };
   const box =
-    "w-full rounded-lg border border-border bg-surface-raised px-3 py-2 aria-invalid:border-danger";
+    "w-full rounded-control border border-border-field bg-surface-raised px-3 py-2 aria-invalid:border-danger";
 
   return (
     <div className={className}>

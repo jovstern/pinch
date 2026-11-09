@@ -50,7 +50,7 @@ export function RecipePage() {
         // No heading above it, so it's named here (screen readers, tests).
         <ul aria-label="Tags" className="mt-3 flex flex-wrap gap-2">
           {recipe.tags.map((tag) => (
-            <li key={tag} className="rounded-full bg-border/60 px-3 py-1 text-sm">
+            <li key={tag} className="rounded-full bg-surface-sunken px-3 py-1 text-sm">
               {tagLabel(tag)}
             </li>
           ))}

@@ -18,6 +18,8 @@
   --color-surface-raised: #ffffff;
   --color-surface-sunken: #f3ede2;
   --color-border: #e6ded1;
+  /* A field's edge: 3:1 against the page, so an empty field can be seen (WCAG 1.4.11). */
+  --color-border-field: #968979;
   --color-text: #221a12;
   --color-text-muted: #6e6257;
   /* The accent for large text (the name); the strong one where it must pass AA at body size:
@@ -37,6 +39,12 @@
 
   --font-display: "Fraunces", Georgia, serif;
 
+  /* Shape (plan §6): cards and sheets round, controls less so, chips full (rounded-full). One
+     soft shadow, for what floats over the page (the dialog). */
+  --radius-card: 1rem;
+  --radius-control: 0.75rem;
+  --shadow-sheet: 0 8px 32px rgb(15 12 9 / 0.24);
+
   /* The type scale, 1.25 from 16 px (plan §6): Tailwind's own sizes up to xl, then 25 and 31. */
   --text-2xl: 1.5625rem;
   --text-2xl--line-height: 1.25;
@@ -51,6 +59,7 @@
     --color-surface-raised: #221c16;
     --color-surface-sunken: #0f0c09;
     --color-border: #3a3029;
+    --color-border-field: #76695d;
     --color-text: #f3ede4;
     --color-text-muted: #a89c8f;
     --color-accent: #f0693a;

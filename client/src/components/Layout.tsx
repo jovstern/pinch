@@ -15,7 +15,20 @@ export function Layout() {
     <>
       <header className="border-b border-border">
         <div className="mx-auto flex max-w-3xl items-center justify-between gap-4 px-4 py-3 sm:px-6">
-          <Link to="/" className="font-display text-2xl font-bold tracking-tight text-accent">
+          <Link
+            to="/"
+            className="inline-flex items-center gap-1.5 font-display text-2xl font-bold tracking-tight text-accent"
+          >
+            {/* The mark: two fingertips pinching, as on the favicon (plan §6). */}
+            <svg aria-hidden="true" viewBox="8 5 16 22" className="h-7 w-5">
+              <path
+                d="M11 25C11 17 13 11 15.5 7M21 25C21 17 19 11 16.5 7"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="3"
+                strokeLinecap="round"
+              />
+            </svg>
             Pinch
           </Link>
           {/* Secondary: each screen's main action is on the page (on /, pasting a link). */}

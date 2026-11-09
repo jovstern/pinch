@@ -48,7 +48,7 @@ export function TagPicker({
                 // relative keeps the hidden checkbox inside its chip, so focusing it scrolls there.
                 <label
                   key={tag}
-                  className="group relative inline-flex min-h-11 cursor-pointer items-center rounded-full border border-border bg-surface-raised px-4 text-sm hover:border-accent has-checked:border-accent-strong has-checked:bg-accent-strong has-checked:text-on-accent has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-focus-visible:outline-text"
+                  className="group relative inline-flex min-h-11 cursor-pointer items-center rounded-full bg-surface-sunken px-4 text-sm hover:bg-border has-checked:bg-accent-strong has-checked:text-on-accent has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-focus-visible:outline-text"
                 >
                   <input
                     type="checkbox"
