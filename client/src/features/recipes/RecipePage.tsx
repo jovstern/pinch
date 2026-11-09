@@ -4,7 +4,7 @@ import { Link, useParams } from "react-router";
 import { Button } from "../../components/Button.tsx";
 import { Thumbnail } from "../../components/Thumbnail.tsx";
 import { ingredientLine } from "./ingredientLine.ts";
-import { stepText } from "./stepText.ts";
+import { keepRangesTogether } from "./ranges.ts";
 import { DeleteRecipeButton } from "./DeleteRecipeButton.tsx";
 import { RecipeLoadError } from "./RecipeLoadError.tsx";
 import { recipeQuery } from "./recipeQueries.ts";
@@ -46,7 +46,11 @@ export function RecipePage() {
       <h1 dir="auto" className="text-3xl font-bold tracking-tight text-balance">
         {recipe.title}
       </h1>
-      {recipe.description && <p className="mt-3 max-w-prose text-pretty">{recipe.description}</p>}
+      {recipe.description && (
+        <p dir="auto" className="mt-3 max-w-prose text-pretty">
+          {recipe.description}
+        </p>
+      )}
       {/* One block, so the nutrition sits close under the details, or alone in their place. */}
       {(recipeDetails || recipe.nutritionPerServing) && (
         <div className="mt-3 grid gap-1 text-sm text-text-muted">
@@ -91,7 +95,7 @@ export function RecipePage() {
       <h2 id="ingredients" className="mt-8 text-xl font-semibold">
         Ingredients
       </h2>
-      <ul aria-labelledby="ingredients" className="mt-3 grid gap-2">
+      <ul aria-labelledby="ingredients" dir="auto" className="mt-3 grid gap-2">
         {recipe.ingredients.map((ingredient, index) => (
           // Ingredients have no id; their order is their identity within the recipe.
           <li key={index}>
@@ -109,11 +113,11 @@ export function RecipePage() {
       <ol
         aria-labelledby="steps"
         dir="auto"
-        className="mt-3 grid max-w-prose list-decimal gap-3 ps-6"
+        className="mt-3 grid max-w-prose list-decimal gap-3 ps-6 rtl:ml-auto"
       >
         {recipe.steps.map((step, index) => (
           <li key={index} className="ps-1 text-pretty">
-            {stepText(step)}
+            {keepRangesTogether(step)}
           </li>
         ))}
       </ol>

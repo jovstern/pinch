@@ -23,13 +23,13 @@ export function TimerBar({ timers, now, onStop }: TimerBarProps) {
           <li key={timer.id} className="flex items-center justify-between gap-3">
             {left > 0 ? (
               <p className="tabular-nums">
-                <span dir="auto">{timer.label}</span>: {clock(left)} left
+                <bdi>{timer.label}</bdi>: {clock(left)} left
               </p>
             ) : (
               // Said aloud once, as it ends. Keyed, so it's a new element: a screen reader may miss
               // an alert role added to one already there.
               <p key="done" role="alert" className="font-semibold text-accent-strong">
-                <span dir="auto">{timer.label}</span>: done
+                <bdi>{timer.label}</bdi>: done
               </p>
             )}
             {/* Named for its timer: with two running, "Stop" alone wouldn't say which. */}
