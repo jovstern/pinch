@@ -45,7 +45,9 @@ test("shows the recipe: its details, nutrition, tags, ingredients and steps", as
   renderApp(`/recipes/${omelette.id}`);
 
   expect(await screen.findByRole("heading", { level: 1, name: "Omelette" })).toBeInTheDocument();
-  expect(screen.getByText("Serves 1 · Prep 5 min")).toBeInTheDocument();
+  expect(screen.getByText(/Prep 5 min/)).toHaveTextContent(
+    "Written by you · Serves 1 · Prep 5 min",
+  );
   expect(screen.getByText(/≈ 251 kcal/)).toHaveTextContent(
     "≈ 251 kcal · 13 g protein · 1 g carbs · 22 g fat per serving (estimate)",
   );
@@ -55,6 +57,11 @@ test("shows the recipe: its details, nutrition, tags, ingredients and steps", as
       .getAllByRole("listitem")
       .map((item) => item.textContent),
   ).toEqual(["breakfast", "middle eastern"]);
+  // Each tag opens My recipes filtered by it.
+  expect(within(tags).getByRole("link", { name: "breakfast" })).toHaveAttribute(
+    "href",
+    "/recipes?tags=meal%3Abreakfast",
+  );
   const ingredients = screen.getByRole("list", { name: "Ingredients" });
   expect(
     within(ingredients)
@@ -174,6 +181,31 @@ test("Comments are there, and say they're coming", async () => {
 
   expect(await screen.findByRole("heading", { level: 2, name: "Comments" })).toBeInTheDocument();
   expect(screen.getByText(/Coming soon: notes from whoever/)).toBeInTheDocument();
+});
+
+test("breadcrumbs lead back to My recipes, then name the recipe", async () => {
+  stubApi();
+  renderApp(`/recipes/${omelette.id}`);
+
+  const breadcrumb = await screen.findByRole("navigation", { name: "Breadcrumb" });
+  expect(within(breadcrumb).getByRole("link", { name: "My recipes" })).toHaveAttribute(
+    "href",
+    "/recipes",
+  );
+  expect(within(breadcrumb).getByText("Omelette")).toHaveAttribute("aria-current", "page");
+});
+
+test("a recipe from a link names its site and links to the post, in a new tab", async () => {
+  const url = "https://www.instagram.com/reel/abc123/";
+  stubFetch(() =>
+    Promise.resolve(Response.json({ ...omelette, source: { type: "instagram", url } })),
+  );
+  renderApp(`/recipes/${omelette.id}`);
+
+  const post = await screen.findByRole("link", { name: /^Instagram.*opens in a new tab/ });
+  expect(post).toHaveAttribute("href", url);
+  expect(post).toHaveAttribute("target", "_blank");
+  expect(screen.queryByText(/Written by you/)).not.toBeInTheDocument();
 });
 
 // Delete is in the ⋯ menu.

@@ -25,7 +25,10 @@ test("write a recipe, find it in the list, edit it, delete it", async ({ page })
   await expect(page.getByText("400 g tomatoes")).toBeVisible();
   await page.waitForTimeout(1000);
 
-  await page.getByRole("link", { name: "My recipes" }).click();
+  await page
+    .getByRole("navigation", { name: "Breadcrumb" })
+    .getByRole("link", { name: "My recipes" })
+    .click();
   await expect(page.getByRole("link", { name: /Shakshuka/ })).toBeVisible();
   await page.waitForTimeout(1000);
   await page.getByRole("link", { name: /Shakshuka/ }).click();

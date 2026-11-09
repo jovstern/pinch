@@ -30,8 +30,12 @@ test("paste a link, review the draft, save it as a recipe", async ({ page }) => 
   await page.waitForTimeout(1000);
   // Approved: the import is deleted, so the link has left the queue.
   await page.getByRole("link", { name: /^New recipe/ }).click();
+  await expect(page).toHaveURL("/");
   await expect(link).toHaveCount(0);
-  await page.getByRole("link", { name: "My recipes" }).click();
+  await page
+    .getByRole("navigation", { name: "Main" })
+    .getByRole("link", { name: "My recipes" })
+    .click();
   await expect(page.getByRole("link", { name: /Weeknight tomato pasta/ })).toBeVisible();
   await page.waitForTimeout(1000);
 

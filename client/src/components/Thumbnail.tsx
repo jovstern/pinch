@@ -9,7 +9,9 @@ type ThumbnailProps = {
   // "tile": a small 4:5 crop, for a card (lazy: many may be off screen). "cover": fills the box
   // it's in, cropped, for a card that is mostly picture (lazy too). "full": the picture at its
   // own shape, as wide as the column allows and no taller than 16rem, for the top of a page.
-  shape: "tile" | "cover" | "full";
+  // "banner": a recipe's (design §14): a 5:4 band, edge to edge on a phone; from 1024 px 320 px
+  // wide beside the title, at its own shape, no taller than 4:5.
+  shape: "tile" | "cover" | "full" | "banner";
   className?: string;
 };
 
@@ -19,6 +21,9 @@ const shapeClasses = {
   tile: "h-20 w-16 shrink-0 rounded-control bg-fill",
   cover: "size-full",
   full: "h-auto rounded-card bg-fill",
+  // The negative margins undo Layout's px-4 on a phone (change both together, as TagChips).
+  banner:
+    "-mx-4 aspect-5/4 w-[calc(100%+2rem)] max-w-none bg-fill sm:mx-0 sm:max-h-96 sm:w-full sm:rounded-card lg:aspect-auto lg:max-h-100 lg:w-80 lg:shrink-0",
 };
 
 // A recipe's picture, from its post. Decorative (alt=""): its title is always beside it. Its box
@@ -28,16 +33,17 @@ export function Thumbnail({ src, size, shape, className = "" }: ThumbnailProps) 
   // its address, so another picture in the same place is tried.
   const [failedSrc, setFailedSrc] = useState<string>();
   if (failedSrc === src) return null;
+  // The top of a page: often its largest thing, and the last to arrive (page, JS, data, then it).
+  const onTop = shape === "full" || shape === "banner";
   return (
     <img
       src={src}
       alt=""
       width={size.width}
       height={size.height}
-      loading={shape === "full" ? "eager" : "lazy"}
-      // The page's picture is often its largest thing, and the last to arrive (page, JS, data,
-      // then it): asked for first among what's left.
-      fetchPriority={shape === "full" ? "high" : "auto"}
+      loading={onTop ? "eager" : "lazy"}
+      // So it's asked for first among what's left.
+      fetchPriority={onTop ? "high" : "auto"}
       onError={() => {
         setFailedSrc(src);
       }}
