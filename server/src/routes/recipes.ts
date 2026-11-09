@@ -8,11 +8,11 @@ import {
   recipesCollection,
   searchRecipes,
   toRecipe,
-  WITHOUT_THUMBNAIL_IMAGE,
   type RecipeDocument,
 } from "../db/recipes.ts";
-import { sendThumbnail } from "./thumbnail.ts";
+import { WITHOUT_THUMBNAIL_IMAGE } from "../db/thumbnail.ts";
 import { HttpError, parseInput } from "../errors.ts";
+import { sendThumbnail } from "./thumbnail.ts";
 
 // Every query filters by ownerId: a user only ever sees their own recipes (design §1, §8.3).
 export function recipesRouter(db: Db) {
@@ -63,7 +63,11 @@ export function recipesRouter(db: Db) {
 
   // The recipe's picture (§5), apart from the recipe, so lists stay small.
   router.get("/:id/thumbnail", async (req, res) => {
-    const recipe = await recipes.findOne({ _id: parseId(req.params.id), ownerId: req.userId });
+    const recipe = await recipes.findOne(
+      { _id: parseId(req.params.id), ownerId: req.userId },
+      { projection: { thumbnail: 1 } },
+    );
+    // No picture: as good as no recipe, for an <img>.
     if (!recipe?.thumbnail) throw recipeNotFound();
     sendThumbnail(res, recipe.thumbnail);
   });

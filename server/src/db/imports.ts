@@ -1,6 +1,6 @@
 import { ImportSchema, type Import } from "@pinch/shared";
 import type { Collection, Db, ObjectId } from "mongodb";
-import type { StoredThumbnail } from "./recipes.ts";
+import type { StoredThumbnail } from "./thumbnail.ts";
 
 // An import as it is stored (design §6): the job the worker runs. nextAttemptAt says when it may
 // be claimed (now, or after a backoff); leaseUntil, how long the worker holding it may keep it

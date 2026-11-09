@@ -3,7 +3,7 @@ import type { Collection, UpdateFilter } from "mongodb";
 import { setTimeout } from "node:timers/promises";
 import type { Logger } from "pino";
 import { claimNextImport, LEASE_MS, type ImportDocument } from "../db/imports.ts";
-import type { StoredThumbnail } from "../db/recipes.ts";
+import type { StoredThumbnail } from "../db/thumbnail.ts";
 
 // Turns an import's input into a draft: geminiExtract, or fakeExtract for e2e. It must stop when
 // the signal aborts: that's the attempt's deadline. It says each step as it starts it, and saves

@@ -5,7 +5,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { setTimeout } from "node:timers/promises";
 import { z } from "zod";
-import type { StoredThumbnail } from "../db/recipes.ts";
+import type { StoredThumbnail } from "../db/thumbnail.ts";
 import { makeThumbnail } from "./thumbnail.ts";
 import { downloadVideo, measureSeconds, readVideoInfo } from "./videoInfo.ts";
 import { NoRetryError, type Extract } from "./workLoop.ts";
@@ -88,6 +88,8 @@ async function fromDownload(
   let uploaded: string | undefined;
   try {
     const { seconds: told, caption, path, thumbnailUrl } = await downloadVideo(url, dir, signal);
+    // Before the length check, unlike YouTube's: a photo post has no length to check, and a
+    // picture saved on an import about to fail costs one fetch.
     await keepThumbnail(thumbnailUrl, signal, setThumbnail);
     if (!path) {
       await setStep("analyzing");

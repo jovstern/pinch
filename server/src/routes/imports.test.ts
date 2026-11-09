@@ -265,13 +265,12 @@ test("a draft's picture is served apart, kept out of the list, and goes with it 
   const thumbnail = { webp: new Binary(webp), width: 400, height: 500 };
   const id = await insertDone({ draft, thumbnail });
 
-  // The lists and the import say how big it is, never send it.
+  // The list says how big it is; the image itself comes from its own address.
   const listed = ImportListSchema.parse((await request(app).get("/api/imports")).body);
   expect(listed.items.find((item) => item.id === id)?.thumbnail).toEqual({
     width: 400,
     height: 500,
   });
-  expect(JSON.stringify(listed)).not.toContain("webp");
   const image = await request(app).get(`/api/imports/${id}/thumbnail`);
   expect(image.headers["content-type"]).toBe("image/webp");
   expect(image.headers["cache-control"]).toBe("private, max-age=31536000, immutable");

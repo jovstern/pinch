@@ -1,6 +1,10 @@
 import sharp from "sharp";
-import { expect, test } from "vitest";
-import { shrink } from "./thumbnail.ts";
+import { afterEach, expect, test, vi } from "vitest";
+import { makeThumbnail, shrink } from "./thumbnail.ts";
+
+afterEach(() => {
+  vi.unstubAllGlobals();
+});
 
 test("a picture becomes a WebP inside 400 × 500, of the same shape", async () => {
   const photo = await sharp({
@@ -23,4 +27,18 @@ test("a small picture isn't made bigger", async () => {
     .toBuffer();
 
   expect(await shrink(small)).toMatchObject({ width: 200, height: 200 });
+});
+
+test("a picture that can't be had is no thumbnail, not an error", async () => {
+  const noDeadline = new AbortController().signal;
+  vi.stubGlobal("fetch", () => Promise.resolve(new Response("not an image")));
+  expect(await makeThumbnail("https://cdn/cover.jpg", noDeadline)).toBeUndefined();
+
+  vi.stubGlobal("fetch", () => Promise.resolve(new Response(null, { status: 404 })));
+  expect(await makeThumbnail("https://cdn/cover.jpg", noDeadline)).toBeUndefined();
+
+  vi.stubGlobal("fetch", () =>
+    Promise.resolve(new Response("x", { headers: { "content-length": "50000000" } })),
+  );
+  expect(await makeThumbnail("https://cdn/cover.jpg", noDeadline)).toBeUndefined();
 });

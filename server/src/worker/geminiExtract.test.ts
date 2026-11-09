@@ -22,6 +22,9 @@ const noThumbnail = () => Promise.resolve();
 const thumbnail = { webp: new Binary(Buffer.from("webp")), width: 400, height: 500 };
 
 beforeEach(() => {
+  // restoreAllMocks doesn't reset an automocked module's own: each test starts with none.
+  vi.mocked(makeThumbnail).mockReset();
+  vi.mocked(downloadVideo).mockReset();
   vi.mocked(readVideoInfo).mockResolvedValue({ seconds: 60, caption: "2 eggs, 1 can tomatoes" });
 });
 
@@ -283,7 +286,7 @@ test("the uploaded video is deleted even when Gemini fails", async () => {
   expect(remove).toHaveBeenCalledWith({ name: "files/reel" });
 });
 
-test("a post's picture is made small and saved on the import, for YouTube and a reel", async () => {
+test("a YouTube video's picture is made small and saved on the import", async () => {
   vi.mocked(readVideoInfo).mockResolvedValue({
     caption: "",
     thumbnailUrl: "https://i.ytimg.com/vi/abc/hq.jpg",
@@ -298,7 +301,7 @@ test("a post's picture is made small and saved on the import, for YouTube and a 
   expect(setThumbnail).toHaveBeenCalledWith(thumbnail);
 });
 
-test("without a picture, or when it can't be made, nothing is saved and the recipe still is", async () => {
+test("when the picture can't be made, nothing is saved and the recipe still is", async () => {
   vi.mocked(makeThumbnail).mockResolvedValue(undefined);
   vi.mocked(downloadVideo).mockResolvedValue({
     caption: "Shakshuka: 4 eggs",
@@ -310,4 +313,12 @@ test("without a picture, or when it can't be made, nothing is saved and the reci
   expect(await extract(reel, noDeadline, noStep, setThumbnail)).toEqual(recipe);
 
   expect(setThumbnail).not.toHaveBeenCalled();
+});
+
+test("a post with no picture fetches none", async () => {
+  vi.spyOn(ai.models, "generateContent").mockResolvedValue(answer(JSON.stringify(recipe)));
+
+  await extract(youtube, noDeadline, noStep, noThumbnail);
+
+  expect(makeThumbnail).not.toHaveBeenCalled();
 });

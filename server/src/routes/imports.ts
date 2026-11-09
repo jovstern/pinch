@@ -14,15 +14,11 @@ import {
   toImport,
   type ImportDocument,
 } from "../db/imports.ts";
-import {
-  insertRecipeOnce,
-  recipesCollection,
-  toRecipe,
-  WITHOUT_THUMBNAIL_IMAGE,
-} from "../db/recipes.ts";
-import { sendThumbnail } from "./thumbnail.ts";
+import { insertRecipeOnce, recipesCollection, toRecipe } from "../db/recipes.ts";
+import { WITHOUT_THUMBNAIL_IMAGE } from "../db/thumbnail.ts";
 import { countImport, usageCollection } from "../db/usage.ts";
 import { HttpError, parseInput } from "../errors.ts";
+import { sendThumbnail } from "./thumbnail.ts";
 
 // Imports turn a link, or a post's text, into a draft recipe (design §4). The API only records
 // the job; the worker does it. As with recipes, every query filters by ownerId.
@@ -78,7 +74,11 @@ export function importsRouter(db: Db) {
 
   // The draft's picture (§5), apart from the import, so the list stays small.
   router.get("/:id/thumbnail", async (req, res) => {
-    const job = await imports.findOne({ _id: parseId(req.params.id), ownerId: req.userId });
+    const job = await imports.findOne(
+      { _id: parseId(req.params.id), ownerId: req.userId },
+      { projection: { thumbnail: 1 } },
+    );
+    // No picture: as good as no import, for an <img>.
     if (!job?.thumbnail) throw importNotFound();
     sendThumbnail(res, job.thumbnail);
   });
@@ -138,7 +138,7 @@ export function importsRouter(db: Db) {
         $set: { status: "pending", attempts: 0, nextAttemptAt: now, updatedAt: now },
         $unset: { error: "", noRetry: "" },
       },
-      { returnDocument: "after" },
+      { returnDocument: "after", projection: WITHOUT_THUMBNAIL_IMAGE },
     );
     // Changed since it was read (retried in another tab, or deleted).
     if (!job) throw importNotFailed();

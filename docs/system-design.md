@@ -210,8 +210,9 @@ recipes, correctly rejected one promo, and one call hung. Results and findings a
 Media is thrown away, but a good-looking list needs images, so each recipe keeps **one tiny
 thumbnail** inside its document: WebP inside 400 × 500 (its own shape kept), 20–40 KB, made
 with `sharp`, with its width and height so the page keeps its place before it loads. The
-worker saves it on the import as soon as it has it (as the step); approve copies it to the
-recipe, and editing keeps it (D20). Making it never fails an import: no picture, no thumbnail.
+worker saves it on the import as soon as it has it (as the step), reading at most 5 MB, from
+https, with no redirect; approve copies it to the recipe, and editing keeps it (D20). Making it
+never fails an import: no picture, no thumbnail.
 
 | Source | Thumbnail from |
 |---|---|

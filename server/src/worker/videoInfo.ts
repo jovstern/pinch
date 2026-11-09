@@ -16,14 +16,14 @@ const YTDLP_MAX_OUTPUT = 20_000_000;
 // thumbnailUrl: the post's picture, to make the recipe's thumbnail from (design §5).
 export type VideoInfo = { seconds?: number; caption: string; thumbnailUrl?: string };
 
-// The fields we read from yt-dlp's JSON; it has many more. A picture link that isn't http(s)
-// is dropped (catch), not a failed attempt: the recipe doesn't need it.
+// The fields we read from yt-dlp's JSON; it has many more. A picture link that isn't https (or
+// none) is dropped (catch), not a failed attempt: the recipe doesn't need it.
 const YtDlpInfoSchema = z.object({
   duration: z.number().nullish(),
   description: z.string().nullish(),
   thumbnail: z
     .url({ protocol: /^https$/ })
-    .nullish()
+    .optional()
     .catch(undefined),
 });
 
@@ -56,7 +56,7 @@ export function parseVideoInfo(json: string): VideoInfo {
   return {
     seconds: info.duration ?? undefined,
     caption: info.description ?? "",
-    thumbnailUrl: info.thumbnail ?? undefined,
+    thumbnailUrl: info.thumbnail,
   };
 }
 

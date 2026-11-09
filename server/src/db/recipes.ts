@@ -1,29 +1,10 @@
-import {
-  RecipeSchema,
-  type Nutrition,
-  type Recipe,
-  type RecipeInput,
-  type Thumbnail,
-} from "@pinch/shared";
-import {
-  MongoServerError,
-  type Binary,
-  type Collection,
-  type Db,
-  type Filter,
-  type ObjectId,
-} from "mongodb";
+import { RecipeSchema, type Nutrition, type Recipe, type RecipeInput } from "@pinch/shared";
+import { MongoServerError, type Collection, type Db, type Filter, type ObjectId } from "mongodb";
+import { WITHOUT_THUMBNAIL_IMAGE, type StoredThumbnail } from "./thumbnail.ts";
 
 // A recipe as it is stored (design §6). A field added here that the form doesn't send must
 // also be kept by PUT /api/recipes/:id (routes/recipes.ts, design D20). Recipes saved before
 // tags existed have no `tags` field; toRecipe reads them as [].
-// A thumbnail as stored (design §5): the WebP itself, about 30 KB, and its size.
-export type StoredThumbnail = Thumbnail & { webp: Binary };
-
-// What a query reading recipes or imports to send leaves out: the image, served apart.
-// Its size stays, so the API can say there is one and how big.
-export const WITHOUT_THUMBNAIL_IMAGE = { "thumbnail.webp": 0 } as const;
-
 export type RecipeDocument = RecipeInput & {
   _id: ObjectId;
   ownerId: ObjectId;
