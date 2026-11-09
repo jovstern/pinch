@@ -11,8 +11,12 @@ import { cn } from "../../lib/cn.ts";
 import { importListQuery } from "./importQueries.ts";
 
 // Paste reads the clipboard, where the browser lets a page ask for it (a secure page, and not
-// every browser).
-const canPaste = "clipboard" in navigator && "readText" in navigator.clipboard;
+// every browser). Asked on each render, not once, so a test can give it a clipboard.
+function canPaste() {
+  return "clipboard" in navigator && "readText" in navigator.clipboard;
+}
+
+const hint = "Paste a YouTube short, a Facebook or Instagram reel, or a recipe as text";
 
 // The main action on / (design §14): paste a link, or a post's text when its link can't be read
 // (§1), and the worker turns it into a draft (§4.1). One line (Paste · the field · Pinch it) that
@@ -23,6 +27,7 @@ export function ImportForm({ inputRef }: { inputRef: RefObject<HTMLTextAreaEleme
   const formRef = useRef<HTMLFormElement>(null);
   const id = useId();
   const errorId = `${id}-error`;
+  const hintId = `${id}-hint`;
   const [grown, setGrown] = useState(false);
   const form = useForm({
     defaultValues: { pasted: "" },
@@ -65,21 +70,24 @@ export function ImportForm({ inputRef }: { inputRef: RefObject<HTMLTextAreaEleme
   }
 
   // Measured as the text changes, while the box is one line (wrap="off": it scrolls sideways):
-  // a text grows the box once it has a new line or no longer fits. A link stays one line, as
-  // there's nothing in it to read. Grown, it stays so until it's empty, so it doesn't flick back
-  // when the wider box fits the text on one line again.
+  // a text grows the box once it has a new line or no longer fits. A link (or nothing) stays one
+  // line, as there's nothing in it to read. A text, once grown, stays so, so it doesn't flick
+  // back when the wider box fits it on one line again. Only measured on a change: turning the
+  // phone doesn't grow or shrink it.
   function updateGrown(box: HTMLTextAreaElement) {
     const isText = importInput(box.value).type === "text";
     const wraps = box.value.includes("\n") || box.scrollWidth > box.clientWidth;
-    setGrown(box.value !== "" && (grown || (isText && wraps)));
+    setGrown(isText && (grown || wraps));
   }
 
-  // Into the field, not sent: there's no Undo for a send yet (M8 F4), so the user sends it.
+  // Into the field, not sent: there's no Undo for a send yet (M8 F4), so the user sends it. It
+  // replaces what's there: the field holds one thing to pinch. An empty clipboard changes nothing.
   async function paste(setValue: (value: string) => void) {
     const box = inputRef.current;
     if (!box) return;
     try {
       const text = await navigator.clipboard.readText();
+      if (text === "") return;
       setValue(text);
       // Measured now, before React renders the new text into the box.
       box.value = text;
@@ -87,8 +95,9 @@ export function ImportForm({ inputRef }: { inputRef: RefObject<HTMLTextAreaEleme
     } catch {
       // Refused (the user said no, or the clipboard holds no text): nothing to say; the field
       // gets focus, to paste into by hand.
+    } finally {
+      box.focus();
     }
-    box.focus();
   }
 
   return (
@@ -107,20 +116,24 @@ export function ImportForm({ inputRef }: { inputRef: RefObject<HTMLTextAreaEleme
           const invalid = field.state.meta.errors.some((message) => typeof message === "string");
           return (
             <>
-              {/* The placeholder changes with the screen, so the label names the field. */}
+              {/* The placeholder changes with the screen and isn't read, so the label names the
+                  field and the hint says what goes in it. */}
               <label htmlFor={id} className="sr-only">
                 Pinch a recipe from a reel
               </label>
+              <p id={hintId} className="sr-only">
+                {hint}
+              </p>
               {/* shadcn's input group: the group draws the field's edge and focus ring, the
                   textarea inside has none. Grown, the box takes the first row and the buttons
-                  sit under it. */}
+                  sit under it; focus still goes Paste, field, Pinch it, as on one line. */}
               <div
                 className={cn(
                   "flex rounded-control border border-input bg-card has-[[aria-invalid=true]]:border-destructive has-[textarea:focus-visible]:outline-2 has-[textarea:focus-visible]:outline-offset-2 has-[textarea:focus-visible]:outline-ring",
                   grown ? "flex-wrap" : "items-center",
                 )}
               >
-                {canPaste && (
+                {canPaste() && (
                   <Button
                     type="button"
                     variant="ghost"
@@ -137,17 +150,19 @@ export function ImportForm({ inputRef }: { inputRef: RefObject<HTMLTextAreaEleme
                     id={id}
                     name={field.name}
                     value={field.state.value}
-                    rows={1}
+                    // Grown, 3 rows where the browser can't size the box to its text
+                    // (field-sizing).
+                    rows={grown ? 3 : 1}
                     wrap={grown ? "soft" : "off"}
                     // Hebrew reads right to left: the box follows what's typed in it.
                     dir="auto"
                     aria-invalid={invalid}
-                    aria-describedby={invalid ? errorId : undefined}
-                    // The group shows focus (style: the global focus ring is unlayered, so a
-                    // class can't remove it).
-                    style={{ outline: "none" }}
+                    aria-describedby={invalid ? `${hintId} ${errorId}` : hintId}
+                    enterKeyHint="send"
+                    // The group shows focus. Important (!): the global focus ring is unlayered,
+                    // so a plain utility can't remove it.
                     className={cn(
-                      "min-h-0 resize-none rounded-none border-0 bg-transparent",
+                      "min-h-0 resize-none rounded-none border-0 bg-transparent outline-none!",
                       grown
                         ? "max-h-[calc(6lh+1rem)]"
                         : "field-sizing-fixed h-11 overflow-hidden py-2.5",
@@ -174,9 +189,7 @@ export function ImportForm({ inputRef }: { inputRef: RefObject<HTMLTextAreaEleme
                       className="pointer-events-none absolute inset-x-3 top-2.5 truncate text-muted-foreground"
                     >
                       <span className="md:hidden">Paste a link or recipe text</span>
-                      <span className="hidden md:inline">
-                        Paste a YouTube short, a Facebook or Instagram reel, or a recipe as text
-                      </span>
+                      <span className="hidden md:inline">{hint}</span>
                     </span>
                   )}
                 </div>

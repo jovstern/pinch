@@ -13,6 +13,8 @@ import { pollInterval } from "./importQueries.ts";
 
 afterEach(() => {
   vi.unstubAllGlobals();
+  // Paste's clipboard, if a test gave it one.
+  Reflect.deleteProperty(navigator, "clipboard");
 });
 
 const reel = "https://www.instagram.com/p/DOxAbc123/";
@@ -119,6 +121,39 @@ test("Shift+Enter makes a new line, and the text is sent with it", async () => {
   });
 });
 
+// A clipboard that holds this text, for Paste (jsdom has none).
+function stubClipboard(text: string) {
+  Object.defineProperty(navigator, "clipboard", {
+    value: { readText: () => Promise.resolve(text) },
+    configurable: true,
+  });
+}
+
+test("Paste fills the box from the clipboard, and doesn't send it", async () => {
+  const fetch = stubApi([[]]);
+  stubClipboard(reel);
+  renderApp("/");
+
+  await userEvent.click(screen.getByRole("button", { name: "Paste" }));
+
+  const box = screen.getByRole("textbox", { name: "Pinch a recipe from a reel" });
+  expect(box).toHaveValue(reel);
+  expect(box).toHaveFocus();
+  expect(fetch).not.toHaveBeenCalledWith("/api/imports", expect.anything());
+});
+
+test("Paste with an empty clipboard keeps what's in the box", async () => {
+  stubApi([[]]);
+  stubClipboard("");
+  renderApp("/");
+
+  const box = screen.getByRole("textbox", { name: "Pinch a recipe from a reel" });
+  await userEvent.type(box, reel);
+  await userEvent.click(screen.getByRole("button", { name: "Paste" }));
+
+  expect(box).toHaveValue(reel);
+});
+
 test("the API's message for a text shows under the box", async () => {
   stubApi([[]], () =>
     Response.json(
@@ -170,7 +205,10 @@ test("a link from another site is refused before it's sent, until it's fixed", a
   await userEvent.click(screen.getByRole("button", { name: "Pinch it" }));
 
   expect(await screen.findByRole("alert")).toHaveTextContent(linkMessage);
-  expect(box).toHaveAccessibleDescription(linkMessage);
+  // The hint, then the error.
+  expect(box).toHaveAccessibleDescription(
+    `Paste a YouTube short, a Facebook or Instagram reel, or a recipe as text ${linkMessage}`,
+  );
   expect(fetch).not.toHaveBeenCalledWith("/api/imports", expect.anything());
 
   await userEvent.clear(box);
