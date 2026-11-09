@@ -33,3 +33,13 @@ test("finds a word that goes on: eggs, and eggplant too (a guess, not a parse)",
 test("finds none in a step that names none", () => {
   expect(stepIngredients("Let it rest for 10 minutes.", ingredients)).toEqual([]);
 });
+
+test("when one is named whole, others that share only its noun are left out", () => {
+  const butters: Ingredient[] = [
+    { name: "חמאה מומסת", quantity: "50", unit: "גרם" },
+    { name: "חמאה או שמן", note: "לטיגון" },
+  ];
+  expect(stepIngredients("מוסיפים את החמאה המומסת ומערבבים.", butters)).toEqual([0]);
+  // Named by the noun alone, both may be meant.
+  expect(stepIngredients("ממיסים חמאה במחבת.", butters)).toEqual([0, 1]);
+});

@@ -3,8 +3,10 @@ import { useId, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router";
 import { Button } from "../../components/Button.tsx";
 import { RecipeLoadError } from "../recipes/RecipeLoadError.tsx";
+import { keepRangesTogether } from "../recipes/ranges.ts";
 import { recipeQuery } from "../recipes/recipeQueries.ts";
 import { stepDurations } from "./durations.ts";
+import { CookSkeleton } from "./CookSkeleton.tsx";
 import { IngredientChecklist } from "./IngredientChecklist.tsx";
 import { stepIngredients } from "./stepIngredients.ts";
 import { TimerBar } from "./TimerBar.tsx";
@@ -34,7 +36,7 @@ export function CookPage() {
   const { timers, now, start, stop, isRunning } = useTimers();
   const navigate = useNavigate();
 
-  if (status === "pending") return <p className="text-text-muted">Loading the recipe…</p>;
+  if (status === "pending") return <CookSkeleton />;
   if (isLoadingError) {
     return <RecipeLoadError error={error} retry={() => void refetch()} retrying={isFetching} />;
   }
@@ -81,8 +83,11 @@ export function CookPage() {
           {`Step ${String(current + 1)} of ${String(recipe.steps.length)}`}
         </p>
         {/* dir="auto": a Hebrew step reads right to left, as in the form (TextField). */}
-        <p dir="auto" className="mt-3 max-w-prose font-display text-2xl text-pretty sm:text-3xl">
-          {step}
+        <p
+          dir="auto"
+          className="mt-3 max-w-prose font-display text-2xl font-semibold text-pretty sm:text-3xl"
+        >
+          {keepRangesTogether(step)}
         </p>
       </section>
 
@@ -110,7 +115,7 @@ export function CookPage() {
                 {/* One span: a flex item's trailing space would be lost ("Timer:20 min"). */}
                 <span>
                   {running ? "Running: " : "Timer: "}
-                  <span dir="auto">{duration.label}</span>
+                  <bdi>{duration.label}</bdi>
                 </span>
               </Button>
             );
