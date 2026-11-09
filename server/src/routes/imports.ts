@@ -1,12 +1,15 @@
 import {
   dailyLimitMessage,
   ImportInputSchema,
+  MAX_SCREENSHOTS,
   RecipeInputSchema,
+  screenshotsMessage,
   type ImportList,
   type Platform,
 } from "@pinch/shared";
-import express from "express";
-import { ObjectId, type Db } from "mongodb";
+import express, { type RequestHandler } from "express";
+import multer from "multer";
+import { ObjectId, type Binary, type Db } from "mongodb";
 import {
   IMPORT_LIFETIME_MS,
   IMPORT_LIST_LIMIT,
@@ -15,9 +18,10 @@ import {
   type ImportDocument,
 } from "../db/imports.ts";
 import { insertRecipeOnce, recipesCollection, toRecipe } from "../db/recipes.ts";
-import { WITHOUT_THUMBNAIL_IMAGE } from "../db/thumbnail.ts";
+import { WITHOUT_MEDIA } from "../db/thumbnail.ts";
 import { countImport, usageCollection } from "../db/usage.ts";
 import { HttpError, parseInput } from "../errors.ts";
+import { readScreenshot } from "../screenshots.ts";
 import { sendThumbnail } from "./thumbnail.ts";
 
 // Imports turn a link, or a post's text, into a draft recipe (design §4). The API only records
@@ -33,21 +37,28 @@ export function importsRouter(db: Db) {
     const sent = parseInput(ImportInputSchema, req.body);
     // After the input is checked: one refused as invalid doesn't count.
     if (!(await countImport(usage, req.userId))) throw dailyLimit();
-    const now = new Date();
-    const job: ImportDocument = {
-      _id: new ObjectId(),
-      ownerId: req.userId,
-      status: "pending",
-      input:
-        sent.type === "link"
-          ? { type: "link", url: sent.url, platform: platformOf(sent.url) }
-          : sent,
-      attempts: 0,
-      nextAttemptAt: now,
-      createdAt: now,
-      updatedAt: now,
-      expiresAt: new Date(now.getTime() + IMPORT_LIFETIME_MS),
-    };
+    const job = newImport(
+      req.userId,
+      sent.type === "link" ? { type: "link", url: sent.url, platform: platformOf(sent.url) } : sent,
+    );
+    await imports.insertOne(job);
+    res.status(202).location(`/api/imports/${job._id.toHexString()}`).json(toImport(job));
+  });
+
+  // Screenshots of a post (§1, §4.1): a form with up to 4 images, not JSON. Each is read and
+  // made smaller here, so what's kept is known to be an image, and small.
+  router.post("/screenshots", receiveScreenshots, async (req, res) => {
+    const files = Array.isArray(req.files) ? req.files : [];
+    if (files.length === 0) throw invalidScreenshots();
+    // One that isn't an image (or that sharp can't read) refuses them all, as invalid input.
+    let images: Binary[];
+    try {
+      images = await Promise.all(files.map((file) => readScreenshot(file.buffer)));
+    } catch {
+      throw invalidScreenshots();
+    }
+    if (!(await countImport(usage, req.userId))) throw dailyLimit();
+    const job = newImport(req.userId, { type: "images", count: images.length, images });
     await imports.insertOne(job);
     res.status(202).location(`/api/imports/${job._id.toHexString()}`).json(toImport(job));
   });
@@ -56,7 +67,7 @@ export function importsRouter(db: Db) {
   // cap is a guard, never reached in use (node-api.md: never an unbounded list).
   router.get("/", async (req, res) => {
     const found = await imports
-      .find({ ownerId: req.userId }, { projection: WITHOUT_THUMBNAIL_IMAGE })
+      .find({ ownerId: req.userId }, { projection: WITHOUT_MEDIA })
       .sort({ createdAt: -1, _id: -1 })
       .limit(IMPORT_LIST_LIMIT)
       .toArray();
@@ -66,7 +77,7 @@ export function importsRouter(db: Db) {
   router.get("/:id", async (req, res) => {
     const job = await imports.findOne(
       { _id: parseId(req.params.id), ownerId: req.userId },
-      { projection: WITHOUT_THUMBNAIL_IMAGE },
+      { projection: WITHOUT_MEDIA },
     );
     if (!job) throw importNotFound();
     res.json(toImport(job));
@@ -108,7 +119,7 @@ export function importsRouter(db: Db) {
       source:
         job.input.type === "link"
           ? { type: job.input.platform, url: job.input.url }
-          : { type: "text" },
+          : { type: job.input.type === "text" ? "text" : "image" },
       sourceImportId: job._id,
       createdAt: now,
       updatedAt: now,
@@ -138,7 +149,7 @@ export function importsRouter(db: Db) {
         $set: { status: "pending", attempts: 0, nextAttemptAt: now, updatedAt: now },
         $unset: { error: "", noRetry: "" },
       },
-      { returnDocument: "after", projection: WITHOUT_THUMBNAIL_IMAGE },
+      { returnDocument: "after", projection: WITHOUT_MEDIA },
     );
     // Changed since it was read (retried in another tab, or deleted).
     if (!job) throw importNotFailed();
@@ -184,4 +195,40 @@ function dailyLimit() {
 
 function importNotFound() {
   return new HttpError(404, "import_not_found", "This import doesn't exist.");
+}
+
+// A new import of the user's, waiting for the worker (§4.2).
+function newImport(ownerId: ObjectId, input: ImportDocument["input"]): ImportDocument {
+  const now = new Date();
+  return {
+    _id: new ObjectId(),
+    ownerId,
+    status: "pending",
+    input,
+    attempts: 0,
+    nextAttemptAt: now,
+    createdAt: now,
+    updatedAt: now,
+    expiresAt: new Date(now.getTime() + IMPORT_LIFETIME_MS),
+  };
+}
+
+// The form's images, in memory (never on disk): at most 4, of 10 MB each. Past either, or a
+// field that isn't "images", multer stops with its own error: answered as a 400, as invalid
+// input is.
+const screenshotsUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { files: MAX_SCREENSHOTS, fileSize: 10_000_000 },
+}).array("images", MAX_SCREENSHOTS);
+
+const receiveScreenshots: RequestHandler = (req, res, next) => {
+  void screenshotsUpload(req, res, (error: unknown) => {
+    next(error instanceof multer.MulterError ? invalidScreenshots() : error);
+  });
+};
+
+function invalidScreenshots() {
+  return new HttpError(400, "invalid_input", "Some fields are not valid.", {
+    images: screenshotsMessage,
+  });
 }

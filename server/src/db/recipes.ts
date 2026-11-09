@@ -1,6 +1,6 @@
 import { RecipeSchema, type Nutrition, type Recipe, type RecipeInput } from "@pinch/shared";
 import { MongoServerError, type Collection, type Db, type Filter, type ObjectId } from "mongodb";
-import { WITHOUT_THUMBNAIL_IMAGE, type StoredThumbnail } from "./thumbnail.ts";
+import { WITHOUT_MEDIA, type StoredThumbnail } from "./thumbnail.ts";
 
 // A recipe as it is stored (design §6). A field added here that the form doesn't send must
 // also be kept by PUT /api/recipes/:id (routes/recipes.ts, design D20). Recipes saved before
@@ -84,7 +84,7 @@ export function findNewestRecipes(
     ];
   }
   return recipes
-    .find(filter, { projection: WITHOUT_THUMBNAIL_IMAGE })
+    .find(filter, { projection: WITHOUT_MEDIA })
     .sort({ createdAt: -1, _id: -1 })
     .limit(PAGE_SIZE + 1);
 }
@@ -103,7 +103,7 @@ export function searchRecipes(
   if (tags.length > 0) filter.tags = { $all: tags };
   // Equal scores, newest first.
   return recipes
-    .find(filter, { projection: WITHOUT_THUMBNAIL_IMAGE })
+    .find(filter, { projection: WITHOUT_MEDIA })
     .sort({ score: { $meta: "textScore" }, createdAt: -1, _id: -1 })
     .limit(PAGE_SIZE);
 }

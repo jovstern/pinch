@@ -140,7 +140,9 @@ export async function runImport({ imports, extract, logger, job, deadline }: Run
   await save(
     {
       $set: { status: "ready", draft, updatedAt: new Date() },
-      $unset: { leaseUntil: "", step: "" },
+      // Screenshots are kept only until the draft is made (design §4.1): a failed attempt keeps
+      // them, for the next try.
+      $unset: { leaseUntil: "", step: "", "input.images": "" },
     },
     "import ready",
   );

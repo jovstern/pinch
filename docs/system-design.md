@@ -262,8 +262,10 @@ Usage {                            // the daily cap (D22)
 }
 ```
 
-Uploaded screenshots for the fallback are held on the import only until the worker has sent
-them to Gemini, then removed from the document.
+Uploaded screenshots for the fallback (up to 4, each made a JPEG at most 1600 px on a side,
+200–400 KB, by the API) are held on the import (`input.images`) only until the draft is made:
+a failed attempt keeps them for the next try; the import's TTL deletes them in any case.
+Every query that answers imports leaves them out.
 
 ### Indexes
 
@@ -344,7 +346,8 @@ PUT    /api/recipes/:id                replace what the user can edit (the form 
 DELETE /api/recipes/:id
 GET    /api/recipes/:id/thumbnail      image/webp
 
-POST   /api/imports                    { type: "link", url } | { type: "text", text } | multipart images  → 202 import (429 past the daily cap)
+POST   /api/imports                    { type: "link", url } | { type: "text", text }  → 202 import (429 past the daily cap)
+POST   /api/imports/screenshots        a form: up to 4 images (10 MB each) as "images"  → 202 import { type: "images", count }
 GET    /api/imports                    my imports that are not done yet
 GET    /api/imports/:id                status, step, error, draft
 GET    /api/imports/:id/thumbnail      image/webp: the draft's picture

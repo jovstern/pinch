@@ -89,7 +89,7 @@ export function ReviewImportPage() {
       <h1 className="text-3xl font-bold tracking-tight text-balance">Review the recipe</h1>
       <p className="mt-3 text-sm text-pretty text-text-muted">
         Fix anything that's wrong, then save it. Made from
-        {job.input.type === "link" ? ":" : " the text you pasted."}
+        {{ link: ":", text: " the text you pasted.", images: " your screenshots." }[job.input.type]}
       </p>
       {/* A new tab: going to the post here would lose what was typed. One line, as in the list. */}
       {job.input.type === "link" && (

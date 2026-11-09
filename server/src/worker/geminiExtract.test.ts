@@ -1,6 +1,7 @@
 import { FileState, GenerateContentResponse, GoogleGenAI } from "@google/genai";
 import { Binary } from "mongodb";
 import { existsSync, writeFileSync } from "node:fs";
+import sharp from "sharp";
 import { join } from "node:path";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import type { ImportDocument } from "../db/imports.ts";
@@ -9,9 +10,13 @@ import { makeThumbnail } from "./thumbnail.ts";
 import { downloadVideo, measureSeconds, readVideoInfo } from "./videoInfo.ts";
 import { NoRetryError } from "./workLoop.ts";
 
-// yt-dlp is replaced too, and the picture's fetch: no test reads a real post.
+// yt-dlp is replaced too, and the picture's fetch: no test reads a real post. The rest of
+// thumbnail.ts (shrink) is the real one.
 vi.mock("./videoInfo.ts");
-vi.mock("./thumbnail.ts");
+vi.mock("./thumbnail.ts", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("./thumbnail.ts")>()),
+  makeThumbnail: vi.fn(),
+}));
 
 // A real client with a made-up key; its one call is replaced, so nothing reaches Gemini.
 const ai = new GoogleGenAI({ apiKey: "test" });
@@ -321,4 +326,31 @@ test("a post with no picture fetches none", async () => {
   await extract(youtube, noDeadline, noStep, noThumbnail);
 
   expect(makeThumbnail).not.toHaveBeenCalled();
+});
+
+test("screenshots are sent as images, with no yt-dlp, and the first is the picture", async () => {
+  const image = await sharp({
+    create: { width: 800, height: 1600, channels: 3, background: "#fff" },
+  })
+    .jpeg()
+    .toBuffer();
+  const generate = vi
+    .spyOn(ai.models, "generateContent")
+    .mockResolvedValue(answer(JSON.stringify(recipe)));
+  const setThumbnail = vi.fn(() => Promise.resolve());
+
+  await extract(
+    { type: "images", count: 2, images: [new Binary(image), new Binary(image)] },
+    noDeadline,
+    noStep,
+    setThumbnail,
+  );
+
+  expect(readVideoInfo).not.toHaveBeenCalled();
+  const contents = generate.mock.calls[0]?.[0].contents;
+  expect(contents).toContainEqual({
+    inlineData: { mimeType: "image/jpeg", data: image.toString("base64") },
+  });
+  expect(Array.isArray(contents) && contents.length).toBe(3);
+  expect(setThumbnail).toHaveBeenCalledWith(expect.objectContaining({ width: 250, height: 500 }));
 });

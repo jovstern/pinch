@@ -28,10 +28,13 @@ export async function fakeExtract(
   }
   await setStep("analyzing");
   await setTimeout(1500, undefined, { signal });
-  const sent = input.type === "link" ? input.url : input.text;
+  // Screenshots have no words to say "fail" with: they always make the draft.
+  const sent = input.type === "link" ? input.url : input.type === "text" ? input.text : "";
   if (sent.includes("fail")) throw new Error("The fake extractor fails this one on purpose.");
+  const from =
+    input.type === "link" ? input.platform : input.type === "text" ? "text" : "screenshots";
   return {
-    title: `Tomato pasta (from ${input.type === "link" ? input.platform : "text"})`,
+    title: `Tomato pasta (from ${from})`,
     ingredients: [
       { name: "spaghetti", quantity: "200", unit: "g" },
       { name: "tomatoes", quantity: "400", unit: "g", note: "crushed" },
