@@ -13,14 +13,15 @@ import { TagPicker } from "./TagPicker.tsx";
 
 // The way out beside Save: Cancel, back to an address, or a draft's Discard, which deletes it.
 type Leave =
-  | { kind: "cancel"; to: string }
-  | { kind: "discard"; title: string; discard: () => void; discarding: boolean };
+  { kind: "cancel"; to: string } | { kind: "discard"; discard: () => void; discarding: boolean };
 
 type RecipeFormProps = {
   defaultValues: RecipeFormValues;
   // Shown, not edited: the API keeps a recipe's source and picture (D20), and has no upload.
   source: Recipe["source"];
   picture?: ReactNode;
+  // At the top of the left column: a draft's banner, or the tip on writing by hand.
+  intro?: ReactNode;
   submitLabel: string;
   leave: Leave;
   // Sends the recipe; the page that owns the form decides where to go once it's saved.
@@ -33,6 +34,7 @@ export function RecipeForm({
   defaultValues,
   source,
   picture,
+  intro,
   submitLabel,
   leave,
   save,
@@ -82,12 +84,14 @@ export function RecipeForm({
         event.preventDefault();
         void submit();
       }}
-      // Room at the bottom on a phone, so the pinned Save bar never covers the last step.
-      className="mt-4 grid gap-8 pb-32 lg:grid-cols-[minmax(0,1fr)_22rem] lg:items-start lg:gap-12 lg:pb-0"
+      // Room at the bottom on a phone, so the pinned Save bar (its buttons, the lines above them
+      // and the home bar) never covers the last step.
+      className="mt-4 grid gap-8 pb-[calc(10rem+env(safe-area-inset-bottom))] lg:grid-cols-[minmax(0,1fr)_22rem] lg:items-start lg:gap-12 lg:pb-0"
     >
       {/* What you edit most, on the left from 1024 px; the rest beside it (design §14). In this
           order on a phone too, so the keyboard and the eye go the same way on every width. */}
       <div className="grid gap-8">
+        {intro}
         <form.Field name="title">{(field) => <TextField field={field} label="Title" />}</form.Field>
         <form.Field name="description">
           {(field) => <TextField field={field} label="Description" multiline />}
@@ -203,8 +207,9 @@ export function RecipeForm({
         </form.Field>
       </div>
 
-      {/* In view as the left column scrolls, from 1024 px. */}
-      <div className="grid gap-6 lg:sticky lg:top-4 lg:rounded-card lg:border lg:border-border lg:p-5">
+      {/* In view as the left column scrolls, from 1024 px; it scrolls itself on a short screen,
+          so Save is always within reach. */}
+      <div className="grid gap-6 lg:sticky lg:top-4 lg:max-h-[calc(100dvh-2rem)] lg:overflow-y-auto lg:rounded-card lg:border lg:border-border lg:p-5">
         {picture}
         <p className="text-sm text-muted-foreground">
           Source: <RecipeSource source={source} />
@@ -234,29 +239,37 @@ export function RecipeForm({
 
         {/* The Save bar: pinned to the bottom on a phone, in thumb reach on any length of recipe,
             above the home bar where there is one; the column's end from 1024 px. */}
-        <div className="fixed inset-x-0 bottom-0 z-10 grid gap-2 border-t border-border bg-background px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] lg:static lg:border-0 lg:p-0">
-          <form.Subscribe selector={(state) => state.errorMap.onSubmit}>
-            {(error) =>
-              typeof error === "string" && (
-                <p role="alert" className="text-sm text-danger">
-                  {error}
-                </p>
-              )
-            }
-          </form.Subscribe>
-          <div className="flex gap-2">
-            <LeaveButton leave={leave} />
-            <form.Subscribe selector={(state) => state.isSubmitting}>
-              {(isSubmitting) => (
-                // Not while a draft is being discarded: one or the other would find it gone.
-                <Button
-                  type="submit"
-                  disabled={isSubmitting || (leave.kind === "discard" && leave.discarding)}
-                  className="flex-1"
-                >
-                  {isSubmitting ? "Saving…" : submitLabel}
-                </Button>
-              )}
+        <div className="fixed inset-x-0 bottom-0 z-10 border-t border-border bg-background px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] lg:static lg:border-0 lg:p-0">
+          {/* As wide as a phone's from 768 px, where the whole width would be a long reach. */}
+          <div className="grid gap-2 md:mx-auto md:max-w-xl lg:max-w-none">
+            <form.Subscribe selector={(state) => state.errorMap.onSubmit}>
+              {(error) =>
+                typeof error === "string" && (
+                  <p role="alert" className="text-sm text-danger">
+                    {error}
+                  </p>
+                )
+              }
+            </form.Subscribe>
+            <form.Subscribe
+              selector={(state) => ({
+                isSubmitting: state.isSubmitting,
+                title: state.values.title,
+              })}
+            >
+              {({ isSubmitting, title }) => {
+                // Saving and discarding a draft never run together: one or the other would find
+                // it gone.
+                const discarding = leave.kind === "discard" && leave.discarding;
+                return (
+                  <div className="flex gap-2">
+                    <LeaveButton leave={leave} busy={isSubmitting || discarding} title={title} />
+                    <Button type="submit" disabled={isSubmitting || discarding} className="flex-1">
+                      {isSubmitting ? "Saving…" : submitLabel}
+                    </Button>
+                  </div>
+                );
+              }}
             </form.Subscribe>
           </div>
         </div>
@@ -265,7 +278,15 @@ export function RecipeForm({
   );
 }
 
-function LeaveButton({ leave }: { leave: Leave }) {
+type LeaveButtonProps = {
+  leave: Leave;
+  // Saving, or discarding already.
+  busy: boolean;
+  // The title as it is now, for the question.
+  title: string;
+};
+
+function LeaveButton({ leave, busy, title }: LeaveButtonProps) {
   if (leave.kind === "cancel") {
     return (
       <Button asChild variant="outline" className="w-28">
@@ -279,13 +300,21 @@ function LeaveButton({ leave }: { leave: Leave }) {
   return (
     <LeaveDialog
       trigger={
-        // Not disabled while it runs, so focus stays on it (as Show more).
-        <Button type="button" variant="outline" aria-disabled={leave.discarding} className="w-28">
+        // Not disabled while busy, so focus stays on it (as Show more): it just doesn't open.
+        <Button
+          type="button"
+          variant="outline"
+          aria-disabled={busy}
+          onClick={(event) => {
+            if (busy) event.preventDefault();
+          }}
+          className="w-28"
+        >
           {leave.discarding ? "Discarding…" : "Discard"}
         </Button>
       }
       title="Discard this draft?"
-      description={`“${leave.title}” won't be saved.`}
+      description={title.trim() ? `“${title.trim()}” won't be saved.` : "It won't be saved."}
       confirmLabel="Discard draft"
       keepLabel="Keep reviewing"
       onConfirm={leave.discard}

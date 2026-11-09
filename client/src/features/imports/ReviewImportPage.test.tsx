@@ -101,6 +101,39 @@ test("Discard asks first; keeping the draft keeps it", async () => {
   expect(fetch.mock.calls.some(([, init]) => init?.method === "DELETE")).toBe(false);
 });
 
+test("the question names the draft by its title as it is now", async () => {
+  stubApi();
+  renderApp(`/imports/${ready.id}`);
+
+  const title = await screen.findByLabelText("Title");
+  await userEvent.clear(title);
+  await userEvent.type(title, "Nonna's pasta");
+  await userEvent.click(screen.getByRole("button", { name: "Discard" }));
+
+  expect(screen.getByRole("alertdialog")).toHaveTextContent("“Nonna's pasta” won't be saved.");
+});
+
+test("Discard doesn't open while the draft is being saved", async () => {
+  const fetch = stubApi();
+  // Approve never answers: the draft stays "Saving…".
+  fetch.mockImplementation((path: string) =>
+    path.endsWith("/approve")
+      ? new Promise<Response>(() => undefined)
+      : Promise.resolve(
+          path === "/api/imports" ? Response.json({ items: [] }) : Response.json(ready),
+        ),
+  );
+  renderApp(`/imports/${ready.id}`);
+
+  await screen.findByLabelText("Title");
+  await userEvent.click(screen.getByRole("button", { name: "Save to My recipes" }));
+  expect(await screen.findByRole("button", { name: "Saving…" })).toBeDisabled();
+  await userEvent.click(screen.getByRole("button", { name: "Discard" }));
+
+  expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
+  expect(fetch.mock.calls.some(([, init]) => init?.method === "DELETE")).toBe(false);
+});
+
 test("Discard draft deletes the import and goes back to New recipe", async () => {
   const fetch = stubApi();
   renderApp(`/imports/${ready.id}`);

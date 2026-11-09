@@ -6,7 +6,7 @@ import { platformNames } from "../../lib/platformNames.ts";
 // the post to compare. Which fields to check waits for the API (M8 F2).
 export function DraftBanner({ input }: { input: Import["input"] }) {
   return (
-    <div className="mt-2 flex gap-3 rounded-card border border-border p-4">
+    <div className="flex gap-3 rounded-card border border-border p-4">
       <Sparkles aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
       <div className="min-w-0">
         <p className="font-semibold">Pinch read this from {readFrom(input)}</p>
@@ -17,7 +17,7 @@ export function DraftBanner({ input }: { input: Import["input"] }) {
             href={input.url}
             target="_blank"
             rel="noreferrer"
-            className="mt-1 inline-flex min-h-11 items-center gap-1 text-sm underline underline-offset-4 hover:text-foreground"
+            className="inline-flex min-h-11 items-center gap-1 text-sm underline underline-offset-4 hover:text-foreground"
           >
             Watch the video
             <span className="sr-only"> (opens in a new tab)</span>

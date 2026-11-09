@@ -46,7 +46,8 @@ export function ReviewImportPage() {
       toastSaved(recipe.title);
     },
   });
-  // Asked first (LeaveDialog, in the form); a failure toasts with Try again (design §14).
+  // The form asks first, and never while saving (LeaveDialog); a failure toasts with Try again
+  // (design §14).
   const discard = useMutation({
     mutationFn: () => deleteResource(`/api/imports/${id}`),
     onSuccess: async () => {
@@ -90,8 +91,8 @@ export function ReviewImportPage() {
       <Breadcrumb links={[{ label: "New recipe", to: "/" }]} page={`Review: ${job.draft.title}`} />
       {/* The breadcrumbs name the page, so its heading is for screen readers. */}
       <h1 className="sr-only">{`Review ${job.draft.title}`}</h1>
-      <DraftBanner input={job.input} />
       <LazyRecipeForm
+        intro={<DraftBanner input={job.input} />}
         defaultValues={toFormValues(job.draft)}
         source={sourceOf(job.input)}
         picture={
@@ -102,10 +103,8 @@ export function ReviewImportPage() {
         submitLabel="Save to My recipes"
         leave={{
           kind: "discard",
-          title: job.draft.title,
-          // Not while saving: one or the other would find the import gone.
           discard: () => {
-            if (!discard.isPending && !approval.isPending) discard.mutate();
+            discard.mutate();
           },
           discarding: discard.isPending,
         }}
