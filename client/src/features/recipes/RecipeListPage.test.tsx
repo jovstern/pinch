@@ -169,6 +169,8 @@ test("when nothing matches, it says what was asked and offers to clear the searc
   expect(await screen.findByRole("link", { name: /Omelette/ })).toBeInTheDocument();
   expect(fetch).toHaveBeenLastCalledWith("/api/recipes");
   expect(screen.getByRole("searchbox")).toHaveValue("");
+  // The button went with the filters: the keyboard carries on from the search box.
+  expect(screen.getByRole("searchbox")).toHaveFocus();
 });
 
 test("Show more keeps the filter when it asks for the next page", async () => {
@@ -199,6 +201,7 @@ test("with a search and tags matching nothing, it offers the search without the 
 
   expect(await screen.findByText("1 recipe matches.")).toHaveAttribute("role", "status");
   expect(fetch).toHaveBeenLastCalledWith("/api/recipes?q=eggs");
+  expect(screen.getByRole("searchbox")).toHaveFocus();
 });
 
 test("a tag in the address that isn't in the lists is left out", async () => {

@@ -1,6 +1,7 @@
 import { PlatformSchema, type Recipe } from "@pinch/shared";
 import { Link } from "react-router";
 import { Thumbnail } from "../../components/Thumbnail.tsx";
+import { Badge } from "../../components/ui/Badge.tsx";
 import { platformNames } from "../../lib/platformNames.ts";
 
 // A recipe in My recipes' grid (design §14): its picture, where it came from, its title, and the
@@ -27,9 +28,12 @@ export function RecipeCard({ recipe }: { recipe: Recipe }) {
           />
         )}
         {platform && (
-          <span className="absolute top-2 right-2 rounded-full bg-background/90 px-2 py-0.5 text-xs font-medium">
+          <Badge
+            variant="secondary"
+            className="absolute top-2 right-2 bg-background/90 px-2 py-0.5 text-xs font-medium"
+          >
             {platformNames[platform]}
-          </span>
+          </Badge>
         )}
       </div>
     </Link>

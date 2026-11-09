@@ -1,4 +1,4 @@
-import { useId, useState } from "react";
+import { useId, useState, type RefObject } from "react";
 import { Button } from "../../components/ui/Button.tsx";
 import { Input } from "../../components/ui/Input.tsx";
 import type { RecipeFilters } from "./recipeQueries.ts";
@@ -7,11 +7,13 @@ import { TagPicker } from "./TagPicker.tsx";
 type ListFiltersProps = {
   filters: RecipeFilters;
   onChange: (filters: RecipeFilters) => void;
+  // The page focuses the search box after a Clear (RecipeListPage).
+  searchRef: RefObject<HTMLInputElement | null>;
 };
 
 // Search and tag filters above the list (design §7, §14). A search runs on Enter or Search, so
 // each one is a single request; a tag applies as it's ticked.
-export function ListFilters({ filters, onChange }: ListFiltersProps) {
+export function ListFilters({ filters, onChange, searchRef }: ListFiltersProps) {
   const searchId = useId();
   // What's typed. When the address's search changes from elsewhere (Clear, the Pinch link), the
   // box takes it: React docs, "Storing information from previous renders".
@@ -40,6 +42,7 @@ export function ListFilters({ filters, onChange }: ListFiltersProps) {
           Search your recipes
         </label>
         <Input
+          ref={searchRef}
           id={searchId}
           type="search"
           value={text}

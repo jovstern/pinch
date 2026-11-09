@@ -34,6 +34,7 @@ export function RecipeListPage() {
     isPlaceholderData,
   } = useInfiniteQuery(recipeListQuery(filters));
   const listRef = useRef<HTMLUListElement>(null);
+  const searchRef = useRef<HTMLInputElement>(null);
   // The first recipe of the page Show more asked for, to focus once it's drawn.
   const firstNewRef = useRef<number | null>(null);
   const recipes = data?.pages.flatMap((page) => page.items);
@@ -55,6 +56,13 @@ export function RecipeListPage() {
     setSearchParams(filterParams(next), { replace: true });
   }
 
+  // For a button that clears filters and goes away with them (Clear filters, Search all…): focus
+  // moves to the search box, where the next search starts, rather than falling to the page.
+  function clearFilters(next: RecipeFilters) {
+    changeFilters(next);
+    searchRef.current?.focus();
+  }
+
   function showMore() {
     // Not disabled while loading: a disabled button loses focus, and the keyboard with it.
     if (isFetchingNextPage) return;
@@ -71,8 +79,9 @@ export function RecipeListPage() {
   // What narrowed it, as typed and ticked: “soup”, italian.
   const asked = filters.tags.map(tagLabel);
   if (filters.q !== "") asked.unshift(`“${filters.q}”`);
-  // Not before the first recipe: there's nothing to search yet.
-  const showFilters = filtering || recipes?.length !== 0;
+  // Not before the first recipe: there's nothing to search yet. Known only once a list without
+  // filters has loaded, so the search box stays while one loads (it keeps its focus).
+  const noRecipesYet = !filtering && !isPlaceholderData && recipes?.length === 0;
 
   return (
     <>
@@ -80,142 +89,139 @@ export function RecipeListPage() {
       {/* The selected tab names the page on screen; the heading names it for screen readers. */}
       <h1 className="sr-only">My recipes</h1>
 
-      <div className="lg:flex lg:gap-8">
-        <div className="min-w-0 flex-1">
-          {showFilters && (
-            <>
-              <ListFilters filters={filters} onChange={changeFilters} />
-              {/* Announced as results arrive (ui-craft: aria-live for async results); blank
-                  while the list before them shows. Never hidden: a live region must be on the
-                  page before its text changes, or screen readers may miss it. When nothing
-                  matches, the block below says it on screen. */}
-              <p
-                role="status"
-                className={cn("mt-3 text-sm text-muted-foreground", noMatch && "sr-only")}
-              >
-                {filtering &&
-                  recipes !== undefined &&
-                  !isPlaceholderData &&
-                  matches(recipes.length, hasNextPage, filters.q !== "")}
-              </p>
-            </>
-          )}
+      {!noRecipesYet && (
+        <>
+          <ListFilters filters={filters} onChange={changeFilters} searchRef={searchRef} />
+          {/* Announced as results arrive (ui-craft: aria-live for async results); blank
+              while the list before them shows. Never hidden: a live region must be on the
+              page before its text changes, or screen readers may miss it. When nothing
+              matches, the block below says it on screen. */}
+          <p
+            role="status"
+            className={cn("mt-3 text-sm text-muted-foreground", noMatch && "sr-only")}
+          >
+            {filtering &&
+              recipes !== undefined &&
+              !isPlaceholderData &&
+              matches(recipes.length, hasNextPage, filters.q !== "")}
+          </p>
+        </>
+      )}
 
-          {status === "pending" && (
-            <>
-              <p className="sr-only">Loading your recipes…</p>
-              {/* Placeholders in the cards' shape, so nothing jumps when they arrive. */}
-              <ul aria-hidden="true" className={gridClasses}>
-                {[1, 2, 3, 4].map((n) => (
-                  <li key={n}>
-                    <Skeleton className="aspect-4/5 rounded-card" />
-                    <Skeleton className="mt-2 h-5 w-3/4" />
-                    <Skeleton className="mt-1 h-4 w-1/2" />
-                  </li>
-                ))}
-              </ul>
-            </>
-          )}
+      {status === "pending" && (
+        <>
+          <p className="sr-only">Loading your recipes…</p>
+          {/* Placeholders in the cards' shape, so nothing jumps when they arrive. */}
+          <ul aria-hidden="true" className={gridClasses}>
+            {[1, 2, 3, 4].map((n) => (
+              <li key={n}>
+                <Skeleton className="aspect-4/5 rounded-card" />
+                <Skeleton className="mt-2 h-5 w-3/4" />
+                <Skeleton className="mt-1 h-4 w-1/2" />
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
 
-          {/* Only when nothing has loaded: a failed refetch or next page keeps the list on screen. */}
-          {isLoadingError && (
-            <div role="alert" className="mt-6">
-              <p>We couldn't load your recipes.</p>
-              {/* The status stays "error" while it retries, so the button shows the wait. */}
-              <Button
-                type="button"
-                variant="secondary"
-                onClick={() => void refetch()}
-                disabled={isFetching}
-                className="mt-3"
-              >
-                {isFetching ? "Trying…" : "Try again"}
-              </Button>
-            </div>
-          )}
+      {/* Only when nothing has loaded: a failed refetch or next page keeps the list on screen. */}
+      {isLoadingError && (
+        <div role="alert" className="mt-6">
+          <p>We couldn't load your recipes.</p>
+          {/* The status stays "error" while it retries, so the button shows the wait. */}
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={() => void refetch()}
+            disabled={isFetching}
+            className="mt-3"
+          >
+            {isFetching ? "Trying…" : "Try again"}
+          </Button>
+        </div>
+      )}
 
-          {noMatch && (
-            <div className="mt-10 text-center">
-              <h2 className="text-xl font-semibold">No recipes match</h2>
-              <p dir="auto" className="mt-2 text-pretty text-muted-foreground">
-                {asked.join(", ")}
-              </p>
-              <Button
-                type="button"
-                variant="outline"
-                className="mt-4"
-                onClick={() => {
-                  changeFilters({ q: "", tags: [] });
-                }}
-              >
-                Clear filters
-              </Button>
-              {/* The words may be there without the tags. */}
-              {filters.q !== "" && filters.tags.length > 0 && (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  className="mx-auto mt-2 flex"
-                  onClick={() => {
-                    changeFilters({ ...filters, tags: [] });
-                  }}
-                >
-                  Search all recipes for “{filters.q}”
-                </Button>
-              )}
-            </div>
-          )}
-
-          {!filtering && !isPlaceholderData && recipes?.length === 0 && (
-            <div className="mt-16 text-center">
-              <h2 className="text-xl font-semibold">No recipes yet</h2>
-              <p className="mt-2 text-pretty text-muted-foreground">
-                Pinch one from a reel, or write your own.
-              </p>
-              {/* Write a recipe is already on the page (Header). */}
-              <Button asChild className="mt-4">
-                <Link to="/">Pinch a recipe</Link>
-              </Button>
-            </div>
-          )}
-
-          {recipes !== undefined && recipes.length > 0 && (
-            <ul
-              ref={listRef}
-              aria-busy={isPlaceholderData}
-              className={cn(gridClasses, isPlaceholderData && "opacity-60")}
-            >
-              {recipes.map((recipe) => (
-                <li key={recipe.id}>
-                  <RecipeCard recipe={recipe} />
-                </li>
-              ))}
-            </ul>
-          )}
-
-          {isFetchNextPageError && (
-            <p role="alert" className="mt-6 text-danger">
-              We couldn't load more recipes. Press Show more to try again.
-            </p>
-          )}
-          {hasNextPage && (
+      {noMatch && (
+        <div className="mt-10 text-center">
+          <h2 className="text-xl font-semibold">No recipes match</h2>
+          <p dir="auto" className="mt-2 text-pretty text-muted-foreground">
+            {asked.join(", ")}
+          </p>
+          <Button
+            type="button"
+            variant="outline"
+            className="mt-4"
+            onClick={() => {
+              clearFilters({ q: "", tags: [] });
+            }}
+          >
+            Clear filters
+          </Button>
+          {/* The words may be there without the tags. */}
+          {filters.q !== "" && filters.tags.length > 0 && (
             <Button
               type="button"
-              variant="secondary"
-              onClick={showMore}
-              aria-disabled={isFetchingNextPage}
-              className="mt-6"
+              variant="ghost"
+              className="mx-auto mt-2 flex"
+              onClick={() => {
+                clearFilters({ ...filters, tags: [] });
+              }}
             >
-              {isFetchingNextPage ? "Loading…" : "Show more"}
+              Search all recipes for “{filters.q}”
             </Button>
           )}
         </div>
-      </div>
+      )}
+
+      {noRecipesYet && (
+        <div className="mt-16 text-center">
+          <h2 className="text-xl font-semibold">No recipes yet</h2>
+          <p className="mt-2 text-pretty text-muted-foreground">
+            Pinch one from a reel, or write your own.
+          </p>
+          {/* Write a recipe is already on the page (Header). */}
+          <Button asChild className="mt-4">
+            <Link to="/">Pinch a recipe</Link>
+          </Button>
+        </div>
+      )}
+
+      {recipes !== undefined && recipes.length > 0 && (
+        <ul
+          ref={listRef}
+          aria-busy={isPlaceholderData}
+          className={cn(gridClasses, isPlaceholderData && "opacity-60")}
+        >
+          {recipes.map((recipe) => (
+            <li key={recipe.id}>
+              <RecipeCard recipe={recipe} />
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {isFetchNextPageError && (
+        <p role="alert" className="mt-6 text-danger">
+          We couldn't load more recipes. Press Show more to try again.
+        </p>
+      )}
+      {/* Not under a list that's about to be replaced. */}
+      {hasNextPage && !isPlaceholderData && (
+        <Button
+          type="button"
+          variant="secondary"
+          onClick={showMore}
+          aria-disabled={isFetchingNextPage}
+          className="mt-6"
+        >
+          {isFetchingNextPage ? "Loading…" : "Show more"}
+        </Button>
+      )}
     </>
   );
 }
 
-// 2 columns on a phone, 3 at 768, 4 at 1024 (beside the Filters panel), 5 from 1280 (design §14).
+// 2 columns on a phone, 3 at 768, 4 at 1024, 5 from 1280 (design §14).
 const gridClasses =
   "mt-4 grid grid-cols-2 gap-x-3 gap-y-5 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5";
 

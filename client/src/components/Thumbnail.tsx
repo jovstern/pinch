@@ -13,11 +13,12 @@ type ThumbnailProps = {
   className?: string;
 };
 
-// A small tile gets the control's radius: the card's would make it look like a pill.
+// A small tile gets the control's radius: the card's would make it look like a pill. A cover's
+// box is its card's, which has the fill already.
 const shapeClasses = {
-  tile: "h-20 w-16 shrink-0 rounded-control",
+  tile: "h-20 w-16 shrink-0 rounded-control bg-fill",
   cover: "size-full",
-  full: "h-auto rounded-card",
+  full: "h-auto rounded-card bg-fill",
 };
 
 // A recipe's picture, from its post. Decorative (alt=""): its title is always beside it. Its box
@@ -47,7 +48,7 @@ export function Thumbnail({ src, size, shape, className = "" }: ThumbnailProps) 
           ? { width: `min(100%, ${String((16 * size.width) / size.height)}rem)` }
           : undefined
       }
-      className={`bg-fill object-cover ${shapeClasses[shape]} ${className}`}
+      className={`object-cover ${shapeClasses[shape]} ${className}`}
     />
   );
 }
