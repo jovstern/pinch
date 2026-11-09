@@ -81,7 +81,10 @@ export function CookPage() {
           {`Step ${String(current + 1)} of ${String(recipe.steps.length)}`}
         </p>
         {/* dir="auto": a Hebrew step reads right to left, as in the form (TextField). */}
-        <p dir="auto" className="mt-3 max-w-prose font-display text-2xl text-pretty sm:text-3xl">
+        <p
+          dir="auto"
+          className="mt-3 max-w-prose font-display text-2xl font-medium text-pretty sm:text-3xl"
+        >
           {step}
         </p>
       </section>

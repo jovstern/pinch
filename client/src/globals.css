@@ -1,12 +1,14 @@
 @import "tailwindcss";
 
 /* Until Fraunces arrives (lib/displayFont.ts loads it once the page has loaded), titles are in
-   Georgia sized to take Fraunces' room: as wide, as tall, so nothing moves when it swaps in.
-   Measured from both fonts' metrics (Georgia Bold, as the titles are 600–700). */
+   Georgia Bold sized to take Fraunces' room: as wide, as tall, so nothing moves when it swaps
+   in. Measured from both fonts' metrics. For the bold titles only (600–700): lighter display
+   text (cook mode's step) falls to plain Georgia. Android has no Georgia: there the titles may
+   shift once, on the first visit. */
 @font-face {
   font-family: "Fraunces Fallback";
-  src: local("Georgia Bold"), local("Georgia-Bold"), local("Georgia");
-  font-weight: 500 700;
+  src: local("Georgia Bold"), local("Georgia-Bold");
+  font-weight: 600 700;
   size-adjust: 95.1%;
   ascent-override: 102.9%;
   descent-override: 26.8%;
