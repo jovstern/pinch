@@ -1,4 +1,10 @@
-import { dailyLimitMessage, linkMessage, textMessage, type Import } from "@pinch/shared";
+import {
+  dailyLimitMessage,
+  linkMessage,
+  screenshotsMessage,
+  textMessage,
+  type Import,
+} from "@pinch/shared";
 import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, test, vi } from "vitest";
@@ -339,4 +345,46 @@ test("polling runs only while the worker has a link in hand", () => {
   expect(pollInterval(list("processing"))).toBe(2000);
   expect(pollInterval(list("ready", "failed"))).toBe(false);
   expect(pollInterval(undefined)).toBe(false);
+});
+
+const screenshot = (name: string) => new File(["png"], name, { type: "image/png" });
+
+test("chosen screenshots are sent at once, as a form, and show in the list", async () => {
+  const shots = importOf({ input: { type: "images", count: 2 } });
+  const fetch = stubApi([[], [shots]], () => Response.json(shots, { status: 202 }));
+  renderApp("/");
+
+  await userEvent.upload(screen.getByLabelText("Or add screenshots"), [
+    screenshot("one.png"),
+    screenshot("two.png"),
+  ]);
+
+  const [path, init] = fetch.mock.calls.find(([, sent]) => sent?.method === "POST") ?? [];
+  expect(path).toBe("/api/imports/screenshots");
+  expect(init?.body).toBeInstanceOf(FormData);
+  expect((init?.body as FormData).getAll("images")).toHaveLength(2);
+  expect(await screen.findByText("Screenshots")).toBeInTheDocument();
+  expect(screen.getByText("2 images")).toBeInTheDocument();
+});
+
+test("more than 4 screenshots are refused before anything is sent", async () => {
+  const fetch = stubApi([[]]);
+  renderApp("/");
+
+  await userEvent.upload(
+    screen.getByLabelText("Or add screenshots"),
+    ["1", "2", "3", "4", "5"].map((n) => screenshot(`${n}.png`)),
+  );
+
+  expect(await screen.findByRole("alert")).toHaveTextContent(screenshotsMessage);
+  expect(fetch).not.toHaveBeenCalledWith("/api/imports/screenshots", expect.anything());
+});
+
+test("screenshots past the day's cap say so", async () => {
+  stubApi([[]], () => Response.json({ error: { code: "daily_limit" } }, { status: 429 }));
+  renderApp("/");
+
+  await userEvent.upload(screen.getByLabelText("Or add screenshots"), [screenshot("one.png")]);
+
+  expect(await screen.findByRole("alert")).toHaveTextContent(dailyLimitMessage);
 });
