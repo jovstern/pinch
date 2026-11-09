@@ -91,20 +91,25 @@ export function CookPage() {
       {durations.length > 0 && (
         <div className="mt-4 flex flex-wrap gap-2">
           {durations.map((duration, position) => {
-            const key = `${String(current)}:${String(position)}`;
+            // The step's own words and the time's place in them: an edit elsewhere that moves
+            // the steps can't make another step's button look running.
+            const key = `${step}\n${String(position)}`;
+            // Not a toggle (pressed again, nothing): unavailable while it runs, as Back is on
+            // the first step.
+            const running = isRunning(key);
             return (
               <Button
                 key={position}
                 type="button"
                 variant="secondary"
-                aria-pressed={isRunning(key)}
+                aria-disabled={running}
                 onClick={() => {
                   start(key, duration);
                 }}
               >
                 {/* One span: a flex item's trailing space would be lost ("Timer:20 min"). */}
                 <span>
-                  {isRunning(key) ? "Running: " : "Timer: "}
+                  {running ? "Running: " : "Timer: "}
                   <span dir="auto">{duration.label}</span>
                 </span>
               </Button>

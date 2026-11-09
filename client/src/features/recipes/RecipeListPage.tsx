@@ -179,7 +179,9 @@ export function RecipeListPage() {
                   />
                 )}
                 <div className="min-w-0">
-                  <h2 className="text-lg font-semibold">{recipe.title}</h2>
+                  <h2 dir="auto" className="text-lg font-semibold">
+                    {recipe.title}
+                  </h2>
                   <p className="mt-1 text-sm text-text-muted">{summary(recipe)}</p>
                 </div>
               </Link>

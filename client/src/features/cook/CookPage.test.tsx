@@ -185,7 +185,7 @@ test("a timer pressed again while it runs isn't started twice, and shows it's ru
     within(screen.getByRole("list", { name: "Timers" })).getAllByRole("listitem"),
   ).toHaveLength(1);
   expect(screen.getByRole("button", { name: "Running: 2 min" })).toHaveAttribute(
-    "aria-pressed",
+    "aria-disabled",
     "true",
   );
 });

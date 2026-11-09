@@ -3,7 +3,8 @@ import { expect, test } from "./fixtures.ts";
 // M6's demo (pr-demo skill): an Instagram reel becomes a draft with its picture, saved as a
 // recipe that shows it, then cooked a step at a time. The fake extractor stands in for yt-dlp and
 // Gemini (design §9): its picture is a plain tile. The pauses let a viewer follow the video.
-// It deletes the recipe it made, as import.spec.ts does: the files share one database.
+// It deletes the recipe it made, as import.spec.ts does: the files share one database. A picture
+// that didn't load would fail the test: Chrome logs it as a console error (fixtures.ts).
 test("paste a reel, review the draft with its picture, save it, cook it", async ({ page }) => {
   await page.goto("/");
   await page
@@ -26,7 +27,7 @@ test("paste a reel, review the draft with its picture, save it, cook it", async 
   await expect(page.getByRole("presentation")).toBeVisible();
   await page.waitForTimeout(1500);
 
-  await page.getByRole("link", { name: "Cook" }).click();
+  await page.getByRole("link", { name: "Cook", exact: true }).click();
   await expect(page.getByText("Step 1 of 2")).toBeVisible();
   await page.waitForTimeout(1000);
   await page.getByRole("button", { name: "Next" }).click();

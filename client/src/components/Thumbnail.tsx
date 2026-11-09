@@ -15,17 +15,10 @@ type ThumbnailProps = {
 // A recipe's picture, from its post. Decorative (alt=""): its title is always beside it. Its box
 // is the right size before the image loads (width and height from the API), so nothing jumps.
 export function Thumbnail({ src, size, shape, className = "" }: ThumbnailProps) {
-  // A picture that doesn't load (gone, offline): no broken-image icon. A tile keeps its place,
-  // so the cards still line up; the page's picture just isn't there.
-  const [failed, setFailed] = useState(false);
-  if (failed) {
-    return shape === "tile" ? (
-      <div
-        aria-hidden="true"
-        className={`h-20 w-16 shrink-0 rounded-control bg-fill ${className}`}
-      />
-    ) : null;
-  }
+  // A picture that doesn't load (gone, offline) is as no picture: no broken-image icon. Kept by
+  // its address, so another picture in the same place is tried.
+  const [failedSrc, setFailedSrc] = useState<string>();
+  if (failedSrc === src) return null;
   return (
     <img
       src={src}
@@ -34,7 +27,7 @@ export function Thumbnail({ src, size, shape, className = "" }: ThumbnailProps) 
       height={size.height}
       loading={shape === "tile" ? "lazy" : "eager"}
       onError={() => {
-        setFailed(true);
+        setFailedSrc(src);
       }}
       // "full" gets a width, not w-auto: with both sides auto, the box stays empty until the
       // image arrives. The height then follows from width and height.

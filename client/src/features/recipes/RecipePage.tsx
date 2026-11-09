@@ -42,7 +42,9 @@ export function RecipePage() {
           className="mb-4"
         />
       )}
-      <h1 className="text-3xl font-bold tracking-tight text-balance">{recipe.title}</h1>
+      <h1 dir="auto" className="text-3xl font-bold tracking-tight text-balance">
+        {recipe.title}
+      </h1>
       {recipe.description && <p className="mt-3 max-w-prose text-pretty">{recipe.description}</p>}
       {/* One block, so the nutrition sits close under the details, or alone in their place. */}
       {(recipeDetails || recipe.nutritionPerServing) && (
