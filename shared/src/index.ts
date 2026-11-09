@@ -13,6 +13,7 @@ export {
   MAX_SCREENSHOT_BYTES,
   MAX_SCREENSHOTS,
   PlatformSchema,
+  SCREENSHOT_TYPES,
   screenshotsMessage,
   textMessage,
   type Import,
