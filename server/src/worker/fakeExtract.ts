@@ -1,9 +1,9 @@
-import type { ImportStep, RecipeDraft } from "@pinch/shared";
+import type { RecipeDraft } from "@pinch/shared";
 import { setTimeout } from "node:timers/promises";
 import sharp from "sharp";
 import type { ImportDocument } from "../db/imports.ts";
-import type { StoredThumbnail } from "../db/thumbnail.ts";
 import { shrink } from "./thumbnail.ts";
+import type { Attempt } from "./workLoop.ts";
 
 // Stands in for Gemini (EXTRACTOR=fake): the queue was built with it in M4, without AI (design
 // §12), and e2e runs with it, so no test calls Gemini. It takes a few seconds, as the real one
@@ -13,8 +13,7 @@ import { shrink } from "./thumbnail.ts";
 export async function fakeExtract(
   input: ImportDocument["input"],
   signal: AbortSignal,
-  setStep: (step: ImportStep) => Promise<void>,
-  setThumbnail: (thumbnail: StoredThumbnail) => Promise<void>,
+  { setStep, setThumbnail }: Attempt,
 ): Promise<RecipeDraft> {
   // Screenshots: the first is the picture, as the real one does.
   if (input.type === "images" && input.images?.[0]) {

@@ -93,7 +93,7 @@ Slices for later milestones are filled in when the milestone starts.
 - [x] Back under the JS budget: Delete's dialog is fetched only when Delete is about to be pressed
 - [x] Toward the LCP budget on the pages that wait for data: the font after the page has drawn, the
       form's chunk with the data (2.41 → about 2.11 s; the last 110 ms is a decision, see the PR)
-- [ ] Logs: request lines without headers; each import attempt's time and Gemini's tokens
+- [x] Logs: request lines without headers; each import attempt's time and Gemini's tokens
 - [ ] Share and Comments, as "coming soon" (design §1)
 - [ ] Cook mode, from M6's UI review: more ways of writing a time ("1 hour 20 minutes", "חצי
       שעה"), ranges kept on one line, fewer wrong Hebrew ingredient matches, a loading skeleton

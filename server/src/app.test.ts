@@ -67,3 +67,19 @@ test("an unexpected error answers 500 without its details", async () => {
     error: { code: "internal", message: "Something went wrong." },
   });
 });
+
+test("a request's log line has its method, path and status, not its headers", async () => {
+  const lines: string[] = [];
+  const recorded = pino({ level: "info" }, { write: (line: string) => lines.push(line) });
+  const appWithLog = createApp({ logger: recorded, db, devUserId: config.DEV_USER_ID });
+
+  await request(appWithLog).get("/api/health").set("Cookie", "session=secret");
+
+  const line = JSON.parse(lines.find((text) => text.includes("request completed")) ?? "{}") as {
+    req?: unknown;
+    res?: unknown;
+  };
+  expect(line.req).toMatchObject({ method: "GET", url: "/api/health" });
+  expect(line.res).toEqual({ statusCode: 200 });
+  expect(lines.join("")).not.toContain("secret");
+});

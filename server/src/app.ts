@@ -15,8 +15,22 @@ type AppDeps = { logger: Logger; db: Db; devUserId: string };
 export function createApp({ logger, db, devUserId }: AppDeps) {
   const app = express();
   app.use(helmet());
-  // One log line per request, with a request id, method, path, status and duration.
-  app.use(pinoHttp({ logger }));
+  // One log line per request, with a request id, method, path, status and duration. Not its
+  // headers (pino-http's default): cookies and tokens would be written down once auth comes
+  // (§8.3), and they made each line about 1.7 kB.
+  app.use(
+    pinoHttp({
+      logger,
+      serializers: {
+        req: (req: { id: unknown; method: string; url: string }) => ({
+          id: req.id,
+          method: req.method,
+          url: req.url,
+        }),
+        res: (res: { statusCode: number }) => ({ statusCode: res.statusCode }),
+      },
+    }),
+  );
   app.use(devUser(devUserId));
   // JSON bodies only, up to express's default 100 kB: far more than any recipe needs.
   app.use(express.json());
