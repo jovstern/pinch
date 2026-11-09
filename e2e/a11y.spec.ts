@@ -51,10 +51,11 @@ for (const colorScheme of ["light", "dark"] as const) {
 
     await item.getByRole("link", { name: "Review" }).click();
     // The review page first: until it's in, the card's own picture is on the page too.
-    await expect(page.getByRole("heading", { level: 1, name: "Review the recipe" })).toBeVisible();
+    await expect(page.getByText("Pinch read this from Instagram")).toBeVisible();
     await expect(page.getByRole("presentation")).toBeVisible();
     expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
     await page.getByRole("button", { name: "Discard" }).click();
+    await page.getByRole("alertdialog").getByRole("button", { name: "Discard draft" }).click();
     await expect(page.getByRole("heading", { level: 1, name: "New recipe" })).toBeVisible();
   });
 }

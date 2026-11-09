@@ -1,5 +1,5 @@
 import type { Recipe } from "@pinch/shared";
-import { screen, waitFor } from "@testing-library/react";
+import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, test, vi } from "vitest";
 import { renderApp, stubFetch } from "../../test-utils.tsx";
@@ -68,6 +68,21 @@ test("shows the recipe in the form, and saves the whole of it", async () => {
       tags: ["flavor:spicy"],
     }),
   });
+});
+
+test("the editor sits under the recipe, with Save changes and Cancel", async () => {
+  stubApi();
+  renderApp(`/recipes/${omelette.id}/edit`);
+
+  const breadcrumb = await screen.findByRole("navigation", { name: "Breadcrumb" });
+  expect(within(breadcrumb).getByRole("link", { name: "Omelette" })).toHaveAttribute(
+    "href",
+    `/recipes/${omelette.id}`,
+  );
+  expect(within(breadcrumb).getByText("Edit")).toHaveAttribute("aria-current", "page");
+  expect(await screen.findByText("Source: Written by you")).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Save changes" })).toBeInTheDocument();
+  expect(screen.getByRole("link", { name: "Cancel" })).toBeInTheDocument();
 });
 
 test("editing a recipe that doesn't exist shows the not-found page", async () => {

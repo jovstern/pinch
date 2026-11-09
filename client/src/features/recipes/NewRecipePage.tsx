@@ -1,6 +1,7 @@
 import { RecipeSchema, type RecipeInput } from "@pinch/shared";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useNavigate } from "react-router";
+import { Link, useNavigate } from "react-router";
+import { Breadcrumb } from "../../components/ui/Breadcrumb.tsx";
 import { sendJson } from "../../lib/api.ts";
 import { toastSaved } from "../../lib/toasts.tsx";
 import { LazyRecipeForm } from "./LazyRecipeForm.tsx";
@@ -30,15 +31,24 @@ export function NewRecipePage() {
 
   return (
     <>
-      <title>New recipe · Pinch</title>
-      <h1 className="text-3xl font-bold tracking-tight text-balance">New recipe</h1>
-      <p className="mt-3 text-sm text-text-muted">
-        A title, the ingredients and the steps are all a recipe needs.
+      <title>Write a recipe · Pinch</title>
+      {/* Under New recipe, as a draft is (design §14): the breadcrumbs name the page, so its
+          heading is for screen readers. */}
+      <Breadcrumb links={[{ label: "New recipe", to: "/" }]} page="Write a recipe" />
+      <h1 className="sr-only">Write a recipe</h1>
+      {/* The faster way, for a recipe that's already written down somewhere. */}
+      <p className="mt-2 rounded-card bg-muted p-3 text-sm text-pretty">
+        Got the recipe as text?{" "}
+        <Link to="/" className="font-semibold underline underline-offset-4">
+          Paste it on New recipe
+        </Link>{" "}
+        and Pinch fills this in.
       </p>
       <LazyRecipeForm
         defaultValues={emptyRecipe}
+        source={{ type: "manual" }}
         submitLabel="Save recipe"
-        cancelTo="/"
+        leave={{ kind: "cancel", to: "/" }}
         save={creation.mutateAsync}
       />
     </>

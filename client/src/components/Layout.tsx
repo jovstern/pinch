@@ -25,6 +25,8 @@ export function Layout() {
   const onTabPage = pathname === "/" || pathname === "/recipes";
   // A recipe's own page, /recipes/<id>, and its cook mode: not /recipes/new, nor its edit page.
   const onRecipe = /^\/recipes\/[^/]+(\/cook)?$/.test(pathname) && pathname !== "/recipes/new";
+  // The editor: writing a recipe, editing one, reviewing a draft.
+  const onEditor = /^\/(recipes\/new|recipes\/[^/]+\/edit|imports\/[^/]+)$/.test(pathname);
   return (
     <>
       <Header onTabPage={onTabPage} />
@@ -36,6 +38,8 @@ export function Layout() {
           // From 1024 px My recipes has a panel beside its grid, and a recipe its picture beside
           // the title and its ingredients beside the steps (in cook mode too): they take the width.
           (pathname === "/recipes" || onRecipe) && "max-w-7xl",
+          // The editor's two columns, from 1024 px: what you edit, and the rest with Save.
+          onEditor && "max-w-6xl",
           // An inner page starts with its breadcrumbs (D24), close under the header: their
           // 44 px rows have room in them.
           !onTabPage && "pt-2",

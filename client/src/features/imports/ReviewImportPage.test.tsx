@@ -1,5 +1,5 @@
 import type { Import, Recipe, RecipeInput } from "@pinch/shared";
-import { screen } from "@testing-library/react";
+import { screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, test, vi } from "vitest";
 import { renderApp } from "../../test-utils.tsx";
@@ -62,7 +62,7 @@ test("the draft opens in the form; Save approves it as edited and shows the reci
   expect(title).toHaveValue("Tomato pasta");
   await userEvent.clear(title);
   await userEvent.type(title, "Nonna's tomato pasta");
-  await userEvent.click(screen.getByRole("button", { name: "Save recipe" }));
+  await userEvent.click(screen.getByRole("button", { name: "Save to My recipes" }));
 
   expect(
     await screen.findByRole("heading", { level: 1, name: "Nonna's tomato pasta" }),
@@ -74,11 +74,39 @@ test("the draft opens in the form; Save approves it as edited and shows the reci
   });
 });
 
-test("Discard deletes the import and goes back to New recipe", async () => {
+test("the draft sits under New recipe, says where Pinch read it and links to the post", async () => {
+  stubApi();
+  renderApp(`/imports/${ready.id}`);
+
+  const breadcrumb = await screen.findByRole("navigation", { name: "Breadcrumb" });
+  expect(within(breadcrumb).getByRole("link", { name: "New recipe" })).toHaveAttribute("href", "/");
+  expect(within(breadcrumb).getByText("Review: Tomato pasta")).toHaveAttribute(
+    "aria-current",
+    "page",
+  );
+  expect(screen.getByText("Pinch read this from Instagram")).toBeInTheDocument();
+  expect(screen.getByRole("link", { name: /Watch the video/ })).toHaveAttribute("href", reel);
+});
+
+test("Discard asks first; keeping the draft keeps it", async () => {
   const fetch = stubApi();
   renderApp(`/imports/${ready.id}`);
 
   await userEvent.click(await screen.findByRole("button", { name: "Discard" }));
+  const dialog = screen.getByRole("alertdialog", { name: "Discard this draft?" });
+  await userEvent.click(within(dialog).getByRole("button", { name: "Keep reviewing" }));
+
+  expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
+  expect(screen.getByLabelText("Title")).toHaveValue("Tomato pasta");
+  expect(fetch.mock.calls.some(([, init]) => init?.method === "DELETE")).toBe(false);
+});
+
+test("Discard draft deletes the import and goes back to New recipe", async () => {
+  const fetch = stubApi();
+  renderApp(`/imports/${ready.id}`);
+
+  await userEvent.click(await screen.findByRole("button", { name: "Discard" }));
+  await userEvent.click(screen.getByRole("button", { name: "Discard draft" }));
 
   expect(await screen.findByRole("heading", { level: 1, name: "New recipe" })).toBeInTheDocument();
   expect(fetch).toHaveBeenCalledWith(`/api/imports/${ready.id}`, { method: "DELETE" });
@@ -89,6 +117,7 @@ test("when Discard fails, a toast says so and the draft stays", async () => {
   renderApp(`/imports/${ready.id}`);
 
   await userEvent.click(await screen.findByRole("button", { name: "Discard" }));
+  await userEvent.click(screen.getByRole("button", { name: "Discard draft" }));
 
   expect(await screen.findByText("Couldn't save")).toBeInTheDocument();
   expect(screen.getByRole("button", { name: "Try again" })).toBeInTheDocument();
@@ -99,11 +128,11 @@ test("a draft from pasted text says so, with no link to a post", async () => {
   stubApi({ ...ready, input: { type: "text", text: "Tomato pasta: spaghetti, tomatoes." } });
   renderApp(`/imports/${ready.id}`);
 
-  expect(await screen.findByText(/Made from the text you pasted/)).toBeInTheDocument();
+  expect(await screen.findByText("Pinch read this from the text you pasted")).toBeInTheDocument();
   expect(screen.queryByRole("link", { name: /opens in a new tab/ })).not.toBeInTheDocument();
 });
 
-test("the draft's picture shows above it, from the import", async () => {
+test("the draft's picture shows, from the import", async () => {
   stubApi({ ...ready, thumbnail: { width: 400, height: 225 } });
   renderApp(`/imports/${ready.id}`);
 

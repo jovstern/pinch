@@ -15,12 +15,12 @@ test("paste a link, review the draft, save it as a recipe", async ({ page }) => 
   await page.waitForTimeout(1000);
   await link.getByRole("link", { name: "Review" }).click();
 
-  await expect(page.getByRole("heading", { level: 1, name: "Review the recipe" })).toBeVisible();
+  await expect(page.getByText("Pinch read this from YouTube")).toBeVisible();
   await expect(page.getByLabel("Title")).toHaveValue("Tomato pasta (from youtube)");
   await page.waitForTimeout(1000);
   await page.getByLabel("Title").fill("Weeknight tomato pasta");
   await page.waitForTimeout(500);
-  await page.getByRole("button", { name: "Save recipe" }).click();
+  await page.getByRole("button", { name: "Save to My recipes" }).click();
 
   await expect(
     page.getByRole("heading", { level: 1, name: "Weeknight tomato pasta" }),

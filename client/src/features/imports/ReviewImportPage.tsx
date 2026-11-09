@@ -1,7 +1,7 @@
-import { RecipeSchema, type Import, type RecipeInput } from "@pinch/shared";
+import { RecipeSchema, type Import, type Recipe, type RecipeInput } from "@pinch/shared";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate, useParams } from "react-router";
-import { Button } from "../../components/ui/Button.tsx";
+import { Breadcrumb } from "../../components/ui/Breadcrumb.tsx";
 import { Thumbnail } from "../../components/Thumbnail.tsx";
 import { deleteResource, sendJson } from "../../lib/api.ts";
 import { toastCouldntSave, toastDiscarded, toastSaved } from "../../lib/toasts.tsx";
@@ -9,6 +9,7 @@ import { LazyRecipeForm, usePreloadRecipeForm } from "../recipes/LazyRecipeForm.
 import { toFormValues } from "../recipes/recipeFormValues.ts";
 import { RecipeLoadError } from "../recipes/RecipeLoadError.tsx";
 import { recipeListsKey, recipeQuery } from "../recipes/recipeQueries.ts";
+import { DraftBanner } from "./DraftBanner.tsx";
 import { importListQuery, importQuery } from "./importQueries.ts";
 
 // The draft the worker made, in the recipe form: nothing is saved until the user has checked it
@@ -45,7 +46,7 @@ export function ReviewImportPage() {
       toastSaved(recipe.title);
     },
   });
-  // No question first, unlike deleting a recipe: pasting it again makes the draft again.
+  // Asked first (LeaveDialog, in the form); a failure toasts with Try again (design §14).
   const discard = useMutation({
     mutationFn: () => deleteResource(`/api/imports/${id}`),
     onSuccess: async () => {
@@ -86,63 +87,37 @@ export function ReviewImportPage() {
   return (
     <>
       <title>{`Review ${job.draft.title} · Pinch`}</title>
-      {/* As it will be at the top of the recipe. */}
-      {job.thumbnail && (
-        <Thumbnail
-          src={`/api/imports/${job.id}/thumbnail`}
-          size={job.thumbnail}
-          shape="full"
-          className="mb-4"
-        />
-      )}
-      <h1 className="text-3xl font-bold tracking-tight text-balance">Review the recipe</h1>
-      <p className="mt-3 text-sm text-pretty text-text-muted">
-        Fix anything that's wrong, then save it. Made from
-        {madeFrom[job.input.type]}
-      </p>
-      {/* A new tab: going to the post here would lose what was typed. One line, as in the list. */}
-      {job.input.type === "link" && (
-        <a
-          href={job.input.url}
-          target="_blank"
-          rel="noreferrer"
-          title={job.input.url}
-          className="block truncate text-sm text-text-muted underline"
-        >
-          {job.input.url}
-          <span className="sr-only"> (opens in a new tab)</span>
-        </a>
-      )}
+      <Breadcrumb links={[{ label: "New recipe", to: "/" }]} page={`Review: ${job.draft.title}`} />
+      {/* The breadcrumbs name the page, so its heading is for screen readers. */}
+      <h1 className="sr-only">{`Review ${job.draft.title}`}</h1>
+      <DraftBanner input={job.input} />
       <LazyRecipeForm
         defaultValues={toFormValues(job.draft)}
-        submitLabel="Save recipe"
-        cancelTo="/"
-        cancelLabel="Review later"
-        save={approval.mutateAsync}
-        extraAction={
-          // Discard deletes the draft; Review later leaves it. Last in the row, apart: it's not
-          // the way forward. Not while saving (one or the other would find the import gone), and
-          // not disabled, so focus stays on it (as Show more).
-          <Button
-            type="button"
-            variant="destructive-ghost"
-            onClick={() => {
-              if (!discard.isPending && !approval.isPending) discard.mutate();
-            }}
-            aria-disabled={discard.isPending || approval.isPending}
-            className="ml-auto"
-          >
-            {discard.isPending ? "Discarding…" : "Discard"}
-          </Button>
+        source={sourceOf(job.input)}
+        picture={
+          job.thumbnail && (
+            <Thumbnail src={`/api/imports/${job.id}/thumbnail`} size={job.thumbnail} shape="full" />
+          )
         }
+        submitLabel="Save to My recipes"
+        leave={{
+          kind: "discard",
+          title: job.draft.title,
+          // Not while saving: one or the other would find the import gone.
+          discard: () => {
+            if (!discard.isPending && !approval.isPending) discard.mutate();
+          },
+          discarding: discard.isPending,
+        }}
+        save={approval.mutateAsync}
       />
     </>
   );
 }
 
-// The end of "Made from…": a link follows it on the next line.
-const madeFrom: Record<Import["input"]["type"], string> = {
-  link: ":",
-  text: " the text you pasted.",
-  images: " your screenshots.",
-};
+// The recipe's source once it's saved: approve sets it from the import the same way (the API).
+function sourceOf(input: Import["input"]): Recipe["source"] {
+  if (input.type === "link") return { type: input.platform, url: input.url };
+  if (input.type === "text") return { type: "text" };
+  return { type: "image" };
+}
