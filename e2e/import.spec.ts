@@ -30,12 +30,11 @@ test("paste a link, review the draft, save it as a recipe", async ({ page }) => 
   await page.waitForTimeout(1000);
   // Approved: the import is deleted, so the link has left the queue.
   await page.getByRole("link", { name: /^New recipe/ }).click();
-  await expect(page).toHaveURL("/");
+  // On / first: the recipe's page has no queue either, so the next line would pass there too.
+  // The heading, not the address: the address changes before the new page shows.
+  await expect(page.getByRole("heading", { level: 1, name: "New recipe" })).toBeAttached();
   await expect(link).toHaveCount(0);
-  await page
-    .getByRole("navigation", { name: "Main" })
-    .getByRole("link", { name: "My recipes" })
-    .click();
+  await page.getByRole("link", { name: "My recipes" }).click();
   await expect(page.getByRole("link", { name: /Weeknight tomato pasta/ })).toBeVisible();
   await page.waitForTimeout(1000);
 

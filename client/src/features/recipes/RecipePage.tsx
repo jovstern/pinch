@@ -1,17 +1,16 @@
 import type { Nutrition, Recipe } from "@pinch/shared";
 import { useQuery } from "@tanstack/react-query";
-import { ExternalLink } from "lucide-react";
 import { Link, useParams } from "react-router";
 import { Badge } from "../../components/ui/Badge.tsx";
 import { Breadcrumb } from "../../components/ui/Breadcrumb.tsx";
 import { Button } from "../../components/ui/Button.tsx";
 import { Thumbnail } from "../../components/Thumbnail.tsx";
-import { platformNames } from "../../lib/platformNames.ts";
 import { ingredientLine } from "./ingredientLine.ts";
 import { keepRangesTogether } from "./ranges.ts";
-import { RecipeLoadError } from "./RecipeLoadError.tsx";
 import { LazyRecipeMenu } from "./LazyRecipeMenu.tsx";
+import { RecipeLoadError } from "./RecipeLoadError.tsx";
 import { RecipeSkeleton } from "./RecipeSkeleton.tsx";
+import { RecipeSource } from "./RecipeSource.tsx";
 import { filterParams, recipeQuery } from "./recipeQueries.ts";
 import { tagLabel } from "./tagLabels.ts";
 
@@ -74,15 +73,15 @@ export function RecipePage() {
           )}
           {recipe.tags.length > 0 && (
             // No heading above it, so it's named here (screen readers, tests). Each tag opens My
-            // recipes filtered by it; 32 px tall, with a 44 px touch area (the after:), which
-            // the rows' gap leaves room for.
+            // recipes filtered by it; 32 px tall, with a 44 px touch area (the after:, and
+            // min-w-11 for a short tag), which the rows' gap leaves room for.
             <ul aria-label="Tags" className="mt-3 flex flex-wrap gap-x-2 gap-y-3">
               {recipe.tags.map((tag) => (
                 <li key={tag}>
                   <Badge
                     asChild
                     variant="secondary"
-                    className="relative h-8 after:absolute after:inset-x-0 after:-inset-y-1.5 hover:bg-border"
+                    className="relative h-8 min-w-11 after:absolute after:inset-x-0 after:-inset-y-1.5 hover:bg-border active:bg-border/70"
                   >
                     <Link to={`/recipes?${filterParams({ q: "", tags: [tag] }).toString()}`}>
                       {tagLabel(tag)}
@@ -116,7 +115,9 @@ export function RecipePage() {
               // Ingredients have no id; their order is their identity within the recipe.
               <li key={index}>
                 {ingredientLine(ingredient)}
-                {ingredient.note && <span className="text-text-muted">, {ingredient.note}</span>}
+                {ingredient.note && (
+                  <span className="text-muted-foreground">, {ingredient.note}</span>
+                )}
               </li>
             ))}
           </ul>
@@ -132,7 +133,7 @@ export function RecipePage() {
           <ol
             aria-labelledby="steps"
             dir="auto"
-            className="mt-3 grid max-w-[62ch] list-decimal gap-3 ps-6 rtl:ml-auto"
+            className="mt-3 grid max-w-prose list-decimal gap-3 ps-6 rtl:ml-auto"
           >
             {recipe.steps.map((step, index) => (
               <li key={index} className="ps-1 text-pretty">
@@ -146,33 +147,10 @@ export function RecipePage() {
       {/* A placeholder (design §1). When built: its own collection, never an array in the
           recipe, as comments grow without limit. */}
       <h2 className="mt-8 text-xl font-semibold">Comments</h2>
-      <p className="mt-3 text-text-muted">
+      <p className="mt-3 text-muted-foreground">
         Coming soon: notes from whoever you share this recipe with.
       </p>
     </article>
-  );
-}
-
-// Where the recipe came from, first in the subtitle: the post, opened in a new tab, or how it
-// was written.
-function RecipeSource({ source }: { source: Recipe["source"] }) {
-  if (source.type === "manual") return "Written by you";
-  if (source.type === "text") return "From a post's text";
-  if (source.type === "image") return "From screenshots";
-  // Instagram, YouTube or Facebook.
-  const name = platformNames[source.type];
-  if (!source.url) return name;
-  return (
-    <a
-      href={source.url}
-      target="_blank"
-      rel="noreferrer"
-      className="inline-flex items-center gap-1 underline underline-offset-4 hover:text-foreground"
-    >
-      {name}
-      <span className="sr-only"> (opens in a new tab)</span>
-      <ExternalLink aria-hidden="true" className="size-3.5" />
-    </a>
   );
 }
 

@@ -1,5 +1,5 @@
 import { lazy, Suspense, type ComponentType } from "react";
-import { Outlet, useLocation, useMatch } from "react-router";
+import { Outlet, useLocation } from "react-router";
 import { useImportToasts } from "../features/imports/useImportToasts.ts";
 import { cn } from "../lib/cn.ts";
 import { ErrorBoundary } from "./ErrorBoundary.tsx";
@@ -23,8 +23,8 @@ export function Layout() {
   useImportToasts();
   // The two tabs' own pages, where Write a recipe floats on a phone.
   const onTabPage = pathname === "/" || pathname === "/recipes";
-  // A recipe (not /recipes/new, which the pattern also matches).
-  const onRecipe = useMatch("/recipes/:id") !== null && pathname !== "/recipes/new";
+  // A recipe's own page, /recipes/<id>: not /recipes/new, nor its cook and edit pages.
+  const onRecipe = /^\/recipes\/[^/]+$/.test(pathname) && pathname !== "/recipes/new";
   return (
     <>
       <Header onTabPage={onTabPage} />
@@ -33,11 +33,12 @@ export function Layout() {
       <main
         className={cn(
           "mx-auto max-w-3xl px-4 py-8 wrap-anywhere sm:px-6",
-          // My recipes is a grid with a panel beside it from 1024 px: it takes the width.
-          pathname === "/recipes" && "max-w-7xl",
-          // A recipe has its picture beside the title and the ingredients beside the steps. Its
-          // breadcrumbs sit close under the header (their 44 px rows have room in them).
-          onRecipe && "max-w-6xl pt-2",
+          // From 1024 px My recipes has a panel beside its grid, and a recipe its picture beside
+          // the title and its ingredients beside the steps: they take the width.
+          (pathname === "/recipes" || onRecipe) && "max-w-7xl",
+          // An inner page starts with its breadcrumbs (D24), close under the header: their
+          // 44 px rows have room in them.
+          !onTabPage && "pt-2",
           onTabPage && "pb-24 md:pb-8",
         )}
       >

@@ -21,7 +21,10 @@ const shapeClasses = {
   tile: "h-20 w-16 shrink-0 rounded-control bg-fill",
   cover: "size-full",
   full: "h-auto rounded-card bg-fill",
-  // The negative margins undo Layout's px-4 on a phone (change both together, as TagChips).
+  // The negative margins undo Layout's px-4 on a phone (change both together, as TagChips);
+  // max-w-none undoes Tailwind's img max-width: 100%, which would hold it in the gutter. Its height
+  // stays Tailwind's auto, so the aspect class sets it (on a phone), or its own width and height
+  // do (from 1024 px, aspect-auto).
   banner:
     "-mx-4 aspect-5/4 w-[calc(100%+2rem)] max-w-none bg-fill sm:mx-0 sm:max-h-96 sm:w-full sm:rounded-card lg:aspect-auto lg:max-h-100 lg:w-80 lg:shrink-0",
 };
