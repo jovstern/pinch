@@ -137,8 +137,11 @@ export function RecipeForm({
                 <span>Ingredient</span>
                 <span className="hidden sm:block">Note</span>
               </div>
-              {list.state.value.map((_, index) => {
+              {list.state.value.map((ingredient, index) => {
                 const position = String(index + 1);
+                // An example in a row that came empty (Add ingredient, a new recipe), as the
+                // title's; not in a recipe's own rows, where "g" in an empty unit would mislead.
+                const example = ingredient.name === "";
                 // TanStack Form types the name as `ingredients[${number}]`: the index must stay a
                 // number, which this rule forbids in a template.
                 // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
@@ -149,13 +152,34 @@ export function RecipeForm({
                   <fieldset key={index} className={ingredientColumns}>
                     <legend className="sr-only">Ingredient {position}</legend>
                     <form.Field name={`${row}.quantity`}>
-                      {(field) => <TextField field={field} label="Amount" hideLabel />}
+                      {(field) => (
+                        <TextField
+                          field={field}
+                          label="Amount"
+                          hideLabel
+                          placeholder={example ? "200" : undefined}
+                        />
+                      )}
                     </form.Field>
                     <form.Field name={`${row}.unit`}>
-                      {(field) => <TextField field={field} label="Unit" hideLabel />}
+                      {(field) => (
+                        <TextField
+                          field={field}
+                          label="Unit"
+                          hideLabel
+                          placeholder={example ? "g" : undefined}
+                        />
+                      )}
                     </form.Field>
                     <form.Field name={`${row}.name`}>
-                      {(field) => <TextField field={field} label="Ingredient" hideLabel />}
+                      {(field) => (
+                        <TextField
+                          field={field}
+                          label="Ingredient"
+                          hideLabel
+                          placeholder={example ? "e.g. flour" : undefined}
+                        />
+                      )}
                     </form.Field>
                     <form.Field name={`${row}.note`}>
                       {(field) => (
@@ -407,9 +431,10 @@ function LeaveButton({ leave, busy, title, changed }: LeaveButtonProps) {
 }
 
 // An ingredient's row: amount, unit and name on one line with ✕, even at 360 px; the note under
-// them on a phone, beside them from 640 px.
+// them on a phone, beside them from 640 px. The unit wider than the amount ("tablespoons" whole
+// from 640 px; on a phone the amount, a few digits, gives it what room a 360 px row has).
 const ingredientColumns =
-  "grid grid-cols-[4rem_4rem_minmax(0,1fr)_2.75rem] items-start gap-1.5 sm:grid-cols-[4.5rem_5rem_minmax(0,1fr)_minmax(0,1fr)_2.75rem] sm:gap-2";
+  "grid grid-cols-[3.5rem_5.5rem_minmax(0,1fr)_2.75rem] items-start gap-1.5 sm:grid-cols-[4rem_6.5rem_minmax(0,1fr)_minmax(0,1fr)_2.75rem] sm:gap-2";
 
 // ✕, named for screen readers by the row it removes.
 function RemoveButton({

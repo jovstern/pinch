@@ -5,6 +5,7 @@ import { Breadcrumb } from "../../components/ui/Breadcrumb.tsx";
 import { Thumbnail } from "../../components/Thumbnail.tsx";
 import { sendJson } from "../../lib/api.ts";
 import { toastChangesSaved } from "../../lib/toasts.tsx";
+import { focusHeading } from "../../lib/useHeadingFocus.ts";
 import { LazyRecipeForm, usePreloadRecipeForm } from "./LazyRecipeForm.tsx";
 import { toFormValues } from "./recipeFormValues.ts";
 import { RecipeLoadError } from "./RecipeLoadError.tsx";
@@ -35,7 +36,7 @@ export function EditRecipePage() {
         refetchType: "all",
       });
       // replace: Back never returns to the form; it goes to the recipe page Edit was opened from.
-      void navigate(`/recipes/${id}`, { replace: true });
+      void navigate(`/recipes/${id}`, { replace: true, state: focusHeading });
       toastChangesSaved();
     },
   });

@@ -5,6 +5,7 @@ import {
   AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
+  AlertDialogFooter,
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "../../components/ui/AlertDialog.tsx";
@@ -38,7 +39,7 @@ export function LeaveDialog({
         <AlertDialogDescription dir="auto" className="mt-2 text-pretty text-text-muted">
           {description}
         </AlertDialogDescription>
-        <div className="mt-6 flex justify-end gap-3">
+        <AlertDialogFooter>
           <AlertDialogCancel asChild>
             <Button variant="secondary">{keepLabel}</Button>
           </AlertDialogCancel>
@@ -47,7 +48,7 @@ export function LeaveDialog({
               {confirmLabel}
             </Button>
           </AlertDialogAction>
-        </div>
+        </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>
   );

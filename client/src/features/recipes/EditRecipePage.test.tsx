@@ -36,7 +36,7 @@ function stubApi() {
   return fetch;
 }
 
-test("shows the recipe in the form, and saves the whole of it", async () => {
+test("shows the recipe in the form, saves the whole of it, and focuses its title", async () => {
   const fetch = stubApi();
   renderApp(`/recipes/${omelette.id}/edit`);
 
@@ -54,9 +54,7 @@ test("shows the recipe in the form, and saves the whole of it", async () => {
   await userEvent.click(screen.getByRole("button", { name: "Done" }));
   await userEvent.click(screen.getByRole("button", { name: "Save changes" }));
 
-  expect(
-    await screen.findByRole("heading", { level: 1, name: "Cheese omelette" }),
-  ).toBeInTheDocument();
+  expect(await screen.findByRole("heading", { level: 1, name: "Cheese omelette" })).toHaveFocus();
   // Keys in the schema's order.
   expect(fetch).toHaveBeenCalledWith(`/api/recipes/${omelette.id}`, {
     method: "PUT",

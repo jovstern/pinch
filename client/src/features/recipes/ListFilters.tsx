@@ -53,12 +53,13 @@ export function ListFilters({ filters, onChange, onChangeTags, searchRef }: List
             value={text}
             onChange={(event) => {
               setText(event.target.value);
-              // Emptied (its ✕, Escape, or deleting the words): the search is over, without
+              // Emptied (Escape, or deleting the words): the search is over, without
               // an Enter, so the box and the address never disagree.
               if (event.target.value === "" && filters.q !== "") onChange({ ...filters, q: "" });
             }}
-            placeholder="Title or ingredient"
-            className="pl-9"
+            placeholder="Search recipes"
+            // No native ✕: the browser's own, unlike the rest of Pinch (Escape still empties it).
+            className="pl-9 [&::-webkit-search-cancel-button]:appearance-none"
           />
         </form>
         {/* From 1024 px the Filters are a panel beside the grid (FiltersPanel), and the

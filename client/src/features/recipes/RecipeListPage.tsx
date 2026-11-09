@@ -12,6 +12,7 @@ import { ListFilters } from "./ListFilters.tsx";
 import { RecipeCard } from "./RecipeCard.tsx";
 import { filterParams, recipeListQuery, type RecipeFilters } from "./recipeQueries.ts";
 import { tagLabel } from "./tagLabels.ts";
+import { useHeadingFocus } from "../../lib/useHeadingFocus.ts";
 
 // The My recipes tab, at /recipes (design §14, D24).
 export function RecipeListPage() {
@@ -38,6 +39,7 @@ export function RecipeListPage() {
   } = useInfiniteQuery(recipeListQuery(filters));
   const listRef = useRef<HTMLUListElement>(null);
   const searchRef = useRef<HTMLInputElement>(null);
+  const headingRef = useHeadingFocus();
   // The first recipe of the page Show more asked for, to focus once it's drawn.
   const firstNewRef = useRef<number | null>(null);
   const recipes = data?.pages.flatMap((page) => page.items);
@@ -96,7 +98,25 @@ export function RecipeListPage() {
     <>
       <title>My recipes · Pinch</title>
       {/* The selected tab names the page on screen; the heading names it for screen readers. */}
-      <h1 className="sr-only">My recipes</h1>
+      <h1 ref={headingRef} tabIndex={-1} className="sr-only">
+        My recipes
+      </h1>
+
+      {/* From 1024 px the panel's ~35 checkboxes come first, on screen and to the keyboard
+          (ui-craft: the keyboard goes in visual order): a skip link, shown when focused, goes
+          past them to the search. Below 1024 px the Filters are one button. */}
+      {!noRecipesYet && (
+        <Button
+          type="button"
+          variant="secondary"
+          className="sr-only focus-visible:not-sr-only focus-visible:absolute focus-visible:z-10 focus-visible:px-4 focus-visible:shadow-sheet max-lg:hidden"
+          onClick={() => {
+            searchRef.current?.focus();
+          }}
+        >
+          Skip the filters
+        </Button>
+      )}
 
       {/* Two columns from 1024 px: the Filters panel and the grid. */}
       <div className="lg:flex lg:gap-8">
@@ -188,16 +208,17 @@ export function RecipeListPage() {
           )}
 
           {/* Only when nothing has loaded: a failed refetch or next page keeps the list on screen. */}
+          {/* Centred, as the empty states. */}
           {isLoadingError && (
-            <div role="alert" className="mt-6">
-              <p>We couldn't load your recipes.</p>
+            <div role="alert" className="mt-10 text-center">
+              <h2 className="text-xl font-semibold">We couldn't load your recipes</h2>
               {/* The status stays "error" while it retries, so the button shows the wait. */}
               <Button
                 type="button"
                 variant="secondary"
                 onClick={() => void refetch()}
                 disabled={isFetching}
-                className="mt-3"
+                className="mt-4"
               >
                 {isFetching ? "Trying…" : "Try again"}
               </Button>
@@ -218,14 +239,15 @@ export function RecipeListPage() {
                   clearFilters({ q: "", tags: [] });
                 }}
               >
-                Clear filters
+                {/* Named for what it clears: only a search is on, or tags too. */}
+                {filters.tags.length === 0 ? "Clear search" : "Clear filters"}
               </Button>
               {/* The words may be there without the tags. */}
               {filters.q !== "" && filters.tags.length > 0 && (
                 <Button
                   type="button"
                   variant="ghost"
-                  className="mx-auto mt-2 flex"
+                  className="mx-auto mt-2 flex underline underline-offset-4"
                   onClick={() => {
                     clearFilters({ ...filters, tags: [] });
                   }}

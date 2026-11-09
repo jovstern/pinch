@@ -141,7 +141,10 @@ test("Discard draft deletes the import and goes back to New recipe", async () =>
   await userEvent.click(await screen.findByRole("button", { name: "Discard" }));
   await userEvent.click(screen.getByRole("button", { name: "Discard draft" }));
 
-  expect(await screen.findByRole("heading", { level: 1, name: "New recipe" })).toBeInTheDocument();
+  const heading = await screen.findByRole("heading", { level: 1, name: "New recipe" });
+  // Still there once the dialog's own focus handling (a tick later) is done.
+  await new Promise((resolve) => setTimeout(resolve, 10));
+  expect(heading).toHaveFocus();
   expect(fetch).toHaveBeenCalledWith(`/api/imports/${ready.id}`, { method: "DELETE" });
 });
 
@@ -175,18 +178,21 @@ test("the draft's picture shows, from the import", async () => {
   }
 });
 
-test("an import with no draft yet says it isn't ready", async () => {
+test("an import with no draft yet says so", async () => {
   stubApi({ ...ready, status: "processing", draft: undefined });
   renderApp(`/imports/${ready.id}`);
 
   expect(
-    await screen.findByRole("heading", { level: 1, name: "Not ready to review" }),
+    await screen.findByRole("heading", { level: 1, name: "No draft yet" }),
   ).toBeInTheDocument();
 });
 
-test("an import that doesn't exist shows the not-found page", async () => {
+test("an import that doesn't exist has no draft either, and leads back to New recipe", async () => {
   vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(null, { status: 404 })));
   renderApp(`/imports/${ready.id}`);
 
-  expect(await screen.findByRole("heading", { name: "Page not found" })).toBeInTheDocument();
+  expect(
+    await screen.findByRole("heading", { level: 1, name: "No draft yet" }),
+  ).toBeInTheDocument();
+  expect(screen.getByRole("link", { name: "Back to New recipe" })).toHaveAttribute("href", "/");
 });

@@ -67,8 +67,7 @@ export function RecipeTags({ selected, onChange, errors }: RecipeTagsProps) {
                 Add tag
               </Button>
             </SheetTrigger>
-            {/* Centred and narrower from 640 px, where the full width would be a long row. */}
-            <SheetContent aria-describedby={undefined} className="sm:mx-auto sm:max-w-xl">
+            <SheetContent aria-describedby={undefined}>
               <SheetTitle className="px-4 pt-5 pb-2 font-sans text-lg font-semibold">
                 Tags
               </SheetTitle>

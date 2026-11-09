@@ -1,4 +1,5 @@
 import { PlatformSchema, type Recipe } from "@pinch/shared";
+import { CookingPot } from "lucide-react";
 import { Link } from "react-router";
 import { Thumbnail } from "../../components/Thumbnail.tsx";
 import { Badge } from "../../components/ui/Badge.tsx";
@@ -11,21 +12,36 @@ export function RecipeCard({ recipe }: { recipe: Recipe }) {
   const platform = PlatformSchema.safeParse(recipe.source.type).data;
   return (
     // The picture comes first on screen but last in the markup (order-first), so the link is
-    // named by its title, then the rest: "Omelette 10 min · 2 ingredients Instagram".
-    <Link to={`/recipes/${recipe.id}`} className="group flex flex-col rounded-card">
-      <h2 dir="auto" className="mt-2 line-clamp-2 text-base font-semibold group-hover:underline">
-        {recipe.title}
-      </h2>
-      <p className="text-sm text-muted-foreground">{summary(recipe)}</p>
+    // named by its title, then the rest: "Omelette 10 min · 2 ingredients Instagram". The focus
+    // ring a little further out than elsewhere (!: over globals.css), clear of the title.
+    <Link
+      to={`/recipes/${recipe.id}`}
+      className="group flex flex-col rounded-card focus-visible:outline-offset-4!"
+    >
+      {/* dir="auto" on both: the meta line follows its title's side (a Hebrew title, right),
+          its words kept in their own order (bdi), so "120 min" doesn't turn into "min … 120". */}
+      <div dir="auto">
+        <h2 className="mt-2 line-clamp-2 text-base font-semibold group-hover:underline">
+          {recipe.title}
+        </h2>
+        <p className="text-sm text-muted-foreground">
+          <bdi>{summary(recipe)}</bdi>
+        </p>
+      </div>
       {/* 4:5, cropped, so the grid's rows line up whatever the post's shape. Without a picture
-          (or if it fails) the plain tile stays. */}
+          a pot, as in the queue, so it doesn't look like a card still loading; if the picture
+          fails, the plain tile stays. */}
       <div className="relative order-first aspect-4/5 overflow-hidden rounded-card bg-muted">
-        {recipe.thumbnail && (
+        {recipe.thumbnail ? (
           <Thumbnail
             src={`/api/recipes/${recipe.id}/thumbnail`}
             size={recipe.thumbnail}
             shape="cover"
           />
+        ) : (
+          <div className="flex h-full items-center justify-center text-muted-foreground">
+            <CookingPot aria-hidden="true" className="size-8" />
+          </div>
         )}
         {platform && (
           <Badge

@@ -4,6 +4,7 @@ import { Link, useNavigate } from "react-router";
 import { Breadcrumb } from "../../components/ui/Breadcrumb.tsx";
 import { sendJson } from "../../lib/api.ts";
 import { toastSaved } from "../../lib/toasts.tsx";
+import { focusHeading } from "../../lib/useHeadingFocus.ts";
 import { LazyRecipeForm } from "./LazyRecipeForm.tsx";
 import { emptyRecipe } from "./recipeFormValues.ts";
 import { recipeListsKey, recipeQuery } from "./recipeQueries.ts";
@@ -24,7 +25,7 @@ export function NewRecipePage() {
         refetchType: "all",
       });
       // replace: Back from the new recipe goes where the user was, not to a blank form.
-      void navigate(`/recipes/${recipe.id}`, { replace: true });
+      void navigate(`/recipes/${recipe.id}`, { replace: true, state: focusHeading });
       toastSaved(recipe.title);
     },
   });

@@ -31,7 +31,8 @@ export function toastPinching() {
   showToast("message", "Pinching it", {
     description: "Usually under a minute",
     icon: <LoaderCircle className="size-4 motion-safe:animate-spin" />,
-    duration: normal,
+    // Short: the queue right under the field already shows it cooking.
+    duration: short,
   });
 }
 

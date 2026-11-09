@@ -40,7 +40,7 @@ function ingredient(number: number) {
   return within(screen.getByRole("group", { name: `Ingredient ${String(number)}` }));
 }
 
-test("saves a new recipe and shows it", async () => {
+test("saves a new recipe and shows it, its title focused", async () => {
   const fetch = stubApi(() => Response.json(saved, { status: 201 }));
   renderApp("/recipes/new");
 
@@ -59,7 +59,8 @@ test("saves a new recipe and shows it", async () => {
   await userEvent.click(screen.getByRole("button", { name: "Done" }));
   await userEvent.click(screen.getByRole("button", { name: "Save recipe" }));
 
-  expect(await screen.findByRole("heading", { level: 1, name: "Toast" })).toBeInTheDocument();
+  // Focus on the new page's title, not lost to the page (useHeadingFocus).
+  expect(await screen.findByRole("heading", { level: 1, name: "Toast" })).toHaveFocus();
   expect(screen.getByText("Saved to My recipes")).toBeInTheDocument();
   // Blank optional fields aren't sent; the numbers are numbers. (Keys in the schema's order.)
   expect(fetch).toHaveBeenCalledWith("/api/recipes", {

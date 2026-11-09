@@ -216,6 +216,15 @@ test("an applied tag's ✕ takes it off", async () => {
   expect(screen.getByRole("searchbox")).toHaveFocus();
 });
 
+test("Skip the filters goes past the Filters panel to the search box", async () => {
+  stubList();
+  renderApp("/recipes");
+
+  await userEvent.click(await screen.findByRole("button", { name: "Skip the filters" }));
+
+  expect(screen.getByRole("searchbox")).toHaveFocus();
+});
+
 test("emptying the search box ends the search, without Enter", async () => {
   const fetch = stubList();
   renderApp("/recipes?q=eggs");
@@ -242,6 +251,16 @@ test("when nothing matches, it says what was asked and offers to clear the searc
   expect(screen.getByRole("searchbox")).toHaveValue("");
   // The button went with the filters: the keyboard carries on from the search box.
   expect(screen.getByRole("searchbox")).toHaveFocus();
+});
+
+test("with only a search matching nothing, it offers to clear the search", async () => {
+  const fetch = stubList();
+  renderApp("/recipes?q=soup");
+
+  await userEvent.click(await screen.findByRole("button", { name: "Clear search" }));
+
+  expect(await screen.findByRole("link", { name: /Omelette/ })).toBeInTheDocument();
+  expect(fetch).toHaveBeenLastCalledWith("/api/recipes");
 });
 
 test("Show more keeps the filter when it asks for the next page", async () => {

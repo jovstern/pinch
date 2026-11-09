@@ -28,10 +28,6 @@ const buttonVariants = cva(
         // Only for what can't be undone.
         destructive:
           "bg-destructive text-destructive-foreground hover:not-aria-disabled:bg-destructive/90 active:not-aria-disabled:bg-destructive/80",
-        // A destructive action that isn't the page's main one (or only opens a question): it
-        // shouldn't shout.
-        "destructive-ghost":
-          "text-destructive hover:not-aria-disabled:bg-destructive/10 active:not-aria-disabled:bg-destructive/20",
       },
     },
     defaultVariants: { variant: "default" },
