@@ -1,6 +1,9 @@
 import { execFile } from "node:child_process";
+import { existsSync } from "node:fs";
+import { join } from "node:path";
 import { promisify } from "node:util";
 import { z } from "zod";
+import { NoRetryError } from "./workLoop.ts";
 
 const run = promisify(execFile);
 
@@ -36,4 +39,61 @@ export async function readVideoInfo(url: string, signal: AbortSignal): Promise<V
 export function parseVideoInfo(json: string): VideoInfo {
   const info = YtDlpInfoSchema.parse(JSON.parse(json));
   return { seconds: info.duration ?? undefined, caption: info.description ?? "" };
+}
+
+// A download's own timeout inside the attempt's deadline (§4.3): the spike's reels (3–11 MB)
+// took a few seconds each.
+const DOWNLOAD_TIMEOUT_MS = 60_000;
+
+// Reels are small (the spike's were 3–11 MB): a bigger file isn't a short recipe video.
+const MAX_DOWNLOAD = "100M";
+
+export const TOO_BIG = "This video is too big. Pinch reads short ones.";
+
+// Downloads an Instagram or Facebook post's video into `dir` and reads its info in the same
+// call (§4.1): one request to the platform, not two. Returns where the .mp4 is; the caller
+// deletes the folder.
+export async function downloadVideo(
+  url: string,
+  dir: string,
+  signal: AbortSignal,
+): Promise<VideoInfo & { path: string }> {
+  const { stdout } = await run(
+    "yt-dlp",
+    // As readVideoInfo, plus: --no-simulate downloads even though the info is printed;
+    // --remux-video mp4 makes it an .mp4 without re-encoding, as video.mp4.
+    [
+      "--no-warnings",
+      "--no-playlist",
+      "--playlist-items",
+      "1",
+      "--dump-json",
+      "--no-simulate",
+      "--max-filesize",
+      MAX_DOWNLOAD,
+      "--remux-video",
+      "mp4",
+      "-o",
+      join(dir, "video.%(ext)s"),
+      "--",
+      url,
+    ],
+    { signal, timeout: DOWNLOAD_TIMEOUT_MS, maxBuffer: YTDLP_MAX_OUTPUT },
+  );
+  const path = join(dir, "video.mp4");
+  // Past --max-filesize, yt-dlp skips the download and still succeeds: no file.
+  if (!existsSync(path)) throw new NoRetryError(TOO_BIG);
+  return { ...parseVideoInfo(stdout), path };
+}
+
+// The length of a downloaded video, with ffprobe: Instagram doesn't say it before (§4.1).
+export async function measureSeconds(path: string, signal: AbortSignal): Promise<number> {
+  const { stdout } = await run(
+    "ffprobe",
+    ["-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", path],
+    { signal, timeout: YTDLP_TIMEOUT_MS },
+  );
+  const seconds = Number(stdout.trim());
+  if (!Number.isFinite(seconds)) throw new Error(`ffprobe gave no length: "${stdout.trim()}"`);
+  return seconds;
 }

@@ -101,8 +101,9 @@ Mongo is the only shared state. There is no Redis, no queue service and no objec
      quantities (D15).
    - **YouTube** → send the URL to Gemini directly (Gemini can watch public YouTube videos).
    - **Instagram / Facebook** → download to a temp folder, upload to the **Gemini Files API**.
-     Instagram doesn't report a length, so for it the length is checked after the download
-     with `ffprobe` (the spike found reels of 3–11 MB).
+     One `yt-dlp` call reads the info and downloads (at most 100 MB; past it, "too big", not
+     retried). Instagram doesn't report a length, so for it the length is checked after the
+     download with `ffprobe` (the spike found reels of 3–11 MB).
    - **Text / screenshots** (fallback) → send them to Gemini as they are: no `yt-dlp`, no
      video. Pasted text is the post's text, so it's fenced as data like a caption (§9).
 3. Gemini gets the video and the caption together and returns JSON that matches our recipe

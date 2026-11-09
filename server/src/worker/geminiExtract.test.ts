@@ -1,8 +1,10 @@
-import { GenerateContentResponse, GoogleGenAI } from "@google/genai";
+import { FileState, GenerateContentResponse, GoogleGenAI } from "@google/genai";
+import { existsSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import type { ImportDocument } from "../db/imports.ts";
 import { GEMINI_MODEL, geminiExtract, NOT_A_RECIPE, TOO_LONG } from "./geminiExtract.ts";
-import { readVideoInfo } from "./videoInfo.ts";
+import { downloadVideo, measureSeconds, readVideoInfo } from "./videoInfo.ts";
 import { NoRetryError } from "./workLoop.ts";
 
 // yt-dlp is replaced too: no test reads a real post.
@@ -141,14 +143,74 @@ test("an answer cut off mid-JSON is a failed attempt", async () => {
   await expect(extract(youtube, noDeadline, noStep)).rejects.toThrow(SyntaxError);
 });
 
-test("an Instagram link isn't sent: it needs a download first (M6)", async () => {
-  const generate = vi.spyOn(ai.models, "generateContent");
-  const reel: ImportDocument["input"] = {
-    type: "link",
-    url: "https://www.instagram.com/reel/abc/",
-    platform: "instagram",
-  };
+const reel: ImportDocument["input"] = {
+  type: "link",
+  url: "https://www.instagram.com/reel/abc/",
+  platform: "instagram",
+};
 
-  await expect(extract(reel, noDeadline, noStep)).rejects.toThrow("instagram links come in M6.");
-  expect(generate).not.toHaveBeenCalled();
+// yt-dlp downloads a reel into the folder it's given; Instagram says no length. Returns the
+// folder, to check it's deleted.
+function downloadsReel() {
+  const folder = { path: "" };
+  vi.mocked(downloadVideo).mockImplementation((_url, dir) => {
+    folder.path = dir;
+    writeFileSync(join(dir, "video.mp4"), "a video");
+    return Promise.resolve({ caption: "2 eggs", path: join(dir, "video.mp4") });
+  });
+  return folder;
+}
+
+// The Files API takes the video and has it ready at once.
+function filesApi() {
+  const upload = vi.spyOn(ai.files, "upload").mockResolvedValue({
+    name: "files/reel",
+    uri: "https://gemini/files/reel",
+    mimeType: "video/mp4",
+    state: FileState.ACTIVE,
+  });
+  const remove = vi.spyOn(ai.files, "delete").mockResolvedValue({});
+  return { upload, remove };
+}
+
+test("an Instagram reel is downloaded, measured, uploaded and asked about; then both copies are deleted", async () => {
+  const folder = downloadsReel();
+  vi.mocked(measureSeconds).mockResolvedValue(30);
+  const { upload, remove } = filesApi();
+  const generate = vi
+    .spyOn(ai.models, "generateContent")
+    .mockResolvedValue(answer(JSON.stringify(recipe)));
+
+  expect(await extract(reel, noDeadline, noStep)).toEqual(recipe);
+
+  expect(upload.mock.calls[0]?.[0].file).toBe(join(folder.path, "video.mp4"));
+  const contents = generate.mock.calls[0]?.[0].contents;
+  expect(contents).toContainEqual({
+    fileData: { fileUri: "https://gemini/files/reel", mimeType: "video/mp4" },
+  });
+  expect(JSON.stringify(contents)).toContain("2 eggs");
+  expect(remove).toHaveBeenCalledWith({ name: "files/reel" });
+  expect(existsSync(folder.path)).toBe(false);
+});
+
+test("a reel over 3 minutes, measured once it's here, isn't uploaded, and isn't tried again", async () => {
+  const folder = downloadsReel();
+  vi.mocked(measureSeconds).mockResolvedValue(200);
+  const { upload } = filesApi();
+
+  await expect(extract(reel, noDeadline, noStep)).rejects.toThrow(new NoRetryError(TOO_LONG));
+
+  expect(upload).not.toHaveBeenCalled();
+  expect(existsSync(folder.path)).toBe(false);
+});
+
+test("the uploaded video is deleted even when Gemini fails", async () => {
+  downloadsReel();
+  vi.mocked(measureSeconds).mockResolvedValue(30);
+  const { remove } = filesApi();
+  vi.spyOn(ai.models, "generateContent").mockRejectedValue(new Error("Gemini is down."));
+
+  await expect(extract(reel, noDeadline, noStep)).rejects.toThrow("Gemini is down.");
+
+  expect(remove).toHaveBeenCalledWith({ name: "files/reel" });
 });

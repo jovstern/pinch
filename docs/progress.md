@@ -78,4 +78,13 @@ Slices for later milestones are filled in when the milestone starts.
 - [x] U2 PR 2: each step's ingredients inline, tick-off
 - [x] U2 PR 3: timers
 ## M6 — Instagram / Facebook
+
+- [x] Instagram and Facebook links: download with `yt-dlp`, length with `ffprobe`, the Gemini
+      Files API; media deleted in `finally`
+- [ ] Thumbnails: the worker makes one (a frame, or YouTube's image), stored with the draft and
+      the recipe, served by the API
+- [ ] Thumbnails in the client: on the cards, the recipe and the review page
+- [ ] Screenshot fallback, the pipeline: an import can be up to 4 images
+- [ ] Screenshot fallback, the box: add images on `/`
+- [ ] End of milestone: a real reel becomes a draft with a thumbnail; UI review, observer, demo
 ## M7 — Polish
