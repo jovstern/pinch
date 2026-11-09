@@ -99,7 +99,7 @@ test("Keep it closes the question without deleting", async () => {
   await userEvent.click(await screen.findByRole("button", { name: "Keep it" }));
 
   expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
-  // Focus goes back to Delete, for a keyboard to carry on from there.
+  // Focus goes back to Delete, for a keyboard to carry on from there (a tick later: Radix's way).
   await waitFor(() => {
     expect(screen.getByRole("button", { name: "Delete" })).toHaveFocus();
   });

@@ -4,15 +4,18 @@ import { Button } from "../../components/Button.tsx";
 
 // The dialog (Radix, ~14 kB) is its own chunk, fetched only when Delete is about to be pressed
 // (pointer over it, or focus on it) or is pressed: in a recipe's first load it put the page over
-// its JS budget (docs/metrics/m06.md). The button itself is here at once, so it never moves.
+// its JS budget (docs/metrics/m06.md). Not a Lazy* wrapper, as LazyRecipeForm is: the button is
+// real and here at once, so it never moves; only the dialog waits. On a slow link a tap may
+// wait a moment for it (no fallback: one in the button row would move the buttons), and a
+// chunk that won't load is caught by Layout's ErrorBoundary, as any page's.
 const loadDialog = () => import("./DeleteRecipeDialog.tsx");
-const DeleteRecipeDialog = lazy(async () => ({ default: (await loadDialog()).DeleteRecipeDialog }));
+const DeleteRecipeDialog = lazy(async () => ({
+  default: (await loadDialog()).DeleteRecipeDialog,
+}));
 
 export function DeleteRecipeButton({ recipe }: { recipe: Recipe }) {
+  // Open while it's on the page: closing takes it away, and a failed attempt with it.
   const [open, setOpen] = useState(false);
-  // Once asked for, the dialog stays on the page, closed or open, so it can close as a dialog
-  // does (giving focus back) rather than vanish.
-  const [asked, setAsked] = useState(false);
   const buttonRef = useRef<HTMLButtonElement>(null);
   return (
     <>
@@ -20,21 +23,22 @@ export function DeleteRecipeButton({ recipe }: { recipe: Recipe }) {
         ref={buttonRef}
         type="button"
         variant="danger-quiet"
+        aria-haspopup="dialog"
         onPointerEnter={() => void loadDialog()}
         onFocus={() => void loadDialog()}
         onClick={() => {
-          setAsked(true);
           setOpen(true);
         }}
       >
         Delete
       </Button>
-      {asked && (
+      {open && (
         <Suspense>
           <DeleteRecipeDialog
             recipe={recipe}
-            open={open}
-            onOpenChange={setOpen}
+            onClose={() => {
+              setOpen(false);
+            }}
             focusOnClose={() => buttonRef.current?.focus()}
           />
         </Suspense>

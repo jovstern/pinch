@@ -87,6 +87,7 @@ Slices for later milestones are filled in when the milestone starts.
 - [x] Screenshot fallback, the pipeline: an import can be up to 4 images
 - [x] Screenshot fallback, the box: add images on `/`
 - [x] End of milestone: a real reel becomes a draft with a thumbnail; UI review, observer, demo
+
 ## M7 — Polish
 
 - [x] Back under the JS budget: Delete's dialog is fetched only when Delete is about to be pressed

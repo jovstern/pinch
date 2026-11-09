@@ -8,20 +8,15 @@ import { recipeListsKey } from "./recipeQueries.ts";
 
 type DeleteRecipeDialogProps = {
   recipe: Recipe;
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  // Where focus goes when it closes: the Delete button (DeleteRecipeButton). With no Radix
-  // Trigger, Radix wouldn't know it.
+  onClose: () => void;
+  // Where focus goes when it closes: the Delete button (DeleteRecipeButton). Radix would give it
+  // back to what had focus when it opened, and Safari doesn't focus a clicked button: with no
+  // Radix Trigger, focus would land on the page there.
   focusOnClose: () => void;
 };
 
 // Deleting can't be undone, so it asks first (a Radix dialog: focus, Escape, screen readers).
-export function DeleteRecipeDialog({
-  recipe,
-  open,
-  onOpenChange,
-  focusOnClose,
-}: DeleteRecipeDialogProps) {
+export function DeleteRecipeDialog({ recipe, onClose, focusOnClose }: DeleteRecipeDialogProps) {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const deletion = useMutation({
@@ -41,12 +36,11 @@ export function DeleteRecipeDialog({
   });
 
   return (
-    // Closing clears a failed attempt, so the question opens fresh next time.
+    // Open while it's on the page; closing (Keep it, Escape) asks to be taken away.
     <AlertDialog.Root
-      open={open}
+      open
       onOpenChange={(opening) => {
-        if (!opening) deletion.reset();
-        onOpenChange(opening);
+        if (!opening) onClose();
       }}
     >
       <AlertDialog.Portal>
