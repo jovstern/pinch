@@ -1,12 +1,23 @@
 import { ImportSchema, type Import } from "@pinch/shared";
-import type { Collection, Db, ObjectId } from "mongodb";
+import type { Binary, Collection, Db, ObjectId } from "mongodb";
+import type { StoredThumbnail } from "./thumbnail.ts";
 
 // An import as it is stored (design §6): the job the worker runs. nextAttemptAt says when it may
 // be claimed (now, or after a backoff); leaseUntil, how long the worker holding it may keep it
 // (§4.3); expiresAt, when the TTL index deletes it if it's abandoned. stalled isn't stored:
 // toImport works it out each time.
-export type ImportDocument = Omit<Import, "id" | "stalled" | "createdAt" | "updatedAt"> & {
+export type ImportDocument = Omit<
+  Import,
+  "id" | "input" | "stalled" | "thumbnail" | "createdAt" | "updatedAt"
+> & {
   _id: ObjectId;
+  // Only a screenshots input has images (the type lets any have them: a separate union member
+  // would stop TypeScript narrowing input.images): kept, as JPEGs, until the draft is made
+  // (screenshots.ts); the API says only how many.
+  input: Import["input"] & { images?: Binary[] };
+  // The draft's picture, made by the worker; the recipe takes it on approve (§5). Named as on
+  // a recipe, so one projection leaves the image out of both (WITHOUT_MEDIA).
+  thumbnail?: StoredThumbnail;
   ownerId: ObjectId;
   nextAttemptAt: Date;
   leaseUntil?: Date;

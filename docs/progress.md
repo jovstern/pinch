@@ -73,9 +73,31 @@ Slices for later milestones are filled in when the milestone starts.
 ## The look and cook mode (docs/ux/plan.md U4, U2; approved 2026-11-09)
 
 - [x] U4 PR 1: tokens for light and dark, Fraunces for titles, the type scale
-- [ ] U4 PR 2: the components on the tokens, the mark
-- [ ] U2 PR 1: `/recipes/:id/cook`, its type, the steps, Wake Lock
-- [ ] U2 PR 2: each step's ingredients inline, tick-off
-- [ ] U2 PR 3: timers
+- [x] U4 PR 2: the components on the tokens, the mark
+- [x] U2 PR 1: `/recipes/:id/cook`, its type, the steps, Wake Lock
+- [x] U2 PR 2: each step's ingredients inline, tick-off
+- [x] U2 PR 3: timers
 ## M6 — Instagram / Facebook
+
+- [x] Instagram and Facebook links: download with `yt-dlp`, length with `ffprobe`, the Gemini
+      Files API; media deleted in `finally`
+- [x] Thumbnails: the worker makes one (the post's own picture), stored with the draft and
+      the recipe, served by the API
+- [x] Thumbnails in the client: on the cards, the recipe and the review page
+- [x] Screenshot fallback, the pipeline: an import can be up to 4 images
+- [x] Screenshot fallback, the box: add images on `/`
+- [x] End of milestone: a real reel becomes a draft with a thumbnail; UI review, observer, demo
+
 ## M7 — Polish
+
+- [x] Back under the JS budget: Delete's dialog is fetched only when Delete is about to be pressed
+- [x] Toward the LCP budget on the pages that wait for data: the font after the page has drawn, the
+      form's chunk with the data (2.41 → about 2.11 s; the last 110 ms is a decision, see the PR)
+- [x] Logs: request lines without headers; each import attempt's time and Gemini's tokens
+- [x] Share and Comments, as "coming soon" (design §1)
+- [x] Cook mode, from M6's UI review: more ways of writing a time ("1 hour 20 minutes", "חצי
+      שעה"), ranges kept on one line, fewer wrong Hebrew ingredient matches, a loading skeleton
+- [x] States: the accessibility e2e on a recipe, cook mode and a draft's review with its picture,
+      in both themes (Your imports while loading: left as is, as the list is usually empty and a
+      placeholder would jump the other way)
+- [x] End of milestone: UI review, observer, demo

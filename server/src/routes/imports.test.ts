@@ -5,11 +5,13 @@ import {
   ImportSchema,
   linkMessage,
   RecipeSchema,
+  screenshotsMessage,
   textMessage,
   type RecipeInput,
 } from "@pinch/shared";
-import { ObjectId } from "mongodb";
+import { Binary, ObjectId } from "mongodb";
 import { pino } from "pino";
+import sharp from "sharp";
 import request from "supertest";
 import { beforeEach, expect, test } from "vitest";
 import { createApp } from "../app.ts";
@@ -260,6 +262,41 @@ test("POST /api/imports/:id/approve saves the edited draft as a recipe and delet
   expect(stored?.nutritionPerServing).toEqual(nutritionPerServing);
 });
 
+test("a draft's picture is served apart, kept out of the list, and goes with it to the recipe", async () => {
+  const webp = Buffer.from("a webp");
+  const thumbnail = { webp: new Binary(webp), width: 400, height: 500 };
+  const id = await insertDone({ draft, thumbnail });
+
+  // The list says how big it is; the image itself comes from its own address.
+  const listed = ImportListSchema.parse((await request(app).get("/api/imports")).body);
+  expect(listed.items.find((item) => item.id === id)?.thumbnail).toEqual({
+    width: 400,
+    height: 500,
+  });
+  const image = await request(app).get(`/api/imports/${id}/thumbnail`);
+  expect(image.headers["content-type"]).toBe("image/webp");
+  expect(image.headers["cache-control"]).toBe("private, max-age=31536000, immutable");
+  expect(image.body).toEqual(webp);
+
+  const recipe = RecipeSchema.parse(
+    (await request(app).post(`/api/imports/${id}/approve`).send(draft)).body,
+  );
+  expect(recipe.thumbnail).toEqual({ width: 400, height: 500 });
+  // Kept when the recipe is edited (D20).
+  await request(app).put(`/api/recipes/${recipe.id}`).send(draft);
+  const kept = await request(app).get(`/api/recipes/${recipe.id}/thumbnail`);
+  expect(kept.body).toEqual(webp);
+});
+
+test("an import or a recipe with no picture: its thumbnail is not found", async () => {
+  const id = await insertDone({ draft });
+  expect((await request(app).get(`/api/imports/${id}/thumbnail`)).status).toBe(404);
+  const recipe = RecipeSchema.parse(
+    (await request(app).post(`/api/imports/${id}/approve`).send(draft)).body,
+  );
+  expect((await request(app).get(`/api/recipes/${recipe.id}/thumbnail`)).status).toBe(404);
+});
+
 test("a recipe from pasted text has text as its source, and no link", async () => {
   const id = await insertDone({
     draft,
@@ -395,4 +432,79 @@ test("yesterday's count doesn't count today", async () => {
   const response = await request(app).post("/api/imports").send({ type: "link", url: reel });
 
   expect(response.status).toBe(202);
+});
+
+// A phone screenshot: a PNG, taller than the 1600 px it's made into.
+const screenshot = await sharp({
+  create: { width: 1170, height: 2532, channels: 3, background: "#fff" },
+})
+  .png()
+  .toBuffer();
+
+test("POST /api/imports/screenshots keeps them as small JPEGs and answers how many", async () => {
+  const response = await request(app)
+    .post("/api/imports/screenshots")
+    .attach("images", screenshot, "one.png")
+    .attach("images", screenshot, "two.png");
+
+  expect(response.status).toBe(202);
+  const sent = ImportSchema.parse(response.body);
+  expect(sent.input).toEqual({ type: "images", count: 2 });
+  const stored = await importsCollection(db).findOne({ _id: new ObjectId(sent.id) });
+  const images = stored?.input.images ?? [];
+  expect(images).toHaveLength(2);
+  const first = await sharp(images[0]?.buffer).metadata();
+  expect(first).toMatchObject({ format: "jpeg", height: 1600 });
+
+  // A recipe from them is from an image.
+  await importsCollection(db).updateOne(
+    { _id: new ObjectId(sent.id) },
+    { $set: { status: "ready", draft } },
+  );
+  const recipe = RecipeSchema.parse(
+    (await request(app).post(`/api/imports/${sent.id}/approve`).send(draft)).body,
+  );
+  expect(recipe.source).toEqual({ type: "image" });
+});
+
+test("screenshots are refused when there are none, more than 4, or one isn't an image", async () => {
+  const refused = {
+    error: {
+      code: "invalid_input",
+      message: "Some fields are not valid.",
+      fields: { images: screenshotsMessage },
+    },
+  };
+  const none = await request(app).post("/api/imports/screenshots").field("note", "x");
+  expect(none.status).toBe(400);
+  expect(none.body).toEqual(refused);
+
+  let five = request(app).post("/api/imports/screenshots");
+  for (let n = 0; n < 5; n++) five = five.attach("images", screenshot, `${String(n)}.png`);
+  expect((await five).body).toEqual(refused);
+
+  const malformed = await request(app)
+    .post("/api/imports/screenshots")
+    .set("Content-Type", "multipart/form-data")
+    .send("abc");
+  expect(malformed.body).toEqual(refused);
+
+  const notAnImage = await request(app)
+    .post("/api/imports/screenshots")
+    .attach("images", Buffer.from("not an image"), "recipe.png");
+  expect(notAnImage.status).toBe(400);
+  expect(notAnImage.body).toEqual(refused);
+});
+
+test("screenshots refused count nothing; past the cap they're refused with 429", async () => {
+  await request(app)
+    .post("/api/imports/screenshots")
+    .attach("images", Buffer.from("not an image"), "recipe.png");
+  expect(await usage.findOne({ ownerId: devUserId })).toBeNull();
+
+  await setUsage(DAILY_IMPORT_CAP);
+  const capped = await request(app)
+    .post("/api/imports/screenshots")
+    .attach("images", screenshot, "one.png");
+  expect(capped.status).toBe(429);
 });

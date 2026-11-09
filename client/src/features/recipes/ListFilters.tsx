@@ -46,7 +46,7 @@ export function ListFilters({ filters, onChange }: ListFiltersProps) {
             setText(event.target.value);
           }}
           placeholder="Title or ingredient"
-          className="min-h-11 w-full rounded-lg border border-border bg-surface-raised px-3 py-2"
+          className="min-h-11 w-full rounded-control border border-border-field bg-surface-raised px-3 py-2"
         />
         <Button type="submit" variant="secondary" className="shrink-0">
           Search

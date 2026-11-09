@@ -183,7 +183,8 @@ the portrait tiles and the dark theme are what keep it from reading as a templat
 |---|---|---|---|
 | `--color-surface` | `#FBF8F2` | `#17130F` | page |
 | `--color-surface-raised` | `#FFFFFF` | `#221C16` | cards, inputs, sheets |
-| `--color-surface-sunken` | `#F3EDE2` | `#0F0C09` | the capture bar's well, chips at rest |
+| `--color-surface-sunken` | `#F3EDE2` | `#0F0C09` | the capture bar's well |
+| `--color-fill` | `#EFE7DA` | `#2C241D` | chips and secondary buttons at rest, placeholders (added in U4 PR 2: sunken is invisible on the dark page) |
 | `--color-border` | `#E6DED1` | `#3A3029` | 1 px lines, used sparingly |
 | `--color-text` | `#221A12` | `#F3EDE4` | ink |
 | `--color-text-muted` | `#6E6257` | `#A89C8F` | meta, notes (≥ 4.5:1 on its surface) |
@@ -203,7 +204,7 @@ accent and danger buttons, and `--color-scrim` (`#0F0C09`) behind dialogs.
 `@media (prefers-color-scheme: dark)` only — no toggle in v1 (smart defaults over settings).
 
 **Type.** Display: **Fraunces** (variable serif, SIL OFL), self-hosted woff2 subset to
-Latin, `wght` 500–700, `font-display: swap`. Built (U4 PR 1): 29.5 kB, with the optical size
+Latin, `wght` 500–700. Built (U4 PR 1): 29.5 kB, with the optical size
 fixed at 36 (with the `opsz` axis it was 55 kB); for `h1`, `h2`, the
 wordmark and the cook-mode step. Hebrew titles fall back to the system serif via the stack
 (`"Fraunces", "Frank Ruhl Libre", Georgia, serif` — Frank Ruhl Libre only if a Hebrew subset
@@ -212,9 +213,18 @@ is wanted later; not in the first PR). Body: the system sans as today (zero byte
 balance` on headings, `pretty` on paragraphs; tabular numbers on quantities. Budget: the
 display font is the one new download and must fit the 165 kB SPA budget with the entry
 (`docs/metrics/m04.md`); if it doesn't, ship it only on the recipe and cook routes.
+Built (M7): no longer fetched with the page (that cost the data pages' LCP 300–450 ms,
+`docs/metrics/m06.md` Miss 1): `client/src/lib/displayFont.ts` adds it 1.5 s after the page
+has loaded, and until then a Georgia sized to match ("Fraunces Fallback") holds its place; it never
+blocks text, so `font-display` no longer applies.
 
 **Shape.** Cards 16 px radius, controls 12 px, chips full; one soft shadow token for sheets
-and the toast only; borders only where two raised surfaces meet.
+and the toast only; borders only where two raised surfaces meet. Built (U4 PR 2): fields keep a
+border, `--color-border-field`, at 3:1 against the page (WCAG 1.4.11: an empty field must be
+seen); secondary buttons and chips at rest are `fill`, not boxes; the recipe cards keep
+their line until U5 gives them a face; imports stay dashed (a filled row would hide its
+filled button); the dialog keeps a line (it would vanish over the dark scrim) and the header
+its rule.
 
 **Imagery.** Thumbnails (M6, §5) shown **4:5 portrait**, the reel's own shape, on cards and at
 the top of a recipe; a text or manual recipe gets a tinted tile (`--color-accent-soft` and
@@ -227,7 +237,9 @@ illustration.
 `prefers-reduced-motion`.
 
 **Mark.** The word "Pinch" in Fraunces with a pinched-fingers glyph (two strokes) as the
-favicon and the PWA icon; the current orange wordmark is replaced.
+favicon and the PWA icon; the current orange wordmark is replaced. Built (U4 PR 2): the SVG
+favicon and the header's mark; the 192/512 PNG icons come with the manifest in U8 (PWA,
+later).
 
 ## 7. The experience
 
@@ -426,7 +438,7 @@ persona unless named. **Status:** `proposed` for all; only the user moves one.
   competitor's first path, B synthesis). Android Chrome supports `share_target` for an
   installed PWA; iOS does not (C15), so iOS gets a Paste button (C17) and an optional
   Shortcut. Design §1 lists the share target under "Later" and D7 chose paste for v1.
-- **Change:** PR 1: `manifest.webmanifest` (name, 192/512 icons from U4, `start_url`,
+- **Change:** PR 1: `manifest.webmanifest` (name, 192/512 icons drawn from U4's mark, `start_url`,
   `display: standalone`, `theme_color`), served by the client build; an install hint after
   the first saved recipe (not on first load, per C16); the **Paste** button in the capture
   bar (`navigator.clipboard.readText()` on tap, with the plain input as the fallback). PR 2:

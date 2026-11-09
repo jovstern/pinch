@@ -1,6 +1,7 @@
 import { Route, Routes } from "react-router";
 import { Layout } from "./components/Layout.tsx";
 import { NotFoundPage } from "./components/NotFoundPage.tsx";
+import { LazyCookPage } from "./features/cook/LazyCookPage.tsx";
 import { ReviewImportPage } from "./features/imports/ReviewImportPage.tsx";
 import { EditRecipePage } from "./features/recipes/EditRecipePage.tsx";
 import { NewRecipePage } from "./features/recipes/NewRecipePage.tsx";
@@ -16,6 +17,7 @@ export function App() {
         <Route path="recipes/new" element={<NewRecipePage />} />
         <Route path="recipes/:id" element={<RecipePage />} />
         <Route path="recipes/:id/edit" element={<EditRecipePage />} />
+        <Route path="recipes/:id/cook" element={<LazyCookPage />} />
         <Route path="imports/:id" element={<ReviewImportPage />} />
         <Route path="*" element={<NotFoundPage />} />
       </Route>

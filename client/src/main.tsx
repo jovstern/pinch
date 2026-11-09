@@ -4,6 +4,7 @@ import { createRoot } from "react-dom/client";
 import { BrowserRouter } from "react-router";
 import { App } from "./App.tsx";
 import { ApiError } from "./lib/api.ts";
+import { loadDisplayFont } from "./lib/displayFont.ts";
 import "./globals.css";
 
 const root = document.getElementById("root");
@@ -19,6 +20,8 @@ const queryClient = new QueryClient({
     },
   },
 });
+
+loadDisplayFont();
 
 createRoot(root).render(
   <StrictMode>

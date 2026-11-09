@@ -1,8 +1,11 @@
-import type { Ingredient, Nutrition, Recipe } from "@pinch/shared";
+import type { Nutrition, Recipe } from "@pinch/shared";
 import { useQuery } from "@tanstack/react-query";
 import { Link, useParams } from "react-router";
 import { Button } from "../../components/Button.tsx";
-import { LazyDeleteRecipeButton } from "./LazyDeleteRecipeButton.tsx";
+import { Thumbnail } from "../../components/Thumbnail.tsx";
+import { ingredientLine } from "./ingredientLine.ts";
+import { keepRangesTogether } from "./ranges.ts";
+import { DeleteRecipeButton } from "./DeleteRecipeButton.tsx";
 import { RecipeLoadError } from "./RecipeLoadError.tsx";
 import { recipeQuery } from "./recipeQueries.ts";
 import { tagLabel } from "./tagLabels.ts";
@@ -31,8 +34,23 @@ export function RecipePage() {
   return (
     <article>
       <title>{`${recipe.title} · Pinch`}</title>
-      <h1 className="text-3xl font-bold tracking-tight text-balance">{recipe.title}</h1>
-      {recipe.description && <p className="mt-3 max-w-prose text-pretty">{recipe.description}</p>}
+      {/* At the top, at its own shape. */}
+      {recipe.thumbnail && (
+        <Thumbnail
+          src={`/api/recipes/${recipe.id}/thumbnail`}
+          size={recipe.thumbnail}
+          shape="full"
+          className="mb-4"
+        />
+      )}
+      <h1 dir="auto" className="text-3xl font-bold tracking-tight text-balance">
+        {recipe.title}
+      </h1>
+      {recipe.description && (
+        <p dir="auto" className="mt-3 max-w-prose text-pretty">
+          {recipe.description}
+        </p>
+      )}
       {/* One block, so the nutrition sits close under the details, or alone in their place. */}
       {(recipeDetails || recipe.nutritionPerServing) && (
         <div className="mt-3 grid gap-1 text-sm text-text-muted">
@@ -50,25 +68,34 @@ export function RecipePage() {
         // No heading above it, so it's named here (screen readers, tests).
         <ul aria-label="Tags" className="mt-3 flex flex-wrap gap-2">
           {recipe.tags.map((tag) => (
-            <li key={tag} className="rounded-full bg-border/60 px-3 py-1 text-sm">
+            <li key={tag} className="rounded-full bg-fill px-3 py-1 text-sm">
               {tagLabel(tag)}
             </li>
           ))}
         </ul>
       )}
 
-      <div className="mt-4 flex gap-3">
+      {/* Cook is the page's one main action (docs/ux/plan.md U2). */}
+      <div className="mt-4 flex flex-wrap gap-3">
+        <Button asChild variant="primary">
+          <Link to={`/recipes/${recipe.id}/cook`}>Cook</Link>
+        </Button>
         <Button asChild variant="secondary">
           <Link to={`/recipes/${recipe.id}/edit`}>Edit</Link>
         </Button>
-        <LazyDeleteRecipeButton recipe={recipe} />
+        {/* A placeholder (design §1): sharing comes after auth. Unavailable, not hidden, so the
+            household sees it's planned; aria-disabled keeps it in the tab order to be read. */}
+        <Button type="button" variant="secondary" aria-disabled="true">
+          Share · coming soon
+        </Button>
+        <DeleteRecipeButton recipe={recipe} />
       </div>
 
       {/* Each list is named by its heading, for screen readers (and the tests). */}
       <h2 id="ingredients" className="mt-8 text-xl font-semibold">
         Ingredients
       </h2>
-      <ul aria-labelledby="ingredients" className="mt-3 grid gap-2">
+      <ul aria-labelledby="ingredients" dir="auto" className="mt-3 grid gap-2">
         {recipe.ingredients.map((ingredient, index) => (
           // Ingredients have no id; their order is their identity within the recipe.
           <li key={index}>
@@ -81,13 +108,26 @@ export function RecipePage() {
       <h2 id="steps" className="mt-8 text-xl font-semibold">
         Steps
       </h2>
-      <ol aria-labelledby="steps" className="mt-3 grid max-w-prose list-decimal gap-3 pl-6">
+      {/* dir="auto" on the list (a recipe's steps are in one language): a Hebrew recipe's numbers
+          sit on the right, with room for them (ps: padding on the side the text starts). */}
+      <ol
+        aria-labelledby="steps"
+        dir="auto"
+        className="mt-3 grid max-w-prose list-decimal gap-3 ps-6 rtl:ml-auto"
+      >
         {recipe.steps.map((step, index) => (
-          <li key={index} className="pl-1 text-pretty">
-            {step}
+          <li key={index} className="ps-1 text-pretty">
+            {keepRangesTogether(step)}
           </li>
         ))}
       </ol>
+
+      {/* A placeholder too (design §1). When built: its own collection, never an array in the
+          recipe, as comments grow without limit. */}
+      <h2 className="mt-8 text-xl font-semibold">Comments</h2>
+      <p className="mt-3 text-text-muted">
+        Coming soon: notes from whoever you share this recipe with.
+      </p>
     </article>
   );
 }
@@ -112,9 +152,4 @@ function nutritionLine({ calories, proteinG, carbsG, fatG }: Nutrition) {
     `${round(fatG)} g fat`,
   ];
   return amounts.join(" · ");
-}
-
-// "2 tbsp olive oil", or just "salt" when the recipe gives no amount.
-function ingredientLine(ingredient: Ingredient) {
-  return [ingredient.quantity, ingredient.unit, ingredient.name].filter(Boolean).join(" ");
 }
