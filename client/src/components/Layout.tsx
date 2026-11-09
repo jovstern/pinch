@@ -1,4 +1,4 @@
-import { Outlet, useLocation, useMatch } from "react-router";
+import { Outlet, useLocation } from "react-router";
 import { cn } from "../lib/cn.ts";
 import { ErrorBoundary } from "./ErrorBoundary.tsx";
 import { Header } from "./Header.tsx";
@@ -7,7 +7,7 @@ import { Header } from "./Header.tsx";
 export function Layout() {
   const { pathname } = useLocation();
   // The two tabs' own pages, where Write a recipe floats on a phone.
-  const onTabPage = [useMatch("/"), useMatch("/recipes")].some((match) => match !== null);
+  const onTabPage = pathname === "/" || pathname === "/recipes";
   return (
     <>
       <Header onTabPage={onTabPage} />
@@ -16,7 +16,7 @@ export function Layout() {
       <main
         className={cn(
           "mx-auto max-w-3xl px-4 py-8 wrap-anywhere sm:px-6",
-          onTabPage && "pb-28 md:pb-8",
+          onTabPage && "pb-24 md:pb-8",
         )}
       >
         {/* Keyed by address: going to another page clears a failure. */}

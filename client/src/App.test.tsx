@@ -36,7 +36,7 @@ test("the header has the two tabs, Write a recipe and the avatar", () => {
     "href",
     "/recipes/new",
   );
-  expect(screen.getByRole("button", { name: "Account · log in coming soon" })).toHaveAttribute(
+  expect(screen.getByRole("button", { name: "Log in · coming soon" })).toHaveAttribute(
     "aria-disabled",
     "true",
   );
@@ -60,6 +60,15 @@ test.each([
   expect(tab(other)).not.toHaveAttribute("aria-current");
 });
 
+test("on Write a recipe, its link says it's the current page", () => {
+  stubNotFound();
+  renderApp("/recipes/new");
+  expect(screen.getByRole("link", { name: "Write a recipe" })).toHaveAttribute(
+    "aria-current",
+    "page",
+  );
+});
+
 test("a page of neither tab selects none", () => {
   stubNotFound();
   renderApp("/nope");
@@ -67,7 +76,8 @@ test("a page of neither tab selects none", () => {
   expect(tab("My recipes")).not.toHaveAttribute("aria-current");
 });
 
-// The imports GET /api/imports answers; anything else is 404.
+// The imports GET /api/imports answers; anything else is 404. fetch is stubbed directly:
+// stubFetch always answers no imports.
 function stubImports(statuses: ("ready" | "failed")[]) {
   const items = statuses.map((status, n) => ({
     id: `6650a1b2c3d4e5f60000000${String(n)}`,

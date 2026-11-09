@@ -17,8 +17,8 @@ export function renderApp(path: string) {
   );
 }
 
-// Stubs fetch with this one, except GET /api/imports, which answers none: / asks for the
-// imports on every visit, and these tests are about something else.
+// Stubs fetch with this one, except GET /api/imports, which answers none: every page asks
+// for the imports (the Header's count), and these tests are about something else.
 export function stubFetch(fetch: (...args: [string, RequestInit?]) => Promise<Response>) {
   // Passed on untouched: toHaveBeenCalledWith tells fetch(path) from fetch(path, undefined).
   vi.stubGlobal("fetch", (...args: [string, RequestInit?]) =>

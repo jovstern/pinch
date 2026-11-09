@@ -20,11 +20,12 @@ function tabOf(pathname: string) {
 const tabClass =
   "inline-flex min-h-11 flex-1 items-center justify-center gap-1.5 rounded-control px-3 font-medium whitespace-nowrap text-muted-foreground aria-[current=page]:bg-background aria-[current=page]:text-foreground aria-[current=page]:shadow-sm";
 
-// The header on every page (design §14, D24): the two tabs, Write a recipe and the avatar. No
-// logo for now. Phone: the tabs fill the row beside the avatar, and Write a recipe floats
+// The app's frame, on every page (design §14, D24): the two tabs, Write a recipe and the avatar,
+// and the imports read for the tab's count. No logo for now. Phone: the tabs fill the row beside the avatar, and Write a recipe floats
 // bottom right on the two tabs' own pages. From 768 px: the tabs left, the rest right.
 export function Header({ onTabPage }: { onTabPage: boolean }) {
-  const tab = tabOf(useLocation().pathname);
+  const { pathname } = useLocation();
+  const tab = tabOf(pathname);
   // The same query as the queue on New recipe, so the count moves as it polls (§4.2).
   const { data } = useQuery(importListQuery);
   const ready = data?.items.filter((job) => job.status === "ready").length ?? 0;
@@ -39,9 +40,10 @@ export function Header({ onTabPage }: { onTabPage: boolean }) {
       >
         <Link to="/" aria-current={tab === "new" ? "page" : undefined} className={tabClass}>
           New recipe
-          {/* A bare "2" says nothing to a screen reader: its name says what it counts ("New
-              recipe 2 ready to review"). The spaces part the words when read; on screen, flex
-              drops them and the gap spaces the badge. */}
+          {/* A bare "2" says nothing to a screen reader: the hidden words say what it counts
+              ("New recipe 2 ready to review"). Not an aria-label: axe reads the visible text as
+              "New recipe2", which no label contains (label-content-name-mismatch). The spaces
+              part the words when read; flex drops them on screen. */}
           {ready > 0 && (
             <>
               {" "}
@@ -60,7 +62,8 @@ export function Header({ onTabPage }: { onTabPage: boolean }) {
       </nav>
 
       {/* One link, placed by width: floating on a phone (in thumb reach, on the tabs' pages
-          only), in the header from 768 px on every page. */}
+          only), in the header from 768 px on every page. On a phone it comes after the tabs
+          in the tab order though it shows at the bottom: fine for the header's one action. */}
       <Button
         asChild
         variant="outline"
@@ -69,7 +72,7 @@ export function Header({ onTabPage }: { onTabPage: boolean }) {
           onTabPage ? "fixed right-4 bottom-5 rounded-full shadow-sheet" : "hidden",
         )}
       >
-        <Link to="/recipes/new">
+        <Link to="/recipes/new" aria-current={pathname === "/recipes/new" ? "page" : undefined}>
           <PenLine aria-hidden="true" className="size-4" />
           Write a recipe
         </Link>
@@ -82,8 +85,7 @@ export function Header({ onTabPage }: { onTabPage: boolean }) {
         type="button"
         variant="secondary"
         aria-disabled="true"
-        aria-label="Account · log in coming soon"
-        title="Log in · coming soon"
+        aria-label="Log in · coming soon"
         className="size-11 shrink-0 rounded-full px-0 text-muted-foreground"
       >
         <UserRound aria-hidden="true" className="size-5" />
