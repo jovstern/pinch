@@ -26,6 +26,9 @@ export function Thumbnail({ src, size, shape, className = "" }: ThumbnailProps) 
       width={size.width}
       height={size.height}
       loading={shape === "tile" ? "lazy" : "eager"}
+      // The page's picture is often its largest thing, and the last to arrive (page, JS, data,
+      // then it): asked for first among what's left.
+      fetchPriority={shape === "full" ? "high" : "auto"}
       onError={() => {
         setFailedSrc(src);
       }}

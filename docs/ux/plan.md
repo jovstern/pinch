@@ -212,7 +212,8 @@ is wanted later; not in the first PR). Body: the system sans as today (zero byte
 1.25 from 16 px: 16 / 20 / 25 / 31 / 39; cook mode body 22 px, step 25–31 px; `text-wrap:
 balance` on headings, `pretty` on paragraphs; tabular numbers on quantities. Budget: the
 display font is the one new download and must fit the 165 kB SPA budget with the entry
-(`docs/metrics/m04.md`); if it doesn't, ship it only on the recipe and cook routes.
+(`docs/metrics/m04.md`); if it doesn't, ship it only on the recipe and cook routes. Built (M7): loaded once the page has loaded, with a Georgia sized to match until then
+(the preload slowed the data pages' LCP by 300–450 ms, `docs/metrics/m06.md`).
 
 **Shape.** Cards 16 px radius, controls 12 px, chips full; one soft shadow token for sheets
 and the toast only; borders only where two raised surfaces meet. Built (U4 PR 2): fields keep a
