@@ -28,7 +28,11 @@ export function stepIngredients(step: string, ingredients: Ingredient[]): number
 // ("egg" is found in "eggs", and in "eggplant": an extra row costs little). Hebrew joins up to
 // two letters to the front of a word ("ו", "ה", "ב", "ל", "מ", "ש", "כ": "והקמח" is "and the
 // flour"), so those may come before it.
-function wordStart(word: string) {
-  const escaped = word.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  return new RegExp(`(?:^|[^\\p{L}])[והבלמשכ]{0,2}${escaped}`, "iu");
+// A name of several words is found with each word taking a prefix: Hebrew writes "the melted
+// butter" as "החמאה המומסת", with a ה on both.
+function wordStart(name: string) {
+  const words = name.split(/\s+/).map((word) => word.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
+  return new RegExp(`(?:^|[^\\p{L}])${words.map((word) => `${PREFIX}${word}`).join("\\s+")}`, "iu");
 }
+
+const PREFIX = "[והבלמשכ]{0,2}";

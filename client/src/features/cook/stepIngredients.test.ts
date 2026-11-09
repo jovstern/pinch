@@ -39,7 +39,7 @@ test("when one is named whole, others that share only its noun are left out", ()
     { name: "חמאה מומסת", quantity: "50", unit: "גרם" },
     { name: "חמאה או שמן", note: "לטיגון" },
   ];
-  expect(stepIngredients("מוסיפים את החמאה מומסת ומערבבים.", butters)).toEqual([0]);
+  expect(stepIngredients("מוסיפים את החמאה המומסת ומערבבים.", butters)).toEqual([0]);
   // Named by the noun alone, both may be meant.
   expect(stepIngredients("ממיסים חמאה במחבת.", butters)).toEqual([0, 1]);
 });

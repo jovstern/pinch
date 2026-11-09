@@ -5,9 +5,10 @@ export function CookSkeleton() {
     <>
       <p className="sr-only">Loading the recipe…</p>
       <div aria-hidden="true" className="motion-safe:animate-pulse">
-        <div className="h-7 w-2/3 rounded-control bg-fill" />
-        <div className="mt-10 h-4 w-24 rounded-control bg-fill" />
-        <div className="mt-4 grid max-w-prose gap-3">
+        {/* As CookPage: the title row (as tall as Exit), the screen line, the step's label. */}
+        <div className="h-11 w-2/3 rounded-control bg-fill" />
+        <div className="mt-14 h-5 w-24 rounded-control bg-fill" />
+        <div className="mt-3 grid max-w-prose gap-3">
           <div className="h-8 rounded-control bg-fill" />
           <div className="h-8 rounded-control bg-fill" />
           <div className="h-8 w-1/2 rounded-control bg-fill" />

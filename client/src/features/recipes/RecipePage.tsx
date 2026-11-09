@@ -104,9 +104,15 @@ export function RecipePage() {
       <h2 id="steps" className="mt-8 text-xl font-semibold">
         Steps
       </h2>
-      <ol aria-labelledby="steps" className="mt-3 grid max-w-prose list-decimal gap-3 pl-6">
+      {/* dir="auto" on the list (a recipe's steps are in one language): a Hebrew recipe's numbers
+          sit on the right, with room for them (ps: padding on the side the text starts). */}
+      <ol
+        aria-labelledby="steps"
+        dir="auto"
+        className="mt-3 grid max-w-prose list-decimal gap-3 ps-6"
+      >
         {recipe.steps.map((step, index) => (
-          <li key={index} dir="auto" className="pl-1 text-pretty">
+          <li key={index} className="ps-1 text-pretty">
             {stepText(step)}
           </li>
         ))}

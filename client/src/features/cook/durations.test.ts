@@ -59,3 +59,14 @@ test("times written in words, in English and Hebrew", () => {
   ]);
   expect(stepDurations("מערבבים 5 דק' ומוסיפים.")).toEqual([{ label: "5 דק'", seconds: 300 }]);
 });
+
+test("a Hebrew time in words keeps its value with any prefix, and more words for times", () => {
+  expect(stepDurations("מבשלים בחצי שעה, ואחר כך שעתיים.")).toEqual([
+    { label: "בחצי שעה", seconds: 1800 },
+    { label: "שעתיים", seconds: 7200 },
+  ]);
+  expect(stepDurations("Rest an hour and a half, then 5 דק׳.")).toEqual([
+    { label: "an hour and a half", seconds: 5400 },
+    { label: "5 דק׳", seconds: 300 },
+  ]);
+});
