@@ -4,11 +4,14 @@ import type { Duration } from "./durations.ts";
 export type Timer = { id: number; label: string; endsAt: number };
 
 // Cook mode's timers (docs/ux/plan.md U2): each runs to its end time, and the page redraws
-// every second while any is running. Several can run at once (the pasta and the sauce).
+// every second while any is running, so the time left is always worked out from the end time.
+// Several can run at once (the pasta and the sauce). A hidden tab's clock is slowed by the
+// browser, so a ring there may come late; cook mode keeps the screen on, so it rarely is.
 export function useTimers() {
   const [timers, setTimers] = useState<Timer[]>([]);
   const [now, setNow] = useState(() => Date.now());
   const running = timers.some((timer) => timer.endsAt > now);
+  const nextId = useRef(0);
   // Made on the first Start: a phone plays sound only from a context a tap made.
   const audio = useRef<AudioContext | null>(null);
 
@@ -22,20 +25,34 @@ export function useTimers() {
     };
   }, [running]);
 
-  // At its end, once: a beep and a buzz, for a cook who isn't looking at the screen.
+  // A beep and a buzz as a timer ends, for a cook who isn't looking: an effect, as it reaches
+  // outside React. It rings when the count of ended timers goes up, not when one is dismissed.
   const ended = timers.filter((timer) => timer.endsAt <= now).length;
+  const endedBefore = useRef(0);
   useEffect(() => {
-    if (ended > 0) ring(audio.current);
+    if (ended > endedBefore.current) ring(audio.current);
+    endedBefore.current = ended;
   }, [ended]);
 
+  // Closed on leaving, as the wake lock is let go: a phone allows only a few at once.
+  useEffect(
+    () => () => {
+      void audio.current?.close();
+    },
+    [],
+  );
+
   function start({ label, seconds }: Duration) {
-    if ("AudioContext" in window) audio.current ??= new AudioContext();
+    if ("AudioContext" in window) {
+      audio.current ??= new AudioContext();
+      // A phone call or another app may have paused it; a tap may start it again.
+      void audio.current.resume();
+    }
+    // The clock stops while no timer runs: bring it up to date, so the new one starts full.
     const startedAt = Date.now();
     setNow(startedAt);
-    setTimers((before) => [
-      ...before,
-      { id: startedAt, label, endsAt: startedAt + seconds * 1000 },
-    ]);
+    const id = nextId.current++;
+    setTimers((before) => [...before, { id, label, endsAt: startedAt + seconds * 1000 }]);
   }
 
   function stop(id: number) {
@@ -45,7 +62,8 @@ export function useTimers() {
   return { timers, now, start, stop };
 }
 
-// Three short beeps (Web Audio, no sound file to load) and a buzz where the phone can.
+// Three short beeps (Web Audio, no sound file to load) and a buzz where the phone can. An
+// iPhone has no buzz and its mute switch silences the beeps: there, only the screen says it.
 function ring(audio: AudioContext | null) {
   if ("vibrate" in navigator) navigator.vibrate([300, 150, 300]);
   if (!audio) return;

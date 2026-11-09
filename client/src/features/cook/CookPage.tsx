@@ -84,8 +84,8 @@ export function CookPage() {
         </p>
       </section>
 
-      {/* Outside the status: ticking one isn't a new step to announce. */}
-      {/* A timer for each time the step mentions; outside the status, as the list below. */}
+      {/* A timer for each time the step mentions; outside the status, so starting one isn't read
+          as a new step. */}
       {durations.length > 0 && (
         <div className="mt-4 flex flex-wrap gap-2">
           {durations.map((duration, position) => (
@@ -97,12 +97,13 @@ export function CookPage() {
                 start(duration);
               }}
             >
-              {`Start a ${duration.label} timer`}
+              Timer: <span dir="auto">{duration.label}</span>
             </Button>
           ))}
         </div>
       )}
 
+      {/* Outside the status: ticking one isn't a new step to announce. */}
       {forThisStep.length > 0 && (
         <div className="mt-6">
           {/* A label like "Step 2 of 6" above, not a section title. */}

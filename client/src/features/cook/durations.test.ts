@@ -20,6 +20,18 @@ test("finds Hebrew durations", () => {
   ]);
 });
 
-test("finds none where a number isn't a time", () => {
+test("reads decimals, worded ranges and a hyphenated unit", () => {
+  expect(stepDurations("Rest 1.5 hours, or 1,5 שעות.")).toEqual([
+    { label: "1.5 hours", seconds: 5400 },
+    { label: "1,5 שעות", seconds: 5400 },
+  ]);
+  expect(stepDurations("Bake 10 to 12 minutes after a 20-minute rest.")).toEqual([
+    { label: "10 to 12 minutes", seconds: 600 },
+    { label: "20-minute", seconds: 1200 },
+  ]);
+});
+
+test("finds none where a number isn't a time, or is a fraction it can't read", () => {
   expect(stepDurations("Add 2 minced onions and 200 g pasta.")).toEqual([]);
+  expect(stepDurations("Rest about 1 1/2 hours.")).toEqual([]);
 });

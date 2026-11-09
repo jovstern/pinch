@@ -126,13 +126,13 @@ test("shows the step's ingredients, ticked off in both lists at once", async () 
 });
 
 test("a time in the step starts a timer, which counts down and says when it's done", async () => {
-  // Fake clocks, moved by hand; user-event waits on them too.
+  // Fake clocks, moved by hand, and with real time too, so findBy and user-event keep working.
   vi.useFakeTimers({ shouldAdvanceTime: true });
   const user = userEvent.setup({ advanceTimers: (ms) => vi.advanceTimersByTime(ms) });
   stubApi({ ...omelette, steps: ["Cook the eggs for 2 min."] });
   renderApp(`/recipes/${omelette.id}/cook`);
 
-  await user.click(await screen.findByRole("button", { name: "Start a 2 min timer" }));
+  await user.click(await screen.findByRole("button", { name: "Timer: 2 min" }));
   const timers = screen.getByRole("list", { name: "Timers" });
   expect(timers).toHaveTextContent("2 min: 2:00 left");
 
@@ -148,4 +148,28 @@ test("a time in the step starts a timer, which counts down and says when it's do
 
   await user.click(screen.getByRole("button", { name: "Dismiss the 2 min timer" }));
   expect(screen.queryByRole("list", { name: "Timers" })).not.toBeInTheDocument();
+});
+
+test("each timer rings once as it ends, and not again when one is dismissed", async () => {
+  vi.useFakeTimers({ shouldAdvanceTime: true });
+  const user = userEvent.setup({ advanceTimers: (ms) => vi.advanceTimersByTime(ms) });
+  const vibrate = vi.fn(() => true);
+  vi.stubGlobal("navigator", Object.assign(Object.create(navigator), { vibrate }));
+  stubApi({ ...omelette, steps: ["Cook 1 min, then 2 min."] });
+  renderApp(`/recipes/${omelette.id}/cook`);
+
+  await user.click(await screen.findByRole("button", { name: "Timer: 1 min" }));
+  await user.click(screen.getByRole("button", { name: "Timer: 2 min" }));
+  act(() => {
+    vi.advanceTimersByTime(60_000);
+  });
+  expect(vibrate).toHaveBeenCalledTimes(1);
+  // A second more: the 2 min timer was started a moment after the first.
+  act(() => {
+    vi.advanceTimersByTime(61_000);
+  });
+  expect(vibrate).toHaveBeenCalledTimes(2);
+
+  await user.click(screen.getByRole("button", { name: "Dismiss the 1 min timer" }));
+  expect(vibrate).toHaveBeenCalledTimes(2);
 });

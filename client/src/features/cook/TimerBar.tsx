@@ -24,8 +24,9 @@ export function TimerBar({ timers, now, onStop }: TimerBarProps) {
                 <span dir="auto">{timer.label}</span>: {clock(left)} left
               </p>
             ) : (
-              // Said aloud once, as it ends.
-              <p role="alert" className="font-semibold text-accent-strong">
+              // Said aloud once, as it ends. Keyed, so it's a new element: a screen reader may miss
+              // an alert role added to one already there.
+              <p key="done" role="alert" className="font-semibold text-accent-strong">
                 <span dir="auto">{timer.label}</span>: done
               </p>
             )}
