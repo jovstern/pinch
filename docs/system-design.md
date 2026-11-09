@@ -249,7 +249,7 @@ Import {
   _id, ownerId,
   status: "pending" | "processing" | "ready" | "failed",
   step?: "fetching" | "analyzing",
-  input: { type: "link" | "text" | "images", url?, platform?, text?, images? },
+  input: { type: "link" | "text" | "images", url?, platform?, text?, count?, images? },
   attempts, nextAttemptAt, leaseUntil?, error?, noRetry?,
   draft?: RecipeDraft, thumbnail?: { webp: Binary, width, height },   // named as on a recipe
   createdAt, updatedAt, expiresAt   // TTL
@@ -262,8 +262,8 @@ Usage {                            // the daily cap (D22)
 }
 ```
 
-Uploaded screenshots for the fallback (up to 4, each made a JPEG at most 1600 px on a side,
-200–400 KB, by the API) are held on the import (`input.images`) only until the draft is made:
+Uploaded screenshots for the fallback (up to 4 PNG, JPEG or WebP files, each made a JPEG at
+most 1600 px on a side by the API: typically 200–400 KB, under 2 MB at worst) are held on the import (`input.images`) only until the draft is made:
 a failed attempt keeps them for the next try; the import's TTL deletes them in any case.
 Every query that answers imports leaves them out.
 

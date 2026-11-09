@@ -1,4 +1,4 @@
-import { RecipeSchema, type RecipeInput } from "@pinch/shared";
+import { RecipeSchema, type Import, type RecipeInput } from "@pinch/shared";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate, useParams } from "react-router";
 import { Button } from "../../components/Button.tsx";
@@ -89,7 +89,7 @@ export function ReviewImportPage() {
       <h1 className="text-3xl font-bold tracking-tight text-balance">Review the recipe</h1>
       <p className="mt-3 text-sm text-pretty text-text-muted">
         Fix anything that's wrong, then save it. Made from
-        {{ link: ":", text: " the text you pasted.", images: " your screenshots." }[job.input.type]}
+        {madeFrom[job.input.type]}
       </p>
       {/* A new tab: going to the post here would lose what was typed. One line, as in the list. */}
       {job.input.type === "link" && (
@@ -136,3 +136,10 @@ export function ReviewImportPage() {
     </>
   );
 }
+
+// The end of "Made from…": a link follows it on the next line.
+const madeFrom: Record<Import["input"]["type"], string> = {
+  link: ":",
+  text: " the text you pasted.",
+  images: " your screenshots.",
+};

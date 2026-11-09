@@ -1,11 +1,13 @@
 import {
   dailyLimitMessage,
   ImportInputSchema,
+  MAX_SCREENSHOT_BYTES,
   MAX_SCREENSHOTS,
   RecipeInputSchema,
   screenshotsMessage,
   type ImportList,
   type Platform,
+  type Recipe,
 } from "@pinch/shared";
 import express, { type RequestHandler } from "express";
 import multer from "multer";
@@ -50,10 +52,11 @@ export function importsRouter(db: Db) {
   router.post("/screenshots", receiveScreenshots, async (req, res) => {
     const files = Array.isArray(req.files) ? req.files : [];
     if (files.length === 0) throw invalidScreenshots();
-    // One that isn't an image (or that sharp can't read) refuses them all, as invalid input.
-    let images: Binary[];
+    // One that isn't an image refuses them all, as invalid input. One at a time: each may be
+    // a few million pixels to decode.
+    const images: Binary[] = [];
     try {
-      images = await Promise.all(files.map((file) => readScreenshot(file.buffer)));
+      for (const file of files) images.push(await readScreenshot(file.buffer));
     } catch {
       throw invalidScreenshots();
     }
@@ -116,10 +119,7 @@ export function importsRouter(db: Db) {
       nutritionPerServing: job.draft?.nutritionPerServing,
       // The worker's, as the nutrition: never from the body (§5).
       thumbnail: job.thumbnail,
-      source:
-        job.input.type === "link"
-          ? { type: job.input.platform, url: job.input.url }
-          : { type: job.input.type === "text" ? "text" : "image" },
+      source: sourceOf(job.input),
       sourceImportId: job._id,
       createdAt: now,
       updatedAt: now,
@@ -213,17 +213,27 @@ function newImport(ownerId: ObjectId, input: ImportDocument["input"]): ImportDoc
   };
 }
 
-// The form's images, in memory (never on disk): at most 4, of 10 MB each. Past either, or a
-// field that isn't "images", multer stops with its own error: answered as a 400, as invalid
-// input is.
+// Where a recipe came from (§6): its link, or the text or the screenshots ("image") it was
+// made from.
+function sourceOf(input: ImportDocument["input"]): Recipe["source"] {
+  if (input.type === "link") return { type: input.platform, url: input.url };
+  if (input.type === "text") return { type: "text" };
+  return { type: "image" };
+}
+
+// The form's images, in memory (never on disk): at most 4, of 10 MB each, and nothing else (no
+// text fields, which multer would otherwise take, any number of them).
 const screenshotsUpload = multer({
   storage: multer.memoryStorage(),
-  limits: { files: MAX_SCREENSHOTS, fileSize: 10_000_000 },
+  limits: { files: MAX_SCREENSHOTS, fileSize: MAX_SCREENSHOT_BYTES, fields: 0 },
 }).array("images", MAX_SCREENSHOTS);
 
+// Every error from the upload is the client's: multer's (too many, too big, another field) and
+// busboy's (a malformed form). All are a 400, as invalid input. (multer's middleware returns
+// nothing to wait for: it calls back; void says so.)
 const receiveScreenshots: RequestHandler = (req, res, next) => {
   void screenshotsUpload(req, res, (error: unknown) => {
-    next(error instanceof multer.MulterError ? invalidScreenshots() : error);
+    next(error ? invalidScreenshots() : undefined);
   });
 };
 

@@ -20,7 +20,8 @@ export const textMessage = "Paste more of the recipe: a line or two at least.";
 // Screenshots of a post, sent when neither its link nor its text will do (design §1): a few
 // pictures of the recipe, sent as a form (POST /api/imports/screenshots), not JSON.
 export const MAX_SCREENSHOTS = 4;
-export const screenshotsMessage = `Add 1 to ${String(MAX_SCREENSHOTS)} screenshots, as images.`;
+export const MAX_SCREENSHOT_BYTES = 10_000_000;
+export const screenshotsMessage = `Add 1 to ${String(MAX_SCREENSHOTS)} screenshots: PNG, JPEG or WebP, up to 10 MB each.`;
 
 // The body of POST /api/imports (design §4.1, §8): a link to a post on one of the platforms, by
 // its host ("www." and "m." are the same site), or the post's text, pasted when its link can't

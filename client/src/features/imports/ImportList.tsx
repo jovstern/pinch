@@ -100,10 +100,12 @@ const platformNames: Record<Platform, string> = {
   youtube: "YouTube",
 };
 
-// What an import was made from: a link (by its site) or a post's text, pasted (design §1).
+// What an import was made from: a link (by its site), a post's text, pasted, or its screenshots
+// (design §1).
 function inputName(input: Import["input"]) {
   if (input.type === "link") return `${platformNames[input.platform]} link`;
-  return input.type === "text" ? "Pasted text" : "Screenshots";
+  if (input.type === "text") return "Pasted text";
+  return "Screenshots";
 }
 
 function inputText(input: Import["input"]) {

@@ -1,8 +1,8 @@
 import { FileState, GenerateContentResponse, GoogleGenAI } from "@google/genai";
 import { Binary } from "mongodb";
 import { existsSync, writeFileSync } from "node:fs";
-import sharp from "sharp";
 import { join } from "node:path";
+import sharp from "sharp";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import type { ImportDocument } from "../db/imports.ts";
 import { GEMINI_MODEL, geminiExtract, NOT_A_RECIPE, TOO_LONG } from "./geminiExtract.ts";
@@ -351,6 +351,6 @@ test("screenshots are sent as images, with no yt-dlp, and the first is the pictu
   expect(contents).toContainEqual({
     inlineData: { mimeType: "image/jpeg", data: image.toString("base64") },
   });
-  expect(Array.isArray(contents) && contents.length).toBe(3);
+  expect(contents).toHaveLength(3);
   expect(setThumbnail).toHaveBeenCalledWith(expect.objectContaining({ width: 250, height: 500 }));
 });

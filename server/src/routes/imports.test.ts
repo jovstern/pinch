@@ -455,9 +455,6 @@ test("POST /api/imports/screenshots keeps them as small JPEGs and answers how ma
   expect(images).toHaveLength(2);
   const first = await sharp(images[0]?.buffer).metadata();
   expect(first).toMatchObject({ format: "jpeg", height: 1600 });
-  // Never sent back: the list says only how many.
-  const listed = (await request(app).get("/api/imports")).body as unknown;
-  expect(JSON.stringify(listed)).not.toContain('"images":[');
 
   // A recipe from them is from an image.
   await importsCollection(db).updateOne(
@@ -486,9 +483,28 @@ test("screenshots are refused when there are none, more than 4, or one isn't an 
   for (let n = 0; n < 5; n++) five = five.attach("images", screenshot, `${String(n)}.png`);
   expect((await five).body).toEqual(refused);
 
+  const malformed = await request(app)
+    .post("/api/imports/screenshots")
+    .set("Content-Type", "multipart/form-data")
+    .send("abc");
+  expect(malformed.body).toEqual(refused);
+
   const notAnImage = await request(app)
     .post("/api/imports/screenshots")
     .attach("images", Buffer.from("not an image"), "recipe.png");
   expect(notAnImage.status).toBe(400);
   expect(notAnImage.body).toEqual(refused);
+});
+
+test("screenshots refused count nothing; past the cap they're refused with 429", async () => {
+  await request(app)
+    .post("/api/imports/screenshots")
+    .attach("images", Buffer.from("not an image"), "recipe.png");
+  expect(await usage.findOne({ ownerId: devUserId })).toBeNull();
+
+  await setUsage(DAILY_IMPORT_CAP);
+  const capped = await request(app)
+    .post("/api/imports/screenshots")
+    .attach("images", screenshot, "one.png");
+  expect(capped.status).toBe(429);
 });

@@ -41,12 +41,12 @@ const responseJsonSchema = z.toJSONSchema(AnswerSchema, {
 
 const PROMPT = `Extract the recipe in this post: the title, a short description, the ingredients
 with quantities and units, the steps in order, the servings, and the prep and cook times in
-minutes, and tags from the allowed list. Use the post's text, and its video when there is one
-(the speech and the text on screen); the text often has the quantities. Write the recipe in the
-language of the post; tags are codes, so keep them as they are. Leave out anything you can't
-tell rather than guessing. The exception: estimate the calories and the grams of protein, carbs
-and fat in one serving, from the ingredients and the servings. If the post is not a recipe, set
-isRecipe to false.`;
+minutes, and tags from the allowed list. Use the post's text, and its video (the speech and the
+text on screen) or its screenshots when there are some; the text often has the quantities.
+Write the recipe in the language of the post; tags are codes, so keep them as they are. Leave
+out anything you can't tell rather than guessing. The exception: estimate the calories and the
+grams of protein, carbs and fat in one serving, from the ingredients and the servings. If the
+post is not a recipe, set isRecipe to false.`;
 
 export const NOT_A_RECIPE = "This doesn't look like a recipe.";
 export const TOO_LONG = "This video is over 3 minutes. Pinch reads shorter ones.";
@@ -63,9 +63,13 @@ export function geminiExtract(ai: GoogleGenAI): Extract {
     // Screenshots: sent as they are, with no caption to add; the first is the picture (§5).
     if (input.type === "images") {
       await setStep("analyzing");
-      const images = input.images ?? [];
+      // Never missing on a job not yet done: a bug, so a failed attempt, logged.
+      const images = input.images;
+      if (!images) throw new Error("The screenshots are gone.");
+      // As for a post's picture, it never fails the import.
       const [first] = images;
-      if (first) await setThumbnail(await shrink(Buffer.from(first.buffer)));
+      const thumbnail = first && (await shrink(Buffer.from(first.buffer)).catch(() => undefined));
+      if (thumbnail) await setThumbnail(thumbnail);
       return askGemini(
         ai,
         [

@@ -10,6 +10,7 @@ export {
   ImportSchema,
   ImportStepSchema,
   linkMessage,
+  MAX_SCREENSHOT_BYTES,
   MAX_SCREENSHOTS,
   PlatformSchema,
   screenshotsMessage,

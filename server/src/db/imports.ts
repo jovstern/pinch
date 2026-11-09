@@ -11,8 +11,9 @@ export type ImportDocument = Omit<
   "id" | "input" | "stalled" | "thumbnail" | "createdAt" | "updatedAt"
 > & {
   _id: ObjectId;
-  // Screenshots are kept, as JPEGs, until the draft is made (screenshots.ts); the API says only
-  // how many.
+  // Only a screenshots input has images (the type lets any have them: a separate union member
+  // would stop TypeScript narrowing input.images): kept, as JPEGs, until the draft is made
+  // (screenshots.ts); the API says only how many.
   input: Import["input"] & { images?: Binary[] };
   // The draft's picture, made by the worker; the recipe takes it on approve (§5). Named as on
   // a recipe, so one projection leaves the image out of both (WITHOUT_MEDIA).
