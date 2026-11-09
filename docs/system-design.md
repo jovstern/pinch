@@ -471,15 +471,14 @@ noise, and M5/M6 only swap the extractor.
 Phone first (§1). Every screen sits in one frame: a header with the name (a link home) and
 **New recipe**, a secondary button (from M4 the main action of `/` is pasting a link; hidden on
 the recipe form's pages, new, edit and review, where Save is the main action, and in cook
-mode); the content in a single readable
-column below it.
+mode); the content in a single readable column below it.
 
 | Address | Screen | Its job | States |
 |---|---|---|---|
 | `/` | Your recipes | Paste a link, or a post's text, to pinch a recipe (from M4, the box and Your imports above the list, below). Pick something to cook; each card shows the title, the number of ingredients and the total time. Search (on Enter) and tag filters (folded, applied as ticked) sit above the list and live in the address: `/?q=egg&tags=meal:dinner` | Loading (placeholder cards), empty (points to the paste box, and links to New recipe: "Write a recipe"), error (Try again); 50 at a time, then Show more (focus moves to the first new recipe; a failed page says so and keeps the list); filtered: how many match (announced), or none and a link to clear them |
 | `/recipes/new` | New recipe | Write a recipe by hand; tags are chips to tick, a group per facet (§7) | From the first Save: each error under its field (§8.1), updated as the user types; focus on the first; saving (button says so); failed (says so, keeps what was typed) |
 | `/recipes/:id` | A recipe | Read it (its tags under the title; from M5 the nutrition per serving, marked ≈ estimate); Cook, the main action; Edit, Delete (asks first) | Loading, error (Try again), not found |
-| `/recipes/:id/cook` | Cook mode | One step at a time in large type ("Step 2 of 6"), Back and Next, Done on the last; the screen kept on (Wake Lock), and says so or that it may lock; Exit goes back to the recipe | Loading, error (Try again), not found |
+| `/recipes/:id/cook` | Cook mode | One step at a time in large type ("Step 2 of 6"), Back and Next, Done on the last; the screen kept on (Wake Lock), and says so or that it may lock; focus stays on Back and Next/Done from step to step; Exit goes back to the recipe | Loading, error (Try again), not found |
 | `/recipes/:id/edit` | Edit recipe | Change it; Cancel goes back to the recipe | Loading, error (Try again), not found; then as New recipe |
 | `/imports/:id` | Review the recipe | Check the draft the worker made, in the recipe form (D1); Save approves it and opens the new recipe; Review later (the form's Cancel) keeps it; Discard, last in the form's buttons, deletes it and goes back to `/` | Loading, error (Try again), not found; no draft (not done yet, or failed): says so and links home; then as New recipe |
 | anything else | Page not found | Get back to the recipes | — |

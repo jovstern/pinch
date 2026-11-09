@@ -23,14 +23,14 @@ function stubApi() {
   stubFetch(() => Promise.resolve(Response.json(omelette)));
 }
 
-// A browser with the Wake Lock API, granting the lock.
+// A browser with the Wake Lock API, granting the lock: the lock (an event target, as a real one
+// is) and how it was asked for.
 function stubWakeLock() {
-  const request = vi.fn(() =>
-    Promise.resolve(Object.assign(new EventTarget(), { release: () => Promise.resolve() })),
-  );
-  // The real navigator underneath (jsdom has no wakeLock), with one added.
+  const lock = Object.assign(new EventTarget(), { release: vi.fn(() => Promise.resolve()) });
+  const request = vi.fn(() => Promise.resolve(lock));
+  // jsdom has no wakeLock: an object that inherits everything from jsdom's navigator, plus one.
   vi.stubGlobal("navigator", Object.assign(Object.create(navigator), { wakeLock: { request } }));
-  return request;
+  return { request, lock };
 }
 
 test("Cook on a recipe opens cook mode at its first step", async () => {
@@ -48,7 +48,10 @@ test("Next and Back go through the steps; Done on the last goes back to the reci
   stubApi();
   renderApp(`/recipes/${omelette.id}/cook`);
 
-  expect(await screen.findByRole("button", { name: "Back" })).toBeDisabled();
+  expect(await screen.findByRole("button", { name: "Back" })).toHaveAttribute(
+    "aria-disabled",
+    "true",
+  );
   await userEvent.click(screen.getByRole("button", { name: "Next" }));
   expect(screen.getByText("Step 2 of 2")).toBeInTheDocument();
   expect(screen.getByText("Cook them in butter.")).toBeInTheDocument();
@@ -57,22 +60,37 @@ test("Next and Back go through the steps; Done on the last goes back to the reci
   expect(screen.getByText("Beat the eggs.")).toBeInTheDocument();
 
   await userEvent.click(screen.getByRole("button", { name: "Next" }));
-  await userEvent.click(screen.getByRole("link", { name: "Done" }));
+  await userEvent.click(screen.getByRole("button", { name: "Done" }));
   expect(await screen.findByRole("heading", { level: 1, name: "Omelette" })).toBeInTheDocument();
 });
 
-test("keeps the screen on, and says so", async () => {
+test("keeps the screen on and says so; lets go when the cook leaves", async () => {
   stubApi();
-  const request = stubWakeLock();
+  const { request, lock } = stubWakeLock();
   renderApp(`/recipes/${omelette.id}/cook`);
 
   expect(await screen.findByText("The screen stays on.")).toBeInTheDocument();
   expect(request).toHaveBeenCalledWith("screen");
+
+  await userEvent.click(screen.getByRole("link", { name: "Exit" }));
+  expect(await screen.findByRole("heading", { level: 1, name: "Omelette" })).toBeInTheDocument();
+  expect(lock.release).toHaveBeenCalled();
+});
+
+test("says so when the browser lets go of the lock", async () => {
+  stubApi();
+  const { lock } = stubWakeLock();
+  renderApp(`/recipes/${omelette.id}/cook`);
+  await screen.findByText("The screen stays on.");
+
+  lock.dispatchEvent(new Event("release"));
+
+  expect(await screen.findByText("This browser may let the screen lock.")).toBeInTheDocument();
 });
 
 test("says the screen may lock where the browser can't keep it on", async () => {
   stubApi();
   renderApp(`/recipes/${omelette.id}/cook`);
 
-  expect(await screen.findByText(/The screen may lock/)).toBeInTheDocument();
+  expect(await screen.findByText("This browser may let the screen lock.")).toBeInTheDocument();
 });
