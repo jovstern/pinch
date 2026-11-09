@@ -6,6 +6,7 @@ import { Button } from "../../components/Button.tsx";
 import { Thumbnail } from "../../components/Thumbnail.tsx";
 import { ImportForm } from "../imports/ImportForm.tsx";
 import { ImportList } from "../imports/ImportList.tsx";
+import { ScreenshotsUpload } from "../imports/ScreenshotsUpload.tsx";
 import { importListQuery } from "../imports/importQueries.ts";
 import { ListFilters } from "./ListFilters.tsx";
 import { filterParams, recipeListQuery, type RecipeFilters } from "./recipeQueries.ts";
@@ -72,6 +73,7 @@ export function RecipeListPage() {
       <title>Your recipes · Pinch</title>
       <h1 className="text-3xl font-bold tracking-tight text-balance">Your recipes</h1>
       <ImportForm inputRef={pasteBoxRef} />
+      <ScreenshotsUpload />
       <ImportList focusPasteBox={() => pasteBoxRef.current?.focus()} />
     </>
   );
@@ -176,8 +178,10 @@ export function RecipeListPage() {
                     shape="tile"
                   />
                 )}
-                <div className="min-w-0">
-                  <h2 className="text-lg font-semibold">{recipe.title}</h2>
+                <div className="min-w-0 flex-1">
+                  <h2 dir="auto" className="text-lg font-semibold">
+                    {recipe.title}
+                  </h2>
                   <p className="mt-1 text-sm text-text-muted">{summary(recipe)}</p>
                 </div>
               </Link>
