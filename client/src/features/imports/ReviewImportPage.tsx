@@ -4,7 +4,7 @@ import { Link, useNavigate, useParams } from "react-router";
 import { Button } from "../../components/Button.tsx";
 import { Thumbnail } from "../../components/Thumbnail.tsx";
 import { deleteResource, sendJson } from "../../lib/api.ts";
-import { LazyRecipeForm } from "../recipes/LazyRecipeForm.tsx";
+import { LazyRecipeForm, usePreloadRecipeForm } from "../recipes/LazyRecipeForm.tsx";
 import { toFormValues } from "../recipes/recipeFormValues.ts";
 import { RecipeLoadError } from "../recipes/RecipeLoadError.tsx";
 import { recipeListsKey, recipeQuery } from "../recipes/recipeQueries.ts";
@@ -23,6 +23,7 @@ export function ReviewImportPage() {
     refetch,
     isFetching,
   } = useQuery(importQuery(id));
+  usePreloadRecipeForm();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
 

@@ -178,8 +178,10 @@ export function RecipeListPage() {
                     shape="tile"
                   />
                 )}
-                <div className="min-w-0">
-                  <h2 className="text-lg font-semibold">{recipe.title}</h2>
+                <div className="min-w-0 flex-1">
+                  <h2 dir="auto" className="text-lg font-semibold">
+                    {recipe.title}
+                  </h2>
                   <p className="mt-1 text-sm text-text-muted">{summary(recipe)}</p>
                 </div>
               </Link>

@@ -26,7 +26,7 @@ const draft: RecipeInput = {
 };
 const extractNow = () => Promise.resolve(draft);
 // Fails after its first step, as a real attempt would: the step is left to be cleared.
-const extractFails: Extract = async (_input, _signal, setStep) => {
+const extractFails: Extract = async (_input, _signal, { setStep }) => {
   await setStep("fetching");
   throw new Error("The site is down.");
 };
@@ -136,7 +136,7 @@ test("a run shows its step while it's working, and clears it when it's done", as
   const { _id } = await insertImport();
   let stepWhileWorking: unknown;
 
-  await run(await claim(), async (_input, _signal, setStep) => {
+  await run(await claim(), async (_input, _signal, { setStep }) => {
     await setStep("analyzing");
     stepWhileWorking = (await imports.findOne({ _id }))?.step;
     return draft;

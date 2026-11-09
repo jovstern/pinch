@@ -86,5 +86,18 @@ Slices for later milestones are filled in when the milestone starts.
 - [x] Thumbnails in the client: on the cards, the recipe and the review page
 - [x] Screenshot fallback, the pipeline: an import can be up to 4 images
 - [x] Screenshot fallback, the box: add images on `/`
-- [ ] End of milestone: a real reel becomes a draft with a thumbnail; UI review, observer, demo
+- [x] End of milestone: a real reel becomes a draft with a thumbnail; UI review, observer, demo
+
 ## M7 — Polish
+
+- [x] Back under the JS budget: Delete's dialog is fetched only when Delete is about to be pressed
+- [x] Toward the LCP budget on the pages that wait for data: the font after the page has drawn, the
+      form's chunk with the data (2.41 → about 2.11 s; the last 110 ms is a decision, see the PR)
+- [x] Logs: request lines without headers; each import attempt's time and Gemini's tokens
+- [x] Share and Comments, as "coming soon" (design §1)
+- [x] Cook mode, from M6's UI review: more ways of writing a time ("1 hour 20 minutes", "חצי
+      שעה"), ranges kept on one line, fewer wrong Hebrew ingredient matches, a loading skeleton
+- [x] States: the accessibility e2e on a recipe, cook mode and a draft's review with its picture,
+      in both themes (Your imports while loading: left as is, as the list is usually empty and a
+      placeholder would jump the other way)
+- [x] End of milestone: UI review, observer, demo
