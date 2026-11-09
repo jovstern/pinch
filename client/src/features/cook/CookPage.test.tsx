@@ -67,15 +67,28 @@ test("Next and Back go through the steps; Done on the last goes back to the reci
   expect(await screen.findByRole("heading", { level: 1, name: "Omelette" })).toBeInTheDocument();
 });
 
+test("the breadcrumbs lead back to the recipe; there's no Exit", async () => {
+  stubApi();
+  renderApp(`/recipes/${omelette.id}/cook`);
+
+  const breadcrumb = await screen.findByRole("navigation", { name: "Breadcrumb" });
+  expect(within(breadcrumb).getByRole("link", { name: "Omelette" })).toHaveAttribute(
+    "href",
+    `/recipes/${omelette.id}`,
+  );
+  expect(screen.queryByRole("link", { name: "Exit" })).not.toBeInTheDocument();
+  expect(screen.getByText("Written by you", { exact: false })).toBeInTheDocument();
+});
+
 test("keeps the screen on and says so; lets go when the cook leaves", async () => {
   stubApi();
   const { request, lock } = stubWakeLock();
   renderApp(`/recipes/${omelette.id}/cook`);
 
-  expect(await screen.findByText("The screen stays on.")).toBeInTheDocument();
+  expect(await screen.findByText("The screen stays on.", { exact: false })).toBeInTheDocument();
   expect(request).toHaveBeenCalledWith("screen");
 
-  await userEvent.click(screen.getByRole("link", { name: "Exit" }));
+  await userEvent.click(screen.getByRole("link", { name: "Omelette" }));
   expect(await screen.findByRole("heading", { level: 1, name: "Omelette" })).toBeInTheDocument();
   expect(lock.release).toHaveBeenCalled();
 });
@@ -84,18 +97,22 @@ test("says so when the browser lets go of the lock", async () => {
   stubApi();
   const { lock } = stubWakeLock();
   renderApp(`/recipes/${omelette.id}/cook`);
-  await screen.findByText("The screen stays on.");
+  await screen.findByText("The screen stays on.", { exact: false });
 
   lock.dispatchEvent(new Event("release"));
 
-  expect(await screen.findByText("This browser may let the screen lock.")).toBeInTheDocument();
+  expect(
+    await screen.findByText("This browser may let the screen lock.", { exact: false }),
+  ).toBeInTheDocument();
 });
 
 test("says the screen may lock where the browser can't keep it on", async () => {
   stubApi();
   renderApp(`/recipes/${omelette.id}/cook`);
 
-  expect(await screen.findByText("This browser may let the screen lock.")).toBeInTheDocument();
+  expect(
+    await screen.findByText("This browser may let the screen lock.", { exact: false }),
+  ).toBeInTheDocument();
 });
 
 test("shows the step's ingredients, ticked off in both lists at once", async () => {

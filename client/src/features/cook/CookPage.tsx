@@ -1,8 +1,10 @@
 import { useQuery } from "@tanstack/react-query";
 import { useId, useState } from "react";
-import { Link, useNavigate, useParams } from "react-router";
+import { useNavigate, useParams } from "react-router";
+import { Breadcrumb } from "../../components/ui/Breadcrumb.tsx";
 import { Button } from "../../components/ui/Button.tsx";
 import { RecipeLoadError } from "../recipes/RecipeLoadError.tsx";
+import { RecipeSource } from "../recipes/RecipeSource.tsx";
 import { keepRangesTogether } from "../recipes/ranges.ts";
 import { recipeQuery } from "../recipes/recipeQueries.ts";
 import { stepDurations } from "./durations.ts";
@@ -60,21 +62,22 @@ export function CookPage() {
   return (
     <article>
       <title>{`Cooking ${recipe.title} · Pinch`}</title>
-      <div className="flex items-start justify-between gap-4">
-        <h1 dir="auto" className="text-xl font-semibold text-balance">
-          {recipe.title}
-        </h1>
-        {/* replace, as the form's Cancel: the phone's Back then doesn't reopen cook mode. */}
-        <Button asChild variant="secondary" className="shrink-0">
-          <Link to={recipePath} replace>
-            Exit
-          </Link>
-        </Button>
-      </div>
-      {/* Nothing while the browser is still asked, so it doesn't flicker from one to the other. */}
-      <p className="mt-1 min-h-5 text-sm text-text-muted">
-        {wakeLock === "on" && "The screen stays on."}
-        {wakeLock === "off" && "This browser may let the screen lock."}
+      {/* The way out (no Exit): the recipe's crumb, as the browser's Back. */}
+      <Breadcrumb
+        links={[
+          { label: "My recipes", to: "/recipes" },
+          { label: recipe.title, to: recipePath },
+        ]}
+        page="Cook"
+      />
+      <h1 dir="auto" className="mt-2 text-3xl font-bold tracking-tight text-balance">
+        {recipe.title}
+      </h1>
+      <p className="mt-2 text-sm text-muted-foreground">
+        <RecipeSource source={recipe.source} />
+        {/* Nothing while the browser is still asked, so it doesn't flicker from one to the other. */}
+        {wakeLock === "on" && " · The screen stays on."}
+        {wakeLock === "off" && " · This browser may let the screen lock."}
       </p>
 
       {/* A status (polite, read whole), so a screen reader reads each new step and its number. */}
@@ -160,6 +163,7 @@ export function CookPage() {
           className="min-h-14 text-lg"
           onClick={() => {
             if (current < last) setIndex(current + 1);
+            // replace, as the form's Cancel: the phone's Back then doesn't reopen cook mode.
             else void navigate(recipePath, { replace: true });
           }}
         >
