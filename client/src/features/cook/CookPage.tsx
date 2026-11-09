@@ -4,8 +4,11 @@ import { Link, useNavigate, useParams } from "react-router";
 import { Button } from "../../components/Button.tsx";
 import { RecipeLoadError } from "../recipes/RecipeLoadError.tsx";
 import { recipeQuery } from "../recipes/recipeQueries.ts";
+import { stepDurations } from "./durations.ts";
 import { IngredientChecklist } from "./IngredientChecklist.tsx";
 import { stepIngredients } from "./stepIngredients.ts";
+import { TimerBar } from "./TimerBar.tsx";
+import { useTimers } from "./useTimers.ts";
 import { useWakeLock } from "./useWakeLock.ts";
 
 // Cook mode (docs/ux/plan.md U2, design §14): one step at a time, in big type, with the screen
@@ -28,6 +31,7 @@ export function CookPage() {
   const forThisStepId = useId();
   const allId = useId();
   const wakeLock = useWakeLock();
+  const { timers, now, start, stop } = useTimers();
   const navigate = useNavigate();
 
   if (status === "pending") return <p className="text-text-muted">Loading the recipe…</p>;
@@ -41,6 +45,7 @@ export function CookPage() {
   const current = Math.min(index, last);
   const step = recipe.steps[current] ?? "";
   const forThisStep = stepIngredients(step, recipe.ingredients);
+  const durations = stepDurations(step);
   const all = recipe.ingredients.map((_, position) => position);
 
   // As TagPicker's toggle: in the order ticked.
@@ -80,6 +85,24 @@ export function CookPage() {
       </section>
 
       {/* Outside the status: ticking one isn't a new step to announce. */}
+      {/* A timer for each time the step mentions; outside the status, as the list below. */}
+      {durations.length > 0 && (
+        <div className="mt-4 flex flex-wrap gap-2">
+          {durations.map((duration, position) => (
+            <Button
+              key={position}
+              type="button"
+              variant="secondary"
+              onClick={() => {
+                start(duration);
+              }}
+            >
+              {`Start a ${duration.label} timer`}
+            </Button>
+          ))}
+        </div>
+      )}
+
       {forThisStep.length > 0 && (
         <div className="mt-6">
           {/* A label like "Step 2 of 6" above, not a section title. */}
@@ -137,6 +160,8 @@ export function CookPage() {
           onToggle={toggle}
         />
       </details>
+
+      <TimerBar timers={timers} now={now} onStop={stop} />
     </article>
   );
 }

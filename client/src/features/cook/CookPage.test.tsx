@@ -1,11 +1,12 @@
 import type { Recipe } from "@pinch/shared";
-import { screen, within } from "@testing-library/react";
+import { act, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, test, vi } from "vitest";
 import { renderApp, stubFetch } from "../../test-utils.tsx";
 
 afterEach(() => {
   vi.unstubAllGlobals();
+  vi.useRealTimers();
 });
 
 const omelette: Recipe = {
@@ -22,8 +23,8 @@ const omelette: Recipe = {
   updatedAt: "2026-11-01T10:00:00.000Z",
 };
 
-function stubApi() {
-  stubFetch(() => Promise.resolve(Response.json(omelette)));
+function stubApi(recipe = omelette) {
+  stubFetch(() => Promise.resolve(Response.json(recipe)));
 }
 
 // A browser with the Wake Lock API, granting the lock: the lock (an event target, as a real one
@@ -122,4 +123,29 @@ test("shows the step's ingredients, ticked off in both lists at once", async () 
       name: "1 tbsp butter",
     }),
   ).toBeInTheDocument();
+});
+
+test("a time in the step starts a timer, which counts down and says when it's done", async () => {
+  // Fake clocks, moved by hand; user-event waits on them too.
+  vi.useFakeTimers({ shouldAdvanceTime: true });
+  const user = userEvent.setup({ advanceTimers: (ms) => vi.advanceTimersByTime(ms) });
+  stubApi({ ...omelette, steps: ["Cook the eggs for 2 min."] });
+  renderApp(`/recipes/${omelette.id}/cook`);
+
+  await user.click(await screen.findByRole("button", { name: "Start a 2 min timer" }));
+  const timers = screen.getByRole("list", { name: "Timers" });
+  expect(timers).toHaveTextContent("2 min: 2:00 left");
+
+  act(() => {
+    vi.advanceTimersByTime(60_000);
+  });
+  expect(timers).toHaveTextContent("2 min: 1:00 left");
+
+  act(() => {
+    vi.advanceTimersByTime(60_000);
+  });
+  expect(within(timers).getByRole("alert")).toHaveTextContent("2 min: done");
+
+  await user.click(screen.getByRole("button", { name: "Dismiss the 2 min timer" }));
+  expect(screen.queryByRole("list", { name: "Timers" })).not.toBeInTheDocument();
 });

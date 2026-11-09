@@ -76,6 +76,6 @@ Slices for later milestones are filled in when the milestone starts.
 - [x] U4 PR 2: the components on the tokens, the mark
 - [x] U2 PR 1: `/recipes/:id/cook`, its type, the steps, Wake Lock
 - [x] U2 PR 2: each step's ingredients inline, tick-off
-- [ ] U2 PR 3: timers
+- [x] U2 PR 3: timers
 ## M6 — Instagram / Facebook
 ## M7 — Polish
