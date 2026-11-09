@@ -41,6 +41,15 @@ export async function sendJson<T>(
   return schema.parse(await response.json());
 }
 
+// A form with files (screenshots): as sendJson, but the browser sets the type, with its boundary.
+export async function sendForm<T>(path: string, body: FormData, schema: z.ZodType<T>): Promise<T> {
+  const response = await fetch(path, { method: "POST", body });
+  if (!response.ok) {
+    throw new ApiError("POST", path, response.status, await errorFields(response));
+  }
+  return schema.parse(await response.json());
+}
+
 export async function deleteResource(path: string) {
   const response = await fetch(path, { method: "DELETE" });
   if (!response.ok) throw new ApiError("DELETE", path, response.status);

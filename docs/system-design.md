@@ -54,7 +54,7 @@ Meal planning, shopping lists, scaling servings, Instagram/Facebook **stories** 
 | Import time | Typically < 60 s, always **asynchronous**: the UI never waits on it |
 | Video length | ≤ 3 minutes (checked before downloading when the platform reports it; otherwise right after, see §4.1) |
 | Reliability | A crash never loses an import or creates a duplicate recipe |
-| Media | **Never stored.** Only text, plus a tiny thumbnail (§5) |
+| Media | **Never stored**, beyond an import's own: a video lives for one attempt, uploaded screenshots until the draft is made (§6). Only text, plus a tiny thumbnail (§5) |
 | Cost | Imports per user per day are capped (default 20) |
 | Code | Simple and consistent above all — every line should be easy to read |
 
@@ -249,7 +249,7 @@ Import {
   _id, ownerId,
   status: "pending" | "processing" | "ready" | "failed",
   step?: "fetching" | "analyzing",
-  input: { type: "link" | "text" | "images", url?, platform?, text?, images? },
+  input: { type: "link" | "text" | "images", url?, platform?, text?, count?, images? },
   attempts, nextAttemptAt, leaseUntil?, error?, noRetry?,
   draft?: RecipeDraft, thumbnail?: { webp: Binary, width, height },   // named as on a recipe
   createdAt, updatedAt, expiresAt   // TTL
@@ -262,8 +262,10 @@ Usage {                            // the daily cap (D22)
 }
 ```
 
-Uploaded screenshots for the fallback are held on the import only until the worker has sent
-them to Gemini, then removed from the document.
+Uploaded screenshots for the fallback (up to 4 PNG, JPEG or WebP files, each made a JPEG at
+most 1600 px on a side by the API: typically 200–400 KB, under 2 MB at worst) are held on the import (`input.images`) only until the draft is made:
+a failed attempt keeps them for the next try; the import's TTL deletes them in any case.
+Every query that answers imports leaves them out.
 
 ### Indexes
 
@@ -344,7 +346,8 @@ PUT    /api/recipes/:id                replace what the user can edit (the form 
 DELETE /api/recipes/:id
 GET    /api/recipes/:id/thumbnail      image/webp
 
-POST   /api/imports                    { type: "link", url } | { type: "text", text } | multipart images  → 202 import (429 past the daily cap)
+POST   /api/imports                    { type: "link", url } | { type: "text", text }  → 202 import (429 past the daily cap)
+POST   /api/imports/screenshots        a form: up to 4 images (10 MB each) as "images"  → 202 import { type: "images", count }
 GET    /api/imports                    my imports that are not done yet
 GET    /api/imports/:id                status, step, error, draft
 GET    /api/imports/:id/thumbnail      image/webp: the draft's picture
@@ -485,12 +488,12 @@ mode); the content in a single readable column below it.
 
 | Address | Screen | Its job | States |
 |---|---|---|---|
-| `/` | Your recipes | Paste a link, or a post's text, to pinch a recipe (from M4, the box and Your imports above the list, below). Pick something to cook; each card shows the title, the number of ingredients and the total time. Search (on Enter) and tag filters (folded, applied as ticked) sit above the list and live in the address: `/?q=egg&tags=meal:dinner` | Loading (placeholder cards), empty (points to the paste box, and links to New recipe: "Write a recipe"), error (Try again); 50 at a time, then Show more (focus moves to the first new recipe; a failed page says so and keeps the list); filtered: how many match (announced), or none and a link to clear them |
+| `/` | Your recipes | Paste a link, or a post's text, to pinch a recipe (from M4, the box and Your imports above the list, below), or add up to 4 screenshots of it (from M6; choosing them sends them). Pick something to cook; each card shows the title, the number of ingredients and the total time (from M6, the post's picture as a small 4:5 tile beside them). Search (on Enter) and tag filters (folded, applied as ticked) sit above the list and live in the address: `/?q=egg&tags=meal:dinner` | Loading (placeholder cards), empty (points to the paste box, and links to New recipe: "Write a recipe"), error (Try again); 50 at a time, then Show more (focus moves to the first new recipe; a failed page says so and keeps the list); filtered: how many match (announced), or none and a link to clear them |
 | `/recipes/new` | New recipe | Write a recipe by hand; tags are chips to tick, a group per facet (§7) | From the first Save: each error under its field (§8.1), updated as the user types; focus on the first; saving (button says so); failed (says so, keeps what was typed) |
-| `/recipes/:id` | A recipe | Read it (its tags under the title; from M5 the nutrition per serving, marked ≈ estimate); Cook, the main action; Edit, Delete (asks first) | Loading, error (Try again), not found |
-| `/recipes/:id/cook` | Cook mode | One step at a time in large type ("Step 2 of 6"), Back and Next, Done on the last; the step's ingredients under it (those it names) and all of them folded below, ticked off in both at once; a timer for each time a step mentions ("20 min", "10 דקות"; a range's shorter end), kept at the bottom of the screen, ringing (a beep, a buzz) and announced at zero; leaving cook mode ends them; the screen kept on (Wake Lock), and says so or that it may lock; focus stays on Back and Next/Done from step to step; Exit goes back to the recipe | Loading, error (Try again), not found |
+| `/recipes/:id` | A recipe | Read it (a range like "8–10" kept on one line; from M6 the post's picture at the top, at its shape; its tags under the title; from M5 the nutrition per serving, marked ≈ estimate); Cook, the main action; Edit, Share (from M7, "coming soon", unavailable), Delete (asks first); Comments under the steps (from M7, "coming soon") | Loading, error (Try again), not found |
+| `/recipes/:id/cook` | Cook mode | One step at a time in large type ("Step 2 of 6"), Back and Next, Done on the last; the step's ingredients under it (those it names) and all of them folded below, ticked off in both at once; a timer for each time a step mentions ("20 min", "10 דקות"; a range's shorter end; hours and minutes as one; in words too: "half an hour", "חצי שעה"), each started once (pressed again while it runs, nothing: its button says Running), kept at the bottom of the screen (at most 40% of it), ringing (a beep, a buzz) and announced at zero; leaving cook mode ends them; the screen kept on (Wake Lock), and says so or that it may lock; focus stays on Back and Next/Done from step to step; Exit goes back to the recipe | Loading (the step's shape), error (Try again), not found |
 | `/recipes/:id/edit` | Edit recipe | Change it; Cancel goes back to the recipe | Loading, error (Try again), not found; then as New recipe |
-| `/imports/:id` | Review the recipe | Check the draft the worker made, in the recipe form (D1); Save approves it and opens the new recipe; Review later (the form's Cancel) keeps it; Discard, last in the form's buttons, deletes it and goes back to `/` | Loading, error (Try again), not found; no draft (not done yet, or failed): says so and links home; then as New recipe |
+| `/imports/:id` | Review the recipe | Check the draft the worker made, in the recipe form (D1), under the post's picture (M6); Save approves it and opens the new recipe; Review later (the form's Cancel) keeps it; Discard, last in the form's buttons, deletes it and goes back to `/` | Loading, error (Try again), not found; no draft (not done yet, or failed): says so and links home; then as New recipe |
 | anything else | Page not found | Get back to the recipes | — |
 
 From M4 the paste-a-link box on `/` becomes the main action, and import status shows there:

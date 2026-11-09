@@ -5,11 +5,13 @@ import {
   ImportSchema,
   linkMessage,
   RecipeSchema,
+  screenshotsMessage,
   textMessage,
   type RecipeInput,
 } from "@pinch/shared";
 import { Binary, ObjectId } from "mongodb";
 import { pino } from "pino";
+import sharp from "sharp";
 import request from "supertest";
 import { beforeEach, expect, test } from "vitest";
 import { createApp } from "../app.ts";
@@ -430,4 +432,79 @@ test("yesterday's count doesn't count today", async () => {
   const response = await request(app).post("/api/imports").send({ type: "link", url: reel });
 
   expect(response.status).toBe(202);
+});
+
+// A phone screenshot: a PNG, taller than the 1600 px it's made into.
+const screenshot = await sharp({
+  create: { width: 1170, height: 2532, channels: 3, background: "#fff" },
+})
+  .png()
+  .toBuffer();
+
+test("POST /api/imports/screenshots keeps them as small JPEGs and answers how many", async () => {
+  const response = await request(app)
+    .post("/api/imports/screenshots")
+    .attach("images", screenshot, "one.png")
+    .attach("images", screenshot, "two.png");
+
+  expect(response.status).toBe(202);
+  const sent = ImportSchema.parse(response.body);
+  expect(sent.input).toEqual({ type: "images", count: 2 });
+  const stored = await importsCollection(db).findOne({ _id: new ObjectId(sent.id) });
+  const images = stored?.input.images ?? [];
+  expect(images).toHaveLength(2);
+  const first = await sharp(images[0]?.buffer).metadata();
+  expect(first).toMatchObject({ format: "jpeg", height: 1600 });
+
+  // A recipe from them is from an image.
+  await importsCollection(db).updateOne(
+    { _id: new ObjectId(sent.id) },
+    { $set: { status: "ready", draft } },
+  );
+  const recipe = RecipeSchema.parse(
+    (await request(app).post(`/api/imports/${sent.id}/approve`).send(draft)).body,
+  );
+  expect(recipe.source).toEqual({ type: "image" });
+});
+
+test("screenshots are refused when there are none, more than 4, or one isn't an image", async () => {
+  const refused = {
+    error: {
+      code: "invalid_input",
+      message: "Some fields are not valid.",
+      fields: { images: screenshotsMessage },
+    },
+  };
+  const none = await request(app).post("/api/imports/screenshots").field("note", "x");
+  expect(none.status).toBe(400);
+  expect(none.body).toEqual(refused);
+
+  let five = request(app).post("/api/imports/screenshots");
+  for (let n = 0; n < 5; n++) five = five.attach("images", screenshot, `${String(n)}.png`);
+  expect((await five).body).toEqual(refused);
+
+  const malformed = await request(app)
+    .post("/api/imports/screenshots")
+    .set("Content-Type", "multipart/form-data")
+    .send("abc");
+  expect(malformed.body).toEqual(refused);
+
+  const notAnImage = await request(app)
+    .post("/api/imports/screenshots")
+    .attach("images", Buffer.from("not an image"), "recipe.png");
+  expect(notAnImage.status).toBe(400);
+  expect(notAnImage.body).toEqual(refused);
+});
+
+test("screenshots refused count nothing; past the cap they're refused with 429", async () => {
+  await request(app)
+    .post("/api/imports/screenshots")
+    .attach("images", Buffer.from("not an image"), "recipe.png");
+  expect(await usage.findOne({ ownerId: devUserId })).toBeNull();
+
+  await setUsage(DAILY_IMPORT_CAP);
+  const capped = await request(app)
+    .post("/api/imports/screenshots")
+    .attach("images", screenshot, "one.png");
+  expect(capped.status).toBe(429);
 });

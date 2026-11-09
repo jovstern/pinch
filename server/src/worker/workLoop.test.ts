@@ -1,5 +1,5 @@
 import type { RecipeInput } from "@pinch/shared";
-import { ObjectId } from "mongodb";
+import { Binary, ObjectId } from "mongodb";
 import { pino } from "pino";
 import { beforeEach, expect, onTestFinished, test, vi } from "vitest";
 import {
@@ -26,7 +26,7 @@ const draft: RecipeInput = {
 };
 const extractNow = () => Promise.resolve(draft);
 // Fails after its first step, as a real attempt would: the step is left to be cleared.
-const extractFails: Extract = async (_input, _signal, setStep) => {
+const extractFails: Extract = async (_input, _signal, { setStep }) => {
   await setStep("fetching");
   throw new Error("The site is down.");
 };
@@ -136,7 +136,7 @@ test("a run shows its step while it's working, and clears it when it's done", as
   const { _id } = await insertImport();
   let stepWhileWorking: unknown;
 
-  await run(await claim(), async (_input, _signal, setStep) => {
+  await run(await claim(), async (_input, _signal, { setStep }) => {
     await setStep("analyzing");
     stepWhileWorking = (await imports.findOne({ _id }))?.step;
     return draft;
@@ -144,6 +144,21 @@ test("a run shows its step while it's working, and clears it when it's done", as
 
   expect(stepWhileWorking).toBe("analyzing");
   expect(await imports.findOne({ _id })).not.toHaveProperty("step");
+});
+
+test("screenshots are kept for a failed attempt's next try, and dropped once the draft is made", async () => {
+  const images = [new Binary(Buffer.from("a jpeg"))];
+  const { _id } = await insertImport({ input: { type: "images", count: 1, images } });
+
+  await run(await claim(), extractFails);
+  expect((await imports.findOne({ _id }))?.input.images).toHaveLength(1);
+
+  await run(await claim(new Date(Date.now() + 11_000)));
+  expect(await imports.findOne({ _id })).toMatchObject({
+    status: "ready",
+    input: { type: "images", count: 1 },
+  });
+  expect((await imports.findOne({ _id }))?.input).not.toHaveProperty("images");
 });
 
 test("a run whose job another worker claimed again saves nothing", async () => {

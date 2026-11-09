@@ -3,8 +3,10 @@ import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { useEffect, useRef } from "react";
 import { Link, useSearchParams } from "react-router";
 import { Button } from "../../components/Button.tsx";
+import { Thumbnail } from "../../components/Thumbnail.tsx";
 import { ImportForm } from "../imports/ImportForm.tsx";
 import { ImportList } from "../imports/ImportList.tsx";
+import { ScreenshotsUpload } from "../imports/ScreenshotsUpload.tsx";
 import { importListQuery } from "../imports/importQueries.ts";
 import { ListFilters } from "./ListFilters.tsx";
 import { filterParams, recipeListQuery, type RecipeFilters } from "./recipeQueries.ts";
@@ -71,6 +73,7 @@ export function RecipeListPage() {
       <title>Your recipes · Pinch</title>
       <h1 className="text-3xl font-bold tracking-tight text-balance">Your recipes</h1>
       <ImportForm inputRef={pasteBoxRef} />
+      <ScreenshotsUpload />
       <ImportList focusPasteBox={() => pasteBoxRef.current?.focus()} />
     </>
   );
@@ -165,10 +168,22 @@ export function RecipeListPage() {
             <li key={recipe.id}>
               <Link
                 to={`/recipes/${recipe.id}`}
-                className="block rounded-card border border-border bg-surface-raised p-4 hover:border-accent"
+                className="flex items-center gap-4 rounded-card border border-border bg-surface-raised p-4 hover:border-accent"
               >
-                <h2 className="text-lg font-semibold">{recipe.title}</h2>
-                <p className="mt-1 text-sm text-text-muted">{summary(recipe)}</p>
+                {/* A small 4:5 tile, cropped: the cards stay one height whatever the post's shape. */}
+                {recipe.thumbnail && (
+                  <Thumbnail
+                    src={`/api/recipes/${recipe.id}/thumbnail`}
+                    size={recipe.thumbnail}
+                    shape="tile"
+                  />
+                )}
+                <div className="min-w-0 flex-1">
+                  <h2 dir="auto" className="text-lg font-semibold">
+                    {recipe.title}
+                  </h2>
+                  <p className="mt-1 text-sm text-text-muted">{summary(recipe)}</p>
+                </div>
               </Link>
             </li>
           ))}
