@@ -106,6 +106,16 @@ test("a draft from pasted text says so, with no link to a post", async () => {
   expect(screen.queryByRole("link", { name: /opens in a new tab/ })).not.toBeInTheDocument();
 });
 
+test("the draft's picture shows above it, from the import", async () => {
+  stubApi({ ...ready, thumbnail: { width: 400, height: 225 } });
+  renderApp(`/imports/${ready.id}`);
+
+  expect(await screen.findByRole("presentation")).toHaveAttribute(
+    "src",
+    `/api/imports/${ready.id}/thumbnail`,
+  );
+});
+
 test("an import with no draft yet says it isn't ready", async () => {
   stubApi({ ...ready, status: "processing", draft: undefined });
   renderApp(`/imports/${ready.id}`);

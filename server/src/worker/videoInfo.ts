@@ -1,4 +1,6 @@
 import { execFile } from "node:child_process";
+import { existsSync } from "node:fs";
+import { join } from "node:path";
 import { promisify } from "node:util";
 import { z } from "zod";
 
@@ -11,12 +13,18 @@ const YTDLP_TIMEOUT_MS = 30_000;
 const YTDLP_MAX_OUTPUT = 20_000_000;
 
 // What yt-dlp says about a post. Instagram gives no length (design §4.1), so it can be missing.
-export type VideoInfo = { seconds?: number; caption: string };
+// thumbnailUrl: the post's picture, to make the recipe's thumbnail from (design §5).
+export type VideoInfo = { seconds?: number; caption: string; thumbnailUrl?: string };
 
-// The two fields we read from yt-dlp's JSON; it has many more.
+// The fields we read from yt-dlp's JSON; it has many more. A picture link that isn't https (or
+// none) is dropped (catch), not a failed attempt: the recipe doesn't need it.
 const YtDlpInfoSchema = z.object({
   duration: z.number().nullish(),
   description: z.string().nullish(),
+  thumbnail: z
+    .url({ protocol: /^https$/ })
+    .optional()
+    .catch(undefined),
 });
 
 // Reads a post's length and caption without downloading it (§4.1): the caption often holds
@@ -24,10 +32,20 @@ const YtDlpInfoSchema = z.object({
 export async function readVideoInfo(url: string, signal: AbortSignal): Promise<VideoInfo> {
   const { stdout } = await run(
     "yt-dlp",
-    // --no-playlist: the video in the link, not the playlist it may also name. --playlist-items 1:
-    // a link to a playlist or channel reads its first video, not all of them. "--": the link is
-    // never read as an option.
-    ["--no-warnings", "--no-playlist", "--playlist-items", "1", "--dump-json", "--", url],
+    // --ignore-config: no config file on the machine changes what it does. --no-playlist: the
+    // video in the link, not the playlist it may also name. --playlist-items 1: a link to a
+    // playlist or channel reads its first video, not all of them. "--": the link is never read
+    // as an option.
+    [
+      "--no-warnings",
+      "--ignore-config",
+      "--no-playlist",
+      "--playlist-items",
+      "1",
+      "--dump-json",
+      "--",
+      url,
+    ],
     { signal, timeout: YTDLP_TIMEOUT_MS, maxBuffer: YTDLP_MAX_OUTPUT },
   );
   return parseVideoInfo(stdout);
@@ -35,5 +53,74 @@ export async function readVideoInfo(url: string, signal: AbortSignal): Promise<V
 
 export function parseVideoInfo(json: string): VideoInfo {
   const info = YtDlpInfoSchema.parse(JSON.parse(json));
-  return { seconds: info.duration ?? undefined, caption: info.description ?? "" };
+  return {
+    seconds: info.duration ?? undefined,
+    caption: info.description ?? "",
+    thumbnailUrl: info.thumbnail,
+  };
+}
+
+// A download's own timeout inside the attempt's deadline (§4.3): the spike's reels (3–11 MB)
+// took a few seconds each.
+const DOWNLOAD_TIMEOUT_MS = 60_000;
+
+// Reels are small (the spike's were 3–11 MB): a bigger file isn't a short recipe video. Only
+// checked when the platform says the size; otherwise the download's timeout bounds it.
+const MAX_DOWNLOAD = "100M";
+
+// ffprobe reads a local file: quick.
+const FFPROBE_TIMEOUT_MS = 10_000;
+
+// Downloads an Instagram or Facebook post's video into `dir` and reads its info in the same
+// call (§4.1): one request to the platform, not two. The caller deletes the folder. The path
+// is missing when there's no video to have: a photo post (--ignore-no-formats-error prints its
+// info anyway), or one over the size limit (skipped, and still a success).
+export async function downloadVideo(
+  url: string,
+  dir: string,
+  signal: AbortSignal,
+): Promise<VideoInfo & { path?: string }> {
+  const { stdout } = await run(
+    "yt-dlp",
+    // As readVideoInfo, plus: --no-simulate downloads although the info is printed;
+    // --ignore-config, so no config file changes where it goes or what; -P is the folder and
+    // -o the name, kept apart so the folder's path is never read as a template;
+    // --remux-video mp4 makes it an .mp4 without re-encoding.
+    [
+      "--no-warnings",
+      "--ignore-config",
+      "--no-playlist",
+      "--playlist-items",
+      "1",
+      "--dump-json",
+      "--no-simulate",
+      "--ignore-no-formats-error",
+      "--max-filesize",
+      MAX_DOWNLOAD,
+      "--remux-video",
+      "mp4",
+      "-P",
+      dir,
+      "-o",
+      "video.%(ext)s",
+      "--",
+      url,
+    ],
+    { signal, timeout: DOWNLOAD_TIMEOUT_MS, maxBuffer: YTDLP_MAX_OUTPUT },
+  );
+  const path = join(dir, "video.mp4");
+  return { ...parseVideoInfo(stdout), path: existsSync(path) ? path : undefined };
+}
+
+// The length of a downloaded video, with ffprobe: Instagram doesn't say it before (§4.1).
+export async function measureSeconds(path: string, signal: AbortSignal): Promise<number> {
+  const { stdout } = await run(
+    "ffprobe",
+    ["-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", path],
+    { signal, timeout: FFPROBE_TIMEOUT_MS },
+  );
+  const seconds = Number(stdout.trim());
+  // Not "": Number("") is 0, which would pass any length check.
+  if (!(seconds > 0)) throw new Error(`ffprobe gave no length: "${stdout.trim()}"`);
+  return seconds;
 }
