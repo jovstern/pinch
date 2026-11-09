@@ -214,8 +214,8 @@ balance` on headings, `pretty` on paragraphs; tabular numbers on quantities. Bud
 display font is the one new download and must fit the 165 kB SPA budget with the entry
 (`docs/metrics/m04.md`); if it doesn't, ship it only on the recipe and cook routes.
 Built (M7): no longer fetched with the page (that cost the data pages' LCP 300–450 ms,
-`docs/metrics/m06.md` Miss 1): `client/src/lib/displayFont.ts` adds it once the page has
-loaded, and until then a Georgia sized to match ("Fraunces Fallback") holds its place; it never
+`docs/metrics/m06.md` Miss 1): `client/src/lib/displayFont.ts` adds it 1.5 s after the page
+has loaded, and until then a Georgia sized to match ("Fraunces Fallback") holds its place; it never
 blocks text, so `font-display` no longer applies.
 
 **Shape.** Cards 16 px radius, controls 12 px, chips full; one soft shadow token for sheets
