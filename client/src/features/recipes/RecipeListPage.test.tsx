@@ -201,6 +201,7 @@ test("Clear all clears the search and the tags", async () => {
   });
   expect(screen.getByRole("searchbox")).toHaveValue("");
   expect(screen.getByRole("checkbox", { name: "breakfast" })).not.toBeChecked();
+  expect(screen.getByRole("searchbox")).toHaveFocus();
 });
 
 test("an applied tag's ✕ takes it off", async () => {
@@ -211,6 +212,18 @@ test("an applied tag's ✕ takes it off", async () => {
 
   await waitFor(() => {
     expect(fetch).toHaveBeenLastCalledWith("/api/recipes?tags=meal%3Abreakfast");
+  });
+  expect(screen.getByRole("searchbox")).toHaveFocus();
+});
+
+test("emptying the search box ends the search, without Enter", async () => {
+  const fetch = stubList();
+  renderApp("/recipes?q=eggs");
+
+  await userEvent.clear(await screen.findByRole("searchbox"));
+
+  await waitFor(() => {
+    expect(fetch).toHaveBeenLastCalledWith("/api/recipes");
   });
 });
 

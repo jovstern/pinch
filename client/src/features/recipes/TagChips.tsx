@@ -19,8 +19,9 @@ type TagChipsProps = {
 
 // A row of toggles for the common tags, on the same tags as the Filters (the address's). It
 // scrolls sideways on a phone rather than wrap: one row, so the grid starts high. It runs to the
-// screen's edges (the negative margins), so a cut-off chip shows there is more, and no scrollbar:
-// the cut-off chip says it.
+// screen's edges: its negative margins undo the page's gutter (Layout's px-4 sm:px-6; change
+// both together), so a cut-off chip shows there is more, and no scrollbar is needed. py-0.5: a
+// scrolling row clips what overflows it, so it makes room for the chips' 44 px touch areas.
 export function TagChips({ selected, onChange }: TagChipsProps) {
   return (
     <div

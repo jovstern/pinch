@@ -1,11 +1,13 @@
 import { tagFacets } from "@pinch/shared";
+import { Check } from "lucide-react";
 import { useId } from "react";
 import { FieldError } from "../../components/FieldError.tsx";
 import { facetNames, facets, tagLabel } from "./tagLabels.ts";
 
 type TagPickerProps = {
   legend: string;
-  // The form shows its legend as a section heading; the list's filter hides it under a summary.
+  // The form shows its legend as a section heading; My recipes' Filters hide it (their own
+  // heading or title names them).
   legendClassName: string;
   selected: string[];
   onChange: (tags: string[]) => void;
@@ -17,25 +19,25 @@ type TagPickerProps = {
 
 // The checkbox is hidden in a chip, so the chip shows its state (a fill and a ✓, not colour
 // alone) and its focus ring, in the text colour so it shows on a filled chip too. relative
-// keeps the hidden checkbox inside its chip, so focusing it scrolls there. A list's rows are
-// 36 px: the panel is for a pointer, and 35 rows of 44 would make it very long.
+// keeps the hidden checkbox inside its chip, so focusing it scrolls there. A list's row is the
+// checkbox and its label, 44 px tall for touch.
 const looks = {
   chips: {
     values: "flex flex-wrap gap-2",
     label:
-      "group relative inline-flex min-h-11 cursor-pointer items-center rounded-full bg-fill px-4 text-sm hover:bg-border has-checked:bg-accent-strong has-checked:text-on-accent has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-focus-visible:outline-text",
+      "group relative inline-flex min-h-11 cursor-pointer items-center gap-1.5 rounded-full bg-fill px-4 text-sm hover:bg-border has-checked:bg-accent-strong has-checked:text-on-accent has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-focus-visible:outline-text",
     checkbox: "sr-only",
   },
   list: {
     values: "grid",
-    label: "flex min-h-9 cursor-pointer items-center gap-3 text-sm",
+    label: "flex min-h-11 cursor-pointer items-center gap-3 text-sm",
     checkbox: "size-4 accent-primary",
   },
 };
 
-// Tags to tick, a group of toggles per facet (design §7): a recipe's in the form, the list's
-// filter on the list. Each is a real checkbox, so Tab, Space and screen readers work as usual;
-// only its label shows, drawn as a chip.
+// Tags to tick, a group per facet (design §7): a recipe's in the form, My recipes' Filters on
+// the list. Each is a real checkbox, so Tab, Space and screen readers work as usual; drawn as a
+// chip (only its label shows) or as a checkbox row.
 export function TagPicker({
   legend,
   legendClassName,
@@ -76,10 +78,9 @@ export function TagPicker({
                       toggle(tag, event.target.checked);
                     }}
                   />
-                  {/* Only a chip is a group: a list row has its checkbox to show it. */}
-                  <span aria-hidden="true" className="hidden group-has-checked:inline">
-                    ✓&nbsp;
-                  </span>
+                  {look === "chips" && (
+                    <Check aria-hidden="true" className="hidden size-4 group-has-checked:block" />
+                  )}
                   {tagLabel(tag)}
                 </label>
               );

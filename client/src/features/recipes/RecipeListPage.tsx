@@ -59,12 +59,14 @@ export function RecipeListPage() {
     setSearchParams(filterParams(next), { replace: true });
   }
 
-  function removeTag(tag: string) {
-    changeFilters({ ...filters, tags: filters.tags.filter((other) => other !== tag) });
+  // A tick, a chip or a Filters row: focus stays where it is.
+  function changeTags(tags: string[]) {
+    changeFilters({ ...filters, tags });
   }
 
-  // For a button that clears filters and goes away with them (Clear filters, Search all…): focus
-  // moves to the search box, where the next search starts, rather than falling to the page.
+  // For a button that clears filters and goes away with them (Clear all, Clear filters, Search
+  // all…, a tag's ✕, the panel's Clear): focus moves to the search box, where the next search
+  // starts, rather than falling to the page.
   function clearFilters(next: RecipeFilters) {
     changeFilters(next);
     searchRef.current?.focus();
@@ -101,8 +103,9 @@ export function RecipeListPage() {
         {!noRecipesYet && (
           <FiltersPanel
             selected={filters.tags}
-            onChange={(tags) => {
-              changeFilters({ ...filters, tags });
+            onChange={changeTags}
+            onClear={() => {
+              clearFilters({ ...filters, tags: [] });
             }}
           />
         )}
@@ -110,12 +113,17 @@ export function RecipeListPage() {
         <div className="min-w-0 flex-1">
           {!noRecipesYet && (
             <>
-              <ListFilters filters={filters} onChange={changeFilters} searchRef={searchRef} />
+              <ListFilters
+                filters={filters}
+                onChange={changeFilters}
+                onChangeTags={changeTags}
+                searchRef={searchRef}
+              />
               <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1">
                 {/* Announced as results arrive (ui-craft: aria-live for async results); blank
-                  while the list before them shows. Never hidden: a live region must be on the
-                  page before its text changes, or screen readers may miss it. When nothing
-                  matches, the block below says it on screen. */}
+                    while the list before them shows. Never hidden: a live region must be on the
+                    page before its text changes, or screen readers may miss it. When nothing
+                    matches, the block below says it on screen. */}
                 <p
                   role="status"
                   className={cn("text-sm text-muted-foreground", noMatch && "sr-only")}
@@ -126,7 +134,8 @@ export function RecipeListPage() {
                     matches(recipes.length, hasNextPage, filters.q !== "")}
                 </p>
                 {/* From 1024 px the tags repeat here, each removable, so what narrows the grid
-                  shows beside it (on a phone the chips and the Filters badge say it). */}
+                    shows beside it (on a phone the chips and the Filters badge say it). The ✕
+                    keeps the badge's size; its after: gives it a 44 px touch area. */}
                 {filters.tags.map((tag) => (
                   <Badge key={tag} variant="secondary" className="hidden gap-0 py-0 pr-0 lg:flex">
                     {tagLabel(tag)}
@@ -134,9 +143,12 @@ export function RecipeListPage() {
                       type="button"
                       variant="ghost"
                       aria-label={`Remove ${tagLabel(tag)}`}
-                      className="min-h-8 rounded-full px-2"
+                      className="relative min-h-8 rounded-full px-2 after:absolute after:-inset-x-1.5 after:-inset-y-1.5 after:content-['']"
                       onClick={() => {
-                        removeTag(tag);
+                        clearFilters({
+                          ...filters,
+                          tags: filters.tags.filter((other) => other !== tag),
+                        });
                       }}
                     >
                       <X aria-hidden="true" className="size-3.5" />
@@ -149,7 +161,7 @@ export function RecipeListPage() {
                     variant="ghost"
                     className="px-2 text-sm underline underline-offset-4"
                     onClick={() => {
-                      changeFilters({ q: "", tags: [] });
+                      clearFilters({ q: "", tags: [] });
                     }}
                   >
                     Clear all

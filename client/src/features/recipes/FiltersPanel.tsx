@@ -5,11 +5,13 @@ import { TagPicker } from "./TagPicker.tsx";
 type FiltersPanelProps = {
   selected: string[];
   onChange: (tags: string[]) => void;
+  // Clear goes away once nothing is ticked: the page moves focus (RecipeListPage).
+  onClear: () => void;
 };
 
 // The Filters from 1024 px: always open on the left, the same groups as the phone's sheet, as
 // checkboxes (design §14). The grid updates as they're ticked.
-export function FiltersPanel({ selected, onChange }: FiltersPanelProps) {
+export function FiltersPanel({ selected, onChange, onClear }: FiltersPanelProps) {
   const headingId = useId();
   return (
     <aside aria-labelledby={headingId} className="hidden w-60 shrink-0 lg:block">
@@ -22,9 +24,7 @@ export function FiltersPanel({ selected, onChange }: FiltersPanelProps) {
             type="button"
             variant="ghost"
             className="px-2 text-sm underline underline-offset-4"
-            onClick={() => {
-              onChange([]);
-            }}
+            onClick={onClear}
           >
             Clear
           </Button>

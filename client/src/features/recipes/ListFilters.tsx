@@ -8,6 +8,7 @@ import { TagChips } from "./TagChips.tsx";
 type ListFiltersProps = {
   filters: RecipeFilters;
   onChange: (filters: RecipeFilters) => void;
+  onChangeTags: (tags: string[]) => void;
   // The page focuses the search box after a Clear (RecipeListPage).
   searchRef: RefObject<HTMLInputElement | null>;
 };
@@ -15,7 +16,7 @@ type ListFiltersProps = {
 // The search and, on a phone, the Filters button and the common tags, above the grid (design §7,
 // §14). A search runs on Enter (the keyboard's Search key), not as you type: one request per
 // search rather than one per pause, and no timer. A tag applies as it's ticked.
-export function ListFilters({ filters, onChange, searchRef }: ListFiltersProps) {
+export function ListFilters({ filters, onChange, onChangeTags, searchRef }: ListFiltersProps) {
   const searchId = useId();
   // What's typed. When the address's search changes from elsewhere (Clear all, the Pinch link),
   // the box takes it: React docs, "Storing information from previous renders".
@@ -24,10 +25,6 @@ export function ListFilters({ filters, onChange, searchRef }: ListFiltersProps) 
   if (filters.q !== prevQ) {
     setPrevQ(filters.q);
     setText(filters.q);
-  }
-
-  function changeTags(tags: string[]) {
-    onChange({ ...filters, tags });
   }
 
   return (
@@ -46,7 +43,7 @@ export function ListFilters({ filters, onChange, searchRef }: ListFiltersProps) 
           </label>
           <Search
             aria-hidden="true"
-            className="pointer-events-none absolute top-3.5 left-3 size-4 text-muted-foreground"
+            className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground"
           />
           <Input
             ref={searchRef}
@@ -56,6 +53,9 @@ export function ListFilters({ filters, onChange, searchRef }: ListFiltersProps) 
             value={text}
             onChange={(event) => {
               setText(event.target.value);
+              // Emptied (its ✕, Escape, or deleting the words): the search is over, without
+              // an Enter, so the box and the address never disagree.
+              if (event.target.value === "" && filters.q !== "") onChange({ ...filters, q: "" });
             }}
             placeholder="Title or ingredient"
             className="pl-9"
@@ -64,11 +64,11 @@ export function ListFilters({ filters, onChange, searchRef }: ListFiltersProps) 
         {/* From 1024 px the Filters are a panel beside the grid (FiltersPanel), and the
             common tags are among them. */}
         <div className="lg:hidden">
-          <FiltersSheet selected={filters.tags} onChange={changeTags} />
+          <FiltersSheet selected={filters.tags} onChange={onChangeTags} />
         </div>
       </div>
       <div className="lg:hidden">
-        <TagChips selected={filters.tags} onChange={changeTags} />
+        <TagChips selected={filters.tags} onChange={onChangeTags} />
       </div>
     </>
   );

@@ -47,7 +47,8 @@ export function FiltersSheet({ selected, onChange }: FiltersSheetProps) {
             onChange={onChange}
           />
         </div>
-        <div className="flex gap-3 border-t border-border p-4">
+        {/* Above the phone's home bar, where it has one. */}
+        <div className="flex gap-3 border-t border-border p-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
           <Button
             type="button"
             variant="outline"
