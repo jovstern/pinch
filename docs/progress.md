@@ -70,5 +70,12 @@ Slices for later milestones are filled in when the milestone starts.
 - [x] Text fallback, the box: one textarea on `/` takes a link or the text (auto-detected)
 - [x] Nutrition per serving, shown as an estimate
 - [x] End of milestone: a real YouTube link becomes a draft; UI review, observer metrics, demo
+## The look and cook mode (docs/ux/plan.md U4, U2; approved 2026-11-09)
+
+- [x] U4 PR 1: tokens for light and dark, Fraunces for titles, the type scale
+- [ ] U4 PR 2: the components on the tokens, the mark
+- [ ] U2 PR 1: `/recipes/:id/cook`, its type, the steps, Wake Lock
+- [ ] U2 PR 2: each step's ingredients inline, tick-off
+- [ ] U2 PR 3: timers
 ## M6 — Instagram / Facebook
 ## M7 — Polish

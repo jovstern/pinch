@@ -1,27 +1,85 @@
 @import "tailwindcss";
 
-/* Design tokens (styling.md): components use these names, never raw colours. */
+/* The display face (docs/ux/plan.md §6): Fraunces, SIL OFL (public/fonts/OFL.txt). Cut down to
+   what the titles use, so it stays small: Latin only, weights 500–700, one optical size (36).
+   In public/, by its path: the dev server doesn't rewrite a relative url() here. index.html
+   preloads it, so titles don't swap from Georgia late and shift the page. */
+@font-face {
+  font-family: "Fraunces";
+  src: url("/fonts/fraunces.woff2") format("woff2");
+  font-weight: 500 700;
+  font-display: swap;
+}
+
+/* Design tokens (styling.md, docs/ux/plan.md §6): components use these names, never raw
+   colours. Every text/background pair passes WCAG AA in both themes. */
 @theme {
-  --color-surface: oklch(0.985 0.008 85);
-  --color-surface-raised: oklch(1 0 0);
-  --color-border: oklch(0.9 0.01 75);
-  --color-text: oklch(0.25 0.02 60);
-  --color-text-muted: oklch(0.48 0.02 60);
+  --color-surface: #fbf8f2;
+  --color-surface-raised: #ffffff;
+  --color-surface-sunken: #f3ede2;
+  --color-border: #e6ded1;
+  --color-text: #221a12;
+  --color-text-muted: #6e6257;
   /* The accent for large text (the name); the strong one where it must pass AA at body size:
-     links, and white labels on buttons. */
-  --color-accent: oklch(0.62 0.17 45);
-  --color-accent-strong: oklch(0.52 0.16 45);
-  /* Only for what can't be undone (delete). */
-  --color-danger: oklch(0.5 0.19 27);
+     links, and the fill behind on-accent labels. */
+  --color-accent: #c8471b;
+  --color-accent-strong: #a33612;
+  --color-accent-soft: #fbe7df;
+  --color-on-accent: #ffffff;
+  /* Each with an icon or text, never colour alone: "check this" marks, cooked and success.
+     Check is a fill or a mark, never a text colour: it is too light to read. */
+  --color-check: #e8b931;
+  --color-cooked: #5e7a3a;
+  /* Only for what can't be undone (delete). Its label is on-accent too. */
+  --color-danger: #b3261e;
+  /* Behind a dialog: dark in both themes. */
+  --color-scrim: #0f0c09;
+
+  --font-display: "Fraunces", Georgia, serif;
+
+  /* The type scale, 1.25 from 16 px (plan §6): Tailwind's own sizes up to xl, then 25 and 31. */
+  --text-2xl: 1.5625rem;
+  --text-2xl--line-height: 1.25;
+  --text-3xl: 1.9375rem;
+  --text-3xl--line-height: 1.2;
+}
+
+/* Dark follows the system, with no toggle (plan §6): the same names, other values. */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-surface: #17130f;
+    --color-surface-raised: #221c16;
+    --color-surface-sunken: #0f0c09;
+    --color-border: #3a3029;
+    --color-text: #f3ede4;
+    --color-text-muted: #a89c8f;
+    --color-accent: #f0693a;
+    --color-accent-strong: #f0693a;
+    --color-accent-soft: #3a1d12;
+    /* Ink, not white: white on the lighter dark-theme accent wouldn't pass AA. */
+    --color-on-accent: #17130f;
+    --color-check: #f2c94c;
+    --color-cooked: #8fb35e;
+    --color-danger: #f2706a;
+  }
 }
 
 :root {
-  /* Light only for now: system controls never render dark on a light page. */
-  color-scheme: light;
+  /* System controls (scrollbars, checkboxes, autofill) follow the theme too. */
+  color-scheme: light dark;
 }
 
 body {
   @apply bg-surface text-text antialiased;
+}
+
+/* Page and section titles in the display face. In the base layer, so a utility class on the
+   element still wins. */
+@layer base {
+  h1,
+  h2 {
+    font-family: var(--font-display);
+  }
 }
 
 /* One focus ring for every link, button and field (ui-craft: every control shows focus). */

@@ -5,9 +5,10 @@ experience, and the numbered proposals. Written by the `designer` agent
 (`.claude/agents/designer.md`) with the method in `.claude/skills/ux-strategy/SKILL.md`;
 revised every milestone (`m<NN>.md` holds each pass). Evidence lives in `research.md`
 (cited as A1…, B1…, C1…) and in the screenshots of `m05.md`. **Nothing here is approved until
-the user says so**; every proposal below is `proposed`.
+the user says so**. Approved on 2026-11-09: **U4** and **U2**; the rest are `proposed`, to be
+built after M6 with the answers in §9.
 
-Last revised: 2026-11-08, after M5 (`m05.md`).
+Last revised: 2026-11-09, the user's approvals and answers (§8, §9).
 
 ## 1. Audience
 
@@ -187,7 +188,7 @@ the portrait tiles and the dark theme are what keep it from reading as a templat
 | `--color-text` | `#221A12` | `#F3EDE4` | ink |
 | `--color-text-muted` | `#6E6257` | `#A89C8F` | meta, notes (≥ 4.5:1 on its surface) |
 | `--color-accent` | `#C8471B` | `#F0693A` | paprika: the one primary action per screen, the wordmark, selected state |
-| `--color-accent-strong` | `#A33612` | `#F0693A` | accent where it must pass AA at body size (links, white-on-accent) |
+| `--color-accent-strong` | `#A33612` | `#F0693A` | accent where it must pass AA at body size (links, the fill under `on-accent` labels) |
 | `--color-accent-soft` | `#FBE7DF` | `#3A1D12` | selected chip fill, "ready" row tint |
 | `--color-check` | `#E8B931` | `#F2C94C` | "check this" marks in review (yellow, never alone: an icon and text go with it) |
 | `--color-cooked` | `#5E7A3A` | `#8FB35E` | "cooked" and success (olive), never alone |
@@ -195,11 +196,15 @@ the portrait tiles and the dark theme are what keep it from reading as a templat
 
 Contrast must be re-checked in the token PR with a checker for every pair in both themes
 (`ui-craft`: AA everywhere); the values above were chosen to pass and the muted/paper pair
-is the tight one. `:root { color-scheme: light dark }`, dark under
+is the tight one. Checked in U4 PR 1: all pass. Two tokens were added there: `--color-on-accent`
+(white in light, `#17130F` in dark, since white on the dark accent fails AA) for labels on
+accent and danger buttons, and `--color-scrim` (`#0F0C09`) behind dialogs.
+`:root { color-scheme: light dark }`, dark under
 `@media (prefers-color-scheme: dark)` only — no toggle in v1 (smart defaults over settings).
 
 **Type.** Display: **Fraunces** (variable serif, SIL OFL), self-hosted woff2 subset to
-Latin, `wght` 500–700 and `opsz`, ≈ 35–45 kB, `font-display: swap`; for `h1`, `h2`, the
+Latin, `wght` 500–700, `font-display: swap`. Built (U4 PR 1): 29.5 kB, with the optical size
+fixed at 36 (with the `opsz` axis it was 55 kB); for `h1`, `h2`, the
 wordmark and the cook-mode step. Hebrew titles fall back to the system serif via the stack
 (`"Fraunces", "Frank Ruhl Libre", Georgia, serif` — Frank Ruhl Libre only if a Hebrew subset
 is wanted later; not in the first PR). Body: the system sans as today (zero bytes). Scale
@@ -327,7 +332,7 @@ persona unless named. **Status:** `proposed` for all; only the user moves one.
   `Layout.tsx`, `ListFilters.tsx`; design §14 (`/`'s description). No server change.
 - **Depends on:** U4 tokens first (one PR), else it is restyled twice.
 
-### U2 — Cook mode — `feature` — **high** — 3 PRs — `proposed`
+### U2 — Cook mode — `feature` — **high** — 3 PRs — `approved` (2026-11-09)
 
 - **Problem:** N3 and D3: the recipe is a 16 px document; the screen locks; Edit/Delete sit
   where the thumb lands; no two-column layout at any width (`m05.md` §7,
@@ -366,7 +371,7 @@ persona unless named. **Status:** `proposed` for all; only the user moves one.
   PR 1: preview layout + sticky bar (client only). PR 2: caption + uncertain fields (server,
   shared, prompt). PR 3: marks and reasons in the UI.
 
-### U4 — The look: tokens, type, mark, dark mode — `look` — **high** — 2 PRs — `proposed`
+### U4 — The look: tokens, type, mark, dark mode — `look` — **high** — 2 PRs — `approved` (2026-11-09)
 
 - **Problem:** the app reads as a Tailwind starter: every element a bordered rectangle,
   light-only, system sans everywhere, an orange word for a mark (`m05.md` §15).
@@ -489,9 +494,12 @@ reel; UI in Hebrew.
 
 ### Suggested order
 
-U4 (tokens) → U1 → U6 → U5 → U2 → U10 → U3 → U7 → U8 → U9 → U11 → U12. U4 first because
-every other change is styled once; U1 + U6 + U5 make the home a library in three PRs; U2 is
-the one bold feature; U3 is the trust feature and needs the server; U8 is the phone.
+The user's order (2026-11-09): U4 (2 PRs) → U2 (3 PRs) → M6 → the rest, with the answers
+in §9 (U8 later). The look comes first so M6's new screens are styled once.
+
+The suggestion it replaced: U4 (tokens) → U1 → U6 → U5 → U2 → U10 → U3 → U7 → U8 → U9 →
+U11 → U12. Its reasoning: U1 + U6 + U5 make the home a library in three PRs; U2 is the one
+bold feature; U3 is the trust feature and needs the server; U8 is the phone.
 
 ## 9. Questions only the user can answer
 
@@ -506,3 +514,12 @@ the one bold feature; U3 is the trust feature and needs the server; U8 is the ph
    fine under "media is never stored", but it is a stranger's text kept for up to 7 days
    (the import's TTL). OK?
 6. **PWA now or at M7?** U8 changes D7 ("paste in v1, share-sheet channels later").
+
+**The user's answers (2026-11-09):**
+
+1. TikTok: out for now, but kept in mind. Nothing should rule it out.
+2. v1 is for the household, so the Hebrew UI and RTL (U11 and later) move up.
+3. Servings scaling stays out, in cook mode too.
+4. Fraunces is worth it, self-hosted as its own woff2.
+5. Storing the caption is OK.
+6. PWA (U8): later.
