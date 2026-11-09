@@ -42,6 +42,7 @@ export function RecipeMenu({ recipe, defaultOpen }: RecipeMenuProps) {
         <DropdownMenuTrigger asChild>
           <Button
             ref={triggerRef}
+            type="button"
             variant="outline"
             aria-label="More actions"
             // While the dialog is on its way (a slow link): the button says it's working. Once
@@ -60,7 +61,8 @@ export function RecipeMenu({ recipe, defaultOpen }: RecipeMenuProps) {
             </Link>
           </DropdownMenuItem>
           {/* A placeholder (design §1): sharing comes after auth. Unavailable, not hidden, so
-              the household sees it's planned. */}
+              the household sees it's planned. Radix's arrow keys skip a disabled item; it's
+              still in the menu, and read as unavailable. */}
           <DropdownMenuItem disabled>
             <Share2 aria-hidden="true" />
             Share · coming soon
