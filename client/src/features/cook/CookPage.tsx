@@ -3,7 +3,7 @@ import { useId, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router";
 import { Button } from "../../components/Button.tsx";
 import { RecipeLoadError } from "../recipes/RecipeLoadError.tsx";
-import { stepText } from "../recipes/stepText.ts";
+import { keepRangesTogether } from "../recipes/ranges.ts";
 import { recipeQuery } from "../recipes/recipeQueries.ts";
 import { stepDurations } from "./durations.ts";
 import { CookSkeleton } from "./CookSkeleton.tsx";
@@ -85,9 +85,9 @@ export function CookPage() {
         {/* dir="auto": a Hebrew step reads right to left, as in the form (TextField). */}
         <p
           dir="auto"
-          className="mt-3 max-w-prose font-display text-2xl font-medium text-pretty sm:text-3xl"
+          className="mt-3 max-w-prose font-display text-2xl font-semibold text-pretty sm:text-3xl"
         >
-          {stepText(step)}
+          {keepRangesTogether(step)}
         </p>
       </section>
 
@@ -115,7 +115,7 @@ export function CookPage() {
                 {/* One span: a flex item's trailing space would be lost ("Timer:20 min"). */}
                 <span>
                   {running ? "Running: " : "Timer: "}
-                  <span dir="auto">{duration.label}</span>
+                  <bdi>{duration.label}</bdi>
                 </span>
               </Button>
             );

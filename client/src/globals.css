@@ -2,9 +2,8 @@
 
 /* Until Fraunces arrives (lib/displayFont.ts loads it once the page has loaded), titles are in
    Georgia Bold sized to take Fraunces' room: as wide, as tall, so nothing moves when it swaps
-   in. Measured from both fonts' metrics. For the bold titles only (600–700): lighter display
-   text (cook mode's step) falls to plain Georgia. Android has no Georgia: there the titles may
-   shift once, on the first visit. */
+   in. Measured from both fonts' metrics, for the weights display text uses (600–700). Android
+   has no Georgia: there the titles may shift once, on the first visit. */
 @font-face {
   font-family: "Fraunces Fallback";
   src: local("Georgia Bold"), local("Georgia-Bold");
@@ -44,7 +43,10 @@
   /* Behind a dialog: dark in both themes. */
   --color-scrim: #0f0c09;
 
-  --font-display: "Fraunces", "Fraunces Fallback", Georgia, serif;
+  /* Fraunces has no Hebrew: a Hebrew title is named a serif here (Times New Roman on Apple and
+     Windows, Noto Serif Hebrew on Android), so it's the same before and after Fraunces swaps in. */
+  --font-display:
+    "Fraunces", "Fraunces Fallback", "Times New Roman", "Noto Serif Hebrew", Georgia, serif;
 
   /* Shape (plan §6): cards and sheets round, controls less so, chips full (rounded-full). One
      soft shadow, for what floats over the page (the dialog). */
