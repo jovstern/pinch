@@ -178,7 +178,7 @@ export function RecipeListPage() {
                     shape="tile"
                   />
                 )}
-                <div className="min-w-0">
+                <div className="min-w-0 flex-1">
                   <h2 dir="auto" className="text-lg font-semibold">
                     {recipe.title}
                   </h2>
