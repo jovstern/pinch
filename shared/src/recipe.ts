@@ -74,6 +74,10 @@ export const RecipeDraftSchema = RecipeInputSchema.extend({
   nutritionPerServing: NutritionSchema.optional(),
 });
 
+// A recipe's (or a draft's) picture, from its post (design §5): its size, so the page keeps
+// its place before it loads. The image itself is served apart: GET /api/recipes/:id/thumbnail.
+export const ThumbnailSchema = z.object({ width: z.int(), height: z.int() });
+
 export const SourceSchema = z.object({
   type: z.enum(["instagram", "facebook", "youtube", "text", "image", "manual"]),
   // http(s) only: the client renders it as a link, and a javascript: URL would run code.
@@ -84,6 +88,7 @@ export const SourceSchema = z.object({
 export const RecipeSchema = RecipeInputSchema.extend({
   id: z.string(),
   nutritionPerServing: NutritionSchema.optional(),
+  thumbnail: ThumbnailSchema.optional(),
   source: SourceSchema,
   createdAt: z.iso.datetime(),
   updatedAt: z.iso.datetime(),
@@ -100,5 +105,6 @@ export type Ingredient = z.infer<typeof IngredientSchema>;
 export type RecipeInput = z.infer<typeof RecipeInputSchema>;
 export type Nutrition = z.infer<typeof NutritionSchema>;
 export type RecipeDraft = z.infer<typeof RecipeDraftSchema>;
+export type Thumbnail = z.infer<typeof ThumbnailSchema>;
 export type Recipe = z.infer<typeof RecipeSchema>;
 export type RecipeList = z.infer<typeof RecipeListSchema>;

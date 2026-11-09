@@ -27,7 +27,11 @@ export function IngredientChecklist({
         (ingredient, index) =>
           shown.includes(index) && (
             <li key={index}>
-              <label className="flex min-h-11 cursor-pointer items-center gap-3 has-checked:text-text-muted has-checked:line-through">
+              {/* dir="auto": a Hebrew row has its box on the right, as the text reads. */}
+              <label
+                dir="auto"
+                className="flex min-h-11 cursor-pointer items-center gap-3 has-checked:text-text-muted has-checked:line-through"
+              >
                 <input
                   type="checkbox"
                   className="size-5 shrink-0 accent-accent-strong"
@@ -36,7 +40,7 @@ export function IngredientChecklist({
                     onToggle(index, event.target.checked);
                   }}
                 />
-                <span dir="auto">
+                <span>
                   {ingredientLine(ingredient)}
                   {ingredient.note && <span className="text-text-muted">, {ingredient.note}</span>}
                 </span>

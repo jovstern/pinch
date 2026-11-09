@@ -13,12 +13,18 @@ const YTDLP_TIMEOUT_MS = 30_000;
 const YTDLP_MAX_OUTPUT = 20_000_000;
 
 // What yt-dlp says about a post. Instagram gives no length (design §4.1), so it can be missing.
-export type VideoInfo = { seconds?: number; caption: string };
+// thumbnailUrl: the post's picture, to make the recipe's thumbnail from (design §5).
+export type VideoInfo = { seconds?: number; caption: string; thumbnailUrl?: string };
 
-// The two fields we read from yt-dlp's JSON; it has many more.
+// The fields we read from yt-dlp's JSON; it has many more. A picture link that isn't https (or
+// none) is dropped (catch), not a failed attempt: the recipe doesn't need it.
 const YtDlpInfoSchema = z.object({
   duration: z.number().nullish(),
   description: z.string().nullish(),
+  thumbnail: z
+    .url({ protocol: /^https$/ })
+    .optional()
+    .catch(undefined),
 });
 
 // Reads a post's length and caption without downloading it (§4.1): the caption often holds
@@ -47,7 +53,11 @@ export async function readVideoInfo(url: string, signal: AbortSignal): Promise<V
 
 export function parseVideoInfo(json: string): VideoInfo {
   const info = YtDlpInfoSchema.parse(JSON.parse(json));
-  return { seconds: info.duration ?? undefined, caption: info.description ?? "" };
+  return {
+    seconds: info.duration ?? undefined,
+    caption: info.description ?? "",
+    thumbnailUrl: info.thumbnail,
+  };
 }
 
 // A download's own timeout inside the attempt's deadline (§4.3): the spike's reels (3–11 MB)

@@ -3,8 +3,10 @@ import { useId, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router";
 import { Button } from "../../components/Button.tsx";
 import { RecipeLoadError } from "../recipes/RecipeLoadError.tsx";
+import { keepRangesTogether } from "../recipes/ranges.ts";
 import { recipeQuery } from "../recipes/recipeQueries.ts";
 import { stepDurations } from "./durations.ts";
+import { CookSkeleton } from "./CookSkeleton.tsx";
 import { IngredientChecklist } from "./IngredientChecklist.tsx";
 import { stepIngredients } from "./stepIngredients.ts";
 import { TimerBar } from "./TimerBar.tsx";
@@ -31,10 +33,10 @@ export function CookPage() {
   const forThisStepId = useId();
   const allId = useId();
   const wakeLock = useWakeLock();
-  const { timers, now, start, stop } = useTimers();
+  const { timers, now, start, stop, isRunning } = useTimers();
   const navigate = useNavigate();
 
-  if (status === "pending") return <p className="text-text-muted">Loading the recipe…</p>;
+  if (status === "pending") return <CookSkeleton />;
   if (isLoadingError) {
     return <RecipeLoadError error={error} retry={() => void refetch()} retrying={isFetching} />;
   }
@@ -59,7 +61,9 @@ export function CookPage() {
     <article>
       <title>{`Cooking ${recipe.title} · Pinch`}</title>
       <div className="flex items-start justify-between gap-4">
-        <h1 className="text-xl font-semibold text-balance">{recipe.title}</h1>
+        <h1 dir="auto" className="text-xl font-semibold text-balance">
+          {recipe.title}
+        </h1>
         {/* replace, as the form's Cancel: the phone's Back then doesn't reopen cook mode. */}
         <Button asChild variant="secondary" className="shrink-0">
           <Link to={recipePath} replace>
@@ -79,8 +83,11 @@ export function CookPage() {
           {`Step ${String(current + 1)} of ${String(recipe.steps.length)}`}
         </p>
         {/* dir="auto": a Hebrew step reads right to left, as in the form (TextField). */}
-        <p dir="auto" className="mt-3 max-w-prose font-display text-2xl text-pretty sm:text-3xl">
-          {step}
+        <p
+          dir="auto"
+          className="mt-3 max-w-prose font-display text-2xl font-semibold text-pretty sm:text-3xl"
+        >
+          {keepRangesTogether(step)}
         </p>
       </section>
 
@@ -88,18 +95,31 @@ export function CookPage() {
           as a new step. */}
       {durations.length > 0 && (
         <div className="mt-4 flex flex-wrap gap-2">
-          {durations.map((duration, position) => (
-            <Button
-              key={position}
-              type="button"
-              variant="secondary"
-              onClick={() => {
-                start(duration);
-              }}
-            >
-              Timer: <span dir="auto">{duration.label}</span>
-            </Button>
-          ))}
+          {durations.map((duration, position) => {
+            // The step's own words and the time's place in them: an edit elsewhere that moves
+            // the steps can't make another step's button look running.
+            const key = `${step}\n${String(position)}`;
+            // Not a toggle (pressed again, nothing): unavailable while it runs, as Back is on
+            // the first step.
+            const running = isRunning(key);
+            return (
+              <Button
+                key={position}
+                type="button"
+                variant="secondary"
+                aria-disabled={running}
+                onClick={() => {
+                  start(key, duration);
+                }}
+              >
+                {/* One span: a flex item's trailing space would be lost ("Timer:20 min"). */}
+                <span>
+                  {running ? "Running: " : "Timer: "}
+                  <bdi>{duration.label}</bdi>
+                </span>
+              </Button>
+            );
+          })}
         </div>
       )}
 
