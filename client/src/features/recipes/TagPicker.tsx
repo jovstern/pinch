@@ -1,18 +1,13 @@
 import { tagFacets } from "@pinch/shared";
 import { Check } from "lucide-react";
-import { useId } from "react";
-import { FieldError } from "../../components/FieldError.tsx";
 import { facetNames, facets, tagLabel } from "./tagLabels.ts";
 
 type TagPickerProps = {
+  // Read, not shown: where it's used, a heading or title above already names the tags.
   legend: string;
-  // The form shows its legend as a section heading; My recipes' Filters hide it (their own
-  // heading or title names them).
-  legendClassName: string;
   selected: string[];
   onChange: (tags: string[]) => void;
-  errors?: unknown[];
-  // "chips" (the form, the Filters sheet), or "list": a column of checkboxes for a narrow panel
+  // "chips" (the editor's Add tag, the Filters sheet), or "list": a column of checkboxes for a narrow panel
   // (My recipes from 1024 px, as in the wireframe).
   look?: "chips" | "list";
 };
@@ -35,22 +30,10 @@ const looks = {
   },
 };
 
-// Tags to tick, a group per facet (design §7): a recipe's in the form, My recipes' Filters on
-// the list. Each is a real checkbox, so Tab, Space and screen readers work as usual; drawn as a
-// chip (only its label shows) or as a checkbox row.
-export function TagPicker({
-  legend,
-  legendClassName,
-  selected,
-  onChange,
-  errors = [],
-  look = "chips",
-}: TagPickerProps) {
-  // As in TextField: each checkbox is marked invalid and points to the error (over 20 tags), so
-  // the form's focus after a failed Save lands on the first chip, just under the message.
-  const errorId = useId();
-  const invalid = errors.some((message) => typeof message === "string");
-
+// Tags to tick, a group per facet (design §7): a recipe's in the editor's Add tag, My recipes'
+// Filters on the list. Each is a real checkbox, so Tab, Space and screen readers work as usual;
+// drawn as a chip (only its label shows) or as a checkbox row.
+export function TagPicker({ legend, selected, onChange, look = "chips" }: TagPickerProps) {
   // In the order ticked; the recipe page shows them as stored.
   function toggle(tag: string, on: boolean) {
     onChange(on ? [...selected, tag] : selected.filter((other) => other !== tag));
@@ -58,8 +41,7 @@ export function TagPicker({
 
   return (
     <fieldset className="mt-4 grid gap-4">
-      <legend className={legendClassName}>{legend}</legend>
-      <FieldError id={errorId} errors={errors} />
+      <legend className="sr-only">{legend}</legend>
       {facets.map((facet) => (
         <fieldset key={facet}>
           <legend className="mb-2 text-sm font-semibold">{facetNames[facet]}</legend>
@@ -72,8 +54,6 @@ export function TagPicker({
                     type="checkbox"
                     className={looks[look].checkbox}
                     checked={selected.includes(tag)}
-                    aria-invalid={invalid}
-                    aria-describedby={invalid ? errorId : undefined}
                     onChange={(event) => {
                       toggle(tag, event.target.checked);
                     }}

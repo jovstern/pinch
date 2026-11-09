@@ -1,6 +1,7 @@
 import { fieldErrors, RecipeInputSchema, type Recipe, type RecipeInput } from "@pinch/shared";
 import { revalidateLogic, useForm } from "@tanstack/react-form";
 import { useRef, type ReactNode } from "react";
+import { Plus, X } from "lucide-react";
 import { Link } from "react-router";
 import { Button } from "../../components/ui/Button.tsx";
 import { FieldError } from "../../components/FieldError.tsx";
@@ -9,7 +10,7 @@ import { ApiError } from "../../lib/api.ts";
 import { LeaveDialog } from "./LeaveDialog.tsx";
 import { emptyIngredient, toInput, type RecipeFormValues } from "./recipeFormValues.ts";
 import { RecipeSource } from "./RecipeSource.tsx";
-import { TagPicker } from "./TagPicker.tsx";
+import { RecipeTags } from "./RecipeTags.tsx";
 
 // The way out beside Save: Cancel, back to an address, or a draft's Discard, which deletes it.
 type Leave =
@@ -92,16 +93,26 @@ export function RecipeForm({
           order on a phone too, so the keyboard and the eye go the same way on every width. */}
       <div className="grid gap-8">
         {intro}
-        <form.Field name="title">{(field) => <TextField field={field} label="Title" />}</form.Field>
+        <form.Field name="title">
+          {(field) => <TextField field={field} label="Title" placeholder="e.g. Red lentil soup" />}
+        </form.Field>
         <form.Field name="description">
           {(field) => <TextField field={field} label="Description" multiline />}
         </form.Field>
 
         <form.Field name="ingredients" mode="array">
           {(list) => (
-            <fieldset className="mt-4 grid gap-4">
+            <fieldset className="grid gap-2">
               <legend className="mb-3 font-display text-xl font-semibold">Ingredients</legend>
               <FieldError errors={list.state.meta.errors} />
+              {/* The columns' names, once over the rows (each box is named for screen readers
+                  too). The note has its own line on a phone, named by its placeholder. */}
+              <div aria-hidden="true" className={`${ingredientColumns} text-sm font-semibold`}>
+                <span>Amount</span>
+                <span>Unit</span>
+                <span>Ingredient</span>
+                <span className="hidden sm:block">Note</span>
+              </div>
               {list.state.value.map((_, index) => {
                 const position = String(index + 1);
                 // TanStack Form types the name as `ingredients[${number}]`: the index must stay a
@@ -110,60 +121,55 @@ export function RecipeForm({
                 const row = `ingredients[${index}]` as const;
                 return (
                   // Rows have no id; the index is the row (TanStack Form names fields by it too).
-                  <fieldset
-                    key={index}
-                    className="grid grid-cols-[5rem_5rem_1fr_auto] items-start gap-3 border-b border-border pb-4"
-                  >
+                  // The recipe's own shape (design §6): amount · unit · name, and a note.
+                  <fieldset key={index} className={ingredientColumns}>
                     <legend className="sr-only">Ingredient {position}</legend>
                     <form.Field name={`${row}.quantity`}>
-                      {(field) => <TextField field={field} label="Amount" />}
+                      {(field) => <TextField field={field} label="Amount" hideLabel />}
                     </form.Field>
                     <form.Field name={`${row}.unit`}>
-                      {(field) => <TextField field={field} label="Unit" />}
+                      {(field) => <TextField field={field} label="Unit" hideLabel />}
                     </form.Field>
                     <form.Field name={`${row}.name`}>
-                      {(field) => (
-                        <TextField field={field} label="Ingredient" className="col-span-2" />
-                      )}
+                      {(field) => <TextField field={field} label="Ingredient" hideLabel />}
                     </form.Field>
                     <form.Field name={`${row}.note`}>
-                      {(field) => <TextField field={field} label="Note" className="col-span-3" />}
+                      {(field) => (
+                        <TextField
+                          field={field}
+                          label="Note"
+                          hideLabel
+                          placeholder="Note (optional)"
+                          className="col-span-3 col-start-1 row-start-2 sm:col-span-1 sm:col-start-auto sm:row-start-auto"
+                        />
+                      )}
                     </form.Field>
-                    {/* Its name says which row, for screen readers. mt-6 skips the label above the
-                      inputs beside it, so it lines up with them even when one shows an error. A
-                      recipe needs an ingredient (§6), so the last row stays. */}
-                    <Button
-                      type="button"
-                      variant="secondary"
-                      aria-label={`Remove ingredient ${position}`}
+                    {/* A recipe needs an ingredient (§6), so the last row stays. */}
+                    <RemoveButton
+                      label={`Remove ingredient ${position}`}
                       disabled={list.state.value.length === 1}
                       onClick={() => {
                         list.removeValue(index);
                       }}
-                      className="mt-6"
-                    >
-                      Remove
-                    </Button>
+                      className="col-start-4 row-start-1 sm:col-start-auto sm:row-start-auto"
+                    />
                   </fieldset>
                 );
               })}
-              <Button
-                type="button"
-                variant="secondary"
+              <AddButton
                 onClick={() => {
                   list.pushValue(emptyIngredient);
                 }}
-                className="justify-self-start"
               >
-                Add an ingredient
-              </Button>
+                Add ingredient
+              </AddButton>
             </fieldset>
           )}
         </form.Field>
 
         <form.Field name="steps" mode="array">
           {(list) => (
-            <fieldset className="mt-4 grid gap-4">
+            <fieldset className="grid gap-3">
               <legend className="mb-3 font-display text-xl font-semibold">Steps</legend>
               <FieldError errors={list.state.meta.errors} />
               {list.state.value.map((_, index) => {
@@ -172,36 +178,45 @@ export function RecipeForm({
                 // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
                 const step = `steps[${index}]` as const;
                 return (
-                  <div key={index} className="grid grid-cols-[1fr_auto] items-start gap-3">
+                  <div
+                    key={index}
+                    className="grid grid-cols-[1.5rem_minmax(0,1fr)_2.75rem] items-start gap-2"
+                  >
+                    {/* The number shows; the box's own label says it to screen readers. */}
+                    <span aria-hidden="true" className="leading-11 font-semibold tabular-nums">
+                      {position}
+                    </span>
                     <form.Field name={step}>
-                      {(field) => <TextField field={field} label={`Step ${position}`} multiline />}
+                      {(field) => (
+                        <TextField
+                          field={field}
+                          label={`Step ${position}`}
+                          hideLabel
+                          multiline
+                          placeholder={
+                            index === 0 ? "e.g. Rinse the lentils and soften the onion." : ""
+                          }
+                        />
+                      )}
                     </form.Field>
                     {/* As for ingredients. */}
-                    <Button
-                      type="button"
-                      variant="secondary"
-                      aria-label={`Remove step ${position}`}
+                    <RemoveButton
+                      label={`Remove step ${position}`}
                       disabled={list.state.value.length === 1}
                       onClick={() => {
                         list.removeValue(index);
                       }}
-                      className="mt-6"
-                    >
-                      Remove
-                    </Button>
+                    />
                   </div>
                 );
               })}
-              <Button
-                type="button"
-                variant="secondary"
+              <AddButton
                 onClick={() => {
                   list.pushValue("");
                 }}
-                className="justify-self-start"
               >
-                Add a step
-              </Button>
+                Add step
+              </AddButton>
             </fieldset>
           )}
         </form.Field>
@@ -227,9 +242,7 @@ export function RecipeForm({
         </div>
         <form.Field name="tags">
           {(field) => (
-            <TagPicker
-              legend="Tags"
-              legendClassName="mb-3 font-display text-xl font-semibold"
+            <RecipeTags
               selected={field.state.value}
               onChange={field.handleChange}
               errors={field.state.meta.errors}
@@ -319,6 +332,44 @@ function LeaveButton({ leave, busy, title }: LeaveButtonProps) {
       keepLabel="Keep reviewing"
       onConfirm={leave.discard}
     />
+  );
+}
+
+// An ingredient's row: amount, unit and name on one line with ✕, even at 360 px; the note under
+// them on a phone, beside them from 640 px.
+const ingredientColumns =
+  "grid grid-cols-[4rem_4rem_minmax(0,1fr)_2.75rem] items-start gap-1.5 sm:grid-cols-[4.5rem_5rem_minmax(0,1fr)_minmax(0,1fr)_2.75rem] sm:gap-2";
+
+// ✕, named for screen readers by the row it removes.
+function RemoveButton({
+  label,
+  className = "",
+  ...props
+}: {
+  label: string;
+  disabled: boolean;
+  onClick: () => void;
+  className?: string;
+}) {
+  return (
+    <Button
+      type="button"
+      variant="ghost"
+      aria-label={label}
+      className={`px-0 text-muted-foreground ${className}`}
+      {...props}
+    >
+      <X aria-hidden="true" className="size-5" />
+    </Button>
+  );
+}
+
+function AddButton({ onClick, children }: { onClick: () => void; children: ReactNode }) {
+  return (
+    <Button type="button" variant="ghost" onClick={onClick} className="-ml-3 justify-self-start">
+      <Plus aria-hidden="true" className="size-4" />
+      {children}
+    </Button>
   );
 }
 

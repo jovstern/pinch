@@ -49,12 +49,14 @@ test("saves a new recipe and shows it", async () => {
   await userEvent.type(ingredient(1).getByLabelText("Amount"), "2");
   await userEvent.type(ingredient(1).getByLabelText("Unit"), "slices");
   await userEvent.type(ingredient(1).getByLabelText("Ingredient"), "bread");
-  await userEvent.click(screen.getByRole("button", { name: "Add an ingredient" }));
+  await userEvent.click(screen.getByRole("button", { name: "Add ingredient" }));
   await userEvent.type(ingredient(2).getByLabelText("Ingredient"), "butter");
   await userEvent.type(ingredient(2).getByLabelText("Note"), "soft");
   await userEvent.type(screen.getByLabelText("Step 1"), "Toast the bread.");
+  await userEvent.click(screen.getByRole("button", { name: "Add tag" }));
   await userEvent.click(screen.getByRole("checkbox", { name: "breakfast" }));
   await userEvent.click(screen.getByRole("checkbox", { name: "quick" }));
+  await userEvent.click(screen.getByRole("button", { name: "Done" }));
   await userEvent.click(screen.getByRole("button", { name: "Save recipe" }));
 
   expect(await screen.findByRole("heading", { level: 1, name: "Toast" })).toBeInTheDocument();
@@ -85,19 +87,20 @@ test("writing by hand sits under New recipe, with a tip to paste instead", async
   expect(screen.getByRole("link", { name: "Cancel" })).toHaveAttribute("href", "/");
 });
 
-test("more than 20 tags says so, and focuses the first tag, under the message", async () => {
+test("more than 20 tags says so, and focuses Add tag, above the message", async () => {
   const fetch = stubApi(() => Response.json(saved, { status: 201 }));
   renderApp("/recipes/new");
 
   await userEvent.type(await screen.findByLabelText("Title"), "Toast");
   await userEvent.type(ingredient(1).getByLabelText("Ingredient"), "bread");
   await userEvent.type(screen.getByLabelText("Step 1"), "Toast the bread.");
-  const tags = screen.getAllByRole("checkbox");
-  for (const tag of tags.slice(0, 21)) await userEvent.click(tag);
+  await userEvent.click(screen.getByRole("button", { name: "Add tag" }));
+  for (const tag of screen.getAllByRole("checkbox").slice(0, 21)) await userEvent.click(tag);
+  await userEvent.click(screen.getByRole("button", { name: "Done" }));
   await userEvent.click(screen.getByRole("button", { name: "Save recipe" }));
 
   expect(await screen.findByText("A recipe can have up to 20 tags.")).toBeInTheDocument();
-  expect(tags[0]).toHaveFocus();
+  expect(screen.getByRole("button", { name: "Add tag" })).toHaveFocus();
   expect(fetch.mock.calls.some(([, init]) => init?.method === "POST")).toBe(false);
 });
 
@@ -177,8 +180,8 @@ test("rows can be added and removed; the last one stays", async () => {
   renderApp("/recipes/new");
 
   expect(await screen.findByRole("button", { name: "Remove ingredient 1" })).toBeDisabled();
-  await userEvent.click(screen.getByRole("button", { name: "Add an ingredient" }));
-  await userEvent.click(screen.getByRole("button", { name: "Add an ingredient" }));
+  await userEvent.click(screen.getByRole("button", { name: "Add ingredient" }));
+  await userEvent.click(screen.getByRole("button", { name: "Add ingredient" }));
   await userEvent.type(ingredient(1).getByLabelText("Ingredient"), "bread");
   await userEvent.type(ingredient(2).getByLabelText("Ingredient"), "jam");
   await userEvent.type(ingredient(3).getByLabelText("Ingredient"), "butter");
@@ -188,6 +191,32 @@ test("rows can be added and removed; the last one stays", async () => {
   expect(ingredient(1).getByLabelText("Ingredient")).toHaveValue("bread");
   expect(ingredient(2).getByLabelText("Ingredient")).toHaveValue("butter");
   expect(screen.queryByRole("group", { name: "Ingredient 3" })).not.toBeInTheDocument();
+});
+
+test("steps can be added and removed; the last one stays", async () => {
+  stubApi(() => Response.json(saved, { status: 201 }));
+  renderApp("/recipes/new");
+
+  expect(await screen.findByRole("button", { name: "Remove step 1" })).toBeDisabled();
+  await userEvent.click(screen.getByRole("button", { name: "Add step" }));
+  await userEvent.type(screen.getByLabelText("Step 1"), "Toast the bread.");
+  await userEvent.type(screen.getByLabelText("Step 2"), "Butter it.");
+  await userEvent.click(screen.getByRole("button", { name: "Remove step 1" }));
+
+  expect(screen.getByLabelText("Step 1")).toHaveValue("Butter it.");
+  expect(screen.queryByLabelText("Step 2")).not.toBeInTheDocument();
+});
+
+test("a tag chosen in Add tag shows as a chip, and its ✕ removes it", async () => {
+  stubApi(() => Response.json(saved, { status: 201 }));
+  renderApp("/recipes/new");
+
+  await userEvent.click(await screen.findByRole("button", { name: "Add tag" }));
+  await userEvent.click(screen.getByRole("checkbox", { name: "spicy" }));
+  await userEvent.click(screen.getByRole("button", { name: "Done" }));
+  await userEvent.click(screen.getByRole("button", { name: "Remove spicy" }));
+
+  expect(screen.queryByRole("button", { name: "Remove spicy" })).not.toBeInTheDocument();
 });
 
 test("every Save checks the whole form again, even while errors still show", async () => {

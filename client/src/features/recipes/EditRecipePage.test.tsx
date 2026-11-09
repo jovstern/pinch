@@ -47,11 +47,11 @@ test("shows the recipe in the form, and saves the whole of it", async () => {
   await userEvent.type(title, "Cheese omelette");
   // A field emptied in the form is left out, so PUT clears it (design D20).
   await userEvent.clear(screen.getByLabelText("Serves"));
-  // Its tag is ticked; untick it and tick another.
-  const breakfast = screen.getByRole("checkbox", { name: "breakfast" });
-  expect(breakfast).toBeChecked();
-  await userEvent.click(breakfast);
+  // Its tag shows as a chip; remove it and add another.
+  await userEvent.click(screen.getByRole("button", { name: "Remove breakfast" }));
+  await userEvent.click(screen.getByRole("button", { name: "Add tag" }));
   await userEvent.click(screen.getByRole("checkbox", { name: "spicy" }));
+  await userEvent.click(screen.getByRole("button", { name: "Done" }));
   await userEvent.click(screen.getByRole("button", { name: "Save changes" }));
 
   expect(

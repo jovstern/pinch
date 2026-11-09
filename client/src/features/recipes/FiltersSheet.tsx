@@ -40,12 +40,7 @@ export function FiltersSheet({ selected, onChange }: FiltersSheetProps) {
       <SheetContent aria-describedby={undefined}>
         <SheetTitle className="px-4 pt-5 pb-2 font-sans text-lg font-semibold">Filters</SheetTitle>
         <div className="overflow-y-auto px-4 pb-4">
-          <TagPicker
-            legend="Filter by tags"
-            legendClassName="sr-only"
-            selected={selected}
-            onChange={onChange}
-          />
+          <TagPicker legend="Filter by tags" selected={selected} onChange={onChange} />
         </div>
         {/* Above the phone's home bar, where it has one. */}
         <div className="flex gap-3 border-t border-border p-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
