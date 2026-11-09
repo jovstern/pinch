@@ -5,11 +5,13 @@ import { ErrorBoundary } from "./ErrorBoundary.tsx";
 // Every screen sits in this frame: the name (home) and New recipe (design §14).
 export function Layout() {
   const { pathname } = useLocation();
-  // The recipe form's pages: there Save is the main action, and New recipe would compete.
-  const onForm = [
+  // The recipe form's pages, where Save is the main action, and cook mode, where the cook is
+  // busy: New recipe would compete.
+  const hideNewRecipe = [
     useMatch("/recipes/new"),
     useMatch("/recipes/:id/edit"),
     useMatch("/imports/:id"),
+    useMatch("/recipes/:id/cook"),
   ].some((match) => match !== null);
   return (
     <>
@@ -33,7 +35,7 @@ export function Layout() {
             Pinch
           </Link>
           {/* Secondary: each screen's main action is on the page (on /, pasting a link). */}
-          {!onForm && (
+          {!hideNewRecipe && (
             <Button asChild variant="secondary">
               <Link to="/recipes/new">New recipe</Link>
             </Button>

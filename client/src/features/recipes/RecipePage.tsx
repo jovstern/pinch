@@ -57,7 +57,11 @@ export function RecipePage() {
         </ul>
       )}
 
-      <div className="mt-4 flex gap-3">
+      {/* Cook is the page's one main action (docs/ux/plan.md U2). */}
+      <div className="mt-4 flex flex-wrap gap-3">
+        <Button asChild variant="primary">
+          <Link to={`/recipes/${recipe.id}/cook`}>Cook</Link>
+        </Button>
         <Button asChild variant="secondary">
           <Link to={`/recipes/${recipe.id}/edit`}>Edit</Link>
         </Button>
