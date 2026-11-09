@@ -18,6 +18,13 @@ afterEach(() => {
 });
 
 const reel = "https://www.instagram.com/p/DOxAbc123/";
+// What the worker made of it, once ready.
+const draft = {
+  title: "Tomato pasta",
+  ingredients: [{ name: "pasta" }],
+  steps: ["Boil it."],
+  tags: [],
+};
 
 function importOf(fields: Partial<Import>): Import {
   return {
@@ -246,16 +253,21 @@ test("when the link can't be sent, it says so and keeps the link", async () => {
 });
 
 test("while a link is worked on, its status is asked again until it's ready to review", async () => {
-  stubApi([[importOf({ status: "processing", attempts: 1 })], [importOf({ status: "ready" })]]);
+  stubApi([
+    [importOf({ status: "processing", attempts: 1 })],
+    [importOf({ status: "ready", draft })],
+  ]);
   renderApp("/");
 
   expect(await screen.findByText("Working on it…")).toBeInTheDocument();
   // The 2 s poll, with time to spare.
   expect(await screen.findByText("Ready to review", {}, { timeout: 3000 })).toBeInTheDocument();
   const review = screen.getByRole("link", { name: "Review" });
-  // Only the change is announced, not the whole list.
-  expect(screen.getByText("Instagram link: Ready to review")).toHaveAttribute("role", "status");
+  // Only the change is announced, by the draft's title, not the whole list.
+  expect(screen.getByText("Tomato pasta: Ready to review")).toHaveAttribute("role", "status");
   expect(review).toHaveAttribute("href", "/imports/6650a1b2c3d4e5f600000001");
+  // Nothing left cooking.
+  expect(screen.getByRole("heading", { name: "1 ready" })).toBeInTheDocument();
 });
 
 test("a pasted text shows as such, with its text", async () => {
@@ -286,12 +298,6 @@ test("one still cooking shows a disabled Cooking… where Review will be", async
 });
 
 test("a ready one is named by its draft's title, and counted in the heading", async () => {
-  const draft = {
-    title: "Tomato pasta",
-    ingredients: [{ name: "pasta" }],
-    steps: ["Boil it."],
-    tags: [],
-  };
   stubApi([[importOf({ status: "ready", draft }), importOf({ id: "6650a1b2c3d4e5f600000002" })]]);
   renderApp("/");
 

@@ -34,9 +34,10 @@ export function ImportActions({ job, focusPasteBox }: { job: Import; focusPasteB
   const busy = retry.isPending || dismiss.isPending;
 
   return (
-    <>
+    // One box, so an error below the buttons stays under them in the card's row from 768 px.
+    <div className="mt-2 md:mt-0">
       {/* Where Review is on a ready card: Retry, the way forward, rightmost. */}
-      <div className="mt-2 flex justify-end gap-2 md:mt-0">
+      <div className="flex justify-end gap-2">
         <Button
           type="button"
           variant="destructive-ghost"
@@ -63,17 +64,17 @@ export function ImportActions({ job, focusPasteBox }: { job: Import; focusPasteB
         )}
       </div>
       {retry.isError && (
-        <p role="alert" className="mt-1 text-right text-sm text-danger">
+        <p role="alert" className="mt-1 text-right text-sm text-destructive">
           {retry.error instanceof ApiError && retry.error.status === 429
             ? dailyLimitMessage
             : "It couldn't be retried. Try again."}
         </p>
       )}
       {dismiss.isError && (
-        <p role="alert" className="mt-1 text-right text-sm text-danger">
+        <p role="alert" className="mt-1 text-right text-sm text-destructive">
           It couldn't be dismissed. Try again.
         </p>
       )}
-    </>
+    </div>
   );
 }

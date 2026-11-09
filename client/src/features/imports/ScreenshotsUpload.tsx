@@ -72,11 +72,11 @@ export function ScreenshotsUpload() {
           />
         </label>
       </Button>
-      <p id={hintId} className="text-sm text-text-muted">
+      <p id={hintId} className="text-sm text-muted-foreground">
         Up to {MAX_SCREENSHOTS} screenshots of the recipe, when its link and text won't do.
       </p>
       {message && (
-        <p id={errorId} role="alert" className="mt-1 text-sm text-danger">
+        <p id={errorId} role="alert" className="mt-1 text-sm text-destructive">
           {message}
         </p>
       )}

@@ -16,6 +16,9 @@ export function ImportList({ focusPasteBox }: { focusPasteBox: () => void }) {
   const { data, isLoadingError, refetch, isFetching } = useQuery(importListQuery);
   const imports = data?.items ?? [];
   const ready = imports.filter((job) => job.status === "ready").length;
+  const cooking = imports.some(
+    (job) => (job.status === "pending" || job.status === "processing") && !job.stalled,
+  );
 
   // What a screen reader hears: only what just changed, one import at a time, not the whole list
   // (ui-craft: aria-live for async results). Worked out as each new list arrives, from the one
@@ -69,7 +72,7 @@ export function ImportList({ focusPasteBox }: { focusPasteBox: () => void }) {
         <>
           {/* A label over the cards, not a title: the sans face, small. */}
           <h2 className="mb-2 font-sans text-sm font-semibold text-muted-foreground">
-            {ready > 0 ? `Cooking… · ${String(ready)} ready` : "Cooking…"}
+            {queueHeading(cooking, ready)}
           </h2>
           <ul className="grid gap-3">
             {imports.map((job) => (
@@ -84,7 +87,7 @@ export function ImportList({ focusPasteBox }: { focusPasteBox: () => void }) {
                   <div className="min-w-0 flex-1">
                     {/* Names the card's buttons and link too (aria-describedby), so a screen
                         reader's list of them says which import each is for. */}
-                    <p id={`import-${job.id}`} className="font-semibold">
+                    <p dir="auto" id={`import-${job.id}`} className="font-semibold break-words">
                       {title(job)}
                     </p>
                     {/* One line: shared links carry long tracking codes, and a pasted text is
@@ -116,9 +119,9 @@ function Picture({ job }: { job: Import }) {
     return <Thumbnail src={`/api/imports/${job.id}/thumbnail`} size={job.thumbnail} shape="tile" />;
   }
   if (job.status === "failed" || job.stalled) {
-    // Hatched, with the alert: the same at a glance in both themes, and not colour alone.
+    // The alert, not colour alone.
     return (
-      <div className="flex h-20 w-16 shrink-0 items-center justify-center rounded-control bg-[repeating-linear-gradient(135deg,var(--color-fill)_0_6px,transparent_6px_12px)] text-danger">
+      <div className="flex h-20 w-16 shrink-0 items-center justify-center rounded-control bg-muted text-destructive">
         <TriangleAlert aria-hidden="true" className="size-5" />
       </div>
     );
@@ -126,7 +129,7 @@ function Picture({ job }: { job: Import }) {
   if (job.status === "ready") {
     // A text or screenshots draft: no picture from a post.
     return (
-      <div className="flex h-20 w-16 shrink-0 items-center justify-center rounded-control bg-fill text-muted-foreground">
+      <div className="flex h-20 w-16 shrink-0 items-center justify-center rounded-control bg-muted text-muted-foreground">
         <CookingPot aria-hidden="true" className="size-6" />
       </div>
     );
@@ -150,7 +153,7 @@ function Action({ job, focusPasteBox }: { job: Import; focusPasteBox: () => void
         </Button>
       ) : (
         // Disabled, so out of the tab order: the status line says what's happening.
-        <Button type="button" variant="outline" disabled>
+        <Button type="button" variant="outline" disabled aria-describedby={`import-${job.id}`}>
           <LoaderCircle aria-hidden="true" className="size-4 motion-safe:animate-spin" />
           Cooking…
         </Button>
@@ -159,10 +162,16 @@ function Action({ job, focusPasteBox }: { job: Import; focusPasteBox: () => void
   );
 }
 
+// "Cooking…" while any is, with how many are ready; "N ready" once none is.
+function queueHeading(cooking: boolean, ready: number) {
+  if (!cooking && ready > 0) return `${String(ready)} ready`;
+  return ready > 0 ? `Cooking… · ${String(ready)} ready` : "Cooking…";
+}
+
 // Ready stands out: it's the one waiting for the user. Stuck is a problem, as failed.
 function statusColor(job: Import) {
-  if (job.stalled || job.status === "failed") return "text-danger";
-  return job.status === "ready" ? "font-semibold text-accent-strong" : "text-muted-foreground";
+  if (job.stalled || job.status === "failed") return "text-destructive";
+  return job.status === "ready" ? "font-semibold text-primary" : "text-muted-foreground";
 }
 
 const platformNames: Record<Platform, string> = {

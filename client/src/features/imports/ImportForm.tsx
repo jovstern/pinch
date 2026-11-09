@@ -217,7 +217,7 @@ export function ImportForm({ inputRef }: { inputRef: RefObject<HTMLTextAreaEleme
       <form.Subscribe selector={(state) => state.errorMap.onSubmit}>
         {(error) =>
           typeof error === "string" && (
-            <p role="alert" className="mt-1 text-sm text-danger">
+            <p role="alert" className="mt-1 text-sm text-destructive">
               {error}
             </p>
           )
