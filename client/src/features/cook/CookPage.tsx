@@ -62,7 +62,8 @@ export function CookPage() {
   return (
     <article>
       <title>{`Cooking ${recipe.title} · Pinch`}</title>
-      {/* The way out (no Exit): the recipe's crumb, as the browser's Back. */}
+      {/* The way out (no Exit): the recipe's crumb, a link that pushes like every crumb. Only Done
+          replaces, as it ends the cooking. */}
       <Breadcrumb
         links={[
           { label: "My recipes", to: "/recipes" },
