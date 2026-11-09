@@ -97,6 +97,7 @@ Slices for later milestones are filled in when the milestone starts.
 - [x] Share and Comments, as "coming soon" (design §1)
 - [x] Cook mode, from M6's UI review: more ways of writing a time ("1 hour 20 minutes", "חצי
       שעה"), ranges kept on one line, fewer wrong Hebrew ingredient matches, a loading skeleton
-- [ ] States: Your imports while loading; the accessibility e2e on cook mode, a recipe with its
-      picture, the review page and dark mode
+- [x] States: the accessibility e2e on a recipe, cook mode and a draft's review with its picture,
+      in both themes (Your imports while loading: left as is, as the list is usually empty and a
+      placeholder would jump the other way)
 - [ ] End of milestone: UI review, observer, demo
