@@ -31,6 +31,8 @@ export function Layout() {
       <main
         className={cn(
           "mx-auto max-w-3xl px-4 py-8 wrap-anywhere sm:px-6",
+          // My recipes is a grid with a panel beside it from 1024 px: it takes the width.
+          pathname === "/recipes" && "max-w-7xl",
           onTabPage && "pb-24 md:pb-8",
         )}
       >

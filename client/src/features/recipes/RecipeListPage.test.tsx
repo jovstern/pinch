@@ -27,11 +27,15 @@ test("lists each recipe as a link to it, with what it needs", async () => {
 
   const link = await screen.findByRole("link", { name: /Omelette/ });
   expect(link).toHaveAttribute("href", `/recipes/${omelette.id}`);
-  expect(link).toHaveTextContent("2 ingredients · 10 min");
+  expect(link).toHaveTextContent("10 min · 2 ingredients");
 });
 
-test("a recipe from a post shows its picture as a tile in its card", async () => {
-  const fromReel = { ...omelette, thumbnail: { width: 281, height: 500 } };
+test("a recipe from a post shows its picture and its site in its card", async () => {
+  const fromReel = {
+    ...omelette,
+    thumbnail: { width: 281, height: 500 },
+    source: { type: "instagram" as const, url: "https://www.instagram.com/reel/abc/" },
+  };
   stubFetch(vi.fn().mockResolvedValue(Response.json({ items: [fromReel], nextCursor: null })));
   renderApp("/recipes");
 
@@ -40,8 +44,8 @@ test("a recipe from a post shows its picture as a tile in its card", async () =>
     "src",
     `/api/recipes/${omelette.id}/thumbnail`,
   );
-  // Decorative: the link is still named by the title and what it needs.
-  expect(link).toHaveAccessibleName("Omelette 2 ingredients · 10 min");
+  // Decorative: the link is named by the title first, then what it needs and where it's from.
+  expect(link).toHaveAccessibleName("Omelette 10 min · 2 ingredients Instagram");
 });
 
 test("one ingredient is counted in the singular", async () => {
@@ -50,7 +54,7 @@ test("one ingredient is counted in the singular", async () => {
   renderApp("/recipes");
 
   expect(await screen.findByRole("link", { name: /Omelette/ })).toHaveTextContent(
-    "1 ingredient · 5 min",
+    "5 min · 1 ingredient",
   );
 });
 
@@ -152,14 +156,15 @@ test("tags in the address filter the list, open, and unticking the last one clea
   expect(screen.getByRole("checkbox", { name: "breakfast" })).toBeVisible();
 });
 
-test("when nothing matches, it says so and offers to clear the search and filters", async () => {
+test("when nothing matches, it says what was asked and offers to clear the search and filters", async () => {
   const fetch = stubList();
   renderApp("/recipes?q=soup&tags=cuisine:italian");
 
   expect(await screen.findByText("No recipes match.")).toHaveAttribute("role", "status");
+  expect(screen.getByText("“soup”, italian")).toBeInTheDocument();
   expect(screen.getByRole("searchbox")).toHaveValue("soup");
 
-  await userEvent.click(screen.getByRole("link", { name: "Clear the search and filters" }));
+  await userEvent.click(screen.getByRole("button", { name: "Clear filters" }));
 
   expect(await screen.findByRole("link", { name: /Omelette/ })).toBeInTheDocument();
   expect(fetch).toHaveBeenLastCalledWith("/api/recipes");
@@ -178,6 +183,22 @@ test("Show more keeps the filter when it asks for the next page", async () => {
 
   expect(await screen.findByRole("link", { name: /Toast/ })).toBeInTheDocument();
   expect(fetch).toHaveBeenLastCalledWith("/api/recipes?tags=meal%3Abreakfast&cursor=next-page");
+});
+
+test("with a search and tags matching nothing, it offers the search without the tags", async () => {
+  const fetch = vi
+    .fn()
+    .mockResolvedValueOnce(Response.json({ items: [], nextCursor: null }))
+    .mockResolvedValueOnce(Response.json({ items: [omelette], nextCursor: null }));
+  stubFetch(fetch);
+  renderApp("/recipes?q=eggs&tags=cuisine:italian");
+
+  await userEvent.click(
+    await screen.findByRole("button", { name: "Search all recipes for “eggs”" }),
+  );
+
+  expect(await screen.findByText("1 recipe matches.")).toHaveAttribute("role", "status");
+  expect(fetch).toHaveBeenLastCalledWith("/api/recipes?q=eggs");
 });
 
 test("a tag in the address that isn't in the lists is left out", async () => {

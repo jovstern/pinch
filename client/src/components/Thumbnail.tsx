@@ -6,10 +6,18 @@ type ThumbnailProps = {
   // GET /api/recipes/:id/thumbnail or /api/imports/:id/thumbnail (design §5).
   src: string;
   size: ThumbnailSize;
-  // "tile": a small 4:5 crop, for a card (lazy: many may be off screen). "full": the picture at
-  // its own shape, as wide as the column allows and no taller than 16rem, for the top of a page.
-  shape: "tile" | "full";
+  // "tile": a small 4:5 crop, for a card (lazy: many may be off screen). "cover": fills the box
+  // it's in, cropped, for a card that is mostly picture (lazy too). "full": the picture at its
+  // own shape, as wide as the column allows and no taller than 16rem, for the top of a page.
+  shape: "tile" | "cover" | "full";
   className?: string;
+};
+
+// A small tile gets the control's radius: the card's would make it look like a pill.
+const shapeClasses = {
+  tile: "h-20 w-16 shrink-0 rounded-control",
+  cover: "size-full",
+  full: "h-auto rounded-card",
 };
 
 // A recipe's picture, from its post. Decorative (alt=""): its title is always beside it. Its box
@@ -25,7 +33,7 @@ export function Thumbnail({ src, size, shape, className = "" }: ThumbnailProps) 
       alt=""
       width={size.width}
       height={size.height}
-      loading={shape === "tile" ? "lazy" : "eager"}
+      loading={shape === "full" ? "eager" : "lazy"}
       // The page's picture is often its largest thing, and the last to arrive (page, JS, data,
       // then it): asked for first among what's left.
       fetchPriority={shape === "full" ? "high" : "auto"}
@@ -39,8 +47,7 @@ export function Thumbnail({ src, size, shape, className = "" }: ThumbnailProps) 
           ? { width: `min(100%, ${String((16 * size.width) / size.height)}rem)` }
           : undefined
       }
-      // A small tile gets the control's radius: the card's would make it look like a pill.
-      className={`bg-fill object-cover ${shape === "tile" ? "h-20 w-16 shrink-0 rounded-control" : "h-auto rounded-card"} ${className}`}
+      className={`bg-fill object-cover ${shapeClasses[shape]} ${className}`}
     />
   );
 }
