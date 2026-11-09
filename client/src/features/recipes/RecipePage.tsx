@@ -113,9 +113,7 @@ export function RecipePage() {
 
       {/* A placeholder too (design §1). When built: its own collection, never an array in the
           recipe, as comments grow without limit. */}
-      <h2 id="comments" className="mt-8 text-xl font-semibold">
-        Comments
-      </h2>
+      <h2 className="mt-8 text-xl font-semibold">Comments</h2>
       <p className="mt-3 text-text-muted">
         Coming soon: notes from whoever you share this recipe with.
       </p>
