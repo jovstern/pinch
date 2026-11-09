@@ -24,6 +24,10 @@ export function DeleteRecipeButton({ recipe }: { recipe: Recipe }) {
         type="button"
         variant="danger-quiet"
         aria-haspopup="dialog"
+        // While its dialog is on its way (a slow link): the button says it's working. Once the
+        // dialog is open it covers the button anyway.
+        aria-busy={open}
+        className="aria-busy:cursor-progress aria-busy:opacity-60"
         onPointerEnter={() => void loadDialog()}
         onFocus={() => void loadDialog()}
         onClick={() => {
