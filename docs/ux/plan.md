@@ -188,7 +188,7 @@ the portrait tiles and the dark theme are what keep it from reading as a templat
 | `--color-text` | `#221A12` | `#F3EDE4` | ink |
 | `--color-text-muted` | `#6E6257` | `#A89C8F` | meta, notes (≥ 4.5:1 on its surface) |
 | `--color-accent` | `#C8471B` | `#F0693A` | paprika: the one primary action per screen, the wordmark, selected state |
-| `--color-accent-strong` | `#A33612` | `#F0693A` | accent where it must pass AA at body size (links, white-on-accent) |
+| `--color-accent-strong` | `#A33612` | `#F0693A` | accent where it must pass AA at body size (links, the fill under `on-accent` labels) |
 | `--color-accent-soft` | `#FBE7DF` | `#3A1D12` | selected chip fill, "ready" row tint |
 | `--color-check` | `#E8B931` | `#F2C94C` | "check this" marks in review (yellow, never alone: an icon and text go with it) |
 | `--color-cooked` | `#5E7A3A` | `#8FB35E` | "cooked" and success (olive), never alone |
@@ -495,9 +495,11 @@ reel; UI in Hebrew.
 ### Suggested order
 
 The user's order (2026-11-09): U4 (2 PRs) → U2 (3 PRs) → M6 → the rest, with the answers
-in §9 (U8 later). The suggestion it replaced: U4 (tokens) → U1 → U6 → U5 → U2 → U10 → U3 →
-U7 → U8 → U9 → U11 → U12. U4 first because every other change is styled once; U1 + U6 + U5 make the home a library in three PRs; U2 is
-the one bold feature; U3 is the trust feature and needs the server; U8 is the phone.
+in §9 (U8 later). The look comes first so M6's new screens are styled once.
+
+The suggestion it replaced: U4 (tokens) → U1 → U6 → U5 → U2 → U10 → U3 → U7 → U8 → U9 →
+U11 → U12. Its reasoning: U1 + U6 + U5 make the home a library in three PRs; U2 is the one
+bold feature; U3 is the trust feature and needs the server; U8 is the phone.
 
 ## 9. Questions only the user can answer
 

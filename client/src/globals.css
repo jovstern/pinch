@@ -2,7 +2,8 @@
 
 /* The display face (docs/ux/plan.md §6): Fraunces, SIL OFL (public/fonts/OFL.txt). Cut down to
    what the titles use, so it stays small: Latin only, weights 500–700, one optical size (36).
-   In public/, by its path: the dev server doesn't rewrite a relative url() here. */
+   In public/, by its path: the dev server doesn't rewrite a relative url() here. index.html
+   preloads it, so titles don't swap from Georgia late and shift the page. */
 @font-face {
   font-family: "Fraunces";
   src: url("/fonts/fraunces.woff2") format("woff2");
@@ -20,12 +21,13 @@
   --color-text: #221a12;
   --color-text-muted: #6e6257;
   /* The accent for large text (the name); the strong one where it must pass AA at body size:
-     links, and labels on accent buttons (on-accent). */
+     links, and the fill behind on-accent labels. */
   --color-accent: #c8471b;
   --color-accent-strong: #a33612;
   --color-accent-soft: #fbe7df;
   --color-on-accent: #ffffff;
-  /* Each with an icon or text, never colour alone: "check this" marks, cooked and success. */
+  /* Each with an icon or text, never colour alone: "check this" marks, cooked and success.
+     Check is a fill or a mark, never a text colour: it is too light to read. */
   --color-check: #e8b931;
   --color-cooked: #5e7a3a;
   /* Only for what can't be undone (delete). Its label is on-accent too. */
@@ -71,16 +73,12 @@ body {
   @apply bg-surface text-text antialiased;
 }
 
-/* Page and section titles in the display face; paragraphs avoid a lone last word. In the base
-   layer, so a utility class on the element still wins. */
+/* Page and section titles in the display face. In the base layer, so a utility class on the
+   element still wins. */
 @layer base {
   h1,
   h2 {
     font-family: var(--font-display);
-  }
-
-  p {
-    text-wrap: pretty;
   }
 }
 
