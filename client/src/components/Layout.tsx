@@ -15,7 +15,7 @@ export function Layout() {
     <>
       <header className="border-b border-border">
         <div className="mx-auto flex max-w-3xl items-center justify-between gap-4 px-4 py-3 sm:px-6">
-          <Link to="/" className="text-2xl font-bold tracking-tight text-accent">
+          <Link to="/" className="font-display text-2xl font-bold tracking-tight text-accent">
             Pinch
           </Link>
           {/* Secondary: each screen's main action is on the page (on /, pasting a link). */}

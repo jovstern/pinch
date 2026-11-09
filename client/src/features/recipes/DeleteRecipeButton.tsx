@@ -37,7 +37,7 @@ export function DeleteRecipeButton({ recipe }: { recipe: Recipe }) {
         <Button variant="danger-quiet">Delete</Button>
       </AlertDialog.Trigger>
       <AlertDialog.Portal>
-        <AlertDialog.Overlay className="fixed inset-0 bg-text/40" />
+        <AlertDialog.Overlay className="fixed inset-0 bg-scrim/50" />
         <AlertDialog.Content className="fixed top-1/2 left-1/2 w-[min(90vw,28rem)] -translate-1/2 rounded-xl bg-surface-raised p-6 shadow-lg">
           <AlertDialog.Title className="text-lg font-semibold">
             Delete this recipe?

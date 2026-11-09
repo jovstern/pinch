@@ -95,7 +95,7 @@ export function RecipeForm({
       <form.Field name="ingredients" mode="array">
         {(list) => (
           <fieldset className="mt-4 grid gap-4">
-            <legend className="mb-3 text-xl font-semibold">Ingredients</legend>
+            <legend className="mb-3 font-display text-xl font-semibold">Ingredients</legend>
             <FieldError errors={list.state.meta.errors} />
             {list.state.value.map((_, index) => {
               const position = String(index + 1);
@@ -159,7 +159,7 @@ export function RecipeForm({
       <form.Field name="steps" mode="array">
         {(list) => (
           <fieldset className="mt-4 grid gap-4">
-            <legend className="mb-3 text-xl font-semibold">Steps</legend>
+            <legend className="mb-3 font-display text-xl font-semibold">Steps</legend>
             <FieldError errors={list.state.meta.errors} />
             {list.state.value.map((_, index) => {
               const position = String(index + 1);
@@ -205,7 +205,7 @@ export function RecipeForm({
         {(field) => (
           <TagPicker
             legend="Tags"
-            legendClassName="mb-3 text-xl font-semibold"
+            legendClassName="mb-3 font-display text-xl font-semibold"
             selected={field.state.value}
             onChange={field.handleChange}
             errors={field.state.meta.errors}
