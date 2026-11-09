@@ -1,16 +1,21 @@
 import type { Import, Platform } from "@pinch/shared";
 import { useQuery } from "@tanstack/react-query";
+import { CookingPot, LoaderCircle, TriangleAlert } from "lucide-react";
 import { useState } from "react";
 import { Link } from "react-router";
+import { Thumbnail } from "../../components/Thumbnail.tsx";
 import { Button } from "../../components/ui/Button.tsx";
+import { Skeleton } from "../../components/ui/Skeleton.tsx";
 import { ImportActions } from "./ImportActions.tsx";
 import { importListQuery } from "./importQueries.ts";
 
-// The links and texts being turned into recipes, each with how far it has got (design §1, §4.2).
+// The queue under the input (design §1, §4.2, §14): each link, text or screenshots being turned
+// into a recipe, as a card with how far it has got and what can be done with it.
 // After Retry or Dismiss, focusPasteBox moves focus to the paste box (the buttons are gone).
 export function ImportList({ focusPasteBox }: { focusPasteBox: () => void }) {
-  const { data, isLoadingError } = useQuery(importListQuery);
+  const { data, isLoadingError, refetch, isFetching } = useQuery(importListQuery);
   const imports = data?.items ?? [];
+  const ready = imports.filter((job) => job.status === "ready").length;
 
   // What a screen reader hears: only what just changed, one import at a time, not the whole list
   // (ui-craft: aria-live for async results). Worked out as each new list arrives, from the one
@@ -24,61 +29,78 @@ export function ImportList({ focusPasteBox }: { focusPasteBox: () => void }) {
     if (prevData !== undefined && data !== undefined) {
       const before = new Map(prevData.items.map((job) => [job.id, job.status]));
       const changed = data.items.find((job) => before.get(job.id) !== job.status);
-      if (changed) setAnnouncement(`${inputName(changed.input)}: ${statusText(changed)}`);
+      if (changed) setAnnouncement(`${title(changed)}: ${statusText(changed)}`);
     }
   }
 
   return (
-    <div className="mt-4">
+    <div className="mt-6">
       {/* Always on the page: a live region must be there before its text changes. */}
       <p role="status" className="sr-only">
         {announcement}
       </p>
-      {/* No Try again, unlike the recipes: the list is second to them, and sending an import
-          asks for it again. */}
+      {/* The queue is the page's main content, so a failed load can be asked again (as the
+          recipes). */}
       {isLoadingError && (
-        <p role="alert" className="text-danger">
-          We couldn't load your imports.
-        </p>
+        <div role="alert">
+          <p>We couldn't load your imports.</p>
+          {/* The status stays "error" while it retries, so the button shows the wait. */}
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={() => void refetch()}
+            disabled={isFetching}
+            className="mt-3"
+          >
+            {isFetching ? "Trying…" : "Try again"}
+          </Button>
+        </div>
+      )}
+      {data && imports.length === 0 && (
+        <div className="mt-12 text-center">
+          <h2 className="text-xl font-semibold">Nothing cooking yet</h2>
+          <p className="mt-2 text-muted-foreground">
+            Paste a link to an Instagram, Facebook or YouTube video, and Pinch writes the recipe
+            down for you.
+          </p>
+        </div>
       )}
       {imports.length > 0 && (
         <>
-          <h2 className="text-lg font-semibold">Your imports</h2>
-          {/* Dashed and flat: on their way to being recipes, so they don't look like the
-              recipe cards below. */}
-          <ul className="mt-2 grid gap-2">
+          {/* A label over the cards, not a title: the sans face, small. */}
+          <h2 className="mb-2 font-sans text-sm font-semibold text-muted-foreground">
+            {ready > 0 ? `Cooking… · ${String(ready)} ready` : "Cooking…"}
+          </h2>
+          <ul className="grid gap-3">
             {imports.map((job) => (
-              // min-w-0: a grid item is as wide as its content, and the link is one long line.
+              // min-w-0: a grid item is as wide as its content, and a link is one long line.
               <li
                 key={job.id}
-                className="min-w-0 rounded-card border border-dashed border-border p-3"
+                className="flex min-w-0 gap-3 rounded-card border border-border bg-card p-3 md:items-center md:gap-4 md:p-4"
               >
-                {/* Names the item's buttons and link too (aria-describedby), so a screen
-                    reader's list of them says which import each is for. */}
-                <p id={`import-${job.id}`} className="font-semibold">
-                  {inputName(job.input)}
-                </p>
-                {/* One line: shared links carry long tracking codes, and a pasted text is long.
-                    A link whole on hover; a text, up to 10,000 characters, isn't. dir="auto": a
-                    Hebrew text reads right to left, so it's cut at its end, not its start. */}
-                <p
-                  dir="auto"
-                  title={job.input.type === "link" ? job.input.url : undefined}
-                  className="truncate text-sm text-text-muted"
-                >
-                  {inputText(job.input)}
-                </p>
-                <p className={`mt-1 text-sm ${statusColor(job)}`}>{statusText(job)}</p>
-                {job.status === "ready" && (
-                  <Button asChild variant="secondary" className="mt-3">
-                    <Link to={`/imports/${job.id}`} aria-describedby={`import-${job.id}`}>
-                      Review the recipe
-                    </Link>
-                  </Button>
-                )}
-                {(job.status === "failed" || job.stalled) && (
-                  <ImportActions job={job} focusPasteBox={focusPasteBox} />
-                )}
+                <Picture job={job} />
+                {/* Phone: the action under the words. From 768 px: on the right. */}
+                <div className="min-w-0 flex-1 md:flex md:items-center md:gap-4">
+                  <div className="min-w-0 flex-1">
+                    {/* Names the card's buttons and link too (aria-describedby), so a screen
+                        reader's list of them says which import each is for. */}
+                    <p id={`import-${job.id}`} className="font-semibold">
+                      {title(job)}
+                    </p>
+                    {/* One line: shared links carry long tracking codes, and a pasted text is
+                        long. A link whole on hover; a text, up to 10,000 characters, isn't.
+                        dir="auto": a Hebrew text reads right to left, so it's cut at its end. */}
+                    <p
+                      dir="auto"
+                      title={job.input.type === "link" ? job.input.url : undefined}
+                      className="truncate text-sm text-muted-foreground"
+                    >
+                      {inputText(job.input)}
+                    </p>
+                    <p className={`mt-1 text-sm ${statusColor(job)}`}>{statusText(job)}</p>
+                  </div>
+                  <Action job={job} focusPasteBox={focusPasteBox} />
+                </div>
               </li>
             ))}
           </ul>
@@ -88,10 +110,59 @@ export function ImportList({ focusPasteBox }: { focusPasteBox: () => void }) {
   );
 }
 
+// The card's picture: the draft's when it has one; else what state it's in.
+function Picture({ job }: { job: Import }) {
+  if (job.thumbnail) {
+    return <Thumbnail src={`/api/imports/${job.id}/thumbnail`} size={job.thumbnail} shape="tile" />;
+  }
+  if (job.status === "failed" || job.stalled) {
+    // Hatched, with the alert: the same at a glance in both themes, and not colour alone.
+    return (
+      <div className="flex h-20 w-16 shrink-0 items-center justify-center rounded-control bg-[repeating-linear-gradient(135deg,var(--color-fill)_0_6px,transparent_6px_12px)] text-danger">
+        <TriangleAlert aria-hidden="true" className="size-5" />
+      </div>
+    );
+  }
+  if (job.status === "ready") {
+    // A text or screenshots draft: no picture from a post.
+    return (
+      <div className="flex h-20 w-16 shrink-0 items-center justify-center rounded-control bg-fill text-muted-foreground">
+        <CookingPot aria-hidden="true" className="size-6" />
+      </div>
+    );
+  }
+  return <Skeleton className="h-20 w-16 shrink-0" />;
+}
+
+// One action in one place (pass-02 §13): while it cooks, a disabled "Cooking…" stands where
+// Review will be, so the place is learned before it can be used.
+function Action({ job, focusPasteBox }: { job: Import; focusPasteBox: () => void }) {
+  if (job.status === "failed" || job.stalled) {
+    return <ImportActions job={job} focusPasteBox={focusPasteBox} />;
+  }
+  return (
+    <div className="mt-2 flex justify-end md:mt-0">
+      {job.status === "ready" ? (
+        <Button asChild variant="outline">
+          <Link to={`/imports/${job.id}`} aria-describedby={`import-${job.id}`}>
+            Review
+          </Link>
+        </Button>
+      ) : (
+        // Disabled, so out of the tab order: the status line says what's happening.
+        <Button type="button" variant="outline" disabled>
+          <LoaderCircle aria-hidden="true" className="size-4 motion-safe:animate-spin" />
+          Cooking…
+        </Button>
+      )}
+    </div>
+  );
+}
+
 // Ready stands out: it's the one waiting for the user. Stuck is a problem, as failed.
 function statusColor(job: Import) {
   if (job.stalled || job.status === "failed") return "text-danger";
-  return job.status === "ready" ? "font-semibold text-accent-strong" : "";
+  return job.status === "ready" ? "font-semibold text-accent-strong" : "text-muted-foreground";
 }
 
 const platformNames: Record<Platform, string> = {
@@ -100,9 +171,11 @@ const platformNames: Record<Platform, string> = {
   youtube: "YouTube",
 };
 
-// What an import was made from: a link (by its site), a post's text, pasted, or its screenshots
-// (design §1).
-function inputName(input: Import["input"]) {
+// The draft's title once there is one; until then what it was made from: a link (by its site),
+// a post's text, pasted, or its screenshots (design §1).
+function title(job: Import) {
+  if (job.draft) return job.draft.title;
+  const input = job.input;
   if (input.type === "link") return `${platformNames[input.platform]} link`;
   if (input.type === "text") return "Pasted text";
   return "Screenshots";

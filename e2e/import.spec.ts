@@ -13,7 +13,7 @@ test("paste a link, review the draft, save it as a recipe", async ({ page }) => 
   await expect(link).toContainText(/Waiting to start…|Working on it…/);
   await expect(link.getByText("Ready to review")).toBeVisible({ timeout: 15_000 });
   await page.waitForTimeout(1000);
-  await link.getByRole("link", { name: "Review the recipe" }).click();
+  await link.getByRole("link", { name: "Review" }).click();
 
   await expect(page.getByRole("heading", { level: 1, name: "Review the recipe" })).toBeVisible();
   await expect(page.getByLabel("Title")).toHaveValue("Tomato pasta (from youtube)");

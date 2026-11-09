@@ -35,20 +35,8 @@ export function ImportActions({ job, focusPasteBox }: { job: Import; focusPasteB
 
   return (
     <>
-      <div className="mt-3 flex gap-3">
-        {job.status === "failed" && !job.noRetry && (
-          <Button
-            type="button"
-            variant="secondary"
-            onClick={() => {
-              if (!busy) retry.mutate();
-            }}
-            aria-disabled={busy}
-            aria-describedby={`import-${job.id}`}
-          >
-            {retry.isPending ? "Retrying…" : "Retry"}
-          </Button>
-        )}
+      {/* Where Review is on a ready card: Retry, the way forward, rightmost. */}
+      <div className="mt-2 flex justify-end gap-2 md:mt-0">
         <Button
           type="button"
           variant="destructive-ghost"
@@ -60,16 +48,29 @@ export function ImportActions({ job, focusPasteBox }: { job: Import; focusPasteB
         >
           {dismiss.isPending ? "Dismissing…" : "Dismiss"}
         </Button>
+        {job.status === "failed" && !job.noRetry && (
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => {
+              if (!busy) retry.mutate();
+            }}
+            aria-disabled={busy}
+            aria-describedby={`import-${job.id}`}
+          >
+            {retry.isPending ? "Retrying…" : "Retry"}
+          </Button>
+        )}
       </div>
       {retry.isError && (
-        <p role="alert" className="mt-1 text-sm text-danger">
+        <p role="alert" className="mt-1 text-right text-sm text-danger">
           {retry.error instanceof ApiError && retry.error.status === 429
             ? dailyLimitMessage
             : "It couldn't be retried. Try again."}
         </p>
       )}
       {dismiss.isError && (
-        <p role="alert" className="mt-1 text-sm text-danger">
+        <p role="alert" className="mt-1 text-right text-sm text-danger">
           It couldn't be dismissed. Try again.
         </p>
       )}

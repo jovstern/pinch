@@ -15,7 +15,7 @@ test("paste a reel, review the draft with its picture, save it, cook it", async 
   const reel = page.getByRole("listitem").filter({ hasText: "instagram.com/reel/e2e-pasta" });
   await expect(reel.getByText("Ready to review")).toBeVisible({ timeout: 15_000 });
   await page.waitForTimeout(1000);
-  await reel.getByRole("link", { name: "Review the recipe" }).click();
+  await reel.getByRole("link", { name: "Review" }).click();
 
   await expect(page.getByRole("heading", { level: 1, name: "Review the recipe" })).toBeVisible();
   await expect(page.getByRole("presentation")).toBeVisible();
@@ -53,9 +53,10 @@ test("add screenshots, review the draft made from them", async ({ page }) => {
     .getByLabel("Or add screenshots")
     .setInputFiles([{ name: "recipe.png", mimeType: "image/png", buffer: screenshot }]);
 
-  const shots = page.getByRole("listitem").filter({ hasText: "Screenshots" });
+  // By its count: once ready, the card is named by the draft's title.
+  const shots = page.getByRole("listitem").filter({ hasText: "1 image" });
   await expect(shots.getByText("Ready to review")).toBeVisible({ timeout: 15_000 });
-  await shots.getByRole("link", { name: "Review the recipe" }).click();
+  await shots.getByRole("link", { name: "Review" }).click();
 
   await expect(page.getByText("Made from your screenshots.")).toBeVisible();
   await expect(page.getByLabel("Title")).toHaveValue("Tomato pasta (from images)");

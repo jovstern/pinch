@@ -252,7 +252,7 @@ test("while a link is worked on, its status is asked again until it's ready to r
   expect(await screen.findByText("Working on it…")).toBeInTheDocument();
   // The 2 s poll, with time to spare.
   expect(await screen.findByText("Ready to review", {}, { timeout: 3000 })).toBeInTheDocument();
-  const review = screen.getByRole("link", { name: "Review the recipe" });
+  const review = screen.getByRole("link", { name: "Review" });
   // Only the change is announced, not the whole list.
   expect(screen.getByText("Instagram link: Ready to review")).toHaveAttribute("role", "status");
   expect(review).toHaveAttribute("href", "/imports/6650a1b2c3d4e5f600000001");
@@ -265,6 +265,56 @@ test("a pasted text shows as such, with its text", async () => {
 
   expect(await screen.findByText("Pasted text")).toBeInTheDocument();
   expect(screen.getByText(text)).toBeInTheDocument();
+});
+
+test("an empty queue says what Pinch does", async () => {
+  stubApi([[]]);
+  renderApp("/");
+
+  expect(await screen.findByRole("heading", { name: "Nothing cooking yet" })).toBeInTheDocument();
+  expect(screen.queryByText(/^Cooking…/)).not.toBeInTheDocument();
+});
+
+test("one still cooking shows a disabled Cooking… where Review will be", async () => {
+  stubApi([[importOf({ status: "processing", attempts: 1, step: "fetching" })]]);
+  renderApp("/");
+
+  expect(await screen.findByText("Fetching the video…")).toBeInTheDocument();
+  expect(screen.getByRole("heading", { name: "Cooking…" })).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Cooking…" })).toBeDisabled();
+  expect(screen.queryByRole("link", { name: "Review" })).not.toBeInTheDocument();
+});
+
+test("a ready one is named by its draft's title, and counted in the heading", async () => {
+  const draft = {
+    title: "Tomato pasta",
+    ingredients: [{ name: "pasta" }],
+    steps: ["Boil it."],
+    tags: [],
+  };
+  stubApi([[importOf({ status: "ready", draft }), importOf({ id: "6650a1b2c3d4e5f600000002" })]]);
+  renderApp("/");
+
+  expect(await screen.findByRole("heading", { name: "Cooking… · 1 ready" })).toBeInTheDocument();
+  expect(screen.getByRole("link", { name: "Review" })).toHaveAccessibleDescription("Tomato pasta");
+});
+
+test("when the queue can't load, Try again asks again", async () => {
+  let gets = 0;
+  const fetch = vi.fn((path: string) => {
+    if (path === "/api/imports") {
+      gets += 1;
+      if (gets === 1) return Promise.resolve(new Response(null, { status: 502 }));
+      return Promise.resolve(Response.json({ items: [importOf({})] }));
+    }
+    return Promise.resolve(Response.json({ items: [], nextCursor: null }));
+  });
+  vi.stubGlobal("fetch", fetch);
+  renderApp("/");
+
+  await userEvent.click(await screen.findByRole("button", { name: "Try again" }));
+
+  expect(await screen.findByText("Waiting to start…")).toBeInTheDocument();
 });
 
 test("a failed link says why", async () => {
