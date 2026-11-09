@@ -1,0 +1,769 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Pinch wireframe: Check the recipe (review a draft)</title>
+    <style>
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      body {
+        font:
+          14px/1.45 -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
+          Roboto,
+          "Noto Sans Hebrew",
+          sans-serif;
+        background: #d9d9d9;
+        color: #222;
+        padding: 32px;
+      }
+      h1.page {
+        font:
+          700 28px/1.2 Georgia,
+          serif;
+        margin-bottom: 4px;
+      }
+      p.lede {
+        max-width: 900px;
+        color: #444;
+        margin-bottom: 24px;
+      }
+      .row {
+        display: flex;
+        gap: 40px;
+        align-items: flex-start;
+        margin-bottom: 48px;
+      }
+      .label {
+        font: 600 12px/1 sans-serif;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        color: #555;
+        margin-bottom: 8px;
+      }
+      .frame {
+        background: #fff;
+        border: 1px solid #999;
+        position: relative;
+        overflow: hidden;
+      }
+      .phone {
+        width: 360px;
+        min-height: 780px;
+      }
+      .desk {
+        width: 1440px;
+        min-height: 900px;
+      }
+      .small {
+        min-height: 0;
+      }
+      /* content */
+      .hd {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 12px 16px;
+        border-bottom: 1px solid #ddd;
+      }
+      .mark {
+        font:
+          700 22px Georgia,
+          serif;
+      }
+      .serif {
+        font-family: Georgia, "Times New Roman", serif;
+      }
+      .h1 {
+        font:
+          700 26px/1.2 Georgia,
+          serif;
+      }
+      .h2 {
+        font:
+          700 18px/1.25 Georgia,
+          serif;
+      }
+      .muted {
+        color: #777;
+      }
+      .sm {
+        font-size: 12px;
+      }
+      .b {
+        font-weight: 600;
+      }
+      .box {
+        background: #eee;
+        border-radius: 12px;
+      }
+      .field {
+        border: 1.5px solid #888;
+        border-radius: 12px;
+        background: #fff;
+        min-height: 48px;
+        display: flex;
+        align-items: center;
+        padding: 0 12px;
+        color: #999;
+      }
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 44px;
+        padding: 0 16px;
+        border-radius: 12px;
+        background: #e4e4e4;
+        font-weight: 600;
+        white-space: nowrap;
+      }
+      .btn.p {
+        background: #333;
+        color: #fff;
+      }
+      .btn.q {
+        background: none;
+        color: #555;
+        text-decoration: underline;
+      }
+      .chip {
+        display: inline-flex;
+        align-items: center;
+        min-height: 40px;
+        position: relative;
+        padding: 0 14px;
+        border-radius: 999px;
+        background: #e8e8e8;
+        white-space: nowrap;
+      }
+      .chip::before {
+        content: "";
+        position: absolute;
+        inset: -2px 0;
+      }
+      .chip.on {
+        background: #444;
+        color: #fff;
+      }
+      .chips {
+        display: flex;
+        gap: 8px;
+        overflow: hidden;
+      }
+      .grid {
+        display: grid;
+        gap: 12px;
+      }
+      .tile {
+        aspect-ratio: 4/5;
+        border-radius: 16px;
+        background: #cfcfcf;
+        position: relative;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 64px;
+        overflow: hidden;
+      }
+      .tile.photo {
+        background: repeating-linear-gradient(45deg, #bbb 0 10px, #c6c6c6 10px 20px);
+      }
+      .tile.photo::after {
+        content: "post picture";
+        position: absolute;
+        font-size: 11px;
+        color: #555;
+        background: #eee;
+        padding: 2px 6px;
+        border-radius: 6px;
+      }
+      .tile.emo {
+        background: #e6e6e6;
+      }
+      .glyph {
+        position: absolute;
+        top: 8px;
+        right: 8px;
+        width: 22px;
+        height: 22px;
+        border-radius: 6px;
+        background: #fff;
+        font: 700 11px/22px sans-serif;
+        text-align: center;
+        color: #333;
+      }
+      .card .t {
+        font:
+          600 16px/1.25 Georgia,
+          serif;
+        margin-top: 8px;
+      }
+      .card .m {
+        font-size: 12px;
+        color: #777;
+        margin-top: 2px;
+      }
+      .tabbar {
+        position: absolute;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        height: 68px;
+        border-top: 1px solid #ccc;
+        background: #fafafa;
+        display: flex;
+      }
+      .tabbar div {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 2px;
+        font-size: 12px;
+        color: #777;
+      }
+      .tabbar .on {
+        color: #111;
+        font-weight: 700;
+      }
+      .ico {
+        width: 24px;
+        height: 24px;
+        border-radius: 6px;
+        background: #bbb;
+        position: relative;
+      }
+      .on .ico {
+        background: #333;
+      }
+      .badge {
+        position: absolute;
+        top: -6px;
+        right: -12px;
+        background: #333;
+        color: #fff;
+        border-radius: 999px;
+        font: 700 11px/18px sans-serif;
+        min-width: 18px;
+        text-align: center;
+        padding: 0 5px;
+      }
+      .toast {
+        position: absolute;
+        left: 16px;
+        right: 16px;
+        bottom: 80px;
+        background: #333;
+        color: #fff;
+        border-radius: 12px;
+        padding: 12px 16px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+      .sticky {
+        position: absolute;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        padding: 12px 16px;
+        background: #fafafa;
+        border-top: 1px solid #ccc;
+        display: flex;
+        gap: 8px;
+        align-items: center;
+      }
+      .skel {
+        background: #e9e9e9;
+        border-radius: 8px;
+      }
+      .mk {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        font-size: 12px;
+        font-weight: 600;
+        padding: 2px 8px;
+        border-radius: 999px;
+        background: #ddd;
+      }
+      .mk.chk::before {
+        content: "◆";
+        font-size: 10px;
+      }
+      .mk.miss::before {
+        content: "■";
+        font-size: 10px;
+      }
+      .hl {
+        background: #efefef;
+        border-left: 4px solid #888;
+        padding: 6px 10px;
+        border-radius: 6px;
+      }
+      .hl.miss {
+        border-left-color: #222;
+        border-left-style: double;
+      }
+      ul.plain {
+        list-style: none;
+        display: grid;
+        gap: 8px;
+      }
+      .qrow {
+        display: flex;
+        gap: 12px;
+        align-items: center;
+        padding: 10px;
+        border-radius: 12px;
+        background: #f2f2f2;
+      }
+      .qrow .th {
+        width: 48px;
+        aspect-ratio: 4/5;
+        border-radius: 8px;
+        background: #ccc;
+        flex: none;
+      }
+      .shimmer {
+        background: linear-gradient(90deg, #e2e2e2, #f3f3f3, #e2e2e2);
+      }
+      .sheet {
+        position: absolute;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: #fff;
+        border-radius: 16px 16px 0 0;
+        box-shadow: 0 -6px 24px rgba(0, 0, 0, 0.25);
+        padding: 16px;
+      }
+      .scrim {
+        position: absolute;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.35);
+      }
+      .side {
+        display: flex;
+        gap: 32px;
+      }
+      .n {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 22px;
+        height: 22px;
+        border-radius: 50%;
+        background: #e0245e;
+        color: #fff;
+        font: 700 12px/1 sans-serif;
+        flex: none;
+        vertical-align: middle;
+        margin: 0 4px;
+        box-shadow: 0 0 0 2px #fff;
+      }
+      .callouts {
+        max-width: 1840px;
+        background: #fff;
+        border: 1px solid #bbb;
+        border-radius: 8px;
+        padding: 16px 20px;
+        margin: -24px 0 48px;
+      }
+      .callouts ol {
+        padding-left: 24px;
+        display: grid;
+        gap: 6px;
+      }
+      .callouts li::marker {
+        color: #e0245e;
+        font-weight: 700;
+      }
+      .rtl {
+        direction: rtl;
+        text-align: right;
+      }
+    </style>
+  </head>
+  <body>
+    <div
+      style="
+        background: #fff3c4;
+        border: 2px solid #8a6a00;
+        border-radius: 8px;
+        padding: 10px 14px;
+        margin: 0 0 16px;
+        font: 600 14px sans-serif;
+        color: #221a12;
+      "
+    >
+      Superseded by revision 2: see <a href="home.html">home</a>,
+      <a href="recipes.html">recipes</a>, <a href="recipe.html">recipe</a>,
+      <a href="cook.html">cook</a> and <a href="edit.html">edit</a>. Kept for the record.
+    </div>
+    <h1 class="page">Check the recipe (review a draft)</h1>
+    <p class="lede">
+      Pass 02 · <code>/imports/:id</code>. The draft as the recipe it will become, with marks where
+      the model was unsure or found nothing, the post beside it, and Save always in reach. Editing
+      is a tap on a field, not a page of inputs.
+    </p>
+
+    <div class="row">
+      <div>
+        <div class="label">Phone · 360 · a draft with three marks</div>
+        <div class="frame phone" style="min-height: 1100px">
+          <div class="hd">
+            <span>‹ Pinch</span><span class="muted">⋯ <span class="n">9</span></span>
+          </div>
+          <div style="padding: 16px 16px 90px">
+            <div style="display: flex; gap: 12px; align-items: center" class="box">
+              <div class="tile photo" style="width: 72px; font-size: 0; flex: none"></div>
+              <div style="padding: 8px 0">
+                <div class="sm muted">From YouTube</div>
+                <a class="b" style="text-decoration: underline">Open the video ↗</a>
+              </div>
+              <span class="n">1</span>
+            </div>
+            <p class="sm b" style="margin-top: 16px">CHECK, THEN SAVE <span class="n">2</span></p>
+            <p class="h1" style="margin-top: 4px">Tomato pasta <span class="muted sm">✎</span></p>
+            <p class="muted sm" style="margin-top: 6px">
+              Serves 2 · Cook 20 min · <span class="mk chk">Prep: not said</span>
+            </p>
+            <div class="hl" style="margin-top: 12px">
+              <span class="mk chk">3 things to check</span>
+              <span class="sm">two quantities and the prep time</span> <span class="n">3</span>
+            </div>
+            <p class="h2" style="margin-top: 20px">Ingredients</p>
+            <ul class="plain" style="margin-top: 8px">
+              <li>200 g spaghetti</li>
+              <li>400 g tomatoes, crushed</li>
+              <li class="hl">
+                <span class="mk chk">check</span> 2 cloves garlic
+                <div class="sm muted">The video shows 4 cloves; the caption says 2.</div>
+                <span class="n">4</span>
+              </li>
+              <li class="hl">
+                <span class="mk chk">check</span> Olive oil
+                <div class="sm muted">No amount in the caption or the video.</div>
+              </li>
+            </ul>
+            <p class="h2" style="margin-top: 20px">Steps</p>
+            <ol style="padding-left: 20px; margin-top: 8px; display: grid; gap: 8px">
+              <li>Boil the spaghetti.</li>
+              <li>Simmer the garlic and tomatoes; toss with the pasta.</li>
+            </ol>
+            <p class="h2" style="margin-top: 20px">Tags</p>
+            <div class="chips" style="flex-wrap: wrap; margin-top: 8px">
+              <span class="chip on">italian</span><span class="chip on">dinner</span
+              ><span class="chip">＋ Edit tags</span><span class="n">5</span>
+            </div>
+            <p class="sm muted" style="margin-top: 12px">
+              ≈ 520 kcal · 18 g protein per serving (estimate) <span class="n">6</span>
+            </p>
+            <details open style="margin-top: 16px" class="box">
+              <summary class="b" style="padding: 12px">
+                What the post said <span class="n">7</span>
+              </summary>
+              <p class="sm" style="padding: 0 12px 12px">
+                "Easy weeknight tomato pasta 🍝 200g spaghetti, a can of crushed tomatoes, 2 garlic
+                cloves, olive oil…"
+              </p>
+            </details>
+          </div>
+          <div class="sticky">
+            <span class="btn p" style="flex: 1">Save recipe</span><span class="btn">Later</span
+            ><span class="n">8</span>
+          </div>
+        </div>
+      </div>
+      <div>
+        <div class="label">Desktop · 1440 · the post beside the draft</div>
+        <div class="frame desk" style="min-height: 1000px">
+          <div class="hd" style="padding: 16px 48px">
+            <span class="mark">∩ Pinch</span>
+            <div style="display: flex; gap: 4px">
+              <span class="chip">Recipes</span><span class="chip on">＋ Pinch</span>
+            </div>
+            <div style="width: 360px"></div>
+          </div>
+          <div
+            style="
+              max-width: 1200px;
+              margin: 0 auto;
+              padding: 32px 0;
+              display: grid;
+              grid-template-columns: 360px 1fr;
+              gap: 56px;
+            "
+          >
+            <aside>
+              <span class="n">10</span>
+              <div class="tile photo" style="font-size: 0"></div>
+              <p class="sm muted" style="margin-top: 8px">From YouTube · <u>Open the video ↗</u></p>
+              <p class="b" style="margin-top: 16px">What the post said</p>
+              <p class="sm" style="margin-top: 4px">
+                "Easy weeknight tomato pasta 🍝 200g spaghetti, a can of crushed tomatoes, 2 garlic
+                cloves, olive oil, salt. Boil, simmer, toss. Done in 20!"
+              </p>
+            </aside>
+            <div>
+              <div style="display: flex; justify-content: space-between; align-items: center">
+                <p class="sm b">CHECK, THEN SAVE · <span class="mk chk">3 things to check</span></p>
+                <div style="display: flex; gap: 8px">
+                  <span class="btn">Later</span><span class="btn p">Save recipe</span
+                  ><span class="btn">⋯</span><span class="n">8</span>
+                </div>
+              </div>
+              <p class="h1" style="font-size: 39px; margin-top: 8px">Tomato pasta</p>
+              <p class="muted" style="margin-top: 6px">
+                Serves 2 · Cook 20 min · <span class="mk chk">Prep: not said</span>
+              </p>
+              <div
+                style="display: grid; grid-template-columns: 1fr 1.4fr; gap: 40px; margin-top: 24px"
+              >
+                <div>
+                  <p class="h2">Ingredients</p>
+                  <ul class="plain" style="margin-top: 8px">
+                    <li>200 g spaghetti</li>
+                    <li>400 g tomatoes, crushed</li>
+                    <li class="hl" style="position: relative">
+                      <span class="mk chk">check</span> 2 cloves garlic
+                      <div class="sm muted">The video shows 4; the caption says 2.</div>
+                      <div
+                        class="box"
+                        style="
+                          position: absolute;
+                          left: 0;
+                          right: -40px;
+                          top: 64px;
+                          background: #fff;
+                          box-shadow: 0 6px 24px rgba(0, 0, 0, 0.25);
+                          padding: 12px;
+                          z-index: 2;
+                        "
+                      >
+                        <div style="display: flex; gap: 6px" class="sm b">
+                          <span style="width: 56px">Amount</span
+                          ><span style="width: 80px">Unit</span><span>Ingredient</span>
+                        </div>
+                        <div style="display: flex; gap: 6px; margin-top: 4px">
+                          <div class="field" style="width: 56px; color: #222">2</div>
+                          <div class="field" style="width: 80px; color: #222">cloves</div>
+                          <div class="field" style="flex: 1; color: #222">garlic</div>
+                        </div>
+                        <div style="display: flex; gap: 6px; margin-top: 8px">
+                          <span class="btn p">Done</span><span class="btn">Use 4 (video)</span>
+                        </div>
+                        <span class="n">11</span>
+                      </div>
+                    </li>
+                    <li class="hl">
+                      <span class="mk chk">check</span> Olive oil
+                      <div class="sm muted">No amount said.</div>
+                    </li>
+                  </ul>
+                </div>
+                <div>
+                  <p class="h2">Steps</p>
+                  <ol style="padding-left: 20px; margin-top: 8px; display: grid; gap: 10px">
+                    <li>Boil the spaghetti.</li>
+                    <li>Simmer the garlic and tomatoes; toss with the pasta.</li>
+                  </ol>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="callouts">
+      <ol>
+        <li>
+          <b>The source on top, small, with its picture and a way back to the video</b>: Daniel
+          checks against it (D1); B synthesis: nobody else offers the way back.
+        </li>
+        <li>
+          <b>The page says what to do, in four words</b>, instead of the heading "Review the recipe"
+          over a form.
+        </li>
+        <li>
+          <b>A summary of the marks</b> first, so the user knows how much checking there is (C19
+          Grammarly's count; C7 naming what's missing). Tapping it scrolls to the first mark.
+        </li>
+        <li>
+          <b>Yellow "check" marks with the reason, shape + word, never colour alone</b> (C18, C19;
+          ui-craft). Needs the model to say which fields it doubted: the U3 server change
+          (<code>uncertain</code>).
+        </li>
+        <li>
+          <b>Tags as the chosen chips + "Edit tags"</b> (opens the filter sheet's picker): the cook
+          confirms 2, not scans 35 (m05 §14).
+        </li>
+        <li><b>Nutrition shown before saving</b> (m05 §12: first seen after saving).</li>
+        <li>
+          <b>The caption, folded, on phone</b>: "What the post said" (A15: keep the original
+          visible; plan §9 Q5 approved storing it).
+        </li>
+        <li>
+          <b>Save is always in reach</b>: a sticky bar at the thumb on phone, top-right on desktop
+          (B3 Flavorish review: "moving the save button to the top or floating"). Later keeps the
+          draft.
+        </li>
+        <li>
+          <b>Discard goes in the ⋯ menu on every width</b>: rare, and it can't be undone. Every
+          field is tappable: the whole row on a phone, ✎ on hover and focus on desktop.
+        </li>
+        <li>
+          <b>Desktop: the post left, the draft right</b>, so checking is a glance across, not a
+          scroll.
+        </li>
+        <li>
+          <b>Tap a field to edit it in place</b>: a popover on desktop, a bottom sheet on phone,
+          with the alternative the model saw as a one-tap answer.
+        </li>
+      </ol>
+      <p style="margin-top: 8px">
+        <b>What the user sees first:</b> the title and how many things to check.
+        <b>Primary action:</b> Save recipe.
+      </p>
+    </div>
+
+    <div class="row">
+      <div>
+        <div class="label">Phone · editing a field (sheet)</div>
+        <div class="frame phone small" style="height: 620px">
+          <div class="hd"><span>‹ Pinch</span></div>
+          <div style="padding: 16px">
+            <p class="h1">Tomato pasta</p>
+            <ul class="plain" style="margin-top: 12px">
+              <li>200 g spaghetti</li>
+              <li>400 g tomatoes</li>
+            </ul>
+          </div>
+          <div class="scrim"></div>
+          <div class="sheet">
+            <p class="b">Garlic</p>
+            <div style="display: flex; gap: 6px; margin-top: 10px" class="sm b">
+              <span style="width: 64px">Amount</span><span style="width: 90px">Unit</span
+              ><span>Ingredient</span>
+            </div>
+            <div style="display: flex; gap: 6px; margin-top: 4px">
+              <div class="field" style="width: 64px; color: #222">2</div>
+              <div class="field" style="width: 90px; color: #222">cloves</div>
+              <div class="field" style="flex: 1; color: #222">garlic</div>
+            </div>
+            <p class="sm b" style="margin-top: 8px">Note (optional)</p>
+            <div class="field" style="margin-top: 4px"></div>
+            <p class="sm muted" style="margin-top: 8px">
+              The video shows 4 cloves; the caption says 2.
+            </p>
+            <div style="display: flex; gap: 8px; margin-top: 12px">
+              <span class="btn p" style="flex: 1">Done</span><span class="btn">Use 4</span>
+            </div>
+            <p style="margin-top: 8px"><span class="btn q">Remove this ingredient</span></p>
+          </div>
+        </div>
+      </div>
+      <div>
+        <div class="label">Phone · partial draft</div>
+        <div class="frame phone small" style="height: 620px">
+          <div class="hd"><span>‹ Pinch</span></div>
+          <div style="padding: 16px">
+            <p class="h1">Shakshuka with feta</p>
+            <div class="hl miss" style="margin-top: 12px">
+              <span class="mk miss">missing</span> <b>We found the ingredients but no steps.</b>
+              <div class="sm">Add them, or paste the post's text and try again.</div>
+            </div>
+            <p class="h2" style="margin-top: 16px">Steps</p>
+            <div class="hl miss" style="margin-top: 8px">＋ Add the first step</div>
+          </div>
+          <div class="sticky">
+            <span class="btn p" style="flex: 1">Save recipe</span><span class="btn">Later</span>
+          </div>
+        </div>
+      </div>
+      <div>
+        <div class="label">Phone · loading</div>
+        <div class="frame phone small" style="height: 620px">
+          <div class="hd"><span>‹ Pinch</span></div>
+          <div style="padding: 16px">
+            <div class="skel" style="height: 88px; border-radius: 12px"></div>
+            <div class="skel" style="height: 28px; margin-top: 20px; width: 70%"></div>
+            <div class="skel" style="height: 14px; margin-top: 10px; width: 50%"></div>
+            <div class="skel" style="height: 14px; margin-top: 24px"></div>
+            <div class="skel" style="height: 14px; margin-top: 8px"></div>
+            <div class="skel" style="height: 14px; margin-top: 8px"></div>
+          </div>
+        </div>
+      </div>
+      <div>
+        <div class="label">Phone · not ready / gone</div>
+        <div class="frame phone small" style="height: 620px">
+          <div class="hd"><span>‹ Pinch</span></div>
+          <div style="padding: 16px">
+            <p class="h1">This draft isn't ready</p>
+            <p class="muted" style="margin-top: 6px">
+              It's still being made, or it was saved or discarded.
+            </p>
+            <span class="btn" style="margin-top: 12px">Back to Pinch</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="callouts">
+      <ol start="12">
+        <li>
+          <b>Red "missing" (double edge + word) on a required field</b>; Save stays at full strength
+          and, when pressed, moves focus to the first missing field and says what's missing
+          (ui-craft forms). Loading has the source strip's shape; an error loading the draft reuses
+          the recipe's error frame (Try again).
+        </li>
+      </ol>
+    </div>
+
+    <script>
+      const R = [
+        ["פנקייק מושלם, גבוה ואוורירי", "photo", "YT", "", "30 min · 11 ingredients"],
+        ["Shakshuka with feta", "photo", "IG", "", "25 min · 8 ingredients"],
+        ["Red lentil soup", "emo", "", "🍲", "30 min · 4 ingredients"],
+        ["Mujadara", "photo", "FB", "", "45 min · 6 ingredients"],
+        ["חומוס ביתי", "emo", "", "🧆", "20 min · 7 ingredients"],
+        ["Spaghetti aglio e olio", "photo", "IG", "", "15 min · 5 ingredients"],
+        ["Chickpea curry", "emo", "", "🍛", "25 min · 9 ingredients"],
+        ["Greek salad", "photo", "YT", "", "10 min · 7 ingredients"],
+        ["Chicken tacos", "emo", "", "🌮", "20 min · 8 ingredients"],
+        ["Chocolate chip cookies", "photo", "IG", "", "25 min · 9 ingredients"],
+      ];
+      function card([t, k, g, e, m]) {
+        return (
+          '<div class="card"><div class="tile ' +
+          k +
+          '">' +
+          e +
+          (g ? '<span class="glyph">' + g + "</span>" : "") +
+          '</div><div class="t" dir="auto">' +
+          t +
+          '</div><div class="m">' +
+          m +
+          "</div></div>"
+        );
+      }
+      function cards(n, from = 0) {
+        return R.slice(from, from + n)
+          .map(card)
+          .join("");
+      }
+      document.querySelectorAll("[data-cards]").forEach((el) => {
+        const [n, f] = el.dataset.cards.split(",").map(Number);
+        el.innerHTML = cards(n, f || 0) + el.innerHTML;
+      });
+    </script>
+  </body>
+</html>

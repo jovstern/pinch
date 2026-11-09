@@ -1,0 +1,373 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Pinch library hi-fi</title>
+    <style>
+      :root {
+        --surface: #fbf8f2;
+        --raised: #fff;
+        --fill: #efe7da;
+        --border: #e6ded1;
+        --text: #221a12;
+        --muted: #6e6257;
+        --accent: #c8471b;
+        --accent-strong: #a33612;
+        --accent-soft: #fbe7df;
+        --on-accent: #fff;
+        --check: #e8b931;
+        --check-soft: #fbf1d3;
+        --tomato: #f8e1d8;
+        --saffron: #f5e3b8;
+        --olive: #dde5c8;
+        --sea: #dce9e9;
+        --plum: #eee2ea;
+      }
+      .dark {
+        --surface: #17130f;
+        --raised: #221c16;
+        --fill: #2c241d;
+        --border: #3a3029;
+        --text: #f3ede4;
+        --muted: #a89c8f;
+        --accent: #f0693a;
+        --accent-strong: #f0693a;
+        --accent-soft: #3a1d12;
+        --on-accent: #17130f;
+        --check: #f2c94c;
+        --check-soft: #3a2f12;
+        --tomato: #4a2419;
+        --saffron: #3e2f16;
+        --olive: #29331a;
+        --sea: #1e3436;
+        --plum: #3b2434;
+      }
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      body {
+        background: #cfcfcf;
+        padding: 32px;
+        font:
+          16px/1.5 -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
+          sans-serif;
+      }
+      .row {
+        display: flex;
+        gap: 40px;
+        align-items: flex-start;
+      }
+      .label {
+        font: 600 12px sans-serif;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: #444;
+        margin-bottom: 8px;
+      }
+      .app {
+        background: var(--surface);
+        color: var(--text);
+        position: relative;
+        overflow: hidden;
+        border-radius: 4px;
+      }
+      .phone {
+        width: 360px;
+        height: 780px;
+      }
+      .desk {
+        width: 1440px;
+        height: 900px;
+      }
+      .disp {
+        font-family: "Fraunces", Georgia, "Times New Roman", serif;
+      }
+      header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 12px 16px;
+      }
+      .mark {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        color: var(--accent);
+        font:
+          700 25px/1 Georgia,
+          serif;
+      }
+      .mark svg {
+        width: 20px;
+        height: 28px;
+      }
+      .search {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        height: 44px;
+        border-radius: 12px;
+        background: var(--fill);
+        padding: 0 14px;
+        color: var(--muted);
+      }
+      .chips {
+        display: flex;
+        gap: 8px;
+        overflow: hidden;
+      }
+      .chip {
+        flex: none;
+        height: 40px;
+        display: flex;
+        align-items: center;
+        border-radius: 999px;
+        padding: 0 14px;
+        background: var(--fill);
+        font-size: 14px;
+      }
+      .chip.on {
+        background: var(--accent-soft);
+        color: var(--accent-strong);
+        font-weight: 600;
+      }
+      .ready {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        border-radius: 12px;
+        background: var(--check-soft);
+        padding: 8px 12px;
+        font-size: 14px;
+      }
+      .ready .dot {
+        width: 28px;
+        height: 35px;
+        border-radius: 6px;
+        background: linear-gradient(160deg, #c0533a, #7a2d1c);
+        flex: none;
+      }
+      .ready b {
+        flex: 1;
+      }
+      .grid {
+        display: grid;
+        gap: 12px 12px;
+      }
+      .card .tile {
+        aspect-ratio: 4/5;
+        border-radius: 16px;
+        position: relative;
+        overflow: hidden;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 64px;
+      }
+      .glyph {
+        position: absolute;
+        top: 8px;
+        right: 8px;
+        width: 24px;
+        height: 24px;
+        border-radius: 7px;
+        background: rgba(255, 255, 255, 0.92);
+        color: #221a12;
+        font: 700 10px/24px sans-serif;
+        text-align: center;
+      }
+      .card h3 {
+        font:
+          600 16px/1.25 Georgia,
+          serif;
+        margin-top: 8px;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+      }
+      .card p {
+        font-size: 13px;
+        color: var(--muted);
+        margin-top: 2px;
+      }
+      .tabs {
+        position: absolute;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        height: 68px;
+        display: flex;
+        background: var(--raised);
+        border-top: 1px solid var(--border);
+      }
+      .tabs a {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 3px;
+        font-size: 12px;
+        color: var(--muted);
+        position: relative;
+      }
+      .tabs a.on {
+        color: var(--accent-strong);
+        font-weight: 700;
+      }
+      .tabs a.on svg {
+        background: var(--accent-soft);
+        border-radius: 999px;
+        padding: 2px 14px;
+        width: 56px;
+      }
+      .badge {
+        position: absolute;
+        top: 8px;
+        left: calc(50% + 8px);
+        background: var(--accent-strong);
+        color: var(--on-accent);
+        border-radius: 999px;
+        font: 700 11px/18px sans-serif;
+        min-width: 18px;
+        padding: 0 5px;
+        text-align: center;
+      }
+      .seg {
+        display: flex;
+        gap: 4px;
+        background: var(--fill);
+        padding: 4px;
+        border-radius: 14px;
+      }
+      .seg a {
+        height: 40px;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        padding: 0 16px;
+        border-radius: 10px;
+        font-weight: 600;
+        font-size: 15px;
+      }
+      .seg a.on {
+        background: var(--raised);
+        color: var(--accent-strong);
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+      }
+      .seg .b {
+        background: var(--accent-strong);
+        color: var(--on-accent);
+        border-radius: 999px;
+        font-size: 11px;
+        padding: 0 6px;
+        line-height: 18px;
+      }
+    </style>
+  </head>
+  <body>
+    <div
+      style="
+        background: #fff3c4;
+        border: 2px solid #8a6a00;
+        border-radius: 8px;
+        padding: 10px 14px;
+        margin: 0 0 16px;
+        font: 600 14px sans-serif;
+        color: #221a12;
+      "
+    >
+      Superseded by revision 2: see <a href="home.html">home</a>,
+      <a href="recipes.html">recipes</a>, <a href="recipe.html">recipe</a>,
+      <a href="cook.html">cook</a> and <a href="edit.html">edit</a>. Kept for the record.
+    </div>
+    <div class="row">
+      <div>
+        <div class="label">Phone · 360 · light</div>
+        <div class="app phone" id="p1"></div>
+      </div>
+      <div>
+        <div class="label">Phone · 360 · dark</div>
+        <div class="app phone dark" id="p2"></div>
+      </div>
+    </div>
+    <div style="height: 40px"></div>
+    <div class="label">Desktop · 1440 · light</div>
+    <div class="app desk" id="d1"></div>
+    <script>
+      // Sample content only: real Pinch titles; photos are stand-in gradients in the reel's colours.
+      const R = [
+        [
+          "פנקייק מושלם, גבוה ואוורירי",
+          "linear-gradient(160deg,#e7b06a,#9b5a23)",
+          "YT",
+          "",
+          "30 min · 11 ingredients",
+        ],
+        [
+          "Shakshuka with feta",
+          "linear-gradient(160deg,#c0533a,#6d2416)",
+          "IG",
+          "",
+          "35 min · 10 ingredients",
+        ],
+        ["Red lentil soup", "var(--saffron)", "", "🍲", "30 min · 4 ingredients"],
+        ["Mujadara", "linear-gradient(160deg,#8a6a45,#3c2a18)", "FB", "", "45 min · 6 ingredients"],
+        ["חומוס ביתי", "var(--saffron)", "", "🧆", "20 min · 7 ingredients"],
+        [
+          "Spaghetti aglio e olio",
+          "linear-gradient(160deg,#e9d39a,#a67c2e)",
+          "IG",
+          "",
+          "15 min · 5 ingredients",
+        ],
+        ["Chickpea curry", "var(--saffron)", "", "🍛", "25 min · 9 ingredients"],
+        [
+          "Greek salad",
+          "linear-gradient(160deg,#7fa65a,#c94f3d)",
+          "YT",
+          "",
+          "10 min · 7 ingredients",
+        ],
+        ["Chicken tacos", "var(--tomato)", "", "🌮", "20 min · 8 ingredients"],
+        [
+          "Chocolate chip cookies",
+          "linear-gradient(160deg,#c8955c,#5b3418)",
+          "IG",
+          "",
+          "25 min · 9 ingredients",
+        ],
+      ];
+      const card = ([t, bg, g, e, m]) =>
+        `<div class="card"><div class="tile" style="background:${bg}">${e}${g ? `<span class="glyph">${g}</span>` : ""}</div><h3 dir="auto">${t}</h3><p>${m}</p></div>`;
+      const mark = `<div class="mark"><svg viewBox="8 5 16 22"><path d="M11 25C11 17 13 11 15.5 7M21 25C21 17 19 11 16.5 7" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></svg><span class="disp">Pinch</span></div>`;
+      const icoBook = `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2z"/><path d="M4 21V5"/></svg>`;
+      const icoPlus = `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>`;
+      const phone = `<header>${mark}<span style="color:var(--muted);font-size:22px;width:44px;height:44px;display:flex;align-items:center;justify-content:center">⋯</span></header>
+<div style="padding:0 16px">
+ <div class="ready"><span class="dot"></span><b>1 recipe ready to check</b><span>›</span></div>
+ <div class="search" style="margin-top:12px">⌕ Title or ingredient</div>
+ <div class="chips" style="margin:12px 0"><span class="chip">quick</span><span class="chip">dinner</span><span class="chip">vegetarian</span><span class="chip">breakfast</span></div>
+ <div class="grid" style="grid-template-columns:1fr 1fr">${R.slice(0, 6).map(card).join("")}</div>
+</div>
+<nav class="tabs"><a class="on">${icoBook}Recipes</a><a>${icoPlus}Pinch<span class="badge">1</span></a></nav>`;
+      document.getElementById("p1").innerHTML = phone;
+      document.getElementById("p2").innerHTML = phone;
+      document.getElementById("d1").innerHTML =
+        `<header style="padding:16px 48px;border-bottom:1px solid var(--border)">${mark}
+ <nav class="seg"><a class="on">Recipes</a><a>＋ Pinch <span class="b">1</span></a></nav>
+ <div style="display:flex;gap:12px;align-items:center"><div class="search" style="width:360px">⌕ Title or ingredient</div><span style="width:44px;height:44px;border-radius:12px;background:var(--fill);display:flex;align-items:center;justify-content:center">⋯</span></div></header>
+<div style="max-width:1200px;margin:0 auto;padding:24px 0">
+ <div class="ready" style="padding:10px 16px"><span class="dot"></span><b>1 recipe ready to check · Tomato pasta, from YouTube</b><span style="font-weight:700;text-decoration:underline">Check it ›</span></div>
+ <div class="chips" style="margin:18px 0 22px"><span class="chip">quick</span><span class="chip">dinner</span><span class="chip">vegetarian</span><span class="chip">breakfast</span><span class="chip">italian</span><span class="chip">All filters</span></div>
+ <div class="grid" style="grid-template-columns:repeat(5,1fr);gap:28px 24px">${R.map(card).join("")}</div>
+</div>`;
+    </script>
+  </body>
+</html>

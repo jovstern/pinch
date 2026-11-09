@@ -441,6 +441,9 @@ changes**. The planned design:
 | D21 | React Router (declarative: `<Routes>` in `App.tsx`, `useParams`, `Link`) | A handful of screens; the most familiar API and the least setup, easy to read line by line | TanStack Router (type-safe routes and loaders, more concepts) |
 | D22 | The daily cap (20) counts links pasted and Retry clicks, in a per-user, per-UTC-day counter (`usage`) raised atomically by both routes; past it, 429 | Imports are deleted once done, so counting them would undercount; the unique `{ownerId, day}` index makes two first counts at once safe on a standalone Mongo (as D9); the routes are where a user asks for work; automatic retries (3 a link) aren't counted, so at most 60 Gemini calls a day | Counting each Gemini call in the worker (exact, but a link could be accepted and then fail with "limit reached") |
 | D23 | "Not a recipe" and "too long" fail the import at once (`NoRetryError`, its message shown to the user); every other error is retried | Trying again gives the same answer and costs a Gemini call each time; the user learns why straight away; nor is the user offered a Retry that can't help, and would use one of the day's 20 | Retry everything (3 Gemini calls for a cat video, and a vague message) |
+| D24 | Two tabs, **New recipe** (`/`, the default) and **My recipes** (`/recipes`); the import queue sits under the box on New recipe; every inner page has breadcrumbs (docs/ux/pass-02.md §12–13) | Adding is the main event, so it opens first; the split keeps the form off the library; breadcrumbs say where a page belongs and replace Exit and "‹ Recipes" | One home with the box above the recipes; Recipes as the default tab; a bottom tab bar |
+| D25 | Every recipe has a face: the post's picture, else an emoji the model picks for the dish (an optional `emoji` on the recipe and the draft) on a tinted tile — built with F3 (docs/progress.md) | The picture is what the user remembers; a recipe with none still needs something to recognise | Grey placeholders; generated images |
+| D26 | The UI is built from **shadcn/ui** components, copied into `client/src/components/ui/`, their variables mapped onto Pinch's tokens; controls 44 px tall for touch | Accessible Radix parts (Tabs, Sheet, DropdownMenu, Dialog, toasts) whose code lives in the repo and can be read line by line; one pattern per control | Pinch's own components only; a packaged kit (MUI, Chakra) |
 
 ## 11. Risks
 
@@ -468,6 +471,7 @@ Each milestone is a few **small PRs** (roughly ≤ 300 changed lines each), whic
 | M5 | **Gemini** — `extractRecipe` for YouTube and text, tags, nutrition | A YouTube link becomes a draft |
 | M6 | **Instagram / Facebook** — `yt-dlp`, Gemini Files, thumbnails, screenshot fallback | A reel link becomes a draft with a thumbnail |
 | M7 | **Polish** — empty, loading and error states, share and comments placeholders, look and feel | It feels like a finished POC |
+| M8 | **Redesign** (docs/ux/pass-02.md): the two tabs, shadcn/ui, the queue, filters, the recipe, cook mode, one editor; then the features it asks the API for | The wireframes in `docs/ux/wireframes/` are the app |
 | Later | Auth, share, comments, WhatsApp bot / PWA share target, nutrition database, semantic search | — |
 
 Doing M4 with a fake extractor first is deliberate (it takes 1.5 s a step, and fails every try of a link
@@ -481,32 +485,27 @@ noise, and M5/M6 only swap the extractor.
 
 ## 14. Screens
 
-Phone first (§1). Every screen sits in one frame: a header with the name (a link home) and
-**New recipe**, a secondary button (from M4 the main action of `/` is pasting a link; hidden on
-the recipe form's pages, new, edit and review, where Save is the main action, and in cook
-mode); the content in a single readable column below it.
+Phone first (§1); the wireframes in `docs/ux/wireframes/` (pass 02, revision 2) show each
+screen at 360 and 1440 px. Every page sits in one frame (D24): a header of two tabs, **New
+recipe** (its badge counts drafts ready to review) and **My recipes**, then an avatar (its menu
+holds the theme until auth arrives, §8.3). **Write a recipe** is on both tabs: in the header from
+768 px, a floating button at the bottom right on a phone. No logo for now. Inner pages have
+breadcrumbs under the header, and the tab they belong to stays selected. Every async change to
+a recipe's status confirms itself in a toast, with the next step when there is one: sent,
+ready to review, failed (Retry), saved (View), changes saved, deleted, discarded, couldn't save
+(Try again). Toasts sit at the top on a phone, bottom right from 768 px.
 
 | Address | Screen | Its job | States |
 |---|---|---|---|
-| `/` | Your recipes | Paste a link, or a post's text, to pinch a recipe (from M4, the box and Your imports above the list, below), or add up to 4 screenshots of it (from M6; choosing them sends them). Pick something to cook; each card shows the title, the number of ingredients and the total time (from M6, the post's picture as a small 4:5 tile beside them). Search (on Enter) and tag filters (folded, applied as ticked) sit above the list and live in the address: `/?q=egg&tags=meal:dinner` | Loading (placeholder cards), empty (points to the paste box, and links to New recipe: "Write a recipe"), error (Try again); 50 at a time, then Show more (focus moves to the first new recipe; a failed page says so and keeps the list); filtered: how many match (announced), or none and a link to clear them |
-| `/recipes/new` | New recipe | Write a recipe by hand; tags are chips to tick, a group per facet (§7) | From the first Save: each error under its field (§8.1), updated as the user types; focus on the first; saving (button says so); failed (says so, keeps what was typed) |
-| `/recipes/:id` | A recipe | Read it (a range like "8–10" kept on one line; from M6 the post's picture at the top, at its shape; its tags under the title; from M5 the nutrition per serving, marked ≈ estimate); Cook, the main action; Edit, Share (from M7, "coming soon", unavailable), Delete (asks first); Comments under the steps (from M7, "coming soon") | Loading, error (Try again), not found |
-| `/recipes/:id/cook` | Cook mode | One step at a time in large type ("Step 2 of 6"), Back and Next, Done on the last; the step's ingredients under it (those it names) and all of them folded below, ticked off in both at once; a timer for each time a step mentions ("20 min", "10 דקות"; a range's shorter end; hours and minutes as one; in words too: "half an hour", "חצי שעה"), each started once (pressed again while it runs, nothing: its button says Running), kept at the bottom of the screen (at most 40% of it), ringing (a beep, a buzz) and announced at zero; leaving cook mode ends them; the screen kept on (Wake Lock), and says so or that it may lock; focus stays on Back and Next/Done from step to step; Exit goes back to the recipe | Loading (the step's shape), error (Try again), not found |
-| `/recipes/:id/edit` | Edit recipe | Change it; Cancel goes back to the recipe | Loading, error (Try again), not found; then as New recipe |
-| `/imports/:id` | Review the recipe | Check the draft the worker made, in the recipe form (D1), under the post's picture (M6); Save approves it and opens the new recipe; Review later (the form's Cancel) keeps it; Discard, last in the form's buttons, deletes it and goes back to `/` | Loading, error (Try again), not found; no draft (not done yet, or failed): says so and links home; then as New recipe |
-| anything else | Page not found | Get back to the recipes | — |
+| `/` | New recipe | One input for a link or a post's text (it grows into a textarea, up to 6 lines, once the text wraps; one word is a link, anything with a space or a new line is text, as before), Paste, **Pinch it**; add up to 4 screenshots. Under it the queue, "Cooking… · N ready": each import as a card with its picture (or a placeholder while it cooks), its title or link, and where it has got to; a ready one offers Review, one still cooking a disabled "Cooking…" button in Review's place, a failed one Retry (unless D23) and Dismiss, a stalled one Dismiss | Empty queue (one line on what Pinch does, the three platforms); a link from another site or too short a text refused under the input; 429 says the day's limit |
+| `/recipes` | My recipes | Search (titles and ingredients), tag chips (the most-used tags), and Filters: the five tag facets (§7), as a bottom sheet on a phone with a live "Show N recipes", a panel on the left from 1024 px. Filters live in the address (`/recipes?q=egg&tags=meal:dinner`). A grid of cards: picture, title, time and ingredient count | Loading (cards' shape), no recipes yet (a way to New recipe), none match (says which filters; Clear filters), error (Try again); 50 at a time, then Show more |
+| `/recipes/:id` | A recipe | Breadcrumbs *My recipes › title*; the picture; the title and a subtitle naming the source (Instagram, YouTube, Facebook: a link to the post; or "Written by you"), serves and times; tags (each opens My recipes filtered by it); **Cook**; ⋯ with Edit, Share ("coming soon") and Delete (asks first); nutrition ≈; ingredients beside the steps from 1024 px; Comments ("coming soon") | Loading, error (Try again), not found |
+| `/recipes/:id/cook` | Cook mode | Breadcrumbs *My recipes › title › Cook* (no Exit), the source in the subtitle; one step per card, swiped sideways on a phone (the next card peeks), ‹ › and dots kept for those who don't swipe, Back and Next from 768 px and the ← → keys; "Step 2 of 6" and a bar; the step's ingredients on its card, all of them folded below (beside the step from 1024 px), ticked off in both at once; timers, Wake Lock and Done as before (§14 of M7: started once, kept at the bottom, ringing at zero, ended on leaving) | Loading (the step's shape), error (Try again), not found |
+| `/recipes/new` | Write a recipe | The editor, empty (breadcrumbs *New recipe › Write a recipe*): picture, title, source "Written by you", serves and times, tags (chips per facet), ingredients as amount · unit · name rows, steps as numbered boxes; Cancel and **Save recipe** pinned to the bottom | Each error under its field from the first Save (§8.1), focus on the first, a count above the Save bar; saving; failed (keeps what was typed) |
+| `/recipes/:id/edit` | Edit a recipe | The same editor, filled (*My recipes › title › Edit*); Cancel and **Save changes** | Loading, error, not found; then as Write a recipe |
+| `/imports/:id` | Review a draft | The same editor, filled from the draft (*New recipe › Review: title*), under a banner that says where it came from and links to the post; Discard and **Save to My recipes** (approves it and opens the recipe) | Loading, error, not found; no draft yet (says so, links to New recipe); then as Write a recipe |
+| anything else | Page not found | Get back to My recipes | — |
 
-From M4 the paste-a-link box on `/` becomes the main action, and import status shows there:
-"Your imports" under the box, each with its platform, its link and how far it has got (waiting,
-working on it, trying again soon, ready to review, or why it failed); announced as it changes.
-A ready one offers Review the recipe; a failed one, Retry (three more tries) and Dismiss, or
-only Dismiss when no retry can fix it (D23); a stalled one (§4.3) says nothing is working on it, and offers Dismiss. Dismiss deletes it, with
-no question: the link can be pasted again. A link from another site is refused under the box
-before it's sent.
-
-From M5 the box is a textarea and takes either, with nothing to choose (§1's text fallback):
-one word is a link; anything with a space or a new line in it is the recipe's text ("Pasted
-text" in Your imports, with its start). So a link with words around it is a text, and Gemini
-finds no recipe in it: kept that simple on purpose. Too short a text (under 20 characters) is
-refused as a link from another site is. Enter makes a new line, as in any textarea: Pinch it
-sends.
+Leaving the editor with changes asks once ("Discard this draft?"). Two columns from 1024 px:
+what you edit most (title, ingredients, steps) on the left, the picture, source, details, tags
+and Save on the right.

@@ -1,0 +1,689 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Pinch wireframe: Recipes (the library)</title>
+    <style>
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      body {
+        font:
+          14px/1.45 -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
+          Roboto,
+          "Noto Sans Hebrew",
+          sans-serif;
+        background: #d9d9d9;
+        color: #222;
+        padding: 32px;
+      }
+      h1.page {
+        font:
+          700 28px/1.2 Georgia,
+          serif;
+        margin-bottom: 4px;
+      }
+      p.lede {
+        max-width: 900px;
+        color: #444;
+        margin-bottom: 24px;
+      }
+      .row {
+        display: flex;
+        gap: 40px;
+        align-items: flex-start;
+        margin-bottom: 48px;
+      }
+      .label {
+        font: 600 12px/1 sans-serif;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        color: #555;
+        margin-bottom: 8px;
+      }
+      .frame {
+        background: #fff;
+        border: 1px solid #999;
+        position: relative;
+        overflow: hidden;
+      }
+      .phone {
+        width: 360px;
+        min-height: 780px;
+      }
+      .desk {
+        width: 1440px;
+        min-height: 900px;
+      }
+      .small {
+        min-height: 0;
+      }
+      /* content */
+      .hd {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 12px 16px;
+        border-bottom: 1px solid #ddd;
+      }
+      .mark {
+        font:
+          700 22px Georgia,
+          serif;
+      }
+      .serif {
+        font-family: Georgia, "Times New Roman", serif;
+      }
+      .h1 {
+        font:
+          700 26px/1.2 Georgia,
+          serif;
+      }
+      .h2 {
+        font:
+          700 18px/1.25 Georgia,
+          serif;
+      }
+      .muted {
+        color: #777;
+      }
+      .sm {
+        font-size: 12px;
+      }
+      .b {
+        font-weight: 600;
+      }
+      .box {
+        background: #eee;
+        border-radius: 12px;
+      }
+      .field {
+        border: 1.5px solid #888;
+        border-radius: 12px;
+        background: #fff;
+        min-height: 48px;
+        display: flex;
+        align-items: center;
+        padding: 0 12px;
+        color: #999;
+      }
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 44px;
+        padding: 0 16px;
+        border-radius: 12px;
+        background: #e4e4e4;
+        font-weight: 600;
+        white-space: nowrap;
+      }
+      .btn.p {
+        background: #333;
+        color: #fff;
+      }
+      .btn.q {
+        background: none;
+        color: #555;
+        text-decoration: underline;
+      }
+      .chip {
+        display: inline-flex;
+        align-items: center;
+        min-height: 40px;
+        position: relative;
+        padding: 0 14px;
+        border-radius: 999px;
+        background: #e8e8e8;
+        white-space: nowrap;
+      }
+      .chip::before {
+        content: "";
+        position: absolute;
+        inset: -2px 0;
+      }
+      .chip.on {
+        background: #444;
+        color: #fff;
+      }
+      .chips {
+        display: flex;
+        gap: 8px;
+        overflow: hidden;
+      }
+      .grid {
+        display: grid;
+        gap: 12px;
+      }
+      .tile {
+        aspect-ratio: 4/5;
+        border-radius: 16px;
+        background: #cfcfcf;
+        position: relative;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 64px;
+        overflow: hidden;
+      }
+      .tile.photo {
+        background: repeating-linear-gradient(45deg, #bbb 0 10px, #c6c6c6 10px 20px);
+      }
+      .tile.photo::after {
+        content: "post picture";
+        position: absolute;
+        font-size: 11px;
+        color: #555;
+        background: #eee;
+        padding: 2px 6px;
+        border-radius: 6px;
+      }
+      .tile.emo {
+        background: #e6e6e6;
+      }
+      .glyph {
+        position: absolute;
+        top: 8px;
+        right: 8px;
+        width: 22px;
+        height: 22px;
+        border-radius: 6px;
+        background: #fff;
+        font: 700 11px/22px sans-serif;
+        text-align: center;
+        color: #333;
+      }
+      .card .t {
+        font:
+          600 16px/1.25 Georgia,
+          serif;
+        margin-top: 8px;
+      }
+      .card .m {
+        font-size: 12px;
+        color: #777;
+        margin-top: 2px;
+      }
+      .tabbar {
+        position: absolute;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        height: 68px;
+        border-top: 1px solid #ccc;
+        background: #fafafa;
+        display: flex;
+      }
+      .tabbar div {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 2px;
+        font-size: 12px;
+        color: #777;
+      }
+      .tabbar .on {
+        color: #111;
+        font-weight: 700;
+      }
+      .ico {
+        width: 24px;
+        height: 24px;
+        border-radius: 6px;
+        background: #bbb;
+        position: relative;
+      }
+      .on .ico {
+        background: #333;
+      }
+      .badge {
+        position: absolute;
+        top: -6px;
+        right: -12px;
+        background: #333;
+        color: #fff;
+        border-radius: 999px;
+        font: 700 11px/18px sans-serif;
+        min-width: 18px;
+        text-align: center;
+        padding: 0 5px;
+      }
+      .toast {
+        position: absolute;
+        left: 16px;
+        right: 16px;
+        bottom: 80px;
+        background: #333;
+        color: #fff;
+        border-radius: 12px;
+        padding: 12px 16px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+      .sticky {
+        position: absolute;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        padding: 12px 16px;
+        background: #fafafa;
+        border-top: 1px solid #ccc;
+        display: flex;
+        gap: 8px;
+        align-items: center;
+      }
+      .skel {
+        background: #e9e9e9;
+        border-radius: 8px;
+      }
+      .mk {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        font-size: 12px;
+        font-weight: 600;
+        padding: 2px 8px;
+        border-radius: 999px;
+        background: #ddd;
+      }
+      .mk.chk::before {
+        content: "◆";
+        font-size: 10px;
+      }
+      .mk.miss::before {
+        content: "■";
+        font-size: 10px;
+      }
+      .hl {
+        background: #efefef;
+        border-left: 4px solid #888;
+        padding: 6px 10px;
+        border-radius: 6px;
+      }
+      .hl.miss {
+        border-left-color: #222;
+        border-left-style: double;
+      }
+      ul.plain {
+        list-style: none;
+        display: grid;
+        gap: 8px;
+      }
+      .qrow {
+        display: flex;
+        gap: 12px;
+        align-items: center;
+        padding: 10px;
+        border-radius: 12px;
+        background: #f2f2f2;
+      }
+      .qrow .th {
+        width: 48px;
+        aspect-ratio: 4/5;
+        border-radius: 8px;
+        background: #ccc;
+        flex: none;
+      }
+      .shimmer {
+        background: linear-gradient(90deg, #e2e2e2, #f3f3f3, #e2e2e2);
+      }
+      .sheet {
+        position: absolute;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: #fff;
+        border-radius: 16px 16px 0 0;
+        box-shadow: 0 -6px 24px rgba(0, 0, 0, 0.25);
+        padding: 16px;
+      }
+      .scrim {
+        position: absolute;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.35);
+      }
+      .side {
+        display: flex;
+        gap: 32px;
+      }
+      .n {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 22px;
+        height: 22px;
+        border-radius: 50%;
+        background: #e0245e;
+        color: #fff;
+        font: 700 12px/1 sans-serif;
+        flex: none;
+        vertical-align: middle;
+        margin: 0 4px;
+        box-shadow: 0 0 0 2px #fff;
+      }
+      .callouts {
+        max-width: 1840px;
+        background: #fff;
+        border: 1px solid #bbb;
+        border-radius: 8px;
+        padding: 16px 20px;
+        margin: -24px 0 48px;
+      }
+      .callouts ol {
+        padding-left: 24px;
+        display: grid;
+        gap: 6px;
+      }
+      .callouts li::marker {
+        color: #e0245e;
+        font-weight: 700;
+      }
+      .rtl {
+        direction: rtl;
+        text-align: right;
+      }
+    </style>
+  </head>
+  <body>
+    <div
+      style="
+        background: #fff3c4;
+        border: 2px solid #8a6a00;
+        border-radius: 8px;
+        padding: 10px 14px;
+        margin: 0 0 16px;
+        font: 600 14px sans-serif;
+        color: #221a12;
+      "
+    >
+      Superseded by revision 2: see <a href="home.html">home</a>,
+      <a href="recipes.html">recipes</a>, <a href="recipe.html">recipe</a>,
+      <a href="cook.html">cook</a> and <a href="edit.html">edit</a>. Kept for the record.
+    </div>
+    <h1 class="page">Recipes (the library)</h1>
+    <p class="lede">
+      Pass 02 · the home. The library is a tab of its own; pinching moved to the Pinch tab. Every
+      card has a face: the post's picture, or the dish's emoji on a cuisine tint. Greyscale
+      wireframe; colour is in <code>library-hifi.html</code>.
+    </p>
+
+    <div class="row">
+      <div>
+        <div class="label">Phone · 360 · default</div>
+        <div class="frame phone">
+          <div class="hd"><span class="mark">∩ Pinch</span><span class="muted">⋯</span></div>
+          <div style="padding: 12px 16px 80px">
+            <a
+              class="hl"
+              style="
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                margin-bottom: 12px;
+              "
+              ><span><span class="n">1</span><b>1 recipe ready to check</b></span
+              ><span>›</span></a
+            >
+            <div class="field">⌕ Title or ingredient <span class="n">2</span></div>
+            <div class="chips" style="margin: 12px 0">
+              <span class="chip">quick</span><span class="chip">dinner</span
+              ><span class="chip">vegetarian</span><span class="chip">breakfast</span
+              ><span class="n">3</span>
+            </div>
+            <div class="grid" style="grid-template-columns: 1fr 1fr" data-cards="6"></div>
+            <div style="margin-top: 8px"><span class="n">4</span><span class="n">5</span></div>
+          </div>
+          <div class="tabbar">
+            <div class="on"><span class="ico"></span>Recipes</div>
+            <div>
+              <span class="ico" style="position: relative">＋<span class="badge">1</span></span
+              >Pinch
+            </div>
+            <span class="n" style="position: absolute; right: 8px; top: -10px">6</span>
+          </div>
+        </div>
+      </div>
+      <div>
+        <div class="label">Desktop · 1440 · default</div>
+        <div class="frame desk">
+          <div class="hd" style="padding: 16px 48px">
+            <span class="mark">∩ Pinch</span>
+            <div style="display: flex; gap: 4px">
+              <span class="chip on">Recipes</span
+              ><span class="chip"
+                >＋ Pinch
+                <span class="badge" style="position: static; margin-left: 6px">1</span></span
+              ><span class="n">6</span>
+            </div>
+            <div style="display: flex; gap: 12px; align-items: center">
+              <div class="field" style="width: 360px">⌕ Title or ingredient</div>
+              <span class="btn">⋯</span><span class="n">10</span>
+            </div>
+          </div>
+          <div style="max-width: 1200px; margin: 0 auto; padding: 24px 0">
+            <a class="hl" style="display: flex; justify-content: space-between; margin-bottom: 16px"
+              ><span
+                ><span class="n">1</span><b>1 recipe ready to check</b> · Tomato pasta, from
+                YouTube</span
+              ><span>Check it ›</span></a
+            >
+            <div class="chips" style="margin-bottom: 20px">
+              <span class="chip">quick</span><span class="chip">dinner</span
+              ><span class="chip">vegetarian</span><span class="chip">breakfast</span
+              ><span class="chip">italian</span><span class="chip">All filters</span
+              ><span class="n">3</span>
+            </div>
+            <div
+              class="grid"
+              style="grid-template-columns: repeat(5, 1fr); gap: 24px"
+              data-cards="10"
+            ></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="callouts">
+      <ol>
+        <li>
+          <b>Ready drafts surface here, in one line.</b> A draft waiting is the only thing more
+          urgent than browsing (Google Photos' status line, C6; Instapaper's count, C2); it links to
+          the Pinch tab's queue. Hidden when nothing waits.
+        </li>
+        <li>
+          <b>Search first, always visible.</b> Daniel's D2 ("chickpeas" in March); today it sits
+          under the paste box, ~900 px down.
+        </li>
+        <li>
+          <b
+            >Four or five mood chips in one scrolling row; the rest behind "All filters" (a
+            sheet).</b
+          >
+          Spotify's five chips (C14); today 35 chips push the list 1,700 px down.
+        </li>
+        <li>
+          <b>Every card has a face.</b> The post's picture at 4:5, the reel's shape; else the dish's
+          emoji on a cuisine tint (never a blank). The user asked for it so a saved recipe is
+          <i>recognised</i>, not read; Pinterest-style recall (pass-02 research).
+        </li>
+        <li>
+          <b>The platform glyph in the corner</b> says where it came from without words: "the one
+          from Instagram".
+        </li>
+        <li>
+          <b>Two tabs: Recipes and Pinch.</b> Phone: a bottom bar, in thumb reach; desktop:
+          segmented tabs in the header. The badge counts drafts ready to check. The clear split the
+          user asked for: browsing never shares a screen with a form.
+        </li>
+      </ol>
+      <p style="margin-top: 8px">
+        <b>What the user sees first:</b> pictures of food they saved. <b>Primary action:</b> open a
+        recipe (there is no button competing with the cards).
+      </p>
+    </div>
+
+    <div class="row">
+      <div>
+        <div class="label">Phone · loading</div>
+        <div class="frame phone small" style="height: 560px">
+          <div class="hd"><span class="mark">∩ Pinch</span></div>
+          <div style="padding: 12px 16px">
+            <div class="field"></div>
+            <div class="chips" style="margin: 12px 0">
+              <span class="chip skel" style="width: 70px"></span
+              ><span class="chip skel" style="width: 80px"></span
+              ><span class="chip skel" style="width: 90px"></span>
+            </div>
+            <div class="grid" style="grid-template-columns: 1fr 1fr">
+              <div>
+                <div class="tile skel"></div>
+                <div class="skel" style="height: 14px; margin-top: 8px"></div>
+              </div>
+              <div>
+                <div class="tile skel"></div>
+                <div class="skel" style="height: 14px; margin-top: 8px"></div>
+              </div>
+            </div>
+            <p class="sm muted" style="margin-top: 12px">
+              <span class="n">7</span> Tiles the size of the cards: nothing moves when they arrive.
+            </p>
+          </div>
+          <div class="tabbar">
+            <div class="on"><span class="ico"></span>Recipes</div>
+            <div><span class="ico"></span>Pinch</div>
+          </div>
+        </div>
+      </div>
+      <div>
+        <div class="label">Phone · empty (first visit)</div>
+        <div class="frame phone small" style="height: 560px">
+          <div class="hd"><span class="mark">∩ Pinch</span></div>
+          <div style="padding: 24px 16px; text-align: center">
+            <div class="tile photo" style="width: 160px; margin: 0 auto"></div>
+            <p class="h2" style="margin-top: 16px">Your recipes will live here</p>
+            <p class="muted" style="margin-top: 6px">
+              Copy a reel's link in Instagram, Facebook or YouTube, and pinch it. A minute later
+              it's a recipe.
+            </p>
+            <span class="btn p" style="margin-top: 16px"
+              >Pinch your first reel <span class="n">8</span></span
+            >
+            <p style="margin-top: 12px"><span class="btn q">or write one by hand</span></p>
+          </div>
+          <div class="tabbar">
+            <div class="on"><span class="ico"></span>Recipes</div>
+            <div><span class="ico"></span>Pinch</div>
+          </div>
+        </div>
+      </div>
+      <div>
+        <div class="label">Phone · no match</div>
+        <div class="frame phone small" style="height: 560px">
+          <div class="hd"><span class="mark">∩ Pinch</span></div>
+          <div style="padding: 12px 16px">
+            <div class="field" style="color: #222">⌕ chickpeas</div>
+            <div class="chips" style="margin: 12px 0">
+              <span class="chip on">✓ quick ✕</span><span class="chip on">✓ dessert ✕</span>
+            </div>
+            <p class="b" style="margin-top: 24px">
+              Nothing matches "chickpeas" with quick and dessert.
+            </p>
+            <p style="margin-top: 8px">
+              <span class="btn">Clear the filters</span> <span class="n">9</span>
+            </p>
+          </div>
+          <div class="tabbar">
+            <div class="on"><span class="ico"></span>Recipes</div>
+            <div><span class="ico"></span>Pinch</div>
+          </div>
+        </div>
+      </div>
+      <div>
+        <div class="label">Phone · error</div>
+        <div class="frame phone small" style="height: 560px">
+          <div class="hd"><span class="mark">∩ Pinch</span></div>
+          <div style="padding: 24px 16px">
+            <p class="b">We couldn't load your recipes.</p>
+            <p class="muted">Check your connection.</p>
+            <span class="btn" style="margin-top: 12px">Try again</span>
+          </div>
+          <div class="tabbar">
+            <div class="on"><span class="ico"></span>Recipes</div>
+            <div><span class="ico"></span>Pinch</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="callouts">
+      <ol start="7">
+        <li>
+          <b>Skeleton tiles match the 4:5 cards</b> (ui-craft: skeletons that match the final
+          layout; metrics m04 CLS).
+        </li>
+        <li>
+          <b>The empty state shows what a pinched recipe becomes and sends to the Pinch tab</b>, the
+          next action (ui-craft: empty states explain and offer the next action). Writing by hand
+          stays, quieter.
+        </li>
+        <li>
+          <b
+            >Applied filters are removable chips (✓ and ✕); the no-match message is on the first
+            screen</b
+          >
+          (m05 §5: it was below the fold). In the default frames no chip is applied: "quick" is
+          first, at rest.
+        </li>
+        <li>
+          <b>⋯ at the end of the header on every width and both tabs</b> holds "Write a recipe by
+          hand": manual entry is a fallback (§1.7), not a peer of the tabs (plan §7 surface
+          closure).
+        </li>
+      </ol>
+    </div>
+
+    <script>
+      const R = [
+        ["פנקייק מושלם, גבוה ואוורירי", "photo", "YT", "", "30 min · 11 ingredients"],
+        ["Shakshuka with feta", "photo", "IG", "", "25 min · 8 ingredients"],
+        ["Red lentil soup", "emo", "", "🍲", "30 min · 4 ingredients"],
+        ["Mujadara", "photo", "FB", "", "45 min · 6 ingredients"],
+        ["חומוס ביתי", "emo", "", "🧆", "20 min · 7 ingredients"],
+        ["Spaghetti aglio e olio", "photo", "IG", "", "15 min · 5 ingredients"],
+        ["Chickpea curry", "emo", "", "🍛", "25 min · 9 ingredients"],
+        ["Greek salad", "photo", "YT", "", "10 min · 7 ingredients"],
+        ["Chicken tacos", "emo", "", "🌮", "20 min · 8 ingredients"],
+        ["Chocolate chip cookies", "photo", "IG", "", "25 min · 9 ingredients"],
+      ];
+      function card([t, k, g, e, m]) {
+        return (
+          '<div class="card"><div class="tile ' +
+          k +
+          '">' +
+          e +
+          (g ? '<span class="glyph">' + g + "</span>" : "") +
+          '</div><div class="t" dir="auto">' +
+          t +
+          '</div><div class="m">' +
+          m +
+          "</div></div>"
+        );
+      }
+      function cards(n, from = 0) {
+        return R.slice(from, from + n)
+          .map(card)
+          .join("");
+      }
+      document.querySelectorAll("[data-cards]").forEach((el) => {
+        const [n, f] = el.dataset.cards.split(",").map(Number);
+        el.innerHTML = cards(n, f || 0) + el.innerHTML;
+      });
+    </script>
+  </body>
+</html>

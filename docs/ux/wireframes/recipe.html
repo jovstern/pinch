@@ -1,0 +1,400 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Pinch A recipe</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.1.11"></script>
+    <style type="text/tailwindcss">
+      /* shadcn/ui neutral theme, as generated (colour is out of scope in this revision). The field
+   border is darkened from neutral-200 so an empty field is visible (3:1 for UI), and muted text is #666 so it passes on the muted fill. */
+      :root {
+        --background: #ffffff;
+        --foreground: #0a0a0a;
+        --card: #ffffff;
+        --card-foreground: #0a0a0a;
+        --popover: #ffffff;
+        --popover-foreground: #0a0a0a;
+        --primary: #171717;
+        --primary-foreground: #fafafa;
+        --secondary: #f5f5f5;
+        --secondary-foreground: #171717;
+        --muted: #f5f5f5;
+        --muted-foreground: #666666;
+        --accent: #f5f5f5;
+        --accent-foreground: #171717;
+        --destructive: #dc2626;
+        --border: #e5e5e5;
+        --input: #8a8a8a;
+        --ring: #a3a3a3;
+      }
+      @theme inline {
+        --color-background: var(--background);
+        --color-foreground: var(--foreground);
+        --color-card: var(--card);
+        --color-card-foreground: var(--card-foreground);
+        --color-popover: var(--popover);
+        --color-popover-foreground: var(--popover-foreground);
+        --color-primary: var(--primary);
+        --color-primary-foreground: var(--primary-foreground);
+        --color-secondary: var(--secondary);
+        --color-secondary-foreground: var(--secondary-foreground);
+        --color-muted: var(--muted);
+        --color-muted-foreground: var(--muted-foreground);
+        --color-accent: var(--accent);
+        --color-accent-foreground: var(--accent-foreground);
+        --color-destructive: var(--destructive);
+        --color-border: var(--border);
+        --color-input: var(--input);
+        --color-ring: var(--ring);
+      }
+      @layer base {
+        * {
+          @apply border-border;
+        }
+      }
+    </style>
+    <style>
+      body {
+        background: #d4d4d4;
+        font:
+          16px/1.5 -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
+          sans-serif;
+        color: #222;
+        padding: 32px;
+      }
+      .page {
+        font:
+          700 31px Georgia,
+          serif;
+      }
+      .lede {
+        max-width: 1100px;
+        margin: 6px 0 24px;
+      }
+      .label {
+        font: 600 12px sans-serif;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: #444;
+        margin-bottom: 8px;
+      }
+      .n {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 20px;
+        height: 20px;
+        border-radius: 999px;
+        background: #e0338a;
+        color: #fff;
+        font: 700 11px sans-serif;
+        vertical-align: middle;
+        flex: none;
+      }
+      .callouts {
+        max-width: 1100px;
+        margin: 16px 0 40px;
+        background: #fff;
+        border-radius: 12px;
+        padding: 16px 24px;
+      }
+      .callouts ol {
+        padding-left: 22px;
+        display: grid;
+        gap: 6px;
+      }
+      .callouts table {
+        border-collapse: collapse;
+        margin-top: 8px;
+        font-size: 14px;
+      }
+      .callouts td,
+      .callouts th {
+        border: 1px solid #ddd;
+        padding: 6px 10px;
+        text-align: left;
+        vertical-align: top;
+      }
+      .frames {
+        display: flex;
+        gap: 40px;
+        align-items: flex-start;
+        flex-wrap: wrap;
+      }
+      .hatch {
+        background: repeating-linear-gradient(135deg, #ececec 0 8px, transparent 8px 14px);
+      }
+    </style>
+  </head>
+  <body>
+    <h1 class="page">A recipe</h1>
+    <p class="lede">
+      Pass 02 · revision 2 (UX only, shadcn greyscale). <code>/recipes/:id</code>. Breadcrumbs
+      replace "‹ Recipes". The source (Instagram, YouTube, Facebook, or "Written by you") sits in
+      the subtitle under the title, and links to the reel.
+    </p>
+
+    <div class="frames">
+      <div>
+        <div class="label">Phone · 360 · from Instagram</div>
+        <div id="p-rec"></div>
+      </div>
+      <div>
+        <div class="label">Phone · written by hand · ⋯ open</div>
+        <div id="p-hand"></div>
+      </div>
+    </div>
+    <div class="callouts">
+      <ol>
+        <li>
+          <b>Breadcrumbs on every inner page</b> (shadcn Breadcrumb):
+          <i>My recipes › Shakshuka with feta</i>. Each step back is a 44 px link; the current page
+          is plain text. A long title is cut with an ellipsis, never the first crumb. The My recipes
+          tab stays selected above it.
+        </li>
+        <li>
+          <b>The subtitle names the source</b>: "Instagram · @cookwithmaya ↗" opens the reel in a
+          new tab. A recipe written by hand says "Written by you", with no link.
+        </li>
+        <li>
+          <b>Cook is the one primary action</b>; ⋯ holds Edit and Delete (shadcn DropdownMenu).
+          Delete asks first (AlertDialog), then a toast offers Undo.
+        </li>
+        <li><b>Tags</b> are read-only Badges here; tapping one opens My recipes filtered by it.</li>
+      </ol>
+    </div>
+
+    <div class="label">Desktop · 1440</div>
+    <div id="d-rec"></div>
+    <div class="callouts">
+      <ol start="5">
+        <li>
+          <b>Picture beside the title</b>, the breadcrumbs above both. Ingredients sit in a panel
+          beside the steps, so the whole recipe fits without scrolling back.
+        </li>
+      </ol>
+      <p class="mt-2">
+        <b>What the user sees first:</b> the picture and the name. <b>Primary action:</b> Cook.
+      </p>
+    </div>
+
+    <script>
+      /* Shared wireframe parts: shadcn/ui (new-york, v4) markup in its neutral theme. Colour is out of
+   scope in this revision (UX only), so this is shadcn's own greyscale. Two departures, for touch:
+   controls are 44 px tall (shadcn: 36), and field text is 16 px (iOS zooms below that). */
+      const cx = (...a) => a.filter(Boolean).join(" ");
+      const base =
+        "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium shrink-0 [&_svg]:size-4 [&_svg]:shrink-0";
+      const B = {
+        primary: `${base} bg-primary text-primary-foreground shadow-xs h-11 px-5`,
+        outline: `${base} border border-input bg-background shadow-xs h-11 px-4`,
+        secondary: `${base} bg-secondary text-secondary-foreground h-11 px-4`,
+        ghost: `${base} h-11 px-3`,
+        link: `${base} h-11 px-1 underline underline-offset-4`,
+        icon: `${base} size-11`,
+        disabled: "opacity-50 pointer-events-none",
+      };
+      const btn = (v, label, extra = "") => `<button class="${cx(B[v], extra)}">${label}</button>`;
+      const I = {
+        user: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>',
+        search:
+          '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>',
+        pen: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>',
+        clip: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/></svg>',
+        spin: '<svg class="animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>',
+        alert:
+          '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4M12 17h.01"/></svg>',
+        check:
+          '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M20 6 9 17l-5-5"/></svg>',
+        right:
+          '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m9 18 6-6-6-6"/></svg>',
+        left: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m15 18-6-6 6-6"/></svg>',
+        more: '<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg>',
+        sliders:
+          '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/></svg>',
+        x: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>',
+        ext: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M15 3h6v6M10 14 21 3M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></svg>',
+        timer:
+          '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2 2M10 2h4"/></svg>',
+        plus: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>',
+        grip: '<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="9" cy="6" r="1.5"/><circle cx="15" cy="6" r="1.5"/><circle cx="9" cy="12" r="1.5"/><circle cx="15" cy="12" r="1.5"/><circle cx="9" cy="18" r="1.5"/><circle cx="15" cy="18" r="1.5"/></svg>',
+        img: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-5-5L5 21"/></svg>',
+        trash:
+          '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></svg>',
+        sparkle:
+          '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z"/></svg>',
+        undo: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></svg>',
+        sun: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2"/></svg>',
+      };
+      const n = (k) => (k ? `<span class="n">${k}</span>` : "");
+      const badge = (t, v = "primary") =>
+        `<span class="inline-flex items-center justify-center rounded-md px-1.5 text-xs font-semibold min-w-5 h-5 ${v === "primary" ? "bg-primary text-primary-foreground" : "border"}">${t}</span>`;
+      const chip = (t, on) =>
+        `<button class="inline-flex items-center gap-1.5 h-10 rounded-full px-4 text-sm shrink-0 border ${on ? "bg-primary text-primary-foreground border-primary font-medium" : "bg-background border-input"} [&_svg]:size-3.5">${on ? I.check : ""}${t}</button>`;
+      const avatar = `<button class="${B.icon} rounded-full bg-muted text-muted-foreground" aria-label="Account">${I.user}</button>`;
+      const sep = `<div class="bg-border h-px w-full"></div>`;
+
+      /* Tabs (shadcn TabsList / TabsTrigger). The owning tab stays active on inner pages. */
+      const tabs = (active, count = 1, cls = "") => {
+        const t = (id, label, x = "") =>
+          `<button data-state="${active === id ? "active" : "inactive"}" class="inline-flex flex-1 h-full items-center justify-center gap-1.5 rounded-md border border-transparent px-3 text-sm font-medium whitespace-nowrap text-muted-foreground data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm">${label}${x}</button>`;
+        return `<div role="tablist" class="bg-muted inline-flex h-11 items-center rounded-lg p-[3px] ${cls}">${t("new", "New recipe", count ? " " + badge(count) : "")}${t("lib", "My recipes")}</div>`;
+      };
+
+      /* Breadcrumb (shadcn Breadcrumb). Links are 44 px tall rows; the current page is not a link. */
+      const crumbs = (items, k) =>
+        `<nav aria-label="breadcrumb" class="flex items-center gap-2"><ol class="flex items-center gap-1 text-sm text-muted-foreground min-w-0">${items
+          .map((it, i) => {
+            const last = i === items.length - 1;
+            return `${i ? `<li role="presentation" class="[&_svg]:size-3.5 shrink-0">${I.right}</li>` : ""}<li class="min-w-0 ${last ? "shrink-0" : ""}">${last ? `<span aria-current="page" class="text-foreground font-medium">${it}</span>` : `<a class="block h-11 leading-[44px] px-1 underline-offset-4 hover:underline truncate ${i > 0 ? "max-w-[150px]" : ""}">${it}</a>`}</li>`;
+          })
+          .join("")}</ol>${n(k)}</nav>`;
+
+      /* Toast (Sonner). */
+      const toast = (
+        { icon = "check", title, desc = "", action = "", tone = "" },
+        k,
+      ) => `<div class="bg-popover text-popover-foreground border rounded-lg shadow-lg p-3 pl-4 flex items-center gap-3 w-full">
+  <span class="size-6 rounded-full flex items-center justify-center shrink-0 [&_svg]:size-3.5 ${tone === "error" ? "bg-destructive text-white" : tone === "busy" ? "bg-muted text-foreground" : "bg-primary text-primary-foreground"}">${I[icon]}</span>
+  <div class="flex-1 min-w-0"><p class="text-sm font-semibold">${title}</p>${desc ? `<p class="text-[13px] text-muted-foreground truncate">${desc}</p>` : ""}</div>${action ? btn("ghost", action, "font-semibold underline underline-offset-4") : ""}${n(k)}</div>`;
+
+      /* Header. Phone: tabs + avatar. Desktop: tabs, then "Write a recipe" and the avatar. No logo for now. */
+      const headerPhone = (tab, count = 1, k) =>
+        `<header class="flex items-center gap-2 px-4 pt-3">${tabs(tab, count, "flex-1")}${avatar}${n(k)}</header>`;
+      const headerDesk = (tab, count = 1, k) =>
+        `<header class="flex items-center gap-4 px-12 py-4 border-b">${tabs(tab, count, "w-[340px]")}<span class="flex-1"></span>${btn("outline", I.pen + "Write a recipe")}${n(k)}${avatar}</header>`;
+
+      /* Mobile: "Write a recipe" floats bottom right on both tabs (an extended FAB). */
+      const fab = (k) =>
+        `<button class="${B.outline} absolute right-4 bottom-5 rounded-full shadow-lg h-12 px-5 bg-background">${I.pen}Write a recipe</button>${k ? `<span class="absolute right-2 bottom-14">${n(k)}</span>` : ""}`;
+
+      const phone = (inner, h = 780) =>
+        `<div class="bg-background text-foreground w-[360px] rounded-[4px] overflow-hidden relative" style="height:${h}px">${inner}</div>`;
+      const desk = (inner, h = 900) =>
+        `<div class="bg-background text-foreground w-[1440px] rounded-[4px] overflow-hidden relative" style="height:${h}px">${inner}</div>`;
+      const put = (id, html) => {
+        document.getElementById(id).innerHTML = html;
+      };
+
+      /* Sample content. Photos are grey stand-ins; recipes without a picture get an emoji tile (U14). */
+      const G = [
+        "#b5b5b5,#5f5f5f",
+        "#cfcfcf,#7a7a7a",
+        "#a8a8a8,#4a4a4a",
+        "#d9d9d9,#8c8c8c",
+        "#bdbdbd,#666",
+      ];
+      const R = [
+        ["Shakshuka with feta", 0, "Instagram", "", "35 min · 10 ingredients"],
+        ["Tomato pasta", 1, "YouTube", "", "20 min · 6 ingredients"],
+        ["Red lentil soup", -1, "", "🍲", "30 min · 4 ingredients"],
+        ["Mujadara", 2, "Facebook", "", "45 min · 6 ingredients"],
+        ["Spaghetti aglio e olio", 3, "Instagram", "", "15 min · 5 ingredients"],
+        ["Chickpea curry", -1, "", "🍛", "25 min · 9 ingredients"],
+        ["Greek salad", 4, "YouTube", "", "10 min · 7 ingredients"],
+        ["Chocolate chip cookies", 0, "Instagram", "", "25 min · 9 ingredients"],
+        ["Chicken tacos", -1, "", "🌮", "20 min · 8 ingredients"],
+        ["Banana bread", 1, "YouTube", "", "70 min · 9 ingredients"],
+        ["Miso salmon", 3, "Instagram", "", "20 min · 6 ingredients"],
+        ["Lemon olive oil cake", -1, "", "🍋", "55 min · 8 ingredients"],
+      ];
+      const tile = (g, e, src, cls = "") =>
+        `<div class="aspect-[4/5] rounded-xl relative overflow-hidden flex items-center justify-center text-[52px] ${cls}" style="background:${g < 0 ? "#f0f0f0" : `linear-gradient(160deg,${G[g]})`}">${e}${src ? `<span class="absolute top-2 right-2 rounded bg-white/90 text-neutral-900 text-[10px] font-bold px-1.5 leading-5">${src}</span>` : ""}</div>`;
+      const rcard = ([t, g, src, e, m]) =>
+        `<div>${tile(g, e, src)}<h3 class="font-semibold text-[15px] leading-tight mt-2 line-clamp-2">${t}</h3><p class="text-[13px] text-muted-foreground">${m}</p></div>`;
+
+      const ING = [
+        "2 tbsp olive oil",
+        "1 onion, diced",
+        "1 red pepper, sliced",
+        "3 cloves garlic",
+        "1 tsp cumin",
+        "1 tsp sweet paprika",
+        "800 g crushed tomatoes",
+        "6 eggs",
+        "100 g feta",
+        "Parsley, to serve",
+      ];
+      const STEPS = [
+        "Warm the oil in a wide pan over medium heat. Soften the onion and pepper, 8–10 minutes.",
+        "Add the garlic, cumin and paprika; stir for a minute.",
+        "Pour in the tomatoes and simmer until thick, about 10 minutes.",
+        "Make six wells, crack in the eggs, cover and cook 5–7 minutes.",
+        "Crumble the feta over, scatter the parsley, serve from the pan.",
+      ];
+      const tagRow = (t) =>
+        `<div class="flex flex-wrap gap-1.5">${t.map((x) => `<span class="inline-flex items-center rounded-md border px-2 h-7 text-xs font-medium">${x}</span>`).join("")}</div>`;
+      const sub = (src) =>
+        src
+          ? `<a class="inline-flex items-center gap-1 underline underline-offset-4 [&_svg]:size-3.5">${src} ${I.ext}</a>`
+          : "Written by you";
+      const body = (
+        compact,
+      ) => `<p class="font-semibold text-lg mt-6">Ingredients</p><ul class="mt-2 divide-y">${ING.slice(
+        0,
+        compact ? 6 : 10,
+      )
+        .map((i) => `<li class="py-2">${i}</li>`)
+        .join(
+          "",
+        )}</ul>${compact ? `<p class="text-sm text-muted-foreground mt-1">+ 4 more</p>` : ""}
+ <p class="font-semibold text-lg mt-6">Steps</p><ol class="mt-2 grid gap-3 list-decimal pl-5">${STEPS.slice(
+   0,
+   compact ? 2 : 5,
+ )
+   .map((s) => `<li>${s}</li>`)
+   .join("")}</ol>`;
+
+      put(
+        "p-rec",
+        phone(
+          `${headerPhone("lib", 1)}<div class="px-3">${crumbs(["My recipes", "Shakshuka with feta"], 1)}</div>
+ ${tile(0, "", "", "rounded-none aspect-[5/4]")}
+ <main class="px-4 pt-4"><h1 class="text-2xl font-semibold leading-tight">Shakshuka with feta</h1>
+  <p class="text-sm text-muted-foreground mt-1">${sub("Instagram · @cookwithmaya")} ${n(2)}</p>
+  <p class="text-sm text-muted-foreground">Serves 4 · Prep 10 min · Cook 25 min</p>
+  <div class="mt-3">${tagRow(["middle-eastern", "breakfast", "vegetarian"])}</div>${n(4)}
+  <div class="flex gap-2 mt-4">${btn("primary", "Cook", "flex-1")}<button class="${B.outline} w-11 px-0" aria-label="More">${I.more}</button>${n(3)}</div>
+  ${body(true)}</main>`,
+          1240,
+        ),
+      );
+
+      put(
+        "p-hand",
+        phone(
+          `${headerPhone("lib", 1)}<div class="px-3">${crumbs(["My recipes", "Red lentil soup"])}</div>
+ ${tile(-1, "🍲", "", "rounded-none aspect-[5/2]")}
+ <main class="px-4 pt-4"><h1 class="text-2xl font-semibold leading-tight">Red lentil soup</h1>
+  <p class="text-sm text-muted-foreground mt-1">${sub("")} · Serves 4 · Cook 30 min</p>
+  <div class="flex gap-2 mt-4 relative">${btn("primary", "Cook", "flex-1")}<button class="${B.outline} w-11 px-0 ring-[3px] ring-ring/40">${I.more}</button>
+   <div class="absolute right-0 top-12 w-48 bg-popover rounded-md border p-1 shadow-md z-10">
+    <div class="flex items-center gap-2 px-2 h-11 text-sm [&_svg]:size-4">${I.pen}Edit</div>
+    <div class="bg-border h-px -mx-1 my-1"></div>
+    <div class="flex items-center gap-2 px-2 h-11 text-sm text-destructive [&_svg]:size-4">${I.trash}Delete…</div></div></div>
+  ${body(true)}</main>`,
+          1240,
+        ),
+      );
+
+      put(
+        "d-rec",
+        desk(
+          `${headerDesk("lib", 1)}<div class="max-w-[1200px] mx-auto pt-4">${crumbs(["My recipes", "Shakshuka with feta"])}
+ <div class="grid grid-cols-[320px_1fr] gap-12 items-end mt-4">${tile(0, "", "")}
+  <div><h1 class="text-5xl font-semibold leading-tight">Shakshuka with feta</h1>
+   <p class="text-muted-foreground mt-2">${sub("Instagram · @cookwithmaya")} · Serves 4 · Prep 10 min · Cook 25 min · ≈ 310 kcal a serving</p>
+   <div class="mt-3">${tagRow(["middle-eastern", "breakfast", "vegetarian"])}</div>
+   <div class="flex gap-2 mt-5">${btn("primary", "Cook", "w-48")}<button class="${B.outline} w-11 px-0">${I.more}</button></div></div></div>
+ <div class="grid grid-cols-[360px_1fr] gap-12 mt-10">
+  <div class="rounded-xl border p-5 self-start"><p class="font-semibold text-lg">Ingredients ${n(5)}</p><ul class="mt-2 divide-y">${ING.map((i) => `<li class="py-2">${i}</li>`).join("")}</ul></div>
+  <div><p class="font-semibold text-lg">Steps</p><ol class="mt-2 grid gap-4 list-decimal pl-5 max-w-[62ch]">${STEPS.map((s) => `<li>${s}</li>`).join("")}</ol></div></div></div>`,
+          1400,
+        ),
+      );
+    </script>
+  </body>
+</html>

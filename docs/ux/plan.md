@@ -8,7 +8,9 @@ revised every milestone (`m<NN>.md` holds each pass). Evidence lives in `researc
 the user says so**. Approved on 2026-11-09: **U4** and **U2**; the rest are `proposed`, to be
 built after M6 with the answers in §9.
 
-Last revised: 2026-11-09, the user's approvals and answers (§8, §9).
+Last revised: 2026-11-09, pass 02 (`pass-02.md`): §2 personas, §4 analogues, §6 tokens, §8
+U13–U16 proposed and U1/U5 replaced. Before that, the same day: the user's approvals and
+answers (§8, §9).
 
 ## 1. Audience
 
@@ -59,6 +61,15 @@ English, saves recipes in both. Phone only — a laptop is for work. Cooks on we
   still on at step 4.
 - **Why primary:** she is the median of the research (A2, A3, A5, A8, A17, A21) and the
   reason Pinch exists: a reel → a recipe → a dinner.
+- **Device split (pass 02):** phone ~100%: in bed and on the bus to pinch, at the counter to
+  cook.
+- **She remembers by the picture (pass 02):** "the one with the eggs in the red pan", not its
+  name (D4 Tasty: hard to find "without remembering its name"; E4 NN/g). A card with no
+  picture is a recipe she won't find.
+- **Moment of truth:** Paste → the reel's picture appears in the queue before she has put the
+  phone down.
+- **Accessibility stretch:** wet hands and the phone propped at arm's length: targets a
+  knuckle can hit, type readable from 60 cm.
 
 ### Daniel — secondary
 
@@ -74,6 +85,13 @@ the counter; searches by what is in the fridge.
   guessed, he fixes one quantity, saves, and in March "chickpeas" finds it.
 - **Why secondary:** he sets the bar for review and search; if the draft earns his trust it
   earns anyone's (A5: 40% trust AI recipes).
+- **Device split (pass 02):** `[ASSUMPTION]` a laptop on Thursday night to pinch three or four
+  links and check them against the posts; the iPad on the counter on Friday.
+- **Moment of truth:** a draft with the post beside it and a yellow mark on the one quantity
+  the model doubted (E3 Dext: "anything… unsure of comes to you first").
+- **Accessibility stretch:** Hebrew and English recipes mixed in one list, and reading
+  glasses left in the other room: each block in its own direction, quantities in tabular
+  figures, nothing below 16 px on the recipe.
 
 ## 3. What matters most
 
@@ -143,6 +161,10 @@ with half the screen empty (m05 §7). **Breaks:** no two-column cook layout (B4,
 | **Exclusive status + free tags; "want to cook" shelf** | Goodreads (C12), Letterboxd (C13), Mela (B5), CookBook's last-cooked (B12) | N2: a small library browsed by intent, not facets | `toCook` / `cooked` with dates; "Want to cook" and "Cooked" as sections; mood tags stay as they are |
 | **A few mood chips, full filters behind a button** | Spotify's five genre options (C14) | N2: 35 chips kill the list on a phone | 4–5 chips from the cook's own tags ("quick", "vegetarian", "dinner"…) in one scrolling row; a Radix Dialog sheet holds the rest |
 | **One place, no decisions at capture** | Raindrop's Unsorted (C1), Stasht (A21) | N1: "any system that depends on you doing manual work at save time will decay" | No category, no tag, no name at pinch time; everything happens in review |
+| **Two tabs: add vs mine** (pass 02) | Tasty's Discover / My Recipes (D4), Shazam's Home / Library (E1) | The user asked for a clear split; the form buried the library | Recipes and Pinch tabs (U13) |
+| **An inbox of things to process, with states** (pass 02) | Things' Inbox (E2), Dext's In Processing / To Review (E3) | N1/D1: drafts are work, not recipes | The queue on the Pinch tab: making / ready to check (names what's missing) / failed |
+| **A literal cover when there's no picture** (pass 02) | NN/g picture superiority (E4), dev.to's generated cover | N2: recall by picture | The dish's emoji on a cuisine tint (U14) |
+| **The source beside the extracted fields** (pass 02) | Dext's image-left, fields-right (E3) | D1: checking is a glance across | Check page: post + caption left on desktop |
 | **Share target + Paste button** | Web Share Target (C15), Clipboard API (C17), Umami's paste entry (B9) | N1: Android gets the share sheet after install; iOS has none (WebKit 194593) | `share_target` in the manifest → `/add?url=`; a "Paste" button that calls `readText()` on tap |
 
 ## 5. Principles
@@ -150,9 +172,10 @@ with half the screen empty (m05 §7). **Breaks:** no two-column cook layout (B4,
 1. **Two taps, no questions.** Pinching never asks for a category, a name or a tag; it never
    opens a modal; it is confirmed by a toast and a card, not a page. *Rules out:* the current
    four-line textarea with a hint as the home's hero, and any "choose a cookbook" step.
-2. **The library is the home.** The first screen is recipes you can see and choose, with
-   capture as a bar above them, not a form with a list underneath. *Rules out:* anything but
-   the capture bar and the queue strip above the first card; a filter panel in the page flow.
+2. **Adding is the home; the library is one tap away.** The first tab (New recipe) and the
+   first screen are the input and the queue under it (the user's sketch, pass 02 revision 1: "pinch it or
+   add a recipe is the main event of the app, so it always be first"). My recipes is its own
+   tab. *Rules out:* recipes and the queue on one page; a filter panel in the page flow.
 3. **One hand, wet.** Anything used at the stove is big, one thing at a time, keeps the
    screen on, and can be reached with a knuckle. *Rules out:* Edit and Delete above the
    ingredients; 16 px steps; relying on scroll to find the current step.
@@ -194,6 +217,17 @@ the portrait tiles and the dark theme are what keep it from reading as a templat
 | `--color-check` | `#E8B931` | `#F2C94C` | "check this" marks in review (yellow, never alone: an icon and text go with it) |
 | `--color-cooked` | `#5E7A3A` | `#8FB35E` | "cooked" and success (olive), never alone |
 | `--color-danger` | `#B3261E` | `#F2706A` | delete, failed |
+| `--color-check-soft` | `#FBF1D3` | `#3A2F12` | background of a field to check (pass 02, proposed) |
+| `--color-check-mark` | `#8A6A00` | `#F2C94C` | the ◆ glyph of a check mark (pass 02, proposed: `check` is too light as a glyph on paper) |
+| `--color-danger-soft` | `#FBE4E1` | `#3D1715` | background of a missing required field (pass 02, proposed) |
+| `--color-tile-tomato` | `#F8E1D8` | `#4A2419` | no-picture cover: Italian, Mexican (pass 02, proposed, U14) |
+| `--color-tile-saffron` | `#F5E3B8` | `#3E2F16` | cover: Middle Eastern, Indian |
+| `--color-tile-olive` | `#DDE5C8` | `#29331A` | cover: Mediterranean, other |
+| `--color-tile-sea` | `#DCE9E9` | `#1E3436` | cover: Asian |
+| `--color-tile-plum` | `#EEE2EA` | `#3B2434` | cover: French, American, desserts |
+
+Pass 02 checked every pair of these with the contrast script (table in `pass-02.md` §6): all
+AA, ink and muted text on every tile.
 
 Contrast must be re-checked in the token PR with a checker for every pair in both themes
 (`ui-craft`: AA everywhere); the values above were chosen to pass and the muted/paper pair
@@ -226,9 +260,11 @@ their line until U5 gives them a face; imports stay dashed (a filled row would h
 filled button); the dialog keeps a line (it would vanish over the dark scrim) and the header
 its rule.
 
-**Imagery.** Thumbnails (M6, §5) shown **4:5 portrait**, the reel's own shape, on cards and at
-the top of a recipe; a text or manual recipe gets a tinted tile (`--color-accent-soft` and
-siblings by cuisine) with the cuisine's emoji at 40 px, as §5 already says. The platform's
+**Imagery.** Thumbnails (M6, §5) shown **4:5 portrait**, the reel's own shape, on cards; at
+the top of a recipe on a phone, full width at 5:4 (pass 02: a 4:5 picture would fill the
+first screen and push Cook down). A recipe with no picture gets a cover (U14, pass 02): the
+dish's emoji (from the model; else the cuisine's) at 64 px on a cuisine tint
+(`--color-tile-*`). The platform's
 mark (a small monochrome glyph, 16 px) sits on the card's corner. No stock photos, no hero
 illustration.
 
@@ -247,17 +283,22 @@ later).
 
 | Address | Screen | Job |
 |---|---|---|
-| `/` | **Library** (header: mark; a compact capture bar; the queue strip when non-empty; mood chips; sections "To check", "Want to cook", "Recent", "Cooked"; a grid of portrait cards) | N1, N2, D2 |
-| `/?q=…&tags=…` | Library, searching / filtered (one flat grid, the count at the top) | N2, D2 |
+| `/` | **New recipe** tab, the default (pass 02 rev 2): one input for a link or text that grows when needed, Paste, **Pinch it**, and the queue under it ("Cooking… · N ready"; Review / Retry / Dismiss) | N1, D1 |
+| `/recipes` | **My recipes** tab: search, Filters (time, source, the five tag facets), tag chips, a grid of portrait cards; "Want to cook" / "Cooked" sections when U9 lands | N2, D2 |
+| `/recipes?q=…&tags=…` | Library, searching / filtered (one flat grid, the count at the top) | N2, D2 |
 | `/recipes/:id` | **Recipe** (thumbnail, title, meta, tags, **Cook** as the one primary action, "Open the reel", ingredients, steps; Edit and more under a `…` menu) | N3, D2 |
 | `/recipes/:id/cook` | **Cook mode** (new) | N3, D3 |
 | `/imports/:id` | **Check the recipe** (the review, as a recipe preview with marks; tap to edit) | D1 |
 | `/recipes/new`, `/recipes/:id/edit` | The form, shortened | manual entry, fixes |
-| `/add?url=…&text=…` | Share-target landing (new): creates the import and goes to `/` with the toast | N1 (Android PWA) |
+| `/add?url=…&text=…` | Share-target landing (new): creates the import and goes to `/` (Add a recipe) with the toast | N1 (Android PWA) |
 | `*` | Page not found | — |
 
-On a phone the header is the mark and a `+` (New recipe) in a `…`; no bottom tab bar yet —
-three screens don't need one; revisit if the PWA grows a Shopping or Plan tab. Desktop and
+Pass 02 (U13, revision 1 from the user's sketch): two tabs, **New recipe** (first, the
+default) and **My recipes**, as shadcn Tabs (revision 2: no logo for now). Phone: the tabs and the
+avatar are the header, and **Write a recipe** floats bottom right on both tabs. Desktop: the
+tabs on the left, Write a recipe and the avatar on the right. Every inner page has breadcrumbs
+under the header. Every async change to a recipe's status confirms itself in a toast. (Replaces "no bottom tab bar yet": the user asked for a clear split between
+capture and the library.) Desktop and
 tablet: the library grid goes to 3–4 columns; the recipe and cook mode go two-column
 (ingredients left, steps right) above 768 px.
 
@@ -290,7 +331,7 @@ tablet: the library grid goes to 3–4 columns; the recipe and cook mode go two-
 | | Loading | Empty | Error | Partial / other |
 |---|---|---|---|---|
 | Library | card-shaped placeholders in the grid, the bar drawn first (no CLS, metrics m04) | a tinted tile with a one-line example of what a pinched recipe becomes, the bar focused, "or write one" | "We couldn't load your recipes." Try again | filtered: "3 match" at the top; none: "Nothing matches — clear"; offline (PWA): the last list from the cache, the bar says "You're offline — we'll pinch it when you're back" |
-| Queue strip | shimmer per row, a stage word | hidden | a failed row: what wasn't found, Retry · Keep the link · Dismiss | stalled: "Nothing is working on this" (§4.3) |
+| Queue (Pinch tab) | shimmer per row, a stage word | three "how it works" steps | a failed row: what wasn't found, Retry · Keep the link · Dismiss | stalled: "Nothing is working on this" (§4.3) |
 | Check | the recipe skeleton | — | as the recipe | partial draft: "We found the ingredients but no steps" with the red mark on Steps |
 | Recipe | skeleton with the 4:5 tile | — | Try again; not found → back to the library | no thumbnail → tinted tile |
 | Cook mode | — | — | wake lock refused → the quiet note | reduced motion: no swipe animation |
@@ -316,11 +357,11 @@ state is text, not a dot; the mood chips are checkboxes as today's TagPicker.
 
 | Job | Screen | Served? |
 |---|---|---|
-| N1 pinch | Library bar, `/add`, toast, queue strip | yes after U1, U6, U8 |
-| N2 pick | Library sections, chips, cards | yes after U1, U5, U7, U9 |
+| N1 pinch | Pinch tab, `/add`, toast, queue | yes after U13, U15, U6, U8 |
+| N2 pick | Recipes tab, chips, cards with a face | yes after U13, U14, U7, U9 |
 | N3 cook | Cook mode, "Open the reel" | yes after U2, U10 |
 | D1 trust | Check | yes after U3 |
-| D2 find | Library search | yes today; better after U1 |
+| D2 find | Recipes search | yes today; better after U13 |
 | D3 tablet | Cook mode two-column | yes after U2 |
 | — | `/recipes/new` | serves no persona job directly (manual entry is the fallback the design asks for, §1.7); kept, demoted to the `…` menu |
 
@@ -329,7 +370,7 @@ state is text, not a dot; the mood chips are checkboxes as today's TagPicker.
 Ranked by impact over effort. Effort in PRs of ≤ ~300 lines. Impact is on the primary
 persona unless named. **Status:** `proposed` for all; only the user moves one.
 
-### U1 — The library is the home; capture is a bar — `flow` + `look` — **high** — 2 PRs — `proposed`
+### U1 — The library is the home; capture is a bar — `flow` + `look` — **high** — 2 PRs — `replaced by U13 (pass 02)`
 
 - **Problem:** Noa's N2 journey: the first recipe is ~1,000 px down at 360 px; `/` is a form
   with a list under it (`m05.md` §1–3, `home-imports-360-full.png`). The spec names the
@@ -396,7 +437,7 @@ persona unless named. **Status:** `proposed` for all; only the user moves one.
   the 165 kB budget — the observer measures it in PR 1; the fallback is loading it only on
   the recipe and cook routes.
 
-### U5 — Cards with a face — `component` — **medium** (high after M6) — 1 PR — `proposed`
+### U5 — Cards with a face — `component` — **medium** (high after M6) — 1 PR — `absorbed by U14 (pass 02)`
 
 - **Problem:** eleven identical bars (`m05.md` §3). Nothing to browse by.
 - **Change:** a portrait card (4:5 tile; the thumbnail when M6 lands, else the cuisine tile
@@ -497,6 +538,22 @@ persona unless named. **Status:** `proposed` for all; only the user moves one.
   accessible name; a sticky Save bar on the form pages (B3). Validation and focus behaviour
   unchanged.
 - **Touches:** `RecipeForm.tsx`, `TextField.tsx`, `TagPicker.tsx`. No server change.
+
+### Pass 02 (2026-11-09): U13–U16 — `proposed`
+
+Detail, evidence and wireframes in `pass-02.md` §4 and `wireframes/`. **U13 replaces U1** (a
+capture bar on the home) and **U14 absorbs U5** (cards with a face); U6's strip moves to the
+Pinch tab.
+
+- **U13 — Two tabs, Recipes and Pinch** — `flow` — **high** — 2 PRs — Must.
+- **U14 — A face for every recipe** (the post's picture, else the dish's emoji from Gemini on a
+  cuisine tint) — `component` + server — **high** — 2 PRs — Must.
+- **U15 — Paste and go** (Paste sends; ⌘V anywhere on desktop) — `flow` — **medium** — 1 PR —
+  Should.
+- **U16 — Two columns on wide screens** for the recipe and cook mode, cook chrome in the
+  recipe's direction — `look` — **medium** — 1–2 PRs — Should.
+
+Suggested order after pass 02: U13 → U14 → U3 → U6 (on Pinch) → U15 → U16 → U7 → U10.
 
 ### Later, not proposed yet (needs a decision first, §9)
 
