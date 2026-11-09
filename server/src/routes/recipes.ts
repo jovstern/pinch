@@ -10,7 +10,7 @@ import {
   toRecipe,
   type RecipeDocument,
 } from "../db/recipes.ts";
-import { WITHOUT_THUMBNAIL_IMAGE } from "../db/thumbnail.ts";
+import { WITHOUT_MEDIA } from "../db/thumbnail.ts";
 import { HttpError, parseInput } from "../errors.ts";
 import { sendThumbnail } from "./thumbnail.ts";
 
@@ -55,7 +55,7 @@ export function recipesRouter(db: Db) {
   router.get("/:id", async (req, res) => {
     const recipe = await recipes.findOne(
       { _id: parseId(req.params.id), ownerId: req.userId },
-      { projection: WITHOUT_THUMBNAIL_IMAGE },
+      { projection: WITHOUT_MEDIA },
     );
     if (!recipe) throw recipeNotFound();
     res.json(toRecipe(recipe));
