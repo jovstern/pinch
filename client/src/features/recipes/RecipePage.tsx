@@ -4,7 +4,7 @@ import { Link, useParams } from "react-router";
 import { Button } from "../../components/Button.tsx";
 import { Thumbnail } from "../../components/Thumbnail.tsx";
 import { ingredientLine } from "./ingredientLine.ts";
-import { LazyDeleteRecipeButton } from "./LazyDeleteRecipeButton.tsx";
+import { DeleteRecipeButton } from "./DeleteRecipeButton.tsx";
 import { RecipeLoadError } from "./RecipeLoadError.tsx";
 import { recipeQuery } from "./recipeQueries.ts";
 import { tagLabel } from "./tagLabels.ts";
@@ -78,7 +78,7 @@ export function RecipePage() {
         <Button asChild variant="secondary">
           <Link to={`/recipes/${recipe.id}/edit`}>Edit</Link>
         </Button>
-        <LazyDeleteRecipeButton recipe={recipe} />
+        <DeleteRecipeButton recipe={recipe} />
       </div>
 
       {/* Each list is named by its heading, for screen readers (and the tests). */}
