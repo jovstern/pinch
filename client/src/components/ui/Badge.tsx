@@ -1,5 +1,6 @@
 import type { ComponentProps } from "react";
 import { cva, type VariantProps } from "class-variance-authority";
+import { Slot } from "radix-ui";
 import { cn } from "../../lib/cn.ts";
 
 // shadcn/ui's Badge (D26), on Pinch's tokens: a small label that isn't a control (a tag, a
@@ -19,8 +20,13 @@ const badgeVariants = cva(
   },
 );
 
-type BadgeProps = ComponentProps<"span"> & VariantProps<typeof badgeVariants>;
+type BadgeProps = ComponentProps<"span"> &
+  VariantProps<typeof badgeVariants> & {
+    // Render the child instead (a Link: a recipe's tag) with these styles (Radix Slot).
+    asChild?: boolean;
+  };
 
-export function Badge({ className, variant, ...props }: BadgeProps) {
-  return <span className={cn(badgeVariants({ variant }), className)} {...props} />;
+export function Badge({ className, variant, asChild = false, ...props }: BadgeProps) {
+  const Component = asChild ? Slot.Root : "span";
+  return <Component className={cn(badgeVariants({ variant }), className)} {...props} />;
 }
