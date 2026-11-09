@@ -52,7 +52,7 @@ export function ScreenshotsUpload() {
       {/* A label with Button's secondary look: the file input inside it is hidden, so the label
           shows its focus (as TagPicker's chips), and relative keeps the input inside it. */}
       <Button asChild variant="secondary">
-        <label className="relative cursor-pointer has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-focus-visible:outline-accent-strong">
+        <label className="relative cursor-pointer has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-focus-visible:outline-ring">
           {upload.isPending ? "Sending…" : "Or add screenshots"}
           <input
             type="file"

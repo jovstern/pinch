@@ -6,8 +6,10 @@ import { cn } from "../../lib/cn.ts";
 // shadcn/ui's Button (D26), on Pinch's tokens: 44 px tall for touch, body-size text, and the
 // global focus ring (globals.css). One look per kind of action, so every button and button-like
 // link matches. An unavailable one (aria-disabled) doesn't answer hover or a press.
+// Where Pinch departs from shadcn: at least 44 px, not exactly, and no nowrap, so a long label
+// (a running timer, text zoom, a 320 px screen) wraps instead of spilling out.
 const buttonVariants = cva(
-  "inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-control px-4 font-semibold whitespace-nowrap disabled:opacity-60 aria-disabled:cursor-not-allowed aria-disabled:opacity-60",
+  "inline-flex min-h-11 items-center justify-center gap-2 rounded-control px-4 font-semibold disabled:opacity-60 aria-disabled:cursor-not-allowed aria-disabled:opacity-60",
   {
     variants: {
       variant: {
@@ -16,9 +18,9 @@ const buttonVariants = cva(
         // A fill, not a bordered box (plan §6: depth from surfaces, not lines).
         secondary:
           "bg-secondary text-secondary-foreground hover:not-aria-disabled:bg-border active:not-aria-disabled:bg-border/70",
-        // Only for what can't be undone. Its label is on-accent too (globals.css).
+        // Only for what can't be undone.
         destructive:
-          "bg-destructive text-on-accent hover:not-aria-disabled:bg-destructive/90 active:not-aria-disabled:bg-destructive/80",
+          "bg-destructive text-destructive-foreground hover:not-aria-disabled:bg-destructive/90 active:not-aria-disabled:bg-destructive/80",
         // A destructive action that isn't the page's main one (or only opens a question): it
         // shouldn't shout.
         "destructive-ghost":

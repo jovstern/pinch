@@ -59,7 +59,8 @@ export function TextField({
       </label>
       {multiline ? (
         // Grows with its text (field-sizing), so a long step is read whole; up to a limit, so a long
-        // pasted caption doesn't push the button below it far off the screen.
+        // pasted caption doesn't push the button below it far off the screen. Input's box, repeated
+        // until a shadcn Textarea arrives (R3/R8).
         <textarea
           ref={inputRef}
           {...shared}

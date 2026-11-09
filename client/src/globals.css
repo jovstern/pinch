@@ -62,8 +62,10 @@
 }
 
 /* shadcn/ui's names (D26), so its components (components/ui/) read Pinch's tokens. Aliases only,
-   no new colours: each follows its token in both themes, so contrast is as above. Not `accent`:
-   shadcn's is a hover fill, Pinch's the brand colour; copied components use `fill` for it. */
+   no new colours: each follows its token in both themes, so contrast is as above. shadcn's set,
+   kept whole on purpose: the coming components (R2–R8) use the ones nothing uses yet. Components
+   use shadcn's name where shadcn has one, Pinch's otherwise. Not `accent`: shadcn's is a hover
+   fill, Pinch's the brand colour; copied components use `fill` for it. */
 @theme {
   --color-background: var(--color-surface);
   --color-foreground: var(--color-text);
@@ -78,6 +80,7 @@
   --color-muted: var(--color-fill);
   --color-muted-foreground: var(--color-text-muted);
   --color-destructive: var(--color-danger);
+  --color-destructive-foreground: var(--color-on-accent);
   --color-input: var(--color-border-field);
   --color-ring: var(--color-accent-strong);
 }
