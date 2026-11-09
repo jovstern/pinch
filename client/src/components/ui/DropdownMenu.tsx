@@ -3,7 +3,8 @@ import { DropdownMenu as DropdownMenuPrimitive } from "radix-ui";
 import { cn } from "../../lib/cn.ts";
 
 // shadcn/ui's DropdownMenu (D26), on Pinch's tokens: a Radix menu (arrow keys, Escape, focus
-// back to its trigger). Only the parts Pinch uses; items 44 px tall for touch.
+// back to its trigger); an item can be a React Router Link (asChild). Only the parts Pinch uses;
+// items 44 px tall for touch.
 export const DropdownMenu = DropdownMenuPrimitive.Root;
 export const DropdownMenuTrigger = DropdownMenuPrimitive.Trigger;
 
@@ -39,7 +40,7 @@ export function DropdownMenuItem({
   return (
     <DropdownMenuPrimitive.Item
       className={cn(
-        "flex min-h-11 cursor-default items-center gap-2 rounded-[calc(var(--radius-control)-0.25rem)] px-3 outline-none select-none data-disabled:opacity-60 data-highlighted:bg-secondary [&_svg]:size-4 [&_svg]:shrink-0",
+        "flex min-h-11 cursor-default items-center gap-2 rounded-control px-3 outline-none select-none data-disabled:opacity-60 data-highlighted:bg-secondary [&_svg]:size-4 [&_svg]:shrink-0",
         variant === "destructive" && "text-destructive data-highlighted:bg-destructive/10",
         className,
       )}

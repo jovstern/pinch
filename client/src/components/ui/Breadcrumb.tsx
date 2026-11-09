@@ -10,9 +10,10 @@ type BreadcrumbProps = {
 };
 
 // shadcn/ui's Breadcrumb markup (D26), on Pinch's tokens, as one component: every inner page
-// says where it belongs (D24). Where Pinch departs from shadcn: one prop per part instead of six
-// parts to compose, as the pages only ever pass links and a page; each link 44 px tall for touch;
-// one row, where a long title is cut with an ellipsis, never the first crumb (the way back).
+// says where it belongs (D24). The links are React Router's. Where Pinch departs from shadcn: one
+// prop per part instead of six parts to compose, as the pages only ever pass links and a page;
+// each link 44 px tall for touch; one row, where only the recipe's title is cut with an
+// ellipsis, never the first crumb (the way back).
 export function Breadcrumb({ links, page }: BreadcrumbProps) {
   return (
     <nav aria-label="Breadcrumb">
@@ -33,7 +34,9 @@ export function Breadcrumb({ links, page }: BreadcrumbProps) {
             </li>
           </Fragment>
         ))}
-        <li className="min-w-0">
+        {/* The title is the page itself (My recipes › title) or the link before it (My recipes ›
+            title › Cook): only the title gives way, so "Cook" or "Edit" stays whole. */}
+        <li className={links.length > 1 ? "shrink-0" : "min-w-0"}>
           <span
             aria-current="page"
             dir="auto"

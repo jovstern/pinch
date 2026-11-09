@@ -3,8 +3,9 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { Slot } from "radix-ui";
 import { cn } from "../../lib/cn.ts";
 
-// shadcn/ui's Badge (D26), on Pinch's tokens: a small label that isn't a control (a tag, a
-// count). Full round, like every chip (plan §6).
+// shadcn/ui's Badge (D26), on Pinch's tokens: a small label (a tag, a count), or with asChild a
+// link drawn as one (a recipe's tag, which opens My recipes filtered by it). Full round, like
+// every chip (plan §6).
 const badgeVariants = cva(
   "inline-flex w-fit items-center justify-center gap-1 rounded-full px-3 py-1 text-sm",
   {
