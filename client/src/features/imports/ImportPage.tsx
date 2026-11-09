@@ -3,8 +3,8 @@ import { ImportForm } from "./ImportForm.tsx";
 import { ImportList } from "./ImportList.tsx";
 import { ScreenshotsUpload } from "./ScreenshotsUpload.tsx";
 
-// The New recipe tab, at / (design §14, D24): paste a link or a post's text, and the queue of
-// what's being turned into recipes.
+// The New recipe tab, at / (design §14, D24): paste a link or a post's text (or add
+// screenshots), and the queue of what's being turned into recipes.
 export function ImportPage() {
   // The paste box, where focus goes after an import is retried or dismissed.
   const pasteBoxRef = useRef<HTMLTextAreaElement>(null);

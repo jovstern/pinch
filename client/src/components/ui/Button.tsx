@@ -22,6 +22,9 @@ const buttonVariants = cva(
         // recipe, floating over the list), so "Pinch it" stays the one filled button (pass-02 §13).
         outline:
           "border border-input bg-background hover:not-aria-disabled:bg-secondary active:not-aria-disabled:bg-border",
+        // No surface until hovered: a small tool beside a field (Paste) or a quiet way in
+        // (Or add screenshots).
+        ghost: "hover:not-aria-disabled:bg-secondary active:not-aria-disabled:bg-border",
         // Only for what can't be undone.
         destructive:
           "bg-destructive text-destructive-foreground hover:not-aria-disabled:bg-destructive/90 active:not-aria-disabled:bg-destructive/80",

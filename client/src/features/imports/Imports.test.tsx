@@ -86,20 +86,36 @@ test("a pasted text, anything with a space or a new line in it, is sent as text"
   });
 });
 
-test("Enter after a link makes a new line, and the link is still sent as a link", async () => {
+test("Enter sends what's in the box", async () => {
   const fetch = stubApi([[]]);
   renderApp("/");
 
-  const box = screen.getByRole("textbox", { name: "Pinch a recipe from a reel" });
-  await userEvent.type(box, `${reel}{Enter}`);
-  expect(box).toHaveValue(`${reel}\n`);
-  expect(fetch).not.toHaveBeenCalledWith("/api/imports", expect.anything());
+  await userEvent.type(
+    screen.getByRole("textbox", { name: "Pinch a recipe from a reel" }),
+    `${reel}{Enter}`,
+  );
 
-  await userEvent.click(screen.getByRole("button", { name: "Pinch it" }));
   expect(fetch).toHaveBeenCalledWith("/api/imports", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ type: "link", url: reel }),
+  });
+});
+
+test("Shift+Enter makes a new line, and the text is sent with it", async () => {
+  const fetch = stubApi([[]]);
+  renderApp("/");
+
+  const box = screen.getByRole("textbox", { name: "Pinch a recipe from a reel" });
+  await userEvent.type(box, "Shakshuka{Shift>}{Enter}{/Shift}4 eggs, 1 can of tomatoes.");
+  expect(box).toHaveValue("Shakshuka\n4 eggs, 1 can of tomatoes.");
+  expect(fetch).not.toHaveBeenCalledWith("/api/imports", expect.anything());
+
+  await userEvent.type(box, "{Enter}");
+  expect(fetch).toHaveBeenCalledWith("/api/imports", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ type: "text", text: "Shakshuka\n4 eggs, 1 can of tomatoes." }),
   });
 });
 
@@ -154,10 +170,7 @@ test("a link from another site is refused before it's sent, until it's fixed", a
   await userEvent.click(screen.getByRole("button", { name: "Pinch it" }));
 
   expect(await screen.findByRole("alert")).toHaveTextContent(linkMessage);
-  // The hint, then the error.
-  expect(box).toHaveAccessibleDescription(
-    `A link to an Instagram, Facebook or YouTube post, or the recipe's text. ${linkMessage}`,
-  );
+  expect(box).toHaveAccessibleDescription(linkMessage);
   expect(fetch).not.toHaveBeenCalledWith("/api/imports", expect.anything());
 
   await userEvent.clear(box);

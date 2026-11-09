@@ -1,6 +1,7 @@
-import { useId, type Ref } from "react";
+import { useId } from "react";
 import { FieldError } from "./FieldError.tsx";
 import { Input } from "./ui/Input.tsx";
+import { Textarea } from "./ui/Textarea.tsx";
 
 // What TextField needs from a TanStack Form field, so it fits any text field of any form.
 type TextFieldApi = {
@@ -18,8 +19,6 @@ type TextFieldProps = {
   inputMode?: "numeric";
   // Always shown under the input, and read with it.
   hint?: string;
-  // The textarea itself (multiline only: the paste box on /), to move focus to it.
-  inputRef?: Ref<HTMLTextAreaElement>;
   className?: string;
 };
 
@@ -31,7 +30,6 @@ export function TextField({
   multiline,
   inputMode,
   hint,
-  inputRef,
   className = "",
 }: TextFieldProps) {
   const id = useId();
@@ -58,13 +56,11 @@ export function TextField({
         {label}
       </label>
       {multiline ? (
-        // Grows with its text (field-sizing), so a long step is read whole; up to a limit, so a long
-        // pasted caption doesn't push the button below it far off the screen. Input's box, repeated
-        // until a shadcn Textarea arrives (R3/R8).
-        <textarea
-          ref={inputRef}
+        // Up to a limit, so a long pasted caption doesn't push the button below it far off the
+        // screen.
+        <Textarea
           {...shared}
-          className="field-sizing-content max-h-80 min-h-24 w-full rounded-control border border-input bg-card px-3 py-2 aria-invalid:border-destructive"
+          className="max-h-80"
           onChange={(event) => {
             field.handleChange(event.target.value);
           }}
