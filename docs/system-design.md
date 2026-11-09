@@ -159,8 +159,9 @@ of an attempt clears it.
 - **Retries with backoff.** A failed attempt goes back to `pending` with `nextAttemptAt` = now +
   10 s, then 60 s. After 3 attempts → `failed` with a readable `error`. A failure no retry can
   fix (not a recipe, a video over 3 minutes) fails the import at once, with its own message
-  (D23). A job whose worker died on its third attempt is failed when it's claimed again, not
-  run a fourth time.
+  and `noRetry: true` (D23): the list offers only Dismiss, and the API refuses its retry. A
+  job whose worker died on its third attempt is failed when it's claimed again, not run a
+  fourth time.
 - **Back-pressure.** At most **2 jobs at a time** per worker, to stay within Gemini rate limits.
 - **Idle polling.** With nothing to do, the worker checks again after 1 s.
 - **Errors don't stop it.** A database error (Mongo restarting) is logged, and the loop tries
@@ -239,7 +240,7 @@ Import {
   status: "pending" | "processing" | "ready" | "failed",
   step?: "fetching" | "analyzing",
   input: { type: "link" | "text" | "images", url?, platform?, text?, images? },
-  attempts, nextAttemptAt, leaseUntil?, error?,
+  attempts, nextAttemptAt, leaseUntil?, error?, noRetry?,
   draft?: RecipeDraft, draftThumbnail?: Binary,
   createdAt, updatedAt, expiresAt   // TTL
 }
@@ -337,7 +338,7 @@ POST   /api/imports                    { type: "link", url } | { type: "text", t
 GET    /api/imports                    my imports that are not done yet
 GET    /api/imports/:id                status, step, error, draft
 POST   /api/imports/:id/approve        the edited draft, as POST /api/recipes; nutritionPerServing from the stored draft (D20) → 201 recipe (409 if not ready)
-POST   /api/imports/:id/retry          failed → pending, attempts and error cleared → 202 (409 if not failed)
+POST   /api/imports/:id/retry          failed → pending, attempts, error and noRetry cleared → 202 (409 if not failed, or noRetry)
 DELETE /api/imports/:id                discard / dismiss
 ```
 
@@ -424,7 +425,7 @@ changes**. The planned design:
 | D20 | Editing is `PUT`: it replaces what the user can edit and keeps the fields the server owns (`_id`, `ownerId`, `source`, `createdAt`, `sourceImportId`, `nutritionPerServing`, later `thumbnail`), listed in the route | The form always sends the whole recipe, so a field the user clears is simply left out; no `null`/`""` rules | `PATCH` with `null` to clear a field |
 | D21 | React Router (declarative: `<Routes>` in `App.tsx`, `useParams`, `Link`) | A handful of screens; the most familiar API and the least setup, easy to read line by line | TanStack Router (type-safe routes and loaders, more concepts) |
 | D22 | The daily cap (20) counts links pasted and Retry clicks, in a per-user, per-UTC-day counter (`usage`) raised atomically by both routes; past it, 429 | Imports are deleted once done, so counting them would undercount; the unique `{ownerId, day}` index makes two first counts at once safe on a standalone Mongo (as D9); the routes are where a user asks for work; automatic retries (3 a link) aren't counted, so at most 60 Gemini calls a day | Counting each Gemini call in the worker (exact, but a link could be accepted and then fail with "limit reached") |
-| D23 | "Not a recipe" and "too long" fail the import at once (`NoRetryError`, its message shown to the user); every other error is retried | Trying again gives the same answer and costs a Gemini call each time; the user learns why straight away | Retry everything (3 Gemini calls for a cat video, and a vague message) |
+| D23 | "Not a recipe" and "too long" fail the import at once (`NoRetryError`, its message shown to the user); every other error is retried | Trying again gives the same answer and costs a Gemini call each time; the user learns why straight away; nor is the user offered a Retry that can't help, and would use one of the day's 20 | Retry everything (3 Gemini calls for a cat video, and a vague message) |
 
 ## 11. Risks
 
@@ -482,8 +483,8 @@ column below it.
 From M4 the paste-a-link box on `/` becomes the main action, and import status shows there:
 "Your imports" under the box, each with its platform, its link and how far it has got (waiting,
 working on it, trying again soon, ready to review, or why it failed); announced as it changes.
-A ready one offers Review the recipe; a failed one, Retry (three more tries) and Dismiss; a
-stalled one (§4.3) says nothing is working on it, and offers Dismiss. Dismiss deletes it, with
+A ready one offers Review the recipe; a failed one, Retry (three more tries) and Dismiss, or
+only Dismiss when no retry can fix it (D23); a stalled one (§4.3) says nothing is working on it, and offers Dismiss. Dismiss deletes it, with
 no question: the link can be pasted again. A link from another site is refused under the box
 before it's sent.
 

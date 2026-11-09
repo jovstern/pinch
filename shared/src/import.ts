@@ -74,6 +74,9 @@ export const ImportSchema = z.object({
   stalled: z.boolean(),
   // Why it failed, in words the user can read.
   error: z.string().optional(),
+  // On a failed one: true when no retry can fix it (not a recipe, too long: design D23), so
+  // Retry isn't offered.
+  noRetry: z.boolean().optional(),
   // The recipe the worker made, for the user to review (design D1).
   draft: RecipeDraftSchema.optional(),
   createdAt: z.iso.datetime(),

@@ -309,7 +309,12 @@ test("approve refuses an import with no draft yet, an invalid recipe and a missi
 });
 
 test("POST /api/imports/:id/retry puts a failed import back in the queue, from the start", async () => {
-  const id = await insertDone({ status: "failed", attempts: 3, error: "We couldn't." });
+  const id = await insertDone({
+    status: "failed",
+    attempts: 3,
+    error: "We couldn't.",
+    noRetry: false,
+  });
 
   const response = await request(app).post(`/api/imports/${id}/retry`);
 
@@ -317,6 +322,7 @@ test("POST /api/imports/:id/retry puts a failed import back in the queue, from t
   const job = ImportSchema.parse(response.body);
   expect(job).toMatchObject({ status: "pending", attempts: 0 });
   expect(job).not.toHaveProperty("error");
+  expect(job).not.toHaveProperty("noRetry");
   // The worker may take it now.
   const stored = await importsCollection(db).findOne({ _id: new ObjectId(id) });
   expect(stored?.nextAttemptAt.getTime()).toBeLessThanOrEqual(Date.now());
@@ -363,6 +369,18 @@ test("each link and Retry counts once for today; one that can't happen doesn't c
   // Not failed: 409, not counted.
   const ready = await insertDone({ draft });
   expect((await request(app).post(`/api/imports/${ready}/retry`)).status).toBe(409);
+  // A failure no retry can fix (D23): 409, not counted, and it stays failed.
+  const notARecipe = await insertDone({
+    status: "failed",
+    attempts: 1,
+    error: "This doesn't look like a recipe.",
+    noRetry: true,
+  });
+  const refused = await request(app).post(`/api/imports/${notARecipe}/retry`);
+  expect(refused.status).toBe(409);
+  expect(refused.body).toMatchObject({ error: { code: "import_no_retry" } });
+  const still = await importsCollection(db).findOne({ _id: new ObjectId(notARecipe) });
+  expect(still?.status).toBe("failed");
   // Not there: 404, not counted.
   const missing = new ObjectId().toHexString();
   expect((await request(app).post(`/api/imports/${missing}/retry`)).status).toBe(404);
