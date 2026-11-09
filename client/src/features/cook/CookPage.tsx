@@ -3,8 +3,10 @@ import { useId, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router";
 import { Button } from "../../components/Button.tsx";
 import { RecipeLoadError } from "../recipes/RecipeLoadError.tsx";
+import { stepText } from "../recipes/stepText.ts";
 import { recipeQuery } from "../recipes/recipeQueries.ts";
 import { stepDurations } from "./durations.ts";
+import { CookSkeleton } from "./CookSkeleton.tsx";
 import { IngredientChecklist } from "./IngredientChecklist.tsx";
 import { stepIngredients } from "./stepIngredients.ts";
 import { TimerBar } from "./TimerBar.tsx";
@@ -34,7 +36,7 @@ export function CookPage() {
   const { timers, now, start, stop, isRunning } = useTimers();
   const navigate = useNavigate();
 
-  if (status === "pending") return <p className="text-text-muted">Loading the recipe…</p>;
+  if (status === "pending") return <CookSkeleton />;
   if (isLoadingError) {
     return <RecipeLoadError error={error} retry={() => void refetch()} retrying={isFetching} />;
   }
@@ -85,7 +87,7 @@ export function CookPage() {
           dir="auto"
           className="mt-3 max-w-prose font-display text-2xl font-medium text-pretty sm:text-3xl"
         >
-          {step}
+          {stepText(step)}
         </p>
       </section>
 

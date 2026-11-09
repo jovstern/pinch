@@ -4,6 +4,7 @@ import { Link, useParams } from "react-router";
 import { Button } from "../../components/Button.tsx";
 import { Thumbnail } from "../../components/Thumbnail.tsx";
 import { ingredientLine } from "./ingredientLine.ts";
+import { stepText } from "./stepText.ts";
 import { DeleteRecipeButton } from "./DeleteRecipeButton.tsx";
 import { RecipeLoadError } from "./RecipeLoadError.tsx";
 import { recipeQuery } from "./recipeQueries.ts";
@@ -105,8 +106,8 @@ export function RecipePage() {
       </h2>
       <ol aria-labelledby="steps" className="mt-3 grid max-w-prose list-decimal gap-3 pl-6">
         {recipe.steps.map((step, index) => (
-          <li key={index} className="pl-1 text-pretty">
-            {step}
+          <li key={index} dir="auto" className="pl-1 text-pretty">
+            {stepText(step)}
           </li>
         ))}
       </ol>
