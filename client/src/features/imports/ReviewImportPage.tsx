@@ -4,7 +4,7 @@ import { Link, useNavigate, useParams } from "react-router";
 import { Button } from "../../components/ui/Button.tsx";
 import { Thumbnail } from "../../components/Thumbnail.tsx";
 import { deleteResource, sendJson } from "../../lib/api.ts";
-import { showToast, toastCouldntSave, toastSaved } from "../../lib/toasts.ts";
+import { toastCouldntSave, toastDiscarded, toastSaved } from "../../lib/toasts.tsx";
 import { LazyRecipeForm, usePreloadRecipeForm } from "../recipes/LazyRecipeForm.tsx";
 import { toFormValues } from "../recipes/recipeFormValues.ts";
 import { RecipeLoadError } from "../recipes/RecipeLoadError.tsx";
@@ -55,7 +55,7 @@ export function ReviewImportPage() {
         refetchType: "all",
       });
       void navigate("/", { replace: true });
-      showToast("success", "Discarded", { description: job?.draft?.title, duration: 8000 });
+      toastDiscarded(job?.draft?.title);
     },
     onError: () => {
       toastCouldntSave(() => {

@@ -1,0 +1,100 @@
+import { LoaderCircle } from "lucide-react";
+import type { ExternalToast } from "sonner";
+
+// Every toast in the app, by name, with how long it stays (design §14; the table in the
+// wireframe home.html). No Undo until the API has one (M8 F4).
+const seconds = (n: number) => n * 1000;
+const short = seconds(3);
+const normal = seconds(5);
+const long = seconds(8);
+// An error stays until it's closed, so it can't be missed.
+const untilClosed = Infinity;
+
+// Sonner is its own chunk, as the Toaster is (Layout): it keeps ~9 kB out of the first load. If
+// it can't be fetched, nothing is shown: a toast is a nicety, and the page shows the change too.
+function showToast(kind: "message" | "success" | "error", title: string, options: ExternalToast) {
+  import("sonner").then(
+    ({ toast }) => toast[kind](title, options),
+    () => undefined,
+  );
+}
+
+export function dismissToast(id: string) {
+  import("sonner").then(
+    ({ toast }) => toast.dismiss(id),
+    () => undefined,
+  );
+}
+
+// Sent: the queue takes it from here.
+export function toastPinching() {
+  showToast("message", "Pinching it", {
+    description: "Usually under a minute",
+    icon: <LoaderCircle className="size-4 motion-safe:animate-spin" />,
+    duration: normal,
+  });
+}
+
+// The import's id is the toast's: a ready one takes the place of its failure, and the failure
+// can be closed once it's retried or gone (importToasts.ts).
+export function toastReady(id: string, title: string, review: () => void) {
+  showToast("success", `${title} is ready to review`, {
+    id,
+    duration: long,
+    action: { label: "Review", onClick: review },
+  });
+}
+
+// retry is left out when no retry can fix it (D23).
+export function toastImportFailed(
+  id: string,
+  title: string,
+  reason: string | undefined,
+  retry: (() => void) | undefined,
+) {
+  showToast("error", title, {
+    id,
+    description: reason,
+    duration: untilClosed,
+    closeButton: true,
+    action: retry && { label: "Retry", onClick: retry },
+  });
+}
+
+// Past the day's cap (design §1): trying again won't help, so no Try again.
+export function toastDailyLimit(message: string) {
+  showToast("error", message, { duration: untilClosed, closeButton: true });
+}
+
+// A new recipe in My recipes, from Review or written by hand. Without the wireframe's View:
+// saving already opens the recipe.
+export function toastSaved(title: string) {
+  showToast("success", "Saved to My recipes", { description: title, duration: normal });
+}
+
+export function toastChangesSaved() {
+  showToast("success", "Changes saved", { duration: short });
+}
+
+export function toastDeleted(title: string) {
+  showToast("success", `Deleted ${title}`, { duration: long });
+}
+
+export function toastDiscarded(title: string | undefined) {
+  showToast("success", "Discarded", { description: title, duration: long });
+}
+
+export function toastDismissed() {
+  showToast("success", "Dismissed", { duration: long });
+}
+
+// A change that couldn't reach the server, with Try again. Only for one-click actions, which can
+// simply be sent again; a form keeps its error by its fields.
+export function toastCouldntSave(tryAgain: () => void) {
+  showToast("error", "Couldn't save", {
+    description: "Check your connection",
+    duration: untilClosed,
+    closeButton: true,
+    action: { label: "Try again", onClick: tryAgain },
+  });
+}

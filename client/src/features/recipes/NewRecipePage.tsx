@@ -2,7 +2,7 @@ import { RecipeSchema, type RecipeInput } from "@pinch/shared";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router";
 import { sendJson } from "../../lib/api.ts";
-import { toastSaved } from "../../lib/toasts.ts";
+import { toastSaved } from "../../lib/toasts.tsx";
 import { LazyRecipeForm } from "./LazyRecipeForm.tsx";
 import { emptyRecipe } from "./recipeFormValues.ts";
 import { recipeListsKey, recipeQuery } from "./recipeQueries.ts";

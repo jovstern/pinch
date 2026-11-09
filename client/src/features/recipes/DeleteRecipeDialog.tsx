@@ -4,7 +4,7 @@ import { AlertDialog } from "radix-ui";
 import { useNavigate } from "react-router";
 import { Button } from "../../components/ui/Button.tsx";
 import { deleteResource } from "../../lib/api.ts";
-import { showToast } from "../../lib/toasts.ts";
+import { toastDeleted } from "../../lib/toasts.tsx";
 import { recipeListsKey } from "./recipeQueries.ts";
 
 type DeleteRecipeDialogProps = {
@@ -33,9 +33,9 @@ export function DeleteRecipeDialog({ recipe, onClose, focusOnClose }: DeleteReci
         refetchType: "all",
       });
       void navigate("/recipes");
-      // No Undo until the API has one (M8 F4). A failure stays in the dialog, by its buttons:
+      // A failure stays in the dialog, by its buttons:
       // the dialog shuts out a toast's.
-      showToast("success", `Deleted ${recipe.title}`, { duration: 8000 });
+      toastDeleted(recipe.title);
     },
   });
 

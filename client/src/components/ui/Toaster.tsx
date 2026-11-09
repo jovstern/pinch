@@ -5,6 +5,11 @@ import { Toaster as Sonner } from "sonner";
 
 // md: Tailwind's 768 px, where the toasts move from the top to the bottom right (design §14).
 const wide = "(min-width: 48rem)";
+// On a phone, under the header (its tabs, 64 px), so a toast never covers them.
+const belowHeader = { top: "4.5rem" };
+// The app's one focus ring (globals.css), which Sonner's own outline: none hides.
+const focusRing =
+  "focus-visible:outline-2! focus-visible:outline-offset-2! focus-visible:outline-ring!";
 
 function subscribe(onChange: () => void) {
   const media = matchMedia(wide);
@@ -23,6 +28,11 @@ export function Toaster() {
   return (
     <Sonner
       position={isWide ? "bottom-right" : "top-center"}
+      // Both: Sonner's phone rule (mobileOffset) stops at 600 px, the header's at 768.
+      offset={isWide ? undefined : belowHeader}
+      mobileOffset={belowHeader}
+      // Sonner's own dark colours (the close button's hover) follow the system, as Pinch's do.
+      theme="system"
       icons={{
         success: <CircleCheck className="size-4 text-primary" />,
         error: <TriangleAlert className="size-4 text-destructive" />,
@@ -38,13 +48,14 @@ export function Toaster() {
       }
       toastOptions={{
         // Important (!): Sonner's own rules are more specific than a utility. The action is a
-        // link-like button, as in the wireframe, 44 px tall for a thumb (ui-craft).
+        // link-like button, as in the wireframe, 44 px tall for a thumb (ui-craft); the close
+        // button stays a small mark but takes 44 px of touch (the after: around it).
         classNames: {
-          toast: "shadow-sheet! text-sm!",
+          toast: `shadow-sheet! text-sm! ${focusRing}`,
           title: "font-semibold!",
           description: "text-muted-foreground!",
-          actionButton:
-            "h-11! bg-transparent! px-3! text-sm! font-semibold! text-primary! underline! underline-offset-4",
+          actionButton: `h-11! bg-transparent! px-3! text-sm! font-semibold! text-primary! underline! underline-offset-4 ${focusRing}`,
+          closeButton: `after:absolute after:-inset-3.5 after:content-[''] ${focusRing}`,
         },
       }}
     />

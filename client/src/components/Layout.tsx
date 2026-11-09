@@ -1,14 +1,20 @@
-import { lazy, Suspense } from "react";
+import { lazy, Suspense, type ComponentType } from "react";
 import { Outlet, useLocation } from "react-router";
-import { useImportToasts } from "../features/imports/importToasts.tsx";
+import { useImportToasts } from "../features/imports/useImportToasts.ts";
 import { cn } from "../lib/cn.ts";
 import { ErrorBoundary } from "./ErrorBoundary.tsx";
 import { Header } from "./Header.tsx";
 
-// Its own chunk, with Sonner, fetched as the app starts (lib/toasts.ts). A toast sent before it
+// Its own chunk, with Sonner, fetched as the app starts (lib/toasts.tsx). A toast sent before it
 // is there shows once it is: Sonner gives a new Toaster the toasts still open. No fallback: there
-// is nothing to show until a toast is sent.
-const Toaster = lazy(async () => ({ default: (await import("./ui/Toaster.tsx")).Toaster }));
+// is nothing to show until a toast is sent. A chunk that won't load means no toasts, not a broken
+// page (the ErrorBoundary is around the page, not the frame).
+const Toaster = lazy<ComponentType>(() =>
+  import("./ui/Toaster.tsx").then(
+    (module) => ({ default: module.Toaster }),
+    () => ({ default: () => null }),
+  ),
+);
 
 // Every screen sits in this frame: the header with the two tabs (design §14, D24), and the
 // toasts, so an import that becomes ready or fails says so on any page.

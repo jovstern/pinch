@@ -1,20 +1,16 @@
-import { dailyLimitMessage, ImportSchema, type Import } from "@pinch/shared";
+import { dailyLimitMessage, type Import } from "@pinch/shared";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { LoaderCircle } from "lucide-react";
 import { useEffect, useRef } from "react";
 import { useNavigate } from "react-router";
-import { ApiError, sendJson } from "../../lib/api.ts";
-import { showToast, toastCouldntSave } from "../../lib/toasts.ts";
-import { importListQuery } from "./importQueries.ts";
-
-// Sent (design §14): the queue takes it from here. No Undo until the API has one (M8 F4).
-export function toastPinching() {
-  showToast("message", "Pinching it", {
-    description: "Usually under a minute",
-    icon: <LoaderCircle className="size-4 motion-safe:animate-spin" />,
-    duration: 5000,
-  });
-}
+import { ApiError } from "../../lib/api.ts";
+import {
+  dismissToast,
+  toastCouldntSave,
+  toastDailyLimit,
+  toastImportFailed,
+  toastReady,
+} from "../../lib/toasts.tsx";
+import { importListQuery, retryImport } from "./importQueries.ts";
 
 // What a failed import couldn't read, by what it was made from.
 const what: Record<Import["input"]["type"], string> = {
@@ -32,17 +28,14 @@ export function useImportToasts() {
   const { data } = useQuery(importListQuery);
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { mutate: retry } = useMutation({
-    // As Retry on the queue's card (ImportActions).
-    mutationFn: (id: string) =>
-      sendJson("POST", `/api/imports/${id}/retry`, undefined, ImportSchema),
+  const retry = useMutation({
+    mutationFn: retryImport,
     onError: (error, id) => {
-      // Past the day's cap, trying again won't help (design §1).
       if (error instanceof ApiError && error.status === 429) {
-        showToast("error", dailyLimitMessage, { duration: Infinity, closeButton: true });
+        toastDailyLimit(dailyLimitMessage);
       } else {
         toastCouldntSave(() => {
-          retry(id);
+          retry.mutate(id);
         });
       }
     },
@@ -56,30 +49,31 @@ export function useImportToasts() {
     const previous = before.current;
     before.current = data;
     if (previous === undefined || data === undefined) return;
+    const now = new Map(data.items.map((job) => [job.id, job.status]));
+    // A failure retried (from its card or another tab) or dismissed: its toast is out of date.
+    // A ready one takes its place by itself (the same id).
+    for (const job of previous.items) {
+      const status = now.get(job.id);
+      if (job.status === "failed" && status !== "failed" && status !== "ready") {
+        dismissToast(job.id);
+      }
+    }
     const statuses = new Map(previous.items.map((job) => [job.id, job.status]));
     for (const job of data.items) {
       if (statuses.get(job.id) === job.status) continue;
       if (job.status === "ready") {
-        showToast("success", `${job.draft?.title ?? "Your recipe"} is ready to review`, {
-          duration: 8000,
-          action: { label: "Review", onClick: () => void navigate(`/imports/${job.id}`) },
+        toastReady(job.id, job.draft?.title ?? "Your recipe", () => {
+          void navigate(`/imports/${job.id}`);
         });
       }
       if (job.status === "failed") {
-        showToast("error", `Couldn't read ${what[job.input.type]}`, {
-          description: job.error,
-          duration: Infinity,
-          closeButton: true,
-          // A failure no retry can fix offers none (D23).
-          action: job.noRetry
-            ? undefined
-            : {
-                label: "Retry",
-                onClick: () => {
-                  retry(job.id);
-                },
-              },
-        });
+        // No Retry when no retry can fix it (D23).
+        const again = job.noRetry
+          ? undefined
+          : () => {
+              retry.mutate(job.id);
+            };
+        toastImportFailed(job.id, `Couldn't read ${what[job.input.type]}`, job.error, again);
       }
     }
   }, [data, navigate, retry]);

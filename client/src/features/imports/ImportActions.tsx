@@ -1,9 +1,9 @@
-import { dailyLimitMessage, ImportSchema, type Import } from "@pinch/shared";
+import { dailyLimitMessage, type Import } from "@pinch/shared";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "../../components/ui/Button.tsx";
-import { ApiError, deleteResource, sendJson } from "../../lib/api.ts";
-import { showToast, toastCouldntSave } from "../../lib/toasts.ts";
-import { importListQuery } from "./importQueries.ts";
+import { ApiError, deleteResource } from "../../lib/api.ts";
+import { toastCouldntSave, toastDismissed } from "../../lib/toasts.tsx";
+import { importListQuery, retryImport } from "./importQueries.ts";
 
 // What a failed import offers (design §4.2): Retry puts it back in the queue for three more
 // tries; Dismiss deletes it. A stalled one (no worker is taking it, §4.3), and a failure no retry
@@ -20,8 +20,7 @@ export function ImportActions({ job, focusPasteBox }: { job: Import; focusPasteB
     await queryClient.invalidateQueries({ queryKey: importListQuery.queryKey });
   }
   const retry = useMutation({
-    // No body: the address says which import.
-    mutationFn: () => sendJson("POST", `/api/imports/${job.id}/retry`, undefined, ImportSchema),
+    mutationFn: retryImport,
     onSuccess: focusPasteBox,
     onSettled: refreshList,
   });
@@ -30,9 +29,10 @@ export function ImportActions({ job, focusPasteBox }: { job: Import; focusPasteB
     mutationFn: () => deleteResource(`/api/imports/${job.id}`),
     onSuccess: () => {
       focusPasteBox();
-      showToast("success", "Dismissed", { duration: 8000 });
+      toastDismissed();
     },
-    // Retry keeps its error by the card: a 429's words (the day's limit) aren't a toast's.
+    // A toast, so Try again is one tap. Retry's failure stays by the card instead: its 429 says
+    // the day's limit, which Try again can't fix.
     onError: () => {
       toastCouldntSave(() => {
         dismiss.mutate();
@@ -64,7 +64,7 @@ export function ImportActions({ job, focusPasteBox }: { job: Import; focusPasteB
             type="button"
             variant="outline"
             onClick={() => {
-              if (!busy) retry.mutate();
+              if (!busy) retry.mutate(job.id);
             }}
             aria-disabled={busy}
             aria-describedby={`import-${job.id}`}

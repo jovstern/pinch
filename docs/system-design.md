@@ -496,8 +496,10 @@ a recipe's status confirms itself in a toast, with the next step when there is o
 ready to review (Review), failed (Retry), saved, changes saved, deleted, discarded, couldn't save
 (Try again). Saved has no View: saving already opens the recipe. Couldn't save is for the
 one-click actions (Dismiss, Discard, the toast's Retry); a form keeps its error by its fields, and
-Delete's stays in its dialog. Undo waits for the API (M8 F4). Toasts sit at the top on a phone,
-bottom right from 768 px; they are the queue's announcements too (Sonner's region is live).
+Delete's stays in its dialog. Undo waits for the API (M8 F4). A status change toasts even when
+its card shows it too: one rule everywhere, chosen over ui-craft's "toasts only for things
+off-screen". Toasts sit at the top on a phone, under the header, and bottom right from 768 px;
+they are the queue's announcements too (Sonner's region is live).
 
 | Address | Screen | Its job | States |
 |---|---|---|---|

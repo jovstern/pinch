@@ -2,7 +2,7 @@ import { RecipeSchema, type RecipeInput } from "@pinch/shared";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useParams } from "react-router";
 import { sendJson } from "../../lib/api.ts";
-import { showToast } from "../../lib/toasts.ts";
+import { toastChangesSaved } from "../../lib/toasts.tsx";
 import { LazyRecipeForm, usePreloadRecipeForm } from "./LazyRecipeForm.tsx";
 import { toFormValues } from "./recipeFormValues.ts";
 import { RecipeLoadError } from "./RecipeLoadError.tsx";
@@ -34,7 +34,7 @@ export function EditRecipePage() {
       });
       // replace: Back never returns to the form; it goes to the recipe page Edit was opened from.
       void navigate(`/recipes/${id}`, { replace: true });
-      showToast("success", "Changes saved", { duration: 3000 });
+      toastChangesSaved();
     },
   });
 

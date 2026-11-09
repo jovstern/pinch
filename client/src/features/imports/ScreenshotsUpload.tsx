@@ -11,8 +11,8 @@ import { ImagePlus } from "lucide-react";
 import { useId, useState } from "react";
 import { Button } from "../../components/ui/Button.tsx";
 import { ApiError, sendForm } from "../../lib/api.ts";
+import { toastPinching } from "../../lib/toasts.tsx";
 import { importListQuery } from "./importQueries.ts";
-import { toastPinching } from "./importToasts.tsx";
 
 // The second way in on / (design §1, §14): screenshots of a post whose link and text won't do.
 // Choosing them sends them at once: the picker's Open is the confirm. Checked here first, with

@@ -13,6 +13,7 @@ import { pollInterval } from "./importQueries.ts";
 
 afterEach(() => {
   vi.unstubAllGlobals();
+  vi.useRealTimers();
   // Paste's clipboard, if a test gave it one.
   Reflect.deleteProperty(navigator, "clipboard");
 });
@@ -408,28 +409,60 @@ test("when Dismiss fails, a toast says so and keeps the link, and Try again send
   expect(await screen.findByText("Dismissed")).toBeInTheDocument();
 });
 
+// The toast a text is in (Sonner's list item), to find its buttons.
+function toastOf(text: string) {
+  const toast = screen.getByText(text).closest("li");
+  if (toast === null) throw new Error(`"${text}" isn't in a toast`);
+  return toast;
+}
+
 test("an import that becomes ready or fails says so once in a toast, with its next step", async () => {
+  // The 2 s polls, without waiting for them; real time still runs, for Testing Library's waits.
+  vi.useFakeTimers({ shouldAdvanceTime: true });
   const other = "6650a1b2c3d4e5f600000002";
+  const failed = importOf({ status: "failed", error: "It may be private." });
   stubApi([
     [importOf({ status: "processing" }), importOf({ id: other, status: "processing" })],
-    [importOf({ status: "failed", error: "It may be private." }), importOf({ id: other })],
-    [
-      importOf({ status: "failed", error: "It may be private." }),
-      importOf({ id: other, status: "ready", draft }),
-    ],
+    [failed, importOf({ id: other })],
+    [failed, importOf({ id: other, status: "ready", draft })],
   ]);
   renderApp("/");
 
-  // The third list, two polls later: the failure was seen twice, and said once.
-  const ready = await screen.findByText("Tomato pasta is ready to review", {}, { timeout: 5000 });
+  expect(await screen.findAllByText("Working on it…")).toHaveLength(2);
+  await vi.advanceTimersByTimeAsync(2000);
+  await vi.advanceTimersByTimeAsync(2000);
+
+  // The third list: the failure was seen twice, and said once.
+  expect(await screen.findByText("Tomato pasta is ready to review")).toBeInTheDocument();
   expect(
-    within(ready.closest("li") ?? ready).getByRole("button", { name: "Review" }),
+    within(toastOf("Tomato pasta is ready to review")).getByRole("button", { name: "Review" }),
   ).toBeVisible();
   expect(screen.getAllByText("Couldn't read that video")).toHaveLength(1);
-  const failed = screen.getByText("Couldn't read that video").closest("li") ?? document.body;
-  expect(within(failed).getByText("It may be private.")).toBeInTheDocument();
-  expect(within(failed).getByRole("button", { name: "Retry" })).toBeInTheDocument();
-}, 10_000);
+  const failure = toastOf("Couldn't read that video");
+  expect(within(failure).getByText("It may be private.")).toBeInTheDocument();
+  expect(within(failure).getByRole("button", { name: "Retry" })).toBeInTheDocument();
+});
+
+test("a failure's toast closes once the import is retried elsewhere", async () => {
+  vi.useFakeTimers({ shouldAdvanceTime: true });
+  // Another one still cooking, so the list is asked again after the failure.
+  const cooking = importOf({ id: "6650a1b2c3d4e5f600000002", status: "processing" });
+  stubApi([
+    [importOf({ status: "processing" }), cooking],
+    [importOf({ status: "failed", error: "It may be private." }), cooking],
+    [importOf({ status: "pending", attempts: 3 }), cooking],
+  ]);
+  renderApp("/");
+
+  expect(await screen.findAllByText("Working on it…")).toHaveLength(2);
+  await vi.advanceTimersByTimeAsync(2000);
+  expect(await screen.findByText("Couldn't read that video")).toBeInTheDocument();
+  await vi.advanceTimersByTimeAsync(2000);
+
+  await waitFor(() => {
+    expect(screen.queryByText("Couldn't read that video")).not.toBeInTheDocument();
+  });
+});
 
 test("what the first list shows isn't a toast", async () => {
   stubApi([[importOf({ status: "ready", draft })]]);
