@@ -36,7 +36,8 @@ test("paste a link, review the draft, save it as a recipe", async ({ page }) => 
   await page.waitForTimeout(1000);
 
   await page.getByRole("link", { name: /Weeknight tomato pasta/ }).click();
-  await page.getByRole("button", { name: "Delete" }).click();
+  await page.getByRole("button", { name: "More actions" }).click();
+  await page.getByRole("menuitem", { name: "Delete…" }).click();
   await page.getByRole("alertdialog").getByRole("button", { name: "Delete" }).click();
   await expect(page.getByRole("heading", { level: 1, name: "My recipes" })).toBeVisible();
 });

@@ -33,7 +33,7 @@ export function ReviewImportPage() {
       sendJson("POST", `/api/imports/${id}/approve`, input, RecipeSchema),
     onSuccess: (recipe) => {
       // As for a new recipe (NewRecipePage); and the import is gone from the list. Only the
-      // list: this import would now answer 404 (as DeleteRecipeButton).
+      // list: this import would now answer 404 (as DeleteRecipeDialog).
       queryClient.setQueryData(recipeQuery(recipe.id).queryKey, recipe);
       void queryClient.invalidateQueries({ queryKey: recipeListsKey, refetchType: "all" });
       void queryClient.invalidateQueries({

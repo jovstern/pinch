@@ -6,7 +6,7 @@ import { Button } from "../../components/ui/Button.tsx";
 import { Thumbnail } from "../../components/Thumbnail.tsx";
 import { ingredientLine } from "./ingredientLine.ts";
 import { keepRangesTogether } from "./ranges.ts";
-import { DeleteRecipeButton } from "./DeleteRecipeButton.tsx";
+import { LazyRecipeMenu } from "./LazyRecipeMenu.tsx";
 import { RecipeLoadError } from "./RecipeLoadError.tsx";
 import { recipeQuery } from "./recipeQueries.ts";
 import { tagLabel } from "./tagLabels.ts";
@@ -76,20 +76,12 @@ export function RecipePage() {
         </ul>
       )}
 
-      {/* Cook is the page's one main action (docs/ux/plan.md U2). */}
-      <div className="mt-4 flex flex-wrap gap-3">
-        <Button asChild>
+      {/* Cook is the page's one main action (docs/ux/plan.md U2); the rest is under ⋯. */}
+      <div className="mt-4 flex gap-2">
+        <Button asChild className="flex-1 sm:w-48 sm:flex-none">
           <Link to={`/recipes/${recipe.id}/cook`}>Cook</Link>
         </Button>
-        <Button asChild variant="secondary">
-          <Link to={`/recipes/${recipe.id}/edit`}>Edit</Link>
-        </Button>
-        {/* A placeholder (design §1): sharing comes after auth. Unavailable, not hidden, so the
-            household sees it's planned; aria-disabled keeps it in the tab order to be read. */}
-        <Button type="button" variant="secondary" aria-disabled="true">
-          Share · coming soon
-        </Button>
-        <DeleteRecipeButton recipe={recipe} />
+        <LazyRecipeMenu recipe={recipe} />
       </div>
 
       {/* Each list is named by its heading, for screen readers (and the tests). */}

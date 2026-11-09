@@ -10,9 +10,9 @@ import { recipeListsKey } from "./recipeQueries.ts";
 type DeleteRecipeDialogProps = {
   recipe: Recipe;
   onClose: () => void;
-  // Where focus goes when it closes: the Delete button (DeleteRecipeButton). Radix would give it
-  // back to what had focus when it opened, and Safari doesn't focus a clicked button: with no
-  // Radix Trigger, focus would land on the page there.
+  // Where focus goes when it closes: the ⋯ button (RecipeMenu). Radix would give it back to what
+  // had focus when it opened, and Safari doesn't focus a clicked button: with no Radix Trigger,
+  // focus would land on the page there.
   focusOnClose: () => void;
 };
 

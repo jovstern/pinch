@@ -30,13 +30,15 @@ test("write a recipe, find it in the list, edit it, delete it", async ({ page })
   await page.waitForTimeout(1000);
   await page.getByRole("link", { name: /Shakshuka/ }).click();
 
-  await page.getByRole("link", { name: "Edit" }).click();
+  await page.getByRole("button", { name: "More actions" }).click();
+  await page.getByRole("menuitem", { name: "Edit" }).click();
   await page.getByLabel("Title").fill("Green shakshuka");
   await page.getByRole("button", { name: "Save changes" }).click();
   await expect(page.getByRole("heading", { level: 1, name: "Green shakshuka" })).toBeVisible();
   await page.waitForTimeout(1000);
 
-  await page.getByRole("button", { name: "Delete" }).click();
+  await page.getByRole("button", { name: "More actions" }).click();
+  await page.getByRole("menuitem", { name: "Delete…" }).click();
   const dialog = page.getByRole("alertdialog", { name: "Delete this recipe?" });
   await page.waitForTimeout(500);
   await dialog.getByRole("button", { name: "Delete" }).click();

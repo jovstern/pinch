@@ -33,7 +33,8 @@ test("paste a recipe's text, review the draft, save it with its nutrition", asyn
   await expect(page.getByText(/≈ 520 kcal · 18 g protein/)).toBeVisible();
   await page.waitForTimeout(2000);
 
-  await page.getByRole("button", { name: "Delete" }).click();
+  await page.getByRole("button", { name: "More actions" }).click();
+  await page.getByRole("menuitem", { name: "Delete…" }).click();
   await page.getByRole("alertdialog").getByRole("button", { name: "Delete" }).click();
   await expect(page.getByRole("heading", { level: 1, name: "My recipes" })).toBeVisible();
 });

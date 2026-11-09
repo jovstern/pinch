@@ -36,7 +36,8 @@ test("paste a reel, review the draft with its picture, save it, cook it", async 
   await page.getByRole("button", { name: "Done" }).click();
 
   await expect(title).toBeVisible();
-  await page.getByRole("button", { name: "Delete" }).click();
+  await page.getByRole("button", { name: "More actions" }).click();
+  await page.getByRole("menuitem", { name: "Delete…" }).click();
   await page.getByRole("alertdialog").getByRole("button", { name: "Delete" }).click();
   await expect(page.getByRole("heading", { level: 1, name: "My recipes" })).toBeVisible();
 });

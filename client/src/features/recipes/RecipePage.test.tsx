@@ -83,7 +83,7 @@ test("Delete asks first, then deletes the recipe and goes back to the list", asy
   const fetch = stubApi();
   renderApp(`/recipes/${omelette.id}`);
 
-  await userEvent.click(await screen.findByRole("button", { name: "Delete" }));
+  await chooseDelete();
   const dialog = await screen.findByRole("alertdialog", { name: "Delete this recipe?" });
   await userEvent.click(within(dialog).getByRole("button", { name: "Delete" }));
 
@@ -95,13 +95,13 @@ test("Keep it closes the question without deleting", async () => {
   const fetch = stubApi();
   renderApp(`/recipes/${omelette.id}`);
 
-  await userEvent.click(await screen.findByRole("button", { name: "Delete" }));
+  await chooseDelete();
   await userEvent.click(await screen.findByRole("button", { name: "Keep it" }));
 
   expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
-  // Focus goes back to Delete, for a keyboard to carry on from there (a tick later: Radix's way).
+  // Focus goes back to ⋯, for a keyboard to carry on from there (a tick later: Radix's way).
   await waitFor(() => {
-    expect(screen.getByRole("button", { name: "Delete" })).toHaveFocus();
+    expect(screen.getByRole("button", { name: "More actions" })).toHaveFocus();
   });
   expect(fetch).not.toHaveBeenCalledWith(expect.anything(), { method: "DELETE" });
 });
@@ -110,7 +110,7 @@ test("a failed delete keeps the question open and says so", async () => {
   stubApi(500);
   renderApp(`/recipes/${omelette.id}`);
 
-  await userEvent.click(await screen.findByRole("button", { name: "Delete" }));
+  await chooseDelete();
   const dialog = await screen.findByRole("alertdialog");
   await userEvent.click(within(dialog).getByRole("button", { name: "Delete" }));
 
@@ -151,14 +151,33 @@ test("a picture that doesn't load is left out, with no broken image", async () =
   expect(screen.queryByRole("presentation")).not.toBeInTheDocument();
 });
 
-test("Share and Comments are there, and say they're coming", async () => {
+test("⋯ holds Edit, Share (coming soon) and Delete", async () => {
   stubApi();
   renderApp(`/recipes/${omelette.id}`);
 
-  expect(await screen.findByRole("button", { name: "Share · coming soon" })).toHaveAttribute(
+  await userEvent.click(await screen.findByRole("button", { name: "More actions" }));
+  const menu = await screen.findByRole("menu");
+  expect(within(menu).getByRole("menuitem", { name: "Edit" })).toHaveAttribute(
+    "href",
+    `/recipes/${omelette.id}/edit`,
+  );
+  expect(within(menu).getByRole("menuitem", { name: "Share · coming soon" })).toHaveAttribute(
     "aria-disabled",
     "true",
   );
-  expect(screen.getByRole("heading", { level: 2, name: "Comments" })).toBeInTheDocument();
+  expect(within(menu).getByRole("menuitem", { name: "Delete…" })).toBeInTheDocument();
+});
+
+test("Comments are there, and say they're coming", async () => {
+  stubApi();
+  renderApp(`/recipes/${omelette.id}`);
+
+  expect(await screen.findByRole("heading", { level: 2, name: "Comments" })).toBeInTheDocument();
   expect(screen.getByText(/Coming soon: notes from whoever/)).toBeInTheDocument();
 });
+
+// Delete is in the ⋯ menu.
+async function chooseDelete() {
+  await userEvent.click(await screen.findByRole("button", { name: "More actions" }));
+  await userEvent.click(await screen.findByRole("menuitem", { name: "Delete…" }));
+}
