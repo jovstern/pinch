@@ -2,7 +2,6 @@ import { useQuery } from "@tanstack/react-query";
 import { useId, useState } from "react";
 import { useNavigate, useParams } from "react-router";
 import { Breadcrumb } from "../../components/ui/Breadcrumb.tsx";
-import { Button } from "../../components/ui/Button.tsx";
 import { useMediaQuery } from "../../lib/useMediaQuery.ts";
 import { RecipeLoadError } from "../recipes/RecipeLoadError.tsx";
 import { RecipeSource } from "../recipes/RecipeSource.tsx";
@@ -10,12 +9,13 @@ import { recipeQuery } from "../recipes/recipeQueries.ts";
 import { CookSkeleton } from "./CookSkeleton.tsx";
 import { IngredientChecklist } from "./IngredientChecklist.tsx";
 import { StepCard } from "./StepCard.tsx";
+import { StepCarousel } from "./StepCarousel.tsx";
 import { TimerBar } from "./TimerBar.tsx";
 import { useTimers } from "./useTimers.ts";
 import { useWakeLock } from "./useWakeLock.ts";
 
 // Cook mode (docs/ux/plan.md U2, design §14): one step at a time, in big type, with the screen
-// kept on, for a cook standing at the stove with wet hands.
+// kept on, for a cook standing at the stove with wet hands. The steps are StepCarousel's.
 export function CookPage() {
   // The route is "recipes/:id/cook", so the id is always there.
   const { id = "" } = useParams();
@@ -27,7 +27,6 @@ export function CookPage() {
     refetch,
     isFetching,
   } = useQuery(recipeQuery(id));
-  const [index, setIndex] = useState(0);
   // The ingredients ticked off, by their place in the list: the same ticks in the step's list
   // and the full one. Kept while the page is open, not saved.
   const [ticked, setTicked] = useState<number[]>([]);
@@ -45,10 +44,6 @@ export function CookPage() {
   }
 
   const recipePath = `/recipes/${recipe.id}`;
-  // An edit elsewhere may have removed steps since: never past the last one.
-  const last = recipe.steps.length - 1;
-  const current = Math.min(index, last);
-  const step = recipe.steps[current] ?? "";
   const all = recipe.ingredients.map((_, position) => position);
 
   // As TagPicker's toggle: in the order ticked.
@@ -102,14 +97,9 @@ export function CookPage() {
           </section>
         )}
 
-        <section>
-          {/* A status (polite, read whole), so a screen reader reads each new step and its
-              number: the step's words again, as the card itself isn't announced. */}
-          <p role="status" className="text-sm font-semibold text-muted-foreground">
-            {`Step ${String(current + 1)} of ${String(recipe.steps.length)}`}
-            <span className="sr-only">: {step}</span>
-          </p>
-          <div className="mt-3">
+        <StepCarousel
+          steps={recipe.steps}
+          card={(step) => (
             <StepCard
               step={step}
               ingredients={recipe.ingredients}
@@ -118,36 +108,12 @@ export function CookPage() {
               isRunning={isRunning}
               onStart={start}
             />
-          </div>
-
-          {/* Big, side by side, at the bottom of the step: easy to reach with a knuckle. Each stays
-              the same button from step to step (aria-disabled, not disabled; Next turns into Done),
-              so a keyboard's focus stays on it. */}
-          <div className="mt-6 grid grid-cols-2 gap-3 sm:max-w-md">
-            <Button
-              type="button"
-              variant="secondary"
-              className="min-h-14 text-lg"
-              aria-disabled={current === 0}
-              onClick={() => {
-                if (current > 0) setIndex(current - 1);
-              }}
-            >
-              Back
-            </Button>
-            <Button
-              type="button"
-              className="min-h-14 text-lg"
-              onClick={() => {
-                if (current < last) setIndex(current + 1);
-                // replace, as the form's Cancel: the phone's Back then doesn't reopen cook mode.
-                else void navigate(recipePath, { replace: true });
-              }}
-            >
-              {current < last ? "Next" : "Done"}
-            </Button>
-          </div>
-        </section>
+          )}
+          onDone={() => {
+            // replace, as the form's Cancel: the phone's Back then doesn't reopen cook mode.
+            void navigate(recipePath, { replace: true });
+          }}
+        />
 
         {!wide && (
           <details className="mt-8">

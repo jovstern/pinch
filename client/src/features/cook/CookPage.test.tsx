@@ -1,5 +1,5 @@
 import type { Recipe } from "@pinch/shared";
-import { act, screen, within } from "@testing-library/react";
+import { act, fireEvent, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, test, vi } from "vitest";
 import { renderApp, stubFetch } from "../../test-utils.tsx";
@@ -56,15 +56,79 @@ test("Next and Back go through the steps; Done on the last goes back to the reci
     "true",
   );
   await userEvent.click(screen.getByRole("button", { name: "Next" }));
-  expect(screen.getByText("Step 2 of 2")).toBeInTheDocument();
-  expect(screen.getByText("Cook them in butter.")).toBeInTheDocument();
+  expect(screen.getByRole("status")).toHaveTextContent("Step 2 of 2: Cook them in butter.");
 
   await userEvent.click(screen.getByRole("button", { name: "Back" }));
-  expect(screen.getByText("Beat the eggs.")).toBeInTheDocument();
+  expect(screen.getByRole("status")).toHaveTextContent("Step 1 of 2: Beat the eggs.");
 
   await userEvent.click(screen.getByRole("button", { name: "Next" }));
   await userEvent.click(screen.getByRole("button", { name: "Done" }));
   expect(await screen.findByRole("heading", { level: 1, name: "Omelette" })).toBeInTheDocument();
+});
+
+test("shows every step as a card, and a dot per step that jumps to it", async () => {
+  stubApi();
+  renderApp(`/recipes/${omelette.id}/cook`);
+
+  const steps = await screen.findByRole("list", { name: "Steps" });
+  expect(within(steps).getByRole("listitem", { name: "Step 2 of 2" })).toHaveTextContent(
+    "Cook them in butter.",
+  );
+  await userEvent.click(screen.getByRole("button", { name: "Step 2" }));
+
+  expect(screen.getByText("Step 2 of 2")).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Step 2" })).toHaveAttribute("aria-current", "step");
+  expect(screen.getByRole("button", { name: "Done" })).toBeInTheDocument();
+});
+
+test("a tap on the next card, peeking at the side, brings it in", async () => {
+  stubApi();
+  renderApp(`/recipes/${omelette.id}/cook`);
+
+  await userEvent.click(await screen.findByRole("listitem", { name: "Step 2 of 2" }));
+
+  expect(screen.getByText("Step 2 of 2")).toBeInTheDocument();
+});
+
+test("no dots past 7 steps: the counter and the bar say where you are", async () => {
+  stubApi({ ...omelette, steps: ["1", "2", "3", "4", "5", "6", "7", "8"] });
+  renderApp(`/recipes/${omelette.id}/cook`);
+
+  await screen.findByText("Step 1 of 8");
+  expect(screen.queryByRole("button", { name: "Step 1" })).not.toBeInTheDocument();
+});
+
+test("the arrow keys go through the steps, but not from a checkbox", async () => {
+  stubApi();
+  renderApp(`/recipes/${omelette.id}/cook`);
+  await screen.findByText("Step 1 of 2");
+
+  await userEvent.keyboard("{ArrowRight}");
+  expect(screen.getByText("Step 2 of 2")).toBeInTheDocument();
+  await userEvent.keyboard("{ArrowLeft}");
+  expect(screen.getByText("Step 1 of 2")).toBeInTheDocument();
+
+  screen.getAllByRole("checkbox", { name: "2 eggs" })[0]?.focus();
+  await userEvent.keyboard("{ArrowRight}");
+  expect(screen.getByText("Step 1 of 2")).toBeInTheDocument();
+});
+
+test("once a swipe comes to rest on a card, that's the step", async () => {
+  vi.useFakeTimers({ shouldAdvanceTime: true });
+  const user = userEvent.setup({ advanceTimers: (ms) => vi.advanceTimersByTime(ms) });
+  stubApi();
+  renderApp(`/recipes/${omelette.id}/cook`);
+  await user.click(await screen.findByRole("button", { name: "Next" }));
+
+  // jsdom lays nothing out: every card starts at 0, where the row is, so it rests on the first
+  // (nearestStep.test.ts has the measuring).
+  fireEvent.scroll(screen.getByRole("list", { name: "Steps" }));
+  expect(screen.getByText("Step 2 of 2")).toBeInTheDocument();
+  act(() => {
+    vi.advanceTimersByTime(100);
+  });
+
+  expect(screen.getByText("Step 1 of 2")).toBeInTheDocument();
 });
 
 test("the breadcrumbs lead back to the recipe; there's no Exit", async () => {
@@ -119,7 +183,8 @@ test("shows the step's ingredients, ticked off in both lists at once", async () 
   stubApi();
   renderApp(`/recipes/${omelette.id}/cook`);
 
-  const forStep = await screen.findByRole("list", { name: "For this step" });
+  const first = await screen.findByRole("listitem", { name: "Step 1 of 2" });
+  const forStep = within(first).getByRole("list", { name: "For this step" });
   expect(
     within(forStep)
       .getAllByRole("listitem")
@@ -133,9 +198,9 @@ test("shows the step's ingredients, ticked off in both lists at once", async () 
   await userEvent.click(within(all).getByRole("checkbox", { name: "2 eggs" }));
   expect(within(forStep).getByRole("checkbox", { name: "2 eggs" })).not.toBeChecked();
 
-  await userEvent.click(screen.getByRole("button", { name: "Next" }));
+  const second = screen.getByRole("listitem", { name: "Step 2 of 2" });
   expect(
-    within(screen.getByRole("list", { name: "For this step" })).getByRole("checkbox", {
+    within(within(second).getByRole("list", { name: "For this step" })).getByRole("checkbox", {
       name: "1 tbsp butter",
     }),
   ).toBeInTheDocument();
