@@ -4,11 +4,11 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { setTimeout } from "node:timers/promises";
+import type { Logger } from "pino";
 import { z } from "zod";
 import type { StoredThumbnail } from "../db/thumbnail.ts";
 import { makeThumbnail, shrink } from "./thumbnail.ts";
 import { downloadVideo, measureSeconds, readVideoInfo } from "./videoInfo.ts";
-import type { Logger } from "pino";
 import { NoRetryError, type Attempt, type Extract } from "./workLoop.ts";
 
 // The current Gemini Flash model, the one the spike was run with (design §9, M0).
@@ -113,7 +113,9 @@ async function fromDownload(
   const dir = await mkdtemp(join(tmpdir(), "pinch-"));
   let uploaded: string | undefined;
   try {
+    const downloading = Date.now();
     const { seconds: told, caption, path, thumbnailUrl } = await downloadVideo(url, dir, signal);
+    log.info({ ms: Date.now() - downloading, video: Boolean(path) }, "post downloaded");
     // Before the length check, unlike YouTube's: a photo post has no length to check, and a
     // picture saved on an import about to fail costs one fetch.
     await keepThumbnail(thumbnailUrl, signal, setThumbnail);
@@ -128,9 +130,11 @@ async function fromDownload(
     await setStep("analyzing");
     // The SDK passes no signal to an upload: the client's timeout (worker.ts) bounds each
     // request of it. Its name is kept at once, so finally deletes it even if the wait fails.
+    const uploading = Date.now();
     const file = await ai.files.upload({ file: path, config: { mimeType: "video/mp4" } });
     uploaded = file.name;
     const ready = await waitUntilActive(ai, file, signal);
+    log.info({ ms: Date.now() - uploading }, "video uploaded and ready");
     return await askGemini(
       ai,
       log,
@@ -200,6 +204,8 @@ async function askGemini(ai: GoogleGenAI, log: Logger, contents: PartUnion[], si
       ms: Date.now() - started,
       inputTokens: usage?.promptTokenCount,
       outputTokens: usage?.candidatesTokenCount,
+      // A thinking model's thoughts are billed as output too.
+      thinkingTokens: usage?.thoughtsTokenCount,
     },
     "gemini answered",
   );

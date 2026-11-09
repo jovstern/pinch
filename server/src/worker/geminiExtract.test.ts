@@ -342,17 +342,23 @@ test("screenshots are sent as images, with no yt-dlp, and the first is the pictu
 
 test("each answer's time and tokens are logged", async () => {
   const response = answer(JSON.stringify(recipe));
-  response.usageMetadata = { promptTokenCount: 1200, candidatesTokenCount: 300 };
+  response.usageMetadata = {
+    promptTokenCount: 1200,
+    candidatesTokenCount: 300,
+    thoughtsTokenCount: 800,
+  };
   vi.spyOn(ai.models, "generateContent").mockResolvedValue(response);
   const lines: string[] = [];
   const log = pino({ level: "info" }, { write: (line: string) => lines.push(line) });
 
   await extract(youtube, noDeadline, { ...quiet, log });
 
-  expect(JSON.parse(lines[0] ?? "{}")).toMatchObject({
-    msg: "gemini answered",
+  const line = lines.find((text) => text.includes("gemini answered")) ?? "{}";
+  expect(JSON.parse(line)).toMatchObject({
     model: GEMINI_MODEL,
+    ms: expect.any(Number) as unknown,
     inputTokens: 1200,
     outputTokens: 300,
+    thinkingTokens: 800,
   });
 });

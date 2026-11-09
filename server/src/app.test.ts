@@ -81,5 +81,6 @@ test("a request's log line has its method, path and status, not its headers", as
   };
   expect(line.req).toMatchObject({ method: "GET", url: "/api/health" });
   expect(line.res).toEqual({ statusCode: 200 });
+  expect(line).toHaveProperty("responseTime");
   expect(lines.join("")).not.toContain("secret");
 });

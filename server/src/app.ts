@@ -15,9 +15,12 @@ type AppDeps = { logger: Logger; db: Db; devUserId: string };
 export function createApp({ logger, db, devUserId }: AppDeps) {
   const app = express();
   app.use(helmet());
-  // One log line per request, with a request id, method, path, status and duration. Not its
-  // headers (pino-http's default): cookies and tokens would be written down once auth comes
-  // (§8.3), and they made each line about 1.7 kB.
+  // One log line per request, with a request id, method, URL, status and duration. The URL
+  // with its query: a search's words are kept, they're not secret. Not the headers (pino-http's
+  // default): cookies and tokens would be written down once auth comes (§8.3), and they made
+  // each line about 1.7 kB. The serializers get pino's own request and response (pino-http
+  // wraps them), so url is express's originalUrl; pino doesn't type them, hence the shapes here.
+  // A 5xx's line is an error, as the handler's own line about it.
   app.use(
     pinoHttp({
       logger,
@@ -27,8 +30,9 @@ export function createApp({ logger, db, devUserId }: AppDeps) {
           method: req.method,
           url: req.url,
         }),
-        res: (res: { statusCode: number }) => ({ statusCode: res.statusCode }),
+        res: (res: { statusCode: number | null }) => ({ statusCode: res.statusCode }),
       },
+      customLogLevel: (_req, res, error) => (error || res.statusCode >= 500 ? "error" : "info"),
     }),
   );
   app.use(devUser(devUserId));

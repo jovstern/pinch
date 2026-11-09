@@ -89,7 +89,6 @@ export async function runImport({ imports, extract, logger, job, deadline }: Run
   const log = logger.child({ importId: job._id.toHexString(), attempt: job.attempts });
   // How long the attempt took, on its last line: imports take 5–60 s (§12, M6).
   const started = Date.now();
-  const took = () => ({ ms: Date.now() - started });
 
   // Every write is only while the job is still this attempt's. The user may have deleted it,
   // or, had this attempt outlived its lease, another worker claimed it and attempts went up.
@@ -97,8 +96,9 @@ export async function runImport({ imports, extract, logger, job, deadline }: Run
   const ours = { _id: job._id, status: "processing" as const, attempts: job.attempts };
   async function save(update: UpdateFilter<ImportDocument>, done: string) {
     const { matchedCount } = await imports.updateOne(ours, update);
-    if (matchedCount === 0) log.warn(took(), "import deleted or claimed again: nothing saved");
-    else log.info(took(), done);
+    const ms = Date.now() - started;
+    if (matchedCount === 0) log.warn({ ms }, "import deleted or claimed again: nothing saved");
+    else log.info({ ms }, done);
   }
   // Progress, not an outcome: not logged. Each end below unsets it.
   async function setStep(step: ImportStep) {
@@ -127,7 +127,7 @@ export async function runImport({ imports, extract, logger, job, deadline }: Run
       return;
     }
     // A timeout at the deadline lands here too: a failed attempt like any other (§4.3).
-    log.error({ err: error, ...took() }, "import attempt failed");
+    log.error({ err: error }, "import attempt failed");
     if (job.attempts === MAX_ATTEMPTS) {
       await save(failedUpdate(), "import failed after its last try");
       return;
