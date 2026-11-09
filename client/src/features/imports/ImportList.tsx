@@ -1,7 +1,6 @@
 import type { Import, Platform } from "@pinch/shared";
 import { useQuery } from "@tanstack/react-query";
 import { CookingPot, LoaderCircle, TriangleAlert } from "lucide-react";
-import { useState } from "react";
 import { Link } from "react-router";
 import { Thumbnail } from "../../components/Thumbnail.tsx";
 import { Button } from "../../components/ui/Button.tsx";
@@ -20,28 +19,8 @@ export function ImportList({ focusPasteBox }: { focusPasteBox: () => void }) {
     (job) => (job.status === "pending" || job.status === "processing") && !job.stalled,
   );
 
-  // What a screen reader hears: only what just changed, one import at a time, not the whole list
-  // (ui-craft: aria-live for async results). Worked out as each new list arrives, from the one
-  // before: React docs, "Storing information from previous renders" (as ListFilters). Kept
-  // simple: one change per poll is said, and the same words twice in a row aren't said again.
-  const [prevData, setPrevData] = useState(data);
-  const [announcement, setAnnouncement] = useState("");
-  if (data !== prevData) {
-    setPrevData(data);
-    // The first list isn't news: it's what the page shows.
-    if (prevData !== undefined && data !== undefined) {
-      const before = new Map(prevData.items.map((job) => [job.id, job.status]));
-      const changed = data.items.find((job) => before.get(job.id) !== job.status);
-      if (changed) setAnnouncement(`${title(changed)}: ${statusText(changed)}`);
-    }
-  }
-
   return (
     <div className="mt-6">
-      {/* Always on the page: a live region must be there before its text changes. */}
-      <p role="status" className="sr-only">
-        {announcement}
-      </p>
       {/* The queue is the page's main content, so a failed load can be asked again (as the
           recipes). */}
       {isLoadingError && (

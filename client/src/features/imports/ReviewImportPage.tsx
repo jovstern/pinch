@@ -4,6 +4,7 @@ import { Link, useNavigate, useParams } from "react-router";
 import { Button } from "../../components/ui/Button.tsx";
 import { Thumbnail } from "../../components/Thumbnail.tsx";
 import { deleteResource, sendJson } from "../../lib/api.ts";
+import { showToast, toastCouldntSave, toastSaved } from "../../lib/toasts.ts";
 import { LazyRecipeForm, usePreloadRecipeForm } from "../recipes/LazyRecipeForm.tsx";
 import { toFormValues } from "../recipes/recipeFormValues.ts";
 import { RecipeLoadError } from "../recipes/RecipeLoadError.tsx";
@@ -41,6 +42,7 @@ export function ReviewImportPage() {
       });
       // replace: Back from the recipe goes to the list, not to a draft that no longer exists.
       void navigate(`/recipes/${recipe.id}`, { replace: true });
+      toastSaved(recipe.title);
     },
   });
   // No question first, unlike deleting a recipe: pasting it again makes the draft again.
@@ -53,6 +55,12 @@ export function ReviewImportPage() {
         refetchType: "all",
       });
       void navigate("/", { replace: true });
+      showToast("success", "Discarded", { description: job?.draft?.title, duration: 8000 });
+    },
+    onError: () => {
+      toastCouldntSave(() => {
+        discard.mutate();
+      });
     },
   });
 
@@ -128,12 +136,6 @@ export function ReviewImportPage() {
           </Button>
         }
       />
-      {/* Under the buttons, by Discard; the form's own save error is its own, above them. */}
-      {discard.isError && (
-        <p role="alert" className="mt-3 text-danger">
-          It couldn't be discarded. Try again.
-        </p>
-      )}
     </>
   );
 }

@@ -2,6 +2,7 @@ import { dailyLimitMessage, ImportSchema, type Import } from "@pinch/shared";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "../../components/ui/Button.tsx";
 import { ApiError, deleteResource, sendJson } from "../../lib/api.ts";
+import { showToast, toastCouldntSave } from "../../lib/toasts.ts";
 import { importListQuery } from "./importQueries.ts";
 
 // What a failed import offers (design §4.2): Retry puts it back in the queue for three more
@@ -27,7 +28,16 @@ export function ImportActions({ job, focusPasteBox }: { job: Import; focusPasteB
   // No question first, as Discard on the review page: pasting it again brings it back.
   const dismiss = useMutation({
     mutationFn: () => deleteResource(`/api/imports/${job.id}`),
-    onSuccess: focusPasteBox,
+    onSuccess: () => {
+      focusPasteBox();
+      showToast("success", "Dismissed", { duration: 8000 });
+    },
+    // Retry keeps its error by the card: a 429's words (the day's limit) aren't a toast's.
+    onError: () => {
+      toastCouldntSave(() => {
+        dismiss.mutate();
+      });
+    },
     onSettled: refreshList,
   });
   // Not disabled while busy: a disabled button drops focus to the page (as Show more).
@@ -68,11 +78,6 @@ export function ImportActions({ job, focusPasteBox }: { job: Import; focusPasteB
           {retry.error instanceof ApiError && retry.error.status === 429
             ? dailyLimitMessage
             : "It couldn't be retried. Try again."}
-        </p>
-      )}
-      {dismiss.isError && (
-        <p role="alert" className="mt-1 text-right text-sm text-destructive">
-          It couldn't be dismissed. Try again.
         </p>
       )}
     </div>

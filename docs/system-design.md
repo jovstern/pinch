@@ -493,8 +493,11 @@ theme follows the system). **Write a recipe** is on both tabs: in the header fro
 768 px, a floating button at the bottom right on a phone. No logo for now. Inner pages have
 breadcrumbs under the header, and the tab they belong to stays selected. Every async change to
 a recipe's status confirms itself in a toast, with the next step when there is one: sent,
-ready to review, failed (Retry), saved (View), changes saved, deleted, discarded, couldn't save
-(Try again). Toasts sit at the top on a phone, bottom right from 768 px.
+ready to review (Review), failed (Retry), saved, changes saved, deleted, discarded, couldn't save
+(Try again). Saved has no View: saving already opens the recipe. Couldn't save is for the
+one-click actions (Dismiss, Discard, the toast's Retry); a form keeps its error by its fields, and
+Delete's stays in its dialog. Undo waits for the API (M8 F4). Toasts sit at the top on a phone,
+bottom right from 768 px; they are the queue's announcements too (Sonner's region is live).
 
 | Address | Screen | Its job | States |
 |---|---|---|---|

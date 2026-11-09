@@ -84,15 +84,14 @@ test("Discard deletes the import and goes back to New recipe", async () => {
   expect(fetch).toHaveBeenCalledWith(`/api/imports/${ready.id}`, { method: "DELETE" });
 });
 
-test("when Discard fails, it says so and keeps the draft", async () => {
+test("when Discard fails, a toast says so and the draft stays", async () => {
   stubApi(ready, 500);
   renderApp(`/imports/${ready.id}`);
 
   await userEvent.click(await screen.findByRole("button", { name: "Discard" }));
 
-  expect(await screen.findByRole("alert")).toHaveTextContent(
-    "It couldn't be discarded. Try again.",
-  );
+  expect(await screen.findByText("Couldn't save")).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Try again" })).toBeInTheDocument();
   expect(screen.getByLabelText("Title")).toHaveValue("Tomato pasta");
 });
 

@@ -9,6 +9,7 @@ import { Textarea } from "../../components/ui/Textarea.tsx";
 import { ApiError, sendJson } from "../../lib/api.ts";
 import { cn } from "../../lib/cn.ts";
 import { importListQuery } from "./importQueries.ts";
+import { toastPinching } from "./importToasts.tsx";
 
 // Paste reads the clipboard, where the browser lets a page ask for it (a secure page, and not
 // every browser). Asked on each render, not once, so a test can give it a clipboard.
@@ -60,6 +61,7 @@ export function ImportForm({ inputRef }: { inputRef: RefObject<HTMLTextAreaEleme
       form.reset();
       setGrown(false);
       void queryClient.invalidateQueries({ queryKey: importListQuery.queryKey });
+      toastPinching();
     },
   });
 

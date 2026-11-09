@@ -58,6 +58,7 @@ test("saves a new recipe and shows it", async () => {
   await userEvent.click(screen.getByRole("button", { name: "Save recipe" }));
 
   expect(await screen.findByRole("heading", { level: 1, name: "Toast" })).toBeInTheDocument();
+  expect(screen.getByText("Saved to My recipes")).toBeInTheDocument();
   // Blank optional fields aren't sent; the numbers are numbers. (Keys in the schema's order.)
   expect(fetch).toHaveBeenCalledWith("/api/recipes", {
     method: "POST",

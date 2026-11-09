@@ -12,6 +12,7 @@ import { useId, useState } from "react";
 import { Button } from "../../components/ui/Button.tsx";
 import { ApiError, sendForm } from "../../lib/api.ts";
 import { importListQuery } from "./importQueries.ts";
+import { toastPinching } from "./importToasts.tsx";
 
 // The second way in on / (design §1, §14): screenshots of a post whose link and text won't do.
 // Choosing them sends them at once: the picker's Open is the confirm. Checked here first, with
@@ -29,8 +30,9 @@ export function ScreenshotsUpload() {
       return sendForm("/api/imports/screenshots", form, ImportSchema);
     },
     onSuccess: () => {
-      // The new import shows in the list, which starts polling and announces it.
+      // The new import shows in the list, which starts polling.
       void queryClient.invalidateQueries({ queryKey: importListQuery.queryKey });
+      toastPinching();
     },
   });
 

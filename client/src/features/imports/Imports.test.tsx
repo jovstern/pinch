@@ -5,7 +5,7 @@ import {
   textMessage,
   type Import,
 } from "@pinch/shared";
-import { screen, waitFor } from "@testing-library/react";
+import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, test, vi } from "vitest";
 import { renderApp } from "../../test-utils.tsx";
@@ -263,8 +263,6 @@ test("while a link is worked on, its status is asked again until it's ready to r
   // The 2 s poll, with time to spare.
   expect(await screen.findByText("Ready to review", {}, { timeout: 3000 })).toBeInTheDocument();
   const review = screen.getByRole("link", { name: "Review" });
-  // Only the change is announced, by the draft's title, not the whole list.
-  expect(screen.getByText("Tomato pasta: Ready to review")).toHaveAttribute("role", "status");
   expect(review).toHaveAttribute("href", "/imports/6650a1b2c3d4e5f600000001");
   // Nothing left cooking.
   expect(screen.getByRole("heading", { name: "1 ready" })).toBeInTheDocument();
@@ -393,20 +391,52 @@ test("when Retry fails, it says so and keeps the link", async () => {
   expect(screen.getByText("No.")).toBeInTheDocument();
 });
 
-test("when Dismiss fails, it says so and keeps the link", async () => {
-  stubApi(
-    [[importOf({ status: "failed", attempts: 3, error: "No." })]],
-    undefined,
-    () => new Response(null, { status: 502 }),
-  );
+test("when Dismiss fails, a toast says so and keeps the link, and Try again sends it again", async () => {
+  let deletes = 0;
+  stubApi([[importOf({ status: "failed", attempts: 3, error: "No." })]], undefined, () => {
+    deletes += 1;
+    return new Response(null, { status: deletes === 1 ? 502 : 204 });
+  });
   renderApp("/");
 
   await userEvent.click(await screen.findByRole("button", { name: "Dismiss" }));
 
-  expect(await screen.findByRole("alert")).toHaveTextContent(
-    "It couldn't be dismissed. Try again.",
-  );
+  expect(await screen.findByText("Couldn't save")).toBeInTheDocument();
   expect(screen.getByText("No.")).toBeInTheDocument();
+  // fireEvent: userEvent's pointer down makes Sonner capture the pointer, which jsdom can't.
+  fireEvent.click(screen.getByRole("button", { name: "Try again" }));
+  expect(await screen.findByText("Dismissed")).toBeInTheDocument();
+});
+
+test("an import that becomes ready or fails says so once in a toast, with its next step", async () => {
+  const other = "6650a1b2c3d4e5f600000002";
+  stubApi([
+    [importOf({ status: "processing" }), importOf({ id: other, status: "processing" })],
+    [importOf({ status: "failed", error: "It may be private." }), importOf({ id: other })],
+    [
+      importOf({ status: "failed", error: "It may be private." }),
+      importOf({ id: other, status: "ready", draft }),
+    ],
+  ]);
+  renderApp("/");
+
+  // The third list, two polls later: the failure was seen twice, and said once.
+  const ready = await screen.findByText("Tomato pasta is ready to review", {}, { timeout: 5000 });
+  expect(
+    within(ready.closest("li") ?? ready).getByRole("button", { name: "Review" }),
+  ).toBeVisible();
+  expect(screen.getAllByText("Couldn't read that video")).toHaveLength(1);
+  const failed = screen.getByText("Couldn't read that video").closest("li") ?? document.body;
+  expect(within(failed).getByText("It may be private.")).toBeInTheDocument();
+  expect(within(failed).getByRole("button", { name: "Retry" })).toBeInTheDocument();
+}, 10_000);
+
+test("what the first list shows isn't a toast", async () => {
+  stubApi([[importOf({ status: "ready", draft })]]);
+  renderApp("/");
+
+  expect(await screen.findByText("Ready to review")).toBeInTheDocument();
+  expect(screen.queryByText("Tomato pasta is ready to review")).not.toBeInTheDocument();
 });
 
 test("a stalled link says nothing is working on it, and offers Dismiss, not Retry", async () => {

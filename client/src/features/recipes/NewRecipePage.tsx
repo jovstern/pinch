@@ -2,6 +2,7 @@ import { RecipeSchema, type RecipeInput } from "@pinch/shared";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router";
 import { sendJson } from "../../lib/api.ts";
+import { toastSaved } from "../../lib/toasts.ts";
 import { LazyRecipeForm } from "./LazyRecipeForm.tsx";
 import { emptyRecipe } from "./recipeFormValues.ts";
 import { recipeListsKey, recipeQuery } from "./recipeQueries.ts";
@@ -23,6 +24,7 @@ export function NewRecipePage() {
       });
       // replace: Back from the new recipe goes where the user was, not to a blank form.
       void navigate(`/recipes/${recipe.id}`, { replace: true });
+      toastSaved(recipe.title);
     },
   });
 
