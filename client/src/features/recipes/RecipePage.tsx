@@ -1,7 +1,8 @@
-import type { Ingredient, Nutrition, Recipe } from "@pinch/shared";
+import type { Nutrition, Recipe } from "@pinch/shared";
 import { useQuery } from "@tanstack/react-query";
 import { Link, useParams } from "react-router";
 import { Button } from "../../components/Button.tsx";
+import { ingredientLine } from "./ingredientLine.ts";
 import { LazyDeleteRecipeButton } from "./LazyDeleteRecipeButton.tsx";
 import { RecipeLoadError } from "./RecipeLoadError.tsx";
 import { recipeQuery } from "./recipeQueries.ts";
@@ -116,9 +117,4 @@ function nutritionLine({ calories, proteinG, carbsG, fatG }: Nutrition) {
     `${round(fatG)} g fat`,
   ];
   return amounts.join(" · ");
-}
-
-// "2 tbsp olive oil", or just "salt" when the recipe gives no amount.
-function ingredientLine(ingredient: Ingredient) {
-  return [ingredient.quantity, ingredient.unit, ingredient.name].filter(Boolean).join(" ");
 }

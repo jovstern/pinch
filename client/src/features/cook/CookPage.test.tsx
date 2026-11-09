@@ -1,5 +1,5 @@
 import type { Recipe } from "@pinch/shared";
-import { screen } from "@testing-library/react";
+import { screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, test, vi } from "vitest";
 import { renderApp, stubFetch } from "../../test-utils.tsx";
@@ -11,7 +11,10 @@ afterEach(() => {
 const omelette: Recipe = {
   id: "6650a1b2c3d4e5f600000001",
   title: "Omelette",
-  ingredients: [{ name: "eggs", quantity: "2" }],
+  ingredients: [
+    { name: "eggs", quantity: "2" },
+    { name: "butter", quantity: "1", unit: "tbsp" },
+  ],
   steps: ["Beat the eggs.", "Cook them in butter."],
   tags: [],
   source: { type: "manual" },
@@ -93,4 +96,28 @@ test("says the screen may lock where the browser can't keep it on", async () => 
   renderApp(`/recipes/${omelette.id}/cook`);
 
   expect(await screen.findByText("This browser may let the screen lock.")).toBeInTheDocument();
+});
+
+test("shows the step's ingredients, ticked off in both lists at once", async () => {
+  stubApi();
+  renderApp(`/recipes/${omelette.id}/cook`);
+
+  const forStep = await screen.findByRole("list", { name: "For this step" });
+  expect(
+    within(forStep)
+      .getAllByRole("listitem")
+      .map((item) => item.textContent),
+  ).toEqual(["2 eggs"]);
+  await userEvent.click(within(forStep).getByRole("checkbox", { name: "2 eggs" }));
+
+  const all = screen.getByRole("list", { name: "All ingredients" });
+  expect(within(all).getByRole("checkbox", { name: "2 eggs" })).toBeChecked();
+  expect(within(all).getByRole("checkbox", { name: "1 tbsp butter" })).not.toBeChecked();
+
+  await userEvent.click(screen.getByRole("button", { name: "Next" }));
+  expect(
+    within(screen.getByRole("list", { name: "For this step" })).getByRole("checkbox", {
+      name: "1 tbsp butter",
+    }),
+  ).toBeInTheDocument();
 });

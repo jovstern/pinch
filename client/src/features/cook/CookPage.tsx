@@ -4,6 +4,8 @@ import { Link, useNavigate, useParams } from "react-router";
 import { Button } from "../../components/Button.tsx";
 import { RecipeLoadError } from "../recipes/RecipeLoadError.tsx";
 import { recipeQuery } from "../recipes/recipeQueries.ts";
+import { IngredientChecklist } from "./IngredientChecklist.tsx";
+import { stepIngredients } from "./stepIngredients.ts";
 import { useWakeLock } from "./useWakeLock.ts";
 
 // Cook mode (docs/ux/plan.md U2, design §14): one step at a time, in big type, with the screen
@@ -20,6 +22,9 @@ export function CookPage() {
     isFetching,
   } = useQuery(recipeQuery(id));
   const [index, setIndex] = useState(0);
+  // The ingredients ticked off, by their place in the list: the same ticks in the step's list
+  // and the full one. Kept while the page is open, not saved.
+  const [ticked, setTicked] = useState<number[]>([]);
   const wakeLock = useWakeLock();
   const navigate = useNavigate();
 
@@ -32,6 +37,17 @@ export function CookPage() {
   // An edit elsewhere may have removed steps since: never past the last one.
   const last = recipe.steps.length - 1;
   const current = Math.min(index, last);
+  const step = recipe.steps[current] ?? "";
+  const forThisStep = stepIngredients(step, recipe.ingredients);
+  const all = recipe.ingredients.map((_, position) => position);
+
+  function toggle(position: number) {
+    setTicked((before) =>
+      before.includes(position)
+        ? before.filter((other) => other !== position)
+        : [...before, position],
+    );
+  }
 
   return (
     <article>
@@ -56,10 +72,25 @@ export function CookPage() {
         <p className="text-sm font-semibold text-text-muted">
           {`Step ${String(current + 1)} of ${String(recipe.steps.length)}`}
         </p>
-        <p className="mt-3 max-w-prose font-display text-2xl text-pretty sm:text-3xl">
-          {recipe.steps[current]}
+        {/* dir="auto": a Hebrew step reads right to left, as in the form (TextField). */}
+        <p dir="auto" className="mt-3 max-w-prose font-display text-2xl text-pretty sm:text-3xl">
+          {step}
         </p>
       </section>
+
+      {/* Outside the status: ticking one isn't a new step to announce. */}
+      {forThisStep.length > 0 && (
+        <div className="mt-6">
+          <h2 className="font-sans text-sm font-semibold text-text-muted">For this step</h2>
+          <IngredientChecklist
+            label="For this step"
+            ingredients={recipe.ingredients}
+            shown={forThisStep}
+            ticked={ticked}
+            onToggle={toggle}
+          />
+        </div>
+      )}
 
       {/* Big, side by side, at the bottom of the step: easy to reach with a knuckle. Each stays
           the same button from step to step (aria-disabled, not disabled; Next turns into Done),
@@ -88,6 +119,20 @@ export function CookPage() {
           {current < last ? "Next" : "Done"}
         </Button>
       </div>
+
+      {/* Folded: the step is what matters at the stove; the whole list is one tap away. */}
+      <details className="mt-8">
+        <summary className="cursor-pointer py-2.5 font-semibold">
+          All ingredients ({recipe.ingredients.length})
+        </summary>
+        <IngredientChecklist
+          label="All ingredients"
+          ingredients={recipe.ingredients}
+          shown={all}
+          ticked={ticked}
+          onToggle={toggle}
+        />
+      </details>
     </article>
   );
 }
