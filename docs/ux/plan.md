@@ -204,7 +204,7 @@ accent and danger buttons, and `--color-scrim` (`#0F0C09`) behind dialogs.
 `@media (prefers-color-scheme: dark)` only — no toggle in v1 (smart defaults over settings).
 
 **Type.** Display: **Fraunces** (variable serif, SIL OFL), self-hosted woff2 subset to
-Latin, `wght` 500–700, `font-display: swap`. Built (U4 PR 1): 29.5 kB, with the optical size
+Latin, `wght` 500–700. Built (U4 PR 1): 29.5 kB, with the optical size
 fixed at 36 (with the `opsz` axis it was 55 kB); for `h1`, `h2`, the
 wordmark and the cook-mode step. Hebrew titles fall back to the system serif via the stack
 (`"Fraunces", "Frank Ruhl Libre", Georgia, serif` — Frank Ruhl Libre only if a Hebrew subset
@@ -213,6 +213,10 @@ is wanted later; not in the first PR). Body: the system sans as today (zero byte
 balance` on headings, `pretty` on paragraphs; tabular numbers on quantities. Budget: the
 display font is the one new download and must fit the 165 kB SPA budget with the entry
 (`docs/metrics/m04.md`); if it doesn't, ship it only on the recipe and cook routes.
+Built (M7): no longer fetched with the page (that cost the data pages' LCP 300–450 ms,
+`docs/metrics/m06.md` Miss 1): `client/src/lib/displayFont.ts` adds it 1.5 s after the page
+has loaded, and until then a Georgia sized to match ("Fraunces Fallback") holds its place; it never
+blocks text, so `font-display` no longer applies.
 
 **Shape.** Cards 16 px radius, controls 12 px, chips full; one soft shadow token for sheets
 and the toast only; borders only where two raised surfaces meet. Built (U4 PR 2): fields keep a
