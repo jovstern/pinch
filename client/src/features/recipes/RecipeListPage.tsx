@@ -3,6 +3,7 @@ import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { useEffect, useRef } from "react";
 import { Link, useSearchParams } from "react-router";
 import { Button } from "../../components/Button.tsx";
+import { Thumbnail } from "../../components/Thumbnail.tsx";
 import { ImportForm } from "../imports/ImportForm.tsx";
 import { ImportList } from "../imports/ImportList.tsx";
 import { importListQuery } from "../imports/importQueries.ts";
@@ -165,10 +166,21 @@ export function RecipeListPage() {
             <li key={recipe.id}>
               <Link
                 to={`/recipes/${recipe.id}`}
-                className="block rounded-card border border-border bg-surface-raised p-4 hover:border-accent"
+                className="flex items-center gap-4 rounded-card border border-border bg-surface-raised p-4 hover:border-accent"
               >
-                <h2 className="text-lg font-semibold">{recipe.title}</h2>
-                <p className="mt-1 text-sm text-text-muted">{summary(recipe)}</p>
+                {/* A small 4:5 tile, cropped: the cards stay one height whatever the post's shape. */}
+                {recipe.thumbnail && (
+                  <Thumbnail
+                    src={`/api/recipes/${recipe.id}/thumbnail`}
+                    size={recipe.thumbnail}
+                    loading="lazy"
+                    className="h-20 w-16 shrink-0"
+                  />
+                )}
+                <div className="min-w-0">
+                  <h2 className="text-lg font-semibold">{recipe.title}</h2>
+                  <p className="mt-1 text-sm text-text-muted">{summary(recipe)}</p>
+                </div>
               </Link>
             </li>
           ))}

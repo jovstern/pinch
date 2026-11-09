@@ -2,6 +2,7 @@ import type { Nutrition, Recipe } from "@pinch/shared";
 import { useQuery } from "@tanstack/react-query";
 import { Link, useParams } from "react-router";
 import { Button } from "../../components/Button.tsx";
+import { Thumbnail } from "../../components/Thumbnail.tsx";
 import { ingredientLine } from "./ingredientLine.ts";
 import { LazyDeleteRecipeButton } from "./LazyDeleteRecipeButton.tsx";
 import { RecipeLoadError } from "./RecipeLoadError.tsx";
@@ -32,6 +33,14 @@ export function RecipePage() {
   return (
     <article>
       <title>{`${recipe.title} · Pinch`}</title>
+      {/* At the top, at its own shape, no taller than a third of a phone's screen. */}
+      {recipe.thumbnail && (
+        <Thumbnail
+          src={`/api/recipes/${recipe.id}/thumbnail`}
+          size={recipe.thumbnail}
+          className="mb-4 h-auto max-h-64 w-auto"
+        />
+      )}
       <h1 className="text-3xl font-bold tracking-tight text-balance">{recipe.title}</h1>
       {recipe.description && <p className="mt-3 max-w-prose text-pretty">{recipe.description}</p>}
       {/* One block, so the nutrition sits close under the details, or alone in their place. */}

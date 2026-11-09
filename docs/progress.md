@@ -83,7 +83,7 @@ Slices for later milestones are filled in when the milestone starts.
       Files API; media deleted in `finally`
 - [x] Thumbnails: the worker makes one (the post's own picture), stored with the draft and
       the recipe, served by the API
-- [ ] Thumbnails in the client: on the cards, the recipe and the review page
+- [x] Thumbnails in the client: on the cards, the recipe and the review page
 - [ ] Screenshot fallback, the pipeline: an import can be up to 4 images
 - [ ] Screenshot fallback, the box: add images on `/`
 - [ ] End of milestone: a real reel becomes a draft with a thumbnail; UI review, observer, demo

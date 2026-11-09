@@ -2,6 +2,7 @@ import { RecipeSchema, type RecipeInput } from "@pinch/shared";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate, useParams } from "react-router";
 import { Button } from "../../components/Button.tsx";
+import { Thumbnail } from "../../components/Thumbnail.tsx";
 import { deleteResource, sendJson } from "../../lib/api.ts";
 import { LazyRecipeForm } from "../recipes/LazyRecipeForm.tsx";
 import { toFormValues } from "../recipes/recipeFormValues.ts";
@@ -76,6 +77,14 @@ export function ReviewImportPage() {
   return (
     <>
       <title>{`Review ${job.draft.title} · Pinch`}</title>
+      {/* As it will be at the top of the recipe. */}
+      {job.thumbnail && (
+        <Thumbnail
+          src={`/api/imports/${job.id}/thumbnail`}
+          size={job.thumbnail}
+          className="mb-4 h-auto max-h-64 w-auto"
+        />
+      )}
       <h1 className="text-3xl font-bold tracking-tight text-balance">Review the recipe</h1>
       <p className="mt-3 text-sm text-pretty text-text-muted">
         Fix anything that's wrong, then save it. Made from

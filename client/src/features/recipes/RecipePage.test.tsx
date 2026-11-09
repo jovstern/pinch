@@ -113,3 +113,25 @@ test("a failed delete keeps the question open and says so", async () => {
   expect(await within(dialog).findByRole("alert")).toHaveTextContent("It couldn't be deleted.");
   expect(screen.queryByRole("heading", { name: "Your recipes" })).not.toBeInTheDocument();
 });
+
+test("shows the post's picture at the top, at its size, when the recipe has one", async () => {
+  stubFetch(() =>
+    Promise.resolve(Response.json({ ...omelette, thumbnail: { width: 281, height: 500 } })),
+  );
+  renderApp(`/recipes/${omelette.id}`);
+
+  await screen.findByRole("heading", { level: 1, name: "Omelette" });
+  // Decorative (alt=""): no role to find it by.
+  const picture = document.querySelector("img");
+  expect(picture).toHaveAttribute("src", `/api/recipes/${omelette.id}/thumbnail`);
+  expect(picture).toHaveAttribute("width", "281");
+  expect(picture).toHaveAttribute("height", "500");
+});
+
+test("a recipe with no picture shows none", async () => {
+  stubApi();
+  renderApp(`/recipes/${omelette.id}`);
+
+  await screen.findByRole("heading", { level: 1, name: "Omelette" });
+  expect(document.querySelector("img")).toBeNull();
+});
