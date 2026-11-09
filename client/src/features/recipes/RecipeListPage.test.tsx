@@ -139,10 +139,11 @@ test("a search asks the API, says how many match, and leaves focus in the box", 
   expect(search).toHaveFocus();
 });
 
-test("tags in the address filter the list, open, and unticking the last one clears it", async () => {
+test("tags in the address tick the Filters, and unticking the last one clears them", async () => {
   const fetch = stubList();
   renderApp("/recipes?tags=meal:breakfast");
 
+  // The panel's checkbox (from 1024 px; jsdom has no widths, so it's always in the page).
   const breakfast = await screen.findByRole("checkbox", { name: "breakfast" });
   expect(breakfast).toBeChecked();
   expect(fetch).toHaveBeenCalledWith("/api/recipes?tags=meal%3Abreakfast");
@@ -152,8 +153,65 @@ test("tags in the address filter the list, open, and unticking the last one clea
   await waitFor(() => {
     expect(fetch).toHaveBeenLastCalledWith("/api/recipes");
   });
-  // Still open: it doesn't fold away under the user's finger.
-  expect(screen.getByRole("checkbox", { name: "breakfast" })).toBeVisible();
+});
+
+test("a common tag's chip turns its tag on and off in the address", async () => {
+  const fetch = stubList();
+  renderApp("/recipes");
+
+  const chips = await screen.findByRole("group", { name: "Common tags" });
+  await userEvent.click(within(chips).getByRole("button", { name: "breakfast" }));
+  expect(await screen.findByText("1 recipe matches.")).toHaveAttribute("role", "status");
+  expect(fetch).toHaveBeenLastCalledWith("/api/recipes?tags=meal%3Abreakfast");
+  expect(within(chips).getByRole("button", { name: "breakfast" })).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
+
+  await userEvent.click(within(chips).getByRole("button", { name: "breakfast" }));
+  await waitFor(() => {
+    expect(fetch).toHaveBeenLastCalledWith("/api/recipes");
+  });
+});
+
+test("the Filters sheet applies a tag as it's ticked and counts it on its button", async () => {
+  const fetch = stubList();
+  renderApp("/recipes");
+
+  await userEvent.click(await screen.findByRole("button", { name: "Filters" }));
+  const sheet = screen.getByRole("dialog", { name: "Filters" });
+  await userEvent.click(within(sheet).getByRole("checkbox", { name: "breakfast" }));
+  await waitFor(() => {
+    expect(fetch).toHaveBeenLastCalledWith("/api/recipes?tags=meal%3Abreakfast");
+  });
+
+  await userEvent.click(within(sheet).getByRole("button", { name: "Show recipes" }));
+  expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Filters 1 applied" })).toHaveFocus();
+});
+
+test("Clear all clears the search and the tags", async () => {
+  const fetch = stubList();
+  renderApp("/recipes?q=eggs&tags=meal:breakfast");
+
+  await userEvent.click(await screen.findByRole("button", { name: "Clear all" }));
+
+  await waitFor(() => {
+    expect(fetch).toHaveBeenLastCalledWith("/api/recipes");
+  });
+  expect(screen.getByRole("searchbox")).toHaveValue("");
+  expect(screen.getByRole("checkbox", { name: "breakfast" })).not.toBeChecked();
+});
+
+test("an applied tag's ✕ takes it off", async () => {
+  const fetch = stubList();
+  renderApp("/recipes?tags=meal:breakfast,diet:vegan");
+
+  await userEvent.click(await screen.findByRole("button", { name: "Remove vegan" }));
+
+  await waitFor(() => {
+    expect(fetch).toHaveBeenLastCalledWith("/api/recipes?tags=meal%3Abreakfast");
+  });
 });
 
 test("when nothing matches, it says what was asked and offers to clear the search and filters", async () => {
