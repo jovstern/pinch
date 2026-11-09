@@ -20,6 +20,7 @@ const UNIT_SECONDS: Record<string, number> = {
   שניות: 1,
   דקה: 60,
   דקות: 60,
+  "דק'": 60,
   שעה: 3600,
   שעות: 3600,
 };
@@ -35,12 +36,78 @@ const DURATION = new RegExp(
   "giu",
 );
 
+// Times written in words, with no number: "half an hour", "חצי שעה", "שעה" (an hour; "כשעה",
+// about an hour, and "לשעה", for an hour, take the prefix the pattern allows).
+// Longer phrases first, so "שעה וחצי" (an hour and a half) isn't read as "שעה".
+const PHRASE_SECONDS: Record<string, number> = {
+  "half an hour": 1800,
+  "an hour": 3600,
+  "שעה וחצי": 5400,
+  "חצי שעה": 1800,
+  "רבע שעה": 900,
+  שעה: 3600,
+};
+const PHRASE = new RegExp(
+  `(?:^|[^\\p{L}])((?:כ|ל)?(${Object.keys(PHRASE_SECONDS).join("|")}))(?!\\p{L})`,
+  "giu",
+);
+
+// What joins hours to minutes in one time: "1 hour 20 minutes", "1 hr and 20 min", "שעה ו-20
+// דקות" ("and" in Hebrew is a ו joined to the next word).
+const JOINER = /^\s*(?:and\s+|,\s*|ו-?)?$/iu;
+
+type Found = Duration & { start: number; end: number };
+
 // The durations in a step, in order. A range's timer is its shorter end: the cook checks then,
-// and can start another.
+// and can start another. Hours then minutes are one timer, not two.
 export function stepDurations(step: string): Duration[] {
-  return [...step.matchAll(DURATION)].map(([, label = "", amount = "", unit = ""]) => ({
-    label,
+  const withNumbers = [...step.matchAll(DURATION)].map((match): Found => {
+    const [whole, label = "", amount = "", unit = ""] = match;
+    // The label is the end of the match (the character before it is only its boundary).
+    const start = match.index + whole.length - label.length;
     // Always found: the pattern only matches the table's units.
-    seconds: Number(amount.replace(",", ".")) * (UNIT_SECONDS[unit.toLowerCase()] ?? 0),
-  }));
+    const seconds = Number(amount.replace(",", ".")) * (UNIT_SECONDS[unit.toLowerCase()] ?? 0);
+    return { label, seconds, start, end: start + label.length };
+  });
+  const inWords = [...step.matchAll(PHRASE)].map((match): Found => {
+    const [whole, label = "", phrase = ""] = match;
+    const start = match.index + whole.length - label.length;
+    return {
+      label,
+      seconds: PHRASE_SECONDS[phrase.toLowerCase()] ?? 0,
+      start,
+      end: start + label.length,
+    };
+  });
+  // A phrase inside a time with a number ("2 שעות" holds no phrase, but be sure) is left out.
+  const found = [
+    ...withNumbers,
+    ...inWords.filter((word) => !withNumbers.some((n) => word.start < n.end && n.start < word.end)),
+  ].sort((a, b) => a.start - b.start);
+  return joinHoursAndMinutes(step, found).map(({ label, seconds }) => ({ label, seconds }));
+}
+
+// "1 hour" then "20 minutes", with only "and" or a space between: one 80-minute timer.
+function joinHoursAndMinutes(step: string, found: Found[]): Found[] {
+  const joined: Found[] = [];
+  for (const next of found) {
+    const last = joined.at(-1);
+    if (
+      last &&
+      last.seconds % 3600 === 0 &&
+      next.seconds < 3600 &&
+      next.seconds % 60 === 0 &&
+      JOINER.test(step.slice(last.end, next.start))
+    ) {
+      joined[joined.length - 1] = {
+        label: step.slice(last.start, next.end),
+        seconds: last.seconds + next.seconds,
+        start: last.start,
+        end: next.end,
+      };
+    } else {
+      joined.push(next);
+    }
+  }
+  return joined;
 }
