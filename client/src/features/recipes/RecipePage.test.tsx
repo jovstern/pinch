@@ -150,3 +150,15 @@ test("a picture that doesn't load is left out, with no broken image", async () =
 
   expect(screen.queryByRole("presentation")).not.toBeInTheDocument();
 });
+
+test("Share and Comments are there, and say they're coming", async () => {
+  stubApi();
+  renderApp(`/recipes/${omelette.id}`);
+
+  expect(await screen.findByRole("button", { name: "Share · coming soon" })).toHaveAttribute(
+    "aria-disabled",
+    "true",
+  );
+  expect(screen.getByRole("heading", { level: 2, name: "Comments" })).toBeInTheDocument();
+  expect(screen.getByText(/Coming soon: notes from whoever/)).toBeInTheDocument();
+});

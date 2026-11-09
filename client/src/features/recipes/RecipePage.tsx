@@ -78,6 +78,11 @@ export function RecipePage() {
         <Button asChild variant="secondary">
           <Link to={`/recipes/${recipe.id}/edit`}>Edit</Link>
         </Button>
+        {/* A placeholder (design §1): sharing comes after auth. Unavailable, not hidden, so the
+            household sees it's planned; aria-disabled keeps it in the tab order to be read. */}
+        <Button type="button" variant="secondary" aria-disabled="true">
+          Share · coming soon
+        </Button>
         <DeleteRecipeButton recipe={recipe} />
       </div>
 
@@ -105,6 +110,15 @@ export function RecipePage() {
           </li>
         ))}
       </ol>
+
+      {/* A placeholder too (design §1). When built: its own collection, never an array in the
+          recipe, as comments grow without limit. */}
+      <h2 id="comments" className="mt-8 text-xl font-semibold">
+        Comments
+      </h2>
+      <p className="mt-3 text-text-muted">
+        Coming soon: notes from whoever you share this recipe with.
+      </p>
     </article>
   );
 }
