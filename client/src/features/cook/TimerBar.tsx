@@ -7,13 +7,15 @@ type TimerBarProps = {
   onStop: (id: number) => void;
 };
 
-// The running timers, kept at the bottom of the screen while the cook moves between steps.
+// The running timers, kept at the bottom of the screen while the cook moves between steps. At
+// most 40% of the screen's height, scrolling past it, so many timers never hide the step and
+// its buttons.
 export function TimerBar({ timers, now, onStop }: TimerBarProps) {
   if (timers.length === 0) return null;
   return (
     <ul
       aria-label="Timers"
-      className="sticky bottom-0 mt-8 grid gap-2 border-t border-border bg-surface py-3"
+      className="sticky bottom-0 mt-8 grid max-h-[40dvh] gap-1 overflow-y-auto border-t border-border bg-surface py-2"
     >
       {timers.map((timer) => {
         const left = Math.max(0, Math.ceil((timer.endsAt - now) / 1000));

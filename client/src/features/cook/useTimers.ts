@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import type { Duration } from "./durations.ts";
 
-export type Timer = { id: number; label: string; endsAt: number };
+// key: which of the recipe's times it is (a step and its place in it), so one can't run twice.
+export type Timer = { id: number; key: string; label: string; endsAt: number };
 
 // Cook mode's timers (docs/ux/plan.md U2): each runs to its end time, and the page redraws
 // every second while any is running, so the time left is always worked out from the end time.
@@ -42,7 +43,9 @@ export function useTimers() {
     [],
   );
 
-  function start({ label, seconds }: Duration) {
+  // Pressed again while it runs (a double tap with wet hands): nothing more.
+  function start(key: string, { label, seconds }: Duration) {
+    if (timers.some((timer) => timer.key === key && timer.endsAt > Date.now())) return;
     if ("AudioContext" in window) {
       audio.current ??= new AudioContext();
       // A phone call or another app may have paused it; a tap may start it again.
@@ -52,14 +55,19 @@ export function useTimers() {
     const startedAt = Date.now();
     setNow(startedAt);
     const id = nextId.current++;
-    setTimers((before) => [...before, { id, label, endsAt: startedAt + seconds * 1000 }]);
+    setTimers((before) => [...before, { id, key, label, endsAt: startedAt + seconds * 1000 }]);
   }
 
   function stop(id: number) {
     setTimers((before) => before.filter((timer) => timer.id !== id));
   }
 
-  return { timers, now, start, stop };
+  // Whether that time's timer is running now, to show its button pressed.
+  function isRunning(key: string) {
+    return timers.some((timer) => timer.key === key && timer.endsAt > now);
+  }
+
+  return { timers, now, start, stop, isRunning };
 }
 
 // Three short beeps (Web Audio, no sound file to load) and a buzz where the phone can. An

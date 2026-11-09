@@ -1,5 +1,6 @@
 // The shared type is also called Thumbnail: here it's the picture's size.
 import type { Thumbnail as ThumbnailSize } from "@pinch/shared";
+import { useState } from "react";
 
 type ThumbnailProps = {
   // GET /api/recipes/:id/thumbnail or /api/imports/:id/thumbnail (design §5).
@@ -14,6 +15,17 @@ type ThumbnailProps = {
 // A recipe's picture, from its post. Decorative (alt=""): its title is always beside it. Its box
 // is the right size before the image loads (width and height from the API), so nothing jumps.
 export function Thumbnail({ src, size, shape, className = "" }: ThumbnailProps) {
+  // A picture that doesn't load (gone, offline): no broken-image icon. A tile keeps its place,
+  // so the cards still line up; the page's picture just isn't there.
+  const [failed, setFailed] = useState(false);
+  if (failed) {
+    return shape === "tile" ? (
+      <div
+        aria-hidden="true"
+        className={`h-20 w-16 shrink-0 rounded-control bg-fill ${className}`}
+      />
+    ) : null;
+  }
   return (
     <img
       src={src}
@@ -21,6 +33,9 @@ export function Thumbnail({ src, size, shape, className = "" }: ThumbnailProps) 
       width={size.width}
       height={size.height}
       loading={shape === "tile" ? "lazy" : "eager"}
+      onError={() => {
+        setFailed(true);
+      }}
       // "full" gets a width, not w-auto: with both sides auto, the box stays empty until the
       // image arrives. The height then follows from width and height.
       style={
@@ -28,7 +43,8 @@ export function Thumbnail({ src, size, shape, className = "" }: ThumbnailProps) 
           ? { width: `min(100%, ${String((16 * size.width) / size.height)}rem)` }
           : undefined
       }
-      className={`rounded-card bg-fill object-cover ${shape === "tile" ? "h-20 w-16 shrink-0" : "h-auto"} ${className}`}
+      // A small tile gets the control's radius: the card's would make it look like a pill.
+      className={`bg-fill object-cover ${shape === "tile" ? "h-20 w-16 shrink-0 rounded-control" : "h-auto rounded-card"} ${className}`}
     />
   );
 }

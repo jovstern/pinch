@@ -31,7 +31,7 @@ export function CookPage() {
   const forThisStepId = useId();
   const allId = useId();
   const wakeLock = useWakeLock();
-  const { timers, now, start, stop } = useTimers();
+  const { timers, now, start, stop, isRunning } = useTimers();
   const navigate = useNavigate();
 
   if (status === "pending") return <p className="text-text-muted">Loading the recipe…</p>;
@@ -59,7 +59,9 @@ export function CookPage() {
     <article>
       <title>{`Cooking ${recipe.title} · Pinch`}</title>
       <div className="flex items-start justify-between gap-4">
-        <h1 className="text-xl font-semibold text-balance">{recipe.title}</h1>
+        <h1 dir="auto" className="text-xl font-semibold text-balance">
+          {recipe.title}
+        </h1>
         {/* replace, as the form's Cancel: the phone's Back then doesn't reopen cook mode. */}
         <Button asChild variant="secondary" className="shrink-0">
           <Link to={recipePath} replace>
@@ -88,18 +90,26 @@ export function CookPage() {
           as a new step. */}
       {durations.length > 0 && (
         <div className="mt-4 flex flex-wrap gap-2">
-          {durations.map((duration, position) => (
-            <Button
-              key={position}
-              type="button"
-              variant="secondary"
-              onClick={() => {
-                start(duration);
-              }}
-            >
-              Timer: <span dir="auto">{duration.label}</span>
-            </Button>
-          ))}
+          {durations.map((duration, position) => {
+            const key = `${String(current)}:${String(position)}`;
+            return (
+              <Button
+                key={position}
+                type="button"
+                variant="secondary"
+                aria-pressed={isRunning(key)}
+                onClick={() => {
+                  start(key, duration);
+                }}
+              >
+                {/* One span: a flex item's trailing space would be lost ("Timer:20 min"). */}
+                <span>
+                  {isRunning(key) ? "Running: " : "Timer: "}
+                  <span dir="auto">{duration.label}</span>
+                </span>
+              </Button>
+            );
+          })}
         </div>
       )}
 

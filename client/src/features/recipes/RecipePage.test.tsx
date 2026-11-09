@@ -1,5 +1,5 @@
 import type { Recipe } from "@pinch/shared";
-import { screen, within } from "@testing-library/react";
+import { fireEvent, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, test, vi } from "vitest";
 import { renderApp, stubFetch } from "../../test-utils.tsx";
@@ -133,5 +133,16 @@ test("a recipe with no picture shows none", async () => {
   renderApp(`/recipes/${omelette.id}`);
 
   await screen.findByRole("heading", { level: 1, name: "Omelette" });
+  expect(screen.queryByRole("presentation")).not.toBeInTheDocument();
+});
+
+test("a picture that doesn't load is left out, with no broken image", async () => {
+  stubFetch(() =>
+    Promise.resolve(Response.json({ ...omelette, thumbnail: { width: 281, height: 500 } })),
+  );
+  renderApp(`/recipes/${omelette.id}`);
+
+  fireEvent.error(await screen.findByRole("presentation"));
+
   expect(screen.queryByRole("presentation")).not.toBeInTheDocument();
 });

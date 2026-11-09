@@ -173,3 +173,19 @@ test("each timer rings once as it ends, and not again when one is dismissed", as
   await user.click(screen.getByRole("button", { name: "Dismiss the 1 min timer" }));
   expect(vibrate).toHaveBeenCalledTimes(2);
 });
+
+test("a timer pressed again while it runs isn't started twice, and shows it's running", async () => {
+  stubApi({ ...omelette, steps: ["Cook the eggs for 2 min."] });
+  renderApp(`/recipes/${omelette.id}/cook`);
+
+  const timer = await screen.findByRole("button", { name: "Timer: 2 min" });
+  await userEvent.dblClick(timer);
+
+  expect(
+    within(screen.getByRole("list", { name: "Timers" })).getAllByRole("listitem"),
+  ).toHaveLength(1);
+  expect(screen.getByRole("button", { name: "Running: 2 min" })).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
+});
