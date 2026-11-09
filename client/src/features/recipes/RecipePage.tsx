@@ -104,7 +104,7 @@ export function RecipePage() {
 
       {/* From 1024 px the ingredients sit in a panel beside the steps, so the whole recipe fits
           without scrolling back (design §14). */}
-      <div className="mt-8 lg:mt-10 lg:grid lg:grid-cols-[minmax(0,22rem)_1fr] lg:items-start lg:gap-12">
+      <div className="mt-8 lg:mt-10 lg:grid lg:grid-cols-[minmax(16rem,22rem)_minmax(0,1fr)] lg:items-start lg:gap-12">
         <section className="lg:rounded-card lg:border lg:border-border lg:p-5">
           {/* Each list is named by its heading, for screen readers (and the tests). */}
           <h2 id="ingredients" className="text-xl font-semibold">

@@ -10,6 +10,10 @@ type StepCarouselProps = {
   // The card for a step (a StepCard).
   card: (step: string) => ReactNode;
   onDone: () => void;
+  // Under the cards, before Back and Next: the whole checklist, folded, below 1024 px.
+  children?: ReactNode;
+  // The running timers (a TimerBar), in the footer with Back and Next below 1024 px.
+  timers?: ReactNode;
 };
 
 // Dots up to this many steps: at 360 px, 7 still leaves each 24 px wide (WCAG 2.5.8) between ‹
@@ -22,7 +26,7 @@ const mostDots = 7;
 // keep the step and the row together. Swiping can't be the only way (WCAG 2.5.7, a wet thumb):
 // ‹ › and the dots on a phone, Back and Next from 768 px, the ← → keys and a tap on the peeking
 // card move it too.
-export function StepCarousel({ steps, card, onDone }: StepCarouselProps) {
+export function StepCarousel({ steps, card, onDone, children, timers }: StepCarouselProps) {
   const [index, setIndex] = useState(0);
   const row = useRef<HTMLOListElement>(null);
   const settling = useRef<number | undefined>(undefined);
@@ -99,12 +103,14 @@ export function StepCarousel({ steps, card, onDone }: StepCarouselProps) {
       </div>
 
       {/* relative: the cards' offsetLeft is measured from the row. The cards out of view aren't
-          inert, on purpose: tabbing into one scrolls it in, and the step follows. */}
+          inert, on purpose: tabbing into one scrolls it in, and the step follows. items-start: each
+          card as tall as its step, while the row keeps the tallest's height, so Back and Next
+          don't move. From 768 px, where Back and Next are, a card takes the whole row: no peek. */}
       <ol
         ref={row}
         aria-label="Steps"
         onScroll={settle}
-        className="relative mt-4 grid snap-x snap-mandatory [scrollbar-width:none] auto-cols-[calc(100%-2rem)] grid-flow-col gap-2 overflow-x-auto overscroll-x-contain motion-safe:scroll-smooth"
+        className="relative mt-4 grid snap-x snap-mandatory [scrollbar-width:none] auto-cols-[calc(100%-2rem)] grid-flow-col items-start gap-2 overflow-x-auto overscroll-x-contain motion-safe:scroll-smooth md:auto-cols-[100%]"
       >
         {steps.map((step, position) => (
           // A tap on the peeking card brings it in; a swipe isn't a click, so it doesn't.
@@ -121,58 +127,70 @@ export function StepCarousel({ steps, card, onDone }: StepCarouselProps) {
         ))}
       </ol>
 
-      {/* Each stays the same button from step to step (aria-disabled, not disabled; Next turns
+      {children}
+
+      {/* Back, Next and the timers in one footer, pinned to the bottom below 1024 px, so a short
+          phone never hides one under the other (design §14). From 1024 px the footer stays put
+          and the timers are cook mode's own, under both columns. data-cook-footer: a field
+          focused under it scrolls clear of it (globals.css). */}
+      <div
+        data-cook-footer
+        className="sticky bottom-0 mt-4 border-t border-border bg-surface py-2 md:mt-6 lg:static lg:border-0"
+      >
+        {/* Each stays the same button from step to step (aria-disabled, not disabled; Next turns
           into Done), so a keyboard's focus stays on it. Small around the dots on a phone (Next a
           fixed width, so Done doesn't move the row), big and as wide as each other from 768 px:
           easy to reach with a knuckle. */}
-      <div className="mt-4 flex items-center gap-2 md:mt-6 md:gap-3">
-        <Button
-          type="button"
-          variant="secondary"
-          className="size-11 shrink-0 px-0 md:h-14 md:w-40 md:text-lg"
-          aria-disabled={current === 0}
-          onClick={() => {
-            if (current > 0) goTo(current - 1);
-          }}
-        >
-          <ChevronLeft aria-hidden="true" className="size-5" />
-          <span className="sr-only md:not-sr-only">Back</span>
-        </Button>
-        {/* A dot per step that jumps to it: 44 px tall, and 44 px wide where they fit. From 768
+        <div className="flex items-center gap-2 md:gap-3">
+          <Button
+            type="button"
+            variant="secondary"
+            className="size-11 shrink-0 px-0 md:h-14 md:w-40 md:text-lg"
+            aria-disabled={current === 0}
+            onClick={() => {
+              if (current > 0) goTo(current - 1);
+            }}
+          >
+            <ChevronLeft aria-hidden="true" className="size-5" />
+            <span className="sr-only md:not-sr-only">Back</span>
+          </Button>
+          {/* A dot per step that jumps to it: 44 px tall, and 44 px wide where they fit. From 768
             px, Back, Next and the keys are enough. */}
-        <div className="flex min-w-0 flex-1 justify-center md:hidden">
-          {steps.length <= mostDots &&
-            steps.map((_, step) => (
-              <button
-                key={step}
-                type="button"
-                aria-label={`Step ${String(step + 1)}`}
-                aria-current={step === current ? "step" : undefined}
-                className="group flex h-11 max-w-11 min-w-0 flex-1 items-center justify-center rounded-control"
-                onClick={() => {
-                  goTo(step);
-                }}
-              >
-                <span className="h-2 w-2 rounded-full bg-input group-aria-[current=step]:w-5 group-aria-[current=step]:bg-foreground" />
-              </button>
-            ))}
+          <div className="flex min-w-0 flex-1 justify-center md:hidden">
+            {steps.length <= mostDots &&
+              steps.map((_, step) => (
+                <button
+                  key={step}
+                  type="button"
+                  aria-label={`Step ${String(step + 1)}`}
+                  aria-current={step === current ? "step" : undefined}
+                  className="group flex h-11 max-w-11 min-w-0 flex-1 items-center justify-center rounded-control"
+                  onClick={() => {
+                    goTo(step);
+                  }}
+                >
+                  <span className="h-2 w-2 rounded-full bg-input group-aria-[current=step]:w-5 group-aria-[current=step]:bg-foreground" />
+                </button>
+              ))}
+          </div>
+          <Button
+            type="button"
+            className="w-20 shrink-0 px-0 md:h-14 md:w-40 md:text-lg"
+            onClick={() => {
+              if (current < last) goTo(current + 1);
+              else onDone();
+            }}
+          >
+            <span className={cn(current < last && "sr-only md:not-sr-only")}>
+              {current < last ? "Next" : "Done"}
+            </span>
+            {current < last && <ChevronRight aria-hidden="true" className="size-5" />}
+          </Button>
+          <p className="hidden text-sm whitespace-nowrap text-muted-foreground md:pointer-fine:block">
+            or the ← → keys
+          </p>
         </div>
-        <Button
-          type="button"
-          className="w-20 shrink-0 px-0 md:h-14 md:w-40 md:text-lg"
-          onClick={() => {
-            if (current < last) goTo(current + 1);
-            else onDone();
-          }}
-        >
-          <span className={cn(current < last && "sr-only md:not-sr-only")}>
-            {current < last ? "Next" : "Done"}
-          </span>
-          {current < last && <ChevronRight aria-hidden="true" className="size-5" />}
-        </Button>
-        <p className="hidden text-sm whitespace-nowrap text-muted-foreground md:pointer-fine:block">
-          or the ← → keys
-        </p>
+        {timers}
       </div>
     </section>
   );

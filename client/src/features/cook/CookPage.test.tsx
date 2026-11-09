@@ -215,17 +215,17 @@ test("a time in the step starts a timer, which counts down and says when it's do
 
   await user.click(await screen.findByRole("button", { name: "Timer: 2 min" }));
   const timers = screen.getByRole("list", { name: "Timers" });
-  expect(timers).toHaveTextContent("2 min: 2:00 left");
+  expect(timers).toHaveTextContent("2:00 left · 2 min timer");
 
   act(() => {
     vi.advanceTimersByTime(60_000);
   });
-  expect(timers).toHaveTextContent("2 min: 1:00 left");
+  expect(timers).toHaveTextContent("1:00 left · 2 min timer");
 
   act(() => {
     vi.advanceTimersByTime(60_000);
   });
-  expect(within(timers).getByRole("alert")).toHaveTextContent("2 min: done");
+  expect(within(timers).getByRole("alert")).toHaveTextContent("2 min timer: done");
 
   await user.click(screen.getByRole("button", { name: "Dismiss the 2 min timer" }));
   expect(screen.queryByRole("list", { name: "Timers" })).not.toBeInTheDocument();
@@ -285,4 +285,15 @@ test("from 1024 px the whole checklist is a panel beside the steps, not folded",
     await screen.findByRole("heading", { level: 2, name: "All ingredients (2)" }),
   ).toBeInTheDocument();
   expect(screen.getByRole("list", { name: "All ingredients (2)" })).toBeVisible();
+});
+
+test("below 1024 px the timers share one footer with Back and Next, pinned to the bottom", async () => {
+  stubApi({ ...omelette, steps: ["Cook the eggs for 2 min."] });
+  renderApp(`/recipes/${omelette.id}/cook`);
+
+  await userEvent.click(await screen.findByRole("button", { name: "Timer: 2 min" }));
+
+  // One footer, so a short phone can't hide the buttons under the timers (design §14).
+  const footer = screen.getByRole("button", { name: "Done" }).closest("[data-cook-footer]");
+  expect(footer).toContainElement(screen.getByRole("list", { name: "Timers" }));
 });

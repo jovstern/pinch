@@ -132,9 +132,10 @@ body {
 }
 
 /* A field focused or scrolled to (the first error after Save) stays clear of the editor's Save
-   bar, pinned to the bottom below 1024 px (RecipeForm). */
+   bar, and a checkbox of cook mode clear of its footer: both pinned to the bottom below 1024 px
+   (RecipeForm, StepCarousel). */
 @media (width < 64rem) {
-  html:has([data-save-bar]) {
+  html:has([data-save-bar], [data-cook-footer]) {
     scroll-padding-bottom: 10rem;
   }
 }
