@@ -14,7 +14,7 @@ the budgets before its PR opens.
 | Metric | Budget (mobile, production build) |
 |---|---|
 | Lighthouse Performance / Accessibility / Best Practices / SEO | ≥ 95 / 100 / 100 / 100 |
-| LCP | ≤ 2.0 s (Lighthouse mobile throttling) |
+| LCP | ≤ 2.0 s (Lighthouse mobile throttling); ≤ 2.5 s on pages that draw their content from an API answer after the JS (raised by the user in M7: three round trips in a row — HTML, JS, the data — cost about 2.1 s under that throttling, and 2.5 s is Core Web Vitals' "good" — docs/metrics/m07.md) |
 | CLS | ≤ 0.05 |
 | TBT (lab proxy for INP) | ≤ 150 ms |
 | First-load JS per route | ≤ 130 kB gzip (Next.js) / ≤ 165 kB (SPA; 150 until M4, raised by the user: the libraries the conventions require fill most of it, and LCP is set by round trips, not bytes — docs/metrics/m04.md) |

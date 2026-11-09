@@ -1,14 +1,17 @@
 @import "tailwindcss";
 
-/* The display face (docs/ux/plan.md §6): Fraunces, SIL OFL (public/fonts/OFL.txt). Cut down to
-   what the titles use, so it stays small: Latin only, weights 500–700, one optical size (36).
-   In public/, by its path: the dev server doesn't rewrite a relative url() here. index.html
-   preloads it, so titles don't swap from Georgia late and shift the page. */
+/* Until Fraunces arrives (lib/displayFont.ts loads it once the page has loaded), titles are in
+   Georgia Bold sized to take Fraunces' room: as wide, as tall, so nothing moves when it swaps
+   in. Measured from both fonts' metrics, for the weights display text uses (600–700). Android
+   has no Georgia: there the titles may shift once, on the first visit. */
 @font-face {
-  font-family: "Fraunces";
-  src: url("/fonts/fraunces.woff2") format("woff2");
-  font-weight: 500 700;
-  font-display: swap;
+  font-family: "Fraunces Fallback";
+  src: local("Georgia Bold"), local("Georgia-Bold");
+  font-weight: 600 700;
+  size-adjust: 95.1%;
+  ascent-override: 102.9%;
+  descent-override: 26.8%;
+  line-gap-override: 0%;
 }
 
 /* Design tokens (styling.md, docs/ux/plan.md §6): components use these names, never raw
@@ -40,7 +43,10 @@
   /* Behind a dialog: dark in both themes. */
   --color-scrim: #0f0c09;
 
-  --font-display: "Fraunces", Georgia, serif;
+  /* Fraunces has no Hebrew: a Hebrew title is named a serif here (Times New Roman on Apple and
+     Windows, Noto Serif Hebrew on Android), so it's the same before and after Fraunces swaps in. */
+  --font-display:
+    "Fraunces", "Fraunces Fallback", "Times New Roman", "Noto Serif Hebrew", Georgia, serif;
 
   /* Shape (plan §6): cards and sheets round, controls less so, chips full (rounded-full). One
      soft shadow, for what floats over the page (the dialog). */

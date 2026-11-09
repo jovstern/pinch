@@ -1,5 +1,5 @@
 import type { Recipe } from "@pinch/shared";
-import { screen, waitFor } from "@testing-library/react";
+import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, test, vi } from "vitest";
 import { renderApp, stubFetch } from "../../test-utils.tsx";
@@ -28,6 +28,20 @@ test("lists each recipe as a link to it, with what it needs", async () => {
   const link = await screen.findByRole("link", { name: /Omelette/ });
   expect(link).toHaveAttribute("href", `/recipes/${omelette.id}`);
   expect(link).toHaveTextContent("2 ingredients · 10 min");
+});
+
+test("a recipe from a post shows its picture as a tile in its card", async () => {
+  const fromReel = { ...omelette, thumbnail: { width: 281, height: 500 } };
+  stubFetch(vi.fn().mockResolvedValue(Response.json({ items: [fromReel], nextCursor: null })));
+  renderApp("/");
+
+  const link = await screen.findByRole("link", { name: /Omelette/ });
+  expect(within(link).getByRole("presentation")).toHaveAttribute(
+    "src",
+    `/api/recipes/${omelette.id}/thumbnail`,
+  );
+  // Decorative: the link is still named by the title and what it needs.
+  expect(link).toHaveAccessibleName("Omelette 2 ingredients · 10 min");
 });
 
 test("one ingredient is counted in the singular", async () => {

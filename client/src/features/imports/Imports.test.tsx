@@ -1,4 +1,10 @@
-import { dailyLimitMessage, linkMessage, textMessage, type Import } from "@pinch/shared";
+import {
+  dailyLimitMessage,
+  linkMessage,
+  screenshotsMessage,
+  textMessage,
+  type Import,
+} from "@pinch/shared";
 import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, test, vi } from "vitest";
@@ -339,4 +345,81 @@ test("polling runs only while the worker has a link in hand", () => {
   expect(pollInterval(list("processing"))).toBe(2000);
   expect(pollInterval(list("ready", "failed"))).toBe(false);
   expect(pollInterval(undefined)).toBe(false);
+});
+
+const screenshot = (name: string) => new File(["png"], name, { type: "image/png" });
+
+test("chosen screenshots are sent at once, as a form, and show in the list", async () => {
+  const shots = importOf({ input: { type: "images", count: 2 } });
+  const fetch = stubApi([[], [shots]], () => Response.json(shots, { status: 202 }));
+  renderApp("/");
+
+  await userEvent.upload(screen.getByLabelText("Or add screenshots"), [
+    screenshot("one.png"),
+    screenshot("two.png"),
+  ]);
+
+  const body = fetch.mock.calls.find(([path]) => path === "/api/imports/screenshots")?.[1]?.body;
+  if (!(body instanceof FormData)) throw new Error("No form was sent.");
+  expect(body.getAll("images")).toHaveLength(2);
+  expect(await screen.findByText("Screenshots")).toBeInTheDocument();
+  expect(screen.getByText("2 images")).toBeInTheDocument();
+});
+
+test("more than 4 screenshots, or one too big, are refused before anything is sent", async () => {
+  const fetch = stubApi([[]]);
+  renderApp("/");
+  const picker = screen.getByLabelText("Or add screenshots");
+
+  await userEvent.upload(
+    picker,
+    ["1", "2", "3", "4", "5"].map((n) => screenshot(`${n}.png`)),
+  );
+  expect(await screen.findByRole("alert")).toHaveTextContent(screenshotsMessage);
+
+  const big = screenshot("big.png");
+  Object.defineProperty(big, "size", { value: 11_000_000 });
+  await userEvent.upload(picker, [big]);
+  expect(screen.getByRole("alert")).toHaveTextContent(screenshotsMessage);
+  expect(fetch).not.toHaveBeenCalledWith("/api/imports/screenshots", expect.anything());
+});
+
+test("the API's reason for refusing the screenshots is shown, and tied to the picker", async () => {
+  stubApi([[]], () =>
+    Response.json({ error: { fields: { images: "Not an image." } } }, { status: 400 }),
+  );
+  renderApp("/");
+
+  const picker = screen.getByLabelText("Or add screenshots");
+  await userEvent.upload(picker, [screenshot("one.png")]);
+
+  expect(await screen.findByRole("alert")).toHaveTextContent("Not an image.");
+  expect(picker).toHaveAccessibleDescription(/Not an image\./);
+});
+
+test("a pick while screenshots are sending sends nothing more", async () => {
+  // A send that waits until the test answers it.
+  let answer: (response: Response) => void = () => undefined;
+  const fetch = vi.fn((path: string, init?: RequestInit) => {
+    if (init?.method === "POST") return new Promise<Response>((resolve) => (answer = resolve));
+    if (path === "/api/imports") return Promise.resolve(Response.json({ items: [] }));
+    return Promise.resolve(Response.json({ items: [], nextCursor: null }));
+  });
+  vi.stubGlobal("fetch", fetch);
+  renderApp("/");
+
+  await userEvent.upload(screen.getByLabelText("Or add screenshots"), [screenshot("one.png")]);
+  await userEvent.upload(await screen.findByLabelText("Sending…"), [screenshot("two.png")]);
+  answer(Response.json(importOf({}), { status: 202 }));
+
+  expect(fetch.mock.calls.filter(([, init]) => init?.method === "POST")).toHaveLength(1);
+});
+
+test("screenshots past the day's cap say so", async () => {
+  stubApi([[]], () => Response.json({ error: { code: "daily_limit" } }, { status: 429 }));
+  renderApp("/");
+
+  await userEvent.upload(screen.getByLabelText("Or add screenshots"), [screenshot("one.png")]);
+
+  expect(await screen.findByRole("alert")).toHaveTextContent(dailyLimitMessage);
 });

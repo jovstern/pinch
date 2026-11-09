@@ -100,13 +100,18 @@ const platformNames: Record<Platform, string> = {
   youtube: "YouTube",
 };
 
-// What an import was made from: a link (by its site) or a post's text, pasted (design §1).
+// What an import was made from: a link (by its site), a post's text, pasted, or its screenshots
+// (design §1).
 function inputName(input: Import["input"]) {
-  return input.type === "link" ? `${platformNames[input.platform]} link` : "Pasted text";
+  if (input.type === "link") return `${platformNames[input.platform]} link`;
+  if (input.type === "text") return "Pasted text";
+  return "Screenshots";
 }
 
 function inputText(input: Import["input"]) {
-  return input.type === "link" ? input.url : input.text;
+  if (input.type === "link") return input.url;
+  if (input.type === "text") return input.text;
+  return input.count === 1 ? "1 image" : `${String(input.count)} images`;
 }
 
 // waiting → fetching → analyzing → ready to review, or why it failed (design §1).

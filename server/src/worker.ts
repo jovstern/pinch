@@ -21,7 +21,10 @@ if (config.EXTRACTOR === "gemini") {
   if (!config.GEMINI_API_KEY) {
     throw new Error("GEMINI_API_KEY is missing: set it in .env, or run with EXTRACTOR=fake.");
   }
-  extract = geminiExtract(new GoogleGenAI({ apiKey: config.GEMINI_API_KEY }));
+  // A timeout on every request, as each call gives its own: the upload's are bound only by this.
+  extract = geminiExtract(
+    new GoogleGenAI({ apiKey: config.GEMINI_API_KEY, httpOptions: { timeout: 120_000 } }),
+  );
 }
 
 const client = await connectToMongo(config.MONGODB_URI);

@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { RecipeDraftSchema } from "./recipe.ts";
+import { RecipeDraftSchema, ThumbnailSchema } from "./recipe.ts";
 
 export const PlatformSchema = z.enum(["instagram", "facebook", "youtube"]);
 export type Platform = z.infer<typeof PlatformSchema>;
@@ -17,9 +17,17 @@ export const dailyLimitMessage = `You've sent ${String(DAILY_IMPORT_CAP)} import
 
 export const textMessage = "Paste more of the recipe: a line or two at least.";
 
+// Screenshots of a post, sent when neither its link nor its text will do (design §1): a few
+// pictures of the recipe, sent as a form (POST /api/imports/screenshots), not JSON.
+export const MAX_SCREENSHOTS = 4;
+export const MAX_SCREENSHOT_BYTES = 10_000_000;
+export const SCREENSHOT_TYPES = ["image/png", "image/jpeg", "image/webp"];
+export const screenshotsMessage = `Add 1 to ${String(MAX_SCREENSHOTS)} screenshots: PNG, JPEG or WebP, up to 10 MB each.`;
+
 // The body of POST /api/imports (design §4.1, §8): a link to a post on one of the platforms, by
 // its host ("www." and "m." are the same site), or the post's text, pasted when its link can't
-// be read (§1). The type says which, so each field has its own message. Screenshots come in M6.
+// be read (§1). The type says which, so each field has its own message. Screenshots have their
+// own route: they're sent as a form.
 export const ImportInputSchema = z.discriminatedUnion(
   "type",
   [
@@ -67,6 +75,8 @@ export const ImportSchema = z.object({
       platform: PlatformSchema,
     }),
     z.object({ type: z.literal("text"), text: z.string() }),
+    // How many; the images themselves stay on the server.
+    z.object({ type: z.literal("images"), count: z.int() }),
   ]),
   attempts: z.int(),
   // No worker has taken it, long after it was due: none is running (design §4.3). The client
@@ -79,6 +89,8 @@ export const ImportSchema = z.object({
   noRetry: z.boolean().optional(),
   // The recipe the worker made, for the user to review (design D1).
   draft: RecipeDraftSchema.optional(),
+  // The draft's picture, served by GET /api/imports/:id/thumbnail (design §5).
+  thumbnail: ThumbnailSchema.optional(),
   createdAt: z.iso.datetime(),
   updatedAt: z.iso.datetime(),
 });
