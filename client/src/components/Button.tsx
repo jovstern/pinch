@@ -4,8 +4,8 @@ import { Slot } from "radix-ui";
 // One look per kind of action, so every button and button-like link matches (styling.md).
 const variants = {
   primary: "bg-accent-strong text-on-accent hover:bg-accent-strong/90 active:bg-accent-strong/80",
-  // A tinted fill, not a bordered box (plan §6: depth from surfaces, not lines).
-  secondary: "bg-surface-sunken hover:bg-border active:bg-border/70",
+  // A fill, not a bordered box (plan §6: depth from surfaces, not lines).
+  secondary: "bg-fill hover:bg-border active:bg-border/70",
   danger: "bg-danger text-on-accent hover:bg-danger/90 active:bg-danger/80",
   // A destructive action that isn't the page's main one (or only opens a question): it
   // shouldn't shout.

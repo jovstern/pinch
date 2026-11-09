@@ -19,7 +19,8 @@ export function Layout() {
             to="/"
             className="inline-flex items-center gap-1.5 font-display text-2xl font-bold tracking-tight text-accent"
           >
-            {/* The mark: two fingertips pinching, as on the favicon (plan §6). */}
+            {/* The mark: two fingertips pinching, as on the favicon (plan §6); its 32×32 box cropped
+                to the strokes and their round caps. */}
             <svg aria-hidden="true" viewBox="8 5 16 22" className="h-7 w-5">
               <path
                 d="M11 25C11 17 13 11 15.5 7M21 25C21 17 19 11 16.5 7"
