@@ -86,5 +86,5 @@ Slices for later milestones are filled in when the milestone starts.
 - [x] Thumbnails in the client: on the cards, the recipe and the review page
 - [x] Screenshot fallback, the pipeline: an import can be up to 4 images
 - [x] Screenshot fallback, the box: add images on `/`
-- [ ] End of milestone: a real reel becomes a draft with a thumbnail; UI review, observer, demo
+- [x] End of milestone: a real reel becomes a draft with a thumbnail; UI review, observer, demo
 ## M7 — Polish
