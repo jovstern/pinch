@@ -100,4 +100,4 @@ Slices for later milestones are filled in when the milestone starts.
 - [x] States: the accessibility e2e on a recipe, cook mode and a draft's review with its picture,
       in both themes (Your imports while loading: left as is, as the list is usually empty and a
       placeholder would jump the other way)
-- [ ] End of milestone: UI review, observer, demo
+- [x] End of milestone: UI review, observer, demo
