@@ -54,7 +54,7 @@ Meal planning, shopping lists, scaling servings, Instagram/Facebook **stories** 
 | Import time | Typically < 60 s, always **asynchronous**: the UI never waits on it |
 | Video length | ≤ 3 minutes (checked before downloading when the platform reports it; otherwise right after, see §4.1) |
 | Reliability | A crash never loses an import or creates a duplicate recipe |
-| Media | **Never stored.** Only text, plus a tiny thumbnail (§5) |
+| Media | **Never stored**, beyond an import's own: a video lives for one attempt, uploaded screenshots until the draft is made (§6). Only text, plus a tiny thumbnail (§5) |
 | Cost | Imports per user per day are capped (default 20) |
 | Code | Simple and consistent above all — every line should be easy to read |
 
@@ -96,13 +96,16 @@ Mongo is the only shared state. There is no Redis, no queue service and no objec
    daily cap, creates an import with
    `status: "pending"` and answers **202** with the import.
 2. The worker **claims** the job, then:
-   - **Every link** → read the post's info with `yt-dlp` (no download): its length, checked
-     against the limit, and its **caption**, which often holds the full recipe with
-     quantities (D15).
-   - **YouTube** → send the URL to Gemini directly (Gemini can watch public YouTube videos).
-   - **Instagram / Facebook** → download to a temp folder, upload to the **Gemini Files API**.
-     Instagram doesn't report a length, so for it the length is checked after the download
-     with `ffprobe` (the spike found reels of 3–11 MB).
+   - **Every link** → read the post's info with `yt-dlp`: its length, checked against the
+     limit, and its **caption**, which often holds the full recipe with quantities (D15).
+   - **YouTube** → no download: send the URL to Gemini directly (Gemini can watch public
+     YouTube videos).
+   - **Instagram / Facebook** → one `yt-dlp` call reads the info and downloads to a temp
+     folder (100 MB at most, when the platform says the size); upload to the **Gemini Files
+     API**. Instagram doesn't report a length, so for it the length is checked after the
+     download with `ffprobe` (the spike found reels of 3–11 MB); a long Facebook video is
+     downloaded before it's turned down. A post with no video (a photo post) is read from its
+     caption alone.
    - **Text / screenshots** (fallback) → send them to Gemini as they are: no `yt-dlp`, no
      video. Pasted text is the post's text, so it's fenced as data like a caption (§9).
 3. Gemini gets the video and the caption together and returns JSON that matches our recipe
@@ -205,16 +208,21 @@ recipes, correctly rejected one promo, and one call hung. Results and findings a
 ## 5. Thumbnails
 
 Media is thrown away, but a good-looking list needs images, so each recipe keeps **one tiny
-thumbnail** inside its document: 400 px wide WebP, ~30 KB, made with `sharp`.
+thumbnail** inside its document: WebP inside 400 × 500 (its own shape kept), 20–40 KB, made
+with `sharp`, with its width and height so the page keeps its place before it loads. The
+worker saves it on the import as soon as it has it (as the step), reading at most 5 MB, from
+https, with no redirect; approve copies it to the recipe, and editing keeps it (D20). Making it
+never fails an import: no picture, no thumbnail.
 
 | Source | Thumbnail from |
 |---|---|
-| Instagram / Facebook | A frame of the downloaded video (`ffmpeg`), before the video is deleted |
-| YouTube | The video's standard thumbnail image, resized |
+| Instagram / Facebook / YouTube | The post's own picture (`yt-dlp`'s `thumbnail`: the reel's cover, YouTube's image), fetched at once (the platforms' links expire) and resized. Chosen over a frame cut with `ffmpeg`: the cover is the picture the author chose, and one path serves all three |
 | Screenshots | The first screenshot, resized |
 | Text / manual | None → a colored placeholder with the cuisine's emoji |
 
-Served by `GET /api/recipes/:id/thumbnail` with long cache headers, so list responses stay small.
+Served by `GET /api/recipes/:id/thumbnail` (a draft's by `GET /api/imports/:id/thumbnail`) with
+long cache headers; every query that answers recipes or imports leaves the image out, so list
+responses stay small.
 
 ## 6. Data model (MongoDB)
 
@@ -231,7 +239,7 @@ Recipe {
   tags: [string],                  // "cuisine:italian", "flavor:spicy" — see §7
   servings?, prepMinutes?, cookMinutes?,
   nutritionPerServing?: { calories, proteinG, carbsG, fatG },   // always Gemini's estimate (D14)
-  thumbnail?: Binary,              // excluded from list queries
+  thumbnail?: { webp: Binary, width, height },   // the image left out of every query that answers
   source: { type: "instagram" | "facebook" | "youtube" | "text" | "image" | "manual", url? },
   sourceImportId?,                 // unique + sparse (§4.4)
   createdAt, updatedAt
@@ -241,9 +249,9 @@ Import {
   _id, ownerId,
   status: "pending" | "processing" | "ready" | "failed",
   step?: "fetching" | "analyzing",
-  input: { type: "link" | "text" | "images", url?, platform?, text?, images? },
+  input: { type: "link" | "text" | "images", url?, platform?, text?, count?, images? },
   attempts, nextAttemptAt, leaseUntil?, error?, noRetry?,
-  draft?: RecipeDraft, draftThumbnail?: Binary,
+  draft?: RecipeDraft, thumbnail?: { webp: Binary, width, height },   // named as on a recipe
   createdAt, updatedAt, expiresAt   // TTL
 }
 
@@ -254,8 +262,10 @@ Usage {                            // the daily cap (D22)
 }
 ```
 
-Uploaded screenshots for the fallback are held on the import only until the worker has sent
-them to Gemini, then removed from the document.
+Uploaded screenshots for the fallback (up to 4 PNG, JPEG or WebP files, each made a JPEG at
+most 1600 px on a side by the API: typically 200–400 KB, under 2 MB at worst) are held on the import (`input.images`) only until the draft is made:
+a failed attempt keeps them for the next try; the import's TTL deletes them in any case.
+Every query that answers imports leaves them out.
 
 ### Indexes
 
@@ -336,10 +346,12 @@ PUT    /api/recipes/:id                replace what the user can edit (the form 
 DELETE /api/recipes/:id
 GET    /api/recipes/:id/thumbnail      image/webp
 
-POST   /api/imports                    { type: "link", url } | { type: "text", text } | multipart images  → 202 import (429 past the daily cap)
+POST   /api/imports                    { type: "link", url } | { type: "text", text }  → 202 import (429 past the daily cap)
+POST   /api/imports/screenshots        a form: up to 4 images (10 MB each) as "images"  → 202 import { type: "images", count }
 GET    /api/imports                    my imports that are not done yet
 GET    /api/imports/:id                status, step, error, draft
-POST   /api/imports/:id/approve        the edited draft, as POST /api/recipes; nutritionPerServing from the stored draft (D20) → 201 recipe (409 if not ready)
+GET    /api/imports/:id/thumbnail      image/webp: the draft's picture
+POST   /api/imports/:id/approve        the edited draft, as POST /api/recipes; nutritionPerServing and the thumbnail from the stored import (D20) → 201 recipe (409 if not ready)
 POST   /api/imports/:id/retry          failed → pending, attempts, error and noRetry cleared → 202 (409 if not failed, or noRetry)
 DELETE /api/imports/:id                discard / dismiss
 ```
@@ -393,8 +405,9 @@ changes**. The planned design:
   from the fixed lists only, and a nutrition estimate per serving. If the video isn't a recipe,
   the model says so and the import fails with "This doesn't look like a recipe".
 - The recipe is written **in the language of the post**; tags stay English codes (D16).
-- Every call has a **timeout** inside the attempt's deadline (§4.3), and no retries of its own
-  (the SDK only retries when asked): the worker's retries are the only ones.
+- Every call has a **timeout** (the client's: 120 s a request), and the attempt's deadline
+  (§4.3) cuts the whole attempt. No retries of its own (the SDK only retries when asked), except
+  an upload's chunks, which the SDK tries up to 3 times: the worker's retries are the others.
 - The worker uses the fake extractor of M4 instead when `EXTRACTOR=fake`: e2e runs that way,
   so no test calls Gemini.
 - The output is validated with Zod anyway; invalid output counts as a failed attempt. The
@@ -424,7 +437,7 @@ changes**. The planned design:
 | D17 | The server runs on Node 24's built-in TypeScript type stripping | One fewer dependency; the spike already runs this way | `tsx` (node-api.md's default) |
 | D18 | Schemas in an npm-workspace package `shared/`, used as TypeScript source with no build: its `exports` point at `src/index.ts`; Vite compiles it, and Node type-strips it because the workspace symlink resolves to a path outside `node_modules` | One copy for client and server, no build step | `server/src/schemas/` (node-api.md); a copy on each side; a built package |
 | D19 | MongoDB through the native driver; Zod checks every write, and every response is parsed with its schema, which drops stored fields like `ownerId` | You see the real queries, which suits learning indexes; one schema layer, shared with the client | Mongoose (a second schema layer next to Zod) |
-| D20 | Editing is `PUT`: it replaces what the user can edit and keeps the fields the server owns (`_id`, `ownerId`, `source`, `createdAt`, `sourceImportId`, `nutritionPerServing`, later `thumbnail`), listed in the route | The form always sends the whole recipe, so a field the user clears is simply left out; no `null`/`""` rules | `PATCH` with `null` to clear a field |
+| D20 | Editing is `PUT`: it replaces what the user can edit and keeps the fields the server owns (`_id`, `ownerId`, `source`, `createdAt`, `sourceImportId`, `nutritionPerServing`, `thumbnail`), listed in the route | The form always sends the whole recipe, so a field the user clears is simply left out; no `null`/`""` rules | `PATCH` with `null` to clear a field |
 | D21 | React Router (declarative: `<Routes>` in `App.tsx`, `useParams`, `Link`) | A handful of screens; the most familiar API and the least setup, easy to read line by line | TanStack Router (type-safe routes and loaders, more concepts) |
 | D22 | The daily cap (20) counts links pasted and Retry clicks, in a per-user, per-UTC-day counter (`usage`) raised atomically by both routes; past it, 429 | Imports are deleted once done, so counting them would undercount; the unique `{ownerId, day}` index makes two first counts at once safe on a standalone Mongo (as D9); the routes are where a user asks for work; automatic retries (3 a link) aren't counted, so at most 60 Gemini calls a day | Counting each Gemini call in the worker (exact, but a link could be accepted and then fail with "limit reached") |
 | D23 | "Not a recipe" and "too long" fail the import at once (`NoRetryError`, its message shown to the user); every other error is retried | Trying again gives the same answer and costs a Gemini call each time; the user learns why straight away; nor is the user offered a Retry that can't help, and would use one of the day's 20 | Retry everything (3 Gemini calls for a cat video, and a vague message) |
@@ -475,12 +488,12 @@ mode); the content in a single readable column below it.
 
 | Address | Screen | Its job | States |
 |---|---|---|---|
-| `/` | Your recipes | Paste a link, or a post's text, to pinch a recipe (from M4, the box and Your imports above the list, below). Pick something to cook; each card shows the title, the number of ingredients and the total time. Search (on Enter) and tag filters (folded, applied as ticked) sit above the list and live in the address: `/?q=egg&tags=meal:dinner` | Loading (placeholder cards), empty (points to the paste box, and links to New recipe: "Write a recipe"), error (Try again); 50 at a time, then Show more (focus moves to the first new recipe; a failed page says so and keeps the list); filtered: how many match (announced), or none and a link to clear them |
+| `/` | Your recipes | Paste a link, or a post's text, to pinch a recipe (from M4, the box and Your imports above the list, below), or add up to 4 screenshots of it (from M6; choosing them sends them). Pick something to cook; each card shows the title, the number of ingredients and the total time (from M6, the post's picture as a small 4:5 tile beside them). Search (on Enter) and tag filters (folded, applied as ticked) sit above the list and live in the address: `/?q=egg&tags=meal:dinner` | Loading (placeholder cards), empty (points to the paste box, and links to New recipe: "Write a recipe"), error (Try again); 50 at a time, then Show more (focus moves to the first new recipe; a failed page says so and keeps the list); filtered: how many match (announced), or none and a link to clear them |
 | `/recipes/new` | New recipe | Write a recipe by hand; tags are chips to tick, a group per facet (§7) | From the first Save: each error under its field (§8.1), updated as the user types; focus on the first; saving (button says so); failed (says so, keeps what was typed) |
-| `/recipes/:id` | A recipe | Read it (its tags under the title; from M5 the nutrition per serving, marked ≈ estimate); Cook, the main action; Edit, Delete (asks first) | Loading, error (Try again), not found |
-| `/recipes/:id/cook` | Cook mode | One step at a time in large type ("Step 2 of 6"), Back and Next, Done on the last; the step's ingredients under it (those it names) and all of them folded below, ticked off in both at once; a timer for each time a step mentions ("20 min", "10 דקות"; a range's shorter end), kept at the bottom of the screen, ringing (a beep, a buzz) and announced at zero; leaving cook mode ends them; the screen kept on (Wake Lock), and says so or that it may lock; focus stays on Back and Next/Done from step to step; Exit goes back to the recipe | Loading, error (Try again), not found |
+| `/recipes/:id` | A recipe | Read it (a range like "8–10" kept on one line; from M6 the post's picture at the top, at its shape; its tags under the title; from M5 the nutrition per serving, marked ≈ estimate); Cook, the main action; Edit, Share (from M7, "coming soon", unavailable), Delete (asks first); Comments under the steps (from M7, "coming soon") | Loading, error (Try again), not found |
+| `/recipes/:id/cook` | Cook mode | One step at a time in large type ("Step 2 of 6"), Back and Next, Done on the last; the step's ingredients under it (those it names) and all of them folded below, ticked off in both at once; a timer for each time a step mentions ("20 min", "10 דקות"; a range's shorter end; hours and minutes as one; in words too: "half an hour", "חצי שעה"), each started once (pressed again while it runs, nothing: its button says Running), kept at the bottom of the screen (at most 40% of it), ringing (a beep, a buzz) and announced at zero; leaving cook mode ends them; the screen kept on (Wake Lock), and says so or that it may lock; focus stays on Back and Next/Done from step to step; Exit goes back to the recipe | Loading (the step's shape), error (Try again), not found |
 | `/recipes/:id/edit` | Edit recipe | Change it; Cancel goes back to the recipe | Loading, error (Try again), not found; then as New recipe |
-| `/imports/:id` | Review the recipe | Check the draft the worker made, in the recipe form (D1); Save approves it and opens the new recipe; Review later (the form's Cancel) keeps it; Discard, last in the form's buttons, deletes it and goes back to `/` | Loading, error (Try again), not found; no draft (not done yet, or failed): says so and links home; then as New recipe |
+| `/imports/:id` | Review the recipe | Check the draft the worker made, in the recipe form (D1), under the post's picture (M6); Save approves it and opens the new recipe; Review later (the form's Cancel) keeps it; Discard, last in the form's buttons, deletes it and goes back to `/` | Loading, error (Try again), not found; no draft (not done yet, or failed): says so and links home; then as New recipe |
 | anything else | Page not found | Get back to the recipes | — |
 
 From M4 the paste-a-link box on `/` becomes the main action, and import status shows there:

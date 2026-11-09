@@ -2,7 +2,7 @@ import { RecipeSchema, type RecipeInput } from "@pinch/shared";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useParams } from "react-router";
 import { sendJson } from "../../lib/api.ts";
-import { LazyRecipeForm } from "./LazyRecipeForm.tsx";
+import { LazyRecipeForm, usePreloadRecipeForm } from "./LazyRecipeForm.tsx";
 import { toFormValues } from "./recipeFormValues.ts";
 import { RecipeLoadError } from "./RecipeLoadError.tsx";
 import { recipeListsKey, recipeQuery } from "./recipeQueries.ts";
@@ -18,6 +18,7 @@ export function EditRecipePage() {
     refetch,
     isFetching,
   } = useQuery(recipeQuery(id));
+  usePreloadRecipeForm();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   // PUT sends the whole recipe: the form always has every field (design §8, D20).
