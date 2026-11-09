@@ -81,7 +81,7 @@ Slices for later milestones are filled in when the milestone starts.
 
 - [x] Instagram and Facebook links: download with `yt-dlp`, length with `ffprobe`, the Gemini
       Files API; media deleted in `finally`
-- [ ] Thumbnails: the worker makes one (a frame, or YouTube's image), stored with the draft and
+- [x] Thumbnails: the worker makes one (the post's own picture), stored with the draft and
       the recipe, served by the API
 - [ ] Thumbnails in the client: on the cards, the recipe and the review page
 - [ ] Screenshot fallback, the pipeline: an import can be up to 4 images

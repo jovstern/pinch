@@ -26,11 +26,13 @@ export {
   RecipeListSchema,
   RecipeSchema,
   SourceSchema,
+  ThumbnailSchema,
   type Ingredient,
   type Nutrition,
   type Recipe,
   type RecipeDraft,
   type RecipeInput,
   type RecipeList,
+  type Thumbnail,
 } from "./recipe.ts";
 export { isTag, tagFacets, TagSchema, type TagFacet } from "./tags.ts";

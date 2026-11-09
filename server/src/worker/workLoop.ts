@@ -3,14 +3,16 @@ import type { Collection, UpdateFilter } from "mongodb";
 import { setTimeout } from "node:timers/promises";
 import type { Logger } from "pino";
 import { claimNextImport, LEASE_MS, type ImportDocument } from "../db/imports.ts";
+import type { StoredThumbnail } from "../db/recipes.ts";
 
 // Turns an import's input into a draft: geminiExtract, or fakeExtract for e2e. It must stop when
-// the signal aborts: that's the attempt's deadline. It says each step as it starts it. Unknown:
-// runImport checks what it makes.
+// the signal aborts: that's the attempt's deadline. It says each step as it starts it, and saves
+// the post's picture when it has one (design §5). Unknown: runImport checks what it makes.
 export type Extract = (
   input: ImportDocument["input"],
   signal: AbortSignal,
   setStep: (step: ImportStep) => Promise<void>,
+  setThumbnail: (thumbnail: StoredThumbnail) => Promise<void>,
 ) => Promise<unknown>;
 
 // With nothing to do, look again after this long (design §4.3).
@@ -92,6 +94,10 @@ export async function runImport({ imports, extract, logger, job, deadline }: Run
   async function setStep(step: ImportStep) {
     await imports.updateOne(ours, { $set: { step, updatedAt: new Date() } });
   }
+  // As the step; kept whatever the end: a retry makes the same picture again.
+  async function setThumbnail(thumbnail: StoredThumbnail) {
+    await imports.updateOne(ours, { $set: { thumbnail, updatedAt: new Date() } });
+  }
 
   // Its worker died on the last try (claimed again after its lease ran out): no more tries.
   if (job.attempts > MAX_ATTEMPTS) {
@@ -102,7 +108,7 @@ export async function runImport({ imports, extract, logger, job, deadline }: Run
   let draft: RecipeDraft;
   try {
     // Checked like a POST body: what the extractor makes is never trusted as it is (§9).
-    draft = RecipeDraftSchema.parse(await extract(job.input, deadline, setStep));
+    draft = RecipeDraftSchema.parse(await extract(job.input, deadline, setStep, setThumbnail));
   } catch (error) {
     if (error instanceof NoRetryError) {
       await save(failedUpdate(error.message, true), `import failed: ${error.message}`);

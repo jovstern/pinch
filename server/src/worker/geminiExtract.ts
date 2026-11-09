@@ -5,6 +5,8 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { setTimeout } from "node:timers/promises";
 import { z } from "zod";
+import type { StoredThumbnail } from "../db/recipes.ts";
+import { makeThumbnail } from "./thumbnail.ts";
 import { downloadVideo, measureSeconds, readVideoInfo } from "./videoInfo.ts";
 import { NoRetryError, type Extract } from "./workLoop.ts";
 
@@ -52,16 +54,19 @@ export const TOO_LONG = "This video is over 3 minutes. Pinch reads shorter ones.
 // The one place that knows about Gemini (§9): the worker hands it an import's input and gets a
 // draft back, which it checks with Zod as it would any other.
 export function geminiExtract(ai: GoogleGenAI): Extract {
-  return async (input, signal, setStep) => {
+  return async (input, signal, setStep, setThumbnail) => {
     // Pasted text: there's no video, so only the text (§4.1).
     if (input.type === "text") {
       await setStep("analyzing");
       return askGemini(ai, [postText(input.text)], signal);
     }
     await setStep("fetching");
-    if (input.platform !== "youtube") return fromDownload(ai, input.url, signal, setStep);
-    const { seconds, caption } = await readVideoInfo(input.url, signal);
+    if (input.platform !== "youtube") {
+      return fromDownload(ai, input.url, signal, setStep, setThumbnail);
+    }
+    const { seconds, caption, thumbnailUrl } = await readVideoInfo(input.url, signal);
     if (seconds !== undefined && seconds > MAX_VIDEO_SECONDS) throw new NoRetryError(TOO_LONG);
+    await keepThumbnail(thumbnailUrl, signal, setThumbnail);
     // Gemini watches a public YouTube video from its link (§4.1), with its caption (D15).
     await setStep("analyzing");
     return askGemini(ai, [{ fileData: { fileUri: input.url } }, postText(caption)], signal);
@@ -77,11 +82,13 @@ async function fromDownload(
   url: string,
   signal: AbortSignal,
   setStep: (step: ImportStep) => Promise<void>,
+  setThumbnail: (thumbnail: StoredThumbnail) => Promise<void>,
 ) {
   const dir = await mkdtemp(join(tmpdir(), "pinch-"));
   let uploaded: string | undefined;
   try {
-    const { seconds: told, caption, path } = await downloadVideo(url, dir, signal);
+    const { seconds: told, caption, path, thumbnailUrl } = await downloadVideo(url, dir, signal);
+    await keepThumbnail(thumbnailUrl, signal, setThumbnail);
     if (!path) {
       await setStep("analyzing");
       return await askGemini(ai, [postText(caption)], signal);
@@ -107,6 +114,16 @@ async function fromDownload(
     if (uploaded) await ai.files.delete({ name: uploaded }).catch(() => undefined);
     await rm(dir, { recursive: true, force: true });
   }
+}
+
+// The post's picture, made small and saved on the import, when the platform gives one (§5).
+async function keepThumbnail(
+  url: string | undefined,
+  signal: AbortSignal,
+  setThumbnail: (thumbnail: StoredThumbnail) => Promise<void>,
+) {
+  const thumbnail = url && (await makeThumbnail(url, signal));
+  if (thumbnail) await setThumbnail(thumbnail);
 }
 
 // Gemini processes an uploaded video (a few seconds for a reel): it can be asked about only

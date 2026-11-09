@@ -14,7 +14,13 @@ import {
   toImport,
   type ImportDocument,
 } from "../db/imports.ts";
-import { insertRecipeOnce, recipesCollection, toRecipe } from "../db/recipes.ts";
+import {
+  insertRecipeOnce,
+  recipesCollection,
+  toRecipe,
+  WITHOUT_THUMBNAIL_IMAGE,
+} from "../db/recipes.ts";
+import { sendThumbnail } from "./thumbnail.ts";
 import { countImport, usageCollection } from "../db/usage.ts";
 import { HttpError, parseInput } from "../errors.ts";
 
@@ -54,7 +60,7 @@ export function importsRouter(db: Db) {
   // cap is a guard, never reached in use (node-api.md: never an unbounded list).
   router.get("/", async (req, res) => {
     const found = await imports
-      .find({ ownerId: req.userId })
+      .find({ ownerId: req.userId }, { projection: WITHOUT_THUMBNAIL_IMAGE })
       .sort({ createdAt: -1, _id: -1 })
       .limit(IMPORT_LIST_LIMIT)
       .toArray();
@@ -62,9 +68,19 @@ export function importsRouter(db: Db) {
   });
 
   router.get("/:id", async (req, res) => {
-    const job = await imports.findOne({ _id: parseId(req.params.id), ownerId: req.userId });
+    const job = await imports.findOne(
+      { _id: parseId(req.params.id), ownerId: req.userId },
+      { projection: WITHOUT_THUMBNAIL_IMAGE },
+    );
     if (!job) throw importNotFound();
     res.json(toImport(job));
+  });
+
+  // The draft's picture (§5), apart from the import, so the list stays small.
+  router.get("/:id/thumbnail", async (req, res) => {
+    const job = await imports.findOne({ _id: parseId(req.params.id), ownerId: req.userId });
+    if (!job?.thumbnail) throw importNotFound();
+    sendThumbnail(res, job.thumbnail);
   });
 
   // Saves the reviewed draft, as the user edited it, as a recipe, then deletes the import
@@ -87,6 +103,8 @@ export function importsRouter(db: Db) {
       // The model's estimate, not in the form (D14, D20): from the draft (there, as it's ready),
       // never from the body.
       nutritionPerServing: job.draft?.nutritionPerServing,
+      // The worker's, as the nutrition: never from the body (§5).
+      thumbnail: job.thumbnail,
       source:
         job.input.type === "link"
           ? { type: job.input.platform, url: job.input.url }

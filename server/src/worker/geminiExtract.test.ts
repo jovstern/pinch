@@ -1,20 +1,25 @@
 import { FileState, GenerateContentResponse, GoogleGenAI } from "@google/genai";
+import { Binary } from "mongodb";
 import { existsSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import type { ImportDocument } from "../db/imports.ts";
 import { GEMINI_MODEL, geminiExtract, NOT_A_RECIPE, TOO_LONG } from "./geminiExtract.ts";
+import { makeThumbnail } from "./thumbnail.ts";
 import { downloadVideo, measureSeconds, readVideoInfo } from "./videoInfo.ts";
 import { NoRetryError } from "./workLoop.ts";
 
-// yt-dlp is replaced too: no test reads a real post.
+// yt-dlp is replaced too, and the picture's fetch: no test reads a real post.
 vi.mock("./videoInfo.ts");
+vi.mock("./thumbnail.ts");
 
 // A real client with a made-up key; its one call is replaced, so nothing reaches Gemini.
 const ai = new GoogleGenAI({ apiKey: "test" });
 const extract = geminiExtract(ai);
 const noDeadline = new AbortController().signal;
 const noStep = () => Promise.resolve();
+const noThumbnail = () => Promise.resolve();
+const thumbnail = { webp: new Binary(Buffer.from("webp")), width: 400, height: 500 };
 
 beforeEach(() => {
   vi.mocked(readVideoInfo).mockResolvedValue({ seconds: 60, caption: "2 eggs, 1 can tomatoes" });
@@ -49,7 +54,7 @@ test("a YouTube link is sent to Gemini with its caption and the recipe's schema,
     .spyOn(ai.models, "generateContent")
     .mockResolvedValue(answer(JSON.stringify(recipe)));
 
-  expect(await extract(youtube, noDeadline, noStep)).toEqual(recipe);
+  expect(await extract(youtube, noDeadline, noStep, noThumbnail)).toEqual(recipe);
 
   const request = generate.mock.calls[0]?.[0];
   expect(request?.model).toBe(GEMINI_MODEL);
@@ -69,8 +74,13 @@ test("a link is fetched, then analyzed; a text is only analyzed", async () => {
     return Promise.resolve();
   };
 
-  await extract(youtube, noDeadline, setStep);
-  await extract({ type: "text", text: "Shakshuka: 4 eggs, 1 can tomatoes." }, noDeadline, setStep);
+  await extract(youtube, noDeadline, setStep, noThumbnail);
+  await extract(
+    { type: "text", text: "Shakshuka: 4 eggs, 1 can tomatoes." },
+    noDeadline,
+    setStep,
+    noThumbnail,
+  );
 
   expect(steps).toEqual(["fetching", "analyzing", "analyzing"]);
 });
@@ -80,7 +90,12 @@ test("pasted text is sent alone, fenced as data: no video, so no yt-dlp", async 
     .spyOn(ai.models, "generateContent")
     .mockResolvedValue(answer(JSON.stringify(recipe)));
 
-  await extract({ type: "text", text: "Shakshuka: 4 eggs, 1 can tomatoes." }, noDeadline, noStep);
+  await extract(
+    { type: "text", text: "Shakshuka: 4 eggs, 1 can tomatoes." },
+    noDeadline,
+    noStep,
+    noThumbnail,
+  );
 
   expect(readVideoInfo).not.toHaveBeenCalled();
   expect(generate.mock.calls[0]?.[0].contents).toEqual([
@@ -94,7 +109,7 @@ test("the calls are given the attempt's deadline, and Gemini's a timeout of its 
     .mockResolvedValue(answer(JSON.stringify(recipe)));
   const deadline = new AbortController().signal;
 
-  await extract(youtube, deadline, noStep);
+  await extract(youtube, deadline, noStep, noThumbnail);
 
   expect(readVideoInfo).toHaveBeenCalledWith(youtube.url, deadline);
   const config = generate.mock.calls[0]?.[0].config;
@@ -106,7 +121,9 @@ test("a video over 3 minutes isn't sent, and isn't tried again", async () => {
   vi.mocked(readVideoInfo).mockResolvedValue({ seconds: 181, caption: "" });
   const generate = vi.spyOn(ai.models, "generateContent");
 
-  await expect(extract(youtube, noDeadline, noStep)).rejects.toThrow(new NoRetryError(TOO_LONG));
+  await expect(extract(youtube, noDeadline, noStep, noThumbnail)).rejects.toThrow(
+    new NoRetryError(TOO_LONG),
+  );
   expect(generate).not.toHaveBeenCalled();
 });
 
@@ -116,7 +133,7 @@ test("a video whose length isn't known is sent", async () => {
     .spyOn(ai.models, "generateContent")
     .mockResolvedValue(answer(JSON.stringify(recipe)));
 
-  await extract(youtube, noDeadline, noStep);
+  await extract(youtube, noDeadline, noStep, noThumbnail);
 
   expect(generate).toHaveBeenCalled();
 });
@@ -126,7 +143,7 @@ test("a video that isn't a recipe isn't tried again", async () => {
     answer(JSON.stringify({ ...recipe, isRecipe: false })),
   );
 
-  await expect(extract(youtube, noDeadline, noStep)).rejects.toThrow(
+  await expect(extract(youtube, noDeadline, noStep, noThumbnail)).rejects.toThrow(
     new NoRetryError(NOT_A_RECIPE),
   );
 });
@@ -134,13 +151,15 @@ test("a video that isn't a recipe isn't tried again", async () => {
 test("an empty answer is a failed attempt", async () => {
   vi.spyOn(ai.models, "generateContent").mockResolvedValue(answer(""));
 
-  await expect(extract(youtube, noDeadline, noStep)).rejects.toThrow("Gemini gave no answer");
+  await expect(extract(youtube, noDeadline, noStep, noThumbnail)).rejects.toThrow(
+    "Gemini gave no answer",
+  );
 });
 
 test("an answer cut off mid-JSON is a failed attempt", async () => {
   vi.spyOn(ai.models, "generateContent").mockResolvedValue(answer('{"title": "Shaksh'));
 
-  await expect(extract(youtube, noDeadline, noStep)).rejects.toThrow(SyntaxError);
+  await expect(extract(youtube, noDeadline, noStep, noThumbnail)).rejects.toThrow(SyntaxError);
 });
 
 const reel: ImportDocument["input"] = {
@@ -182,7 +201,7 @@ test("an Instagram reel is downloaded, measured, uploaded and asked about; then 
     .spyOn(ai.models, "generateContent")
     .mockResolvedValue(answer(JSON.stringify(recipe)));
 
-  expect(await extract(reel, noDeadline, noStep)).toEqual(recipe);
+  expect(await extract(reel, noDeadline, noStep, noThumbnail)).toEqual(recipe);
 
   expect(upload.mock.calls[0]?.[0].file).toBe(join(folder.path, "video.mp4"));
   const contents = generate.mock.calls[0]?.[0].contents;
@@ -199,7 +218,7 @@ test("a Facebook reel's length is the one Facebook gives: nothing to measure", a
   filesApi();
   vi.spyOn(ai.models, "generateContent").mockResolvedValue(answer(JSON.stringify(recipe)));
 
-  await extract({ ...reel, platform: "facebook" }, noDeadline, noStep);
+  await extract({ ...reel, platform: "facebook" }, noDeadline, noStep, noThumbnail);
 
   expect(measureSeconds).not.toHaveBeenCalled();
 });
@@ -210,7 +229,7 @@ test("a video Gemini is still processing is asked about once it's ready", async 
   vi.spyOn(ai.models, "generateContent").mockResolvedValue(answer(JSON.stringify(recipe)));
 
   // Checked again after 2 s: the test waits that long.
-  expect(await extract(reel, noDeadline, noStep)).toEqual(recipe);
+  expect(await extract(reel, noDeadline, noStep, noThumbnail)).toEqual(recipe);
 
   expect(get).toHaveBeenCalledWith(expect.objectContaining({ name: "files/reel" }));
 });
@@ -219,7 +238,9 @@ test("a video Gemini can't read is a failed attempt, and the upload is still del
   downloadsReel(30);
   const { remove } = filesApi(FileState.FAILED);
 
-  await expect(extract(reel, noDeadline, noStep)).rejects.toThrow("Gemini couldn't read");
+  await expect(extract(reel, noDeadline, noStep, noThumbnail)).rejects.toThrow(
+    "Gemini couldn't read",
+  );
 
   expect(remove).toHaveBeenCalledWith({ name: "files/reel" });
 });
@@ -229,7 +250,9 @@ test("a reel over 3 minutes, measured once it's here, isn't uploaded, and isn't 
   vi.mocked(measureSeconds).mockResolvedValue(200);
   const { upload } = filesApi();
 
-  await expect(extract(reel, noDeadline, noStep)).rejects.toThrow(new NoRetryError(TOO_LONG));
+  await expect(extract(reel, noDeadline, noStep, noThumbnail)).rejects.toThrow(
+    new NoRetryError(TOO_LONG),
+  );
 
   expect(upload).not.toHaveBeenCalled();
   expect(existsSync(folder.path)).toBe(false);
@@ -242,7 +265,7 @@ test("a post with no video (a photo post) is read from its caption alone", async
     .spyOn(ai.models, "generateContent")
     .mockResolvedValue(answer(JSON.stringify(recipe)));
 
-  expect(await extract(reel, noDeadline, noStep)).toEqual(recipe);
+  expect(await extract(reel, noDeadline, noStep, noThumbnail)).toEqual(recipe);
 
   expect(upload).not.toHaveBeenCalled();
   expect(generate.mock.calls[0]?.[0].contents).toEqual([
@@ -255,7 +278,36 @@ test("the uploaded video is deleted even when Gemini fails", async () => {
   const { remove } = filesApi();
   vi.spyOn(ai.models, "generateContent").mockRejectedValue(new Error("Gemini is down."));
 
-  await expect(extract(reel, noDeadline, noStep)).rejects.toThrow("Gemini is down.");
+  await expect(extract(reel, noDeadline, noStep, noThumbnail)).rejects.toThrow("Gemini is down.");
 
   expect(remove).toHaveBeenCalledWith({ name: "files/reel" });
+});
+
+test("a post's picture is made small and saved on the import, for YouTube and a reel", async () => {
+  vi.mocked(readVideoInfo).mockResolvedValue({
+    caption: "",
+    thumbnailUrl: "https://i.ytimg.com/vi/abc/hq.jpg",
+  });
+  vi.mocked(makeThumbnail).mockResolvedValue(thumbnail);
+  vi.spyOn(ai.models, "generateContent").mockResolvedValue(answer(JSON.stringify(recipe)));
+  const setThumbnail = vi.fn(() => Promise.resolve());
+
+  await extract(youtube, noDeadline, noStep, setThumbnail);
+
+  expect(makeThumbnail).toHaveBeenCalledWith("https://i.ytimg.com/vi/abc/hq.jpg", noDeadline);
+  expect(setThumbnail).toHaveBeenCalledWith(thumbnail);
+});
+
+test("without a picture, or when it can't be made, nothing is saved and the recipe still is", async () => {
+  vi.mocked(makeThumbnail).mockResolvedValue(undefined);
+  vi.mocked(downloadVideo).mockResolvedValue({
+    caption: "Shakshuka: 4 eggs",
+    thumbnailUrl: "https://instagram/cover.jpg",
+  });
+  vi.spyOn(ai.models, "generateContent").mockResolvedValue(answer(JSON.stringify(recipe)));
+  const setThumbnail = vi.fn(() => Promise.resolve());
+
+  expect(await extract(reel, noDeadline, noStep, setThumbnail)).toEqual(recipe);
+
+  expect(setThumbnail).not.toHaveBeenCalled();
 });

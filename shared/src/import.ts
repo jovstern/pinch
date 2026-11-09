@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { RecipeDraftSchema } from "./recipe.ts";
+import { RecipeDraftSchema, ThumbnailSchema } from "./recipe.ts";
 
 export const PlatformSchema = z.enum(["instagram", "facebook", "youtube"]);
 export type Platform = z.infer<typeof PlatformSchema>;
@@ -79,6 +79,8 @@ export const ImportSchema = z.object({
   noRetry: z.boolean().optional(),
   // The recipe the worker made, for the user to review (design D1).
   draft: RecipeDraftSchema.optional(),
+  // The draft's picture, served by GET /api/imports/:id/thumbnail (design §5).
+  thumbnail: ThumbnailSchema.optional(),
   createdAt: z.iso.datetime(),
   updatedAt: z.iso.datetime(),
 });

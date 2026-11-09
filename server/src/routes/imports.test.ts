@@ -8,7 +8,7 @@ import {
   textMessage,
   type RecipeInput,
 } from "@pinch/shared";
-import { ObjectId } from "mongodb";
+import { Binary, ObjectId } from "mongodb";
 import { pino } from "pino";
 import request from "supertest";
 import { beforeEach, expect, test } from "vitest";
@@ -258,6 +258,42 @@ test("POST /api/imports/:id/approve saves the edited draft as a recipe and delet
   const stored = await recipesCollection(db).findOne({ _id: new ObjectId(recipe.id) });
   expect(stored?.sourceImportId?.toHexString()).toBe(id);
   expect(stored?.nutritionPerServing).toEqual(nutritionPerServing);
+});
+
+test("a draft's picture is served apart, kept out of the list, and goes with it to the recipe", async () => {
+  const webp = Buffer.from("a webp");
+  const thumbnail = { webp: new Binary(webp), width: 400, height: 500 };
+  const id = await insertDone({ draft, thumbnail });
+
+  // The lists and the import say how big it is, never send it.
+  const listed = ImportListSchema.parse((await request(app).get("/api/imports")).body);
+  expect(listed.items.find((item) => item.id === id)?.thumbnail).toEqual({
+    width: 400,
+    height: 500,
+  });
+  expect(JSON.stringify(listed)).not.toContain("webp");
+  const image = await request(app).get(`/api/imports/${id}/thumbnail`);
+  expect(image.headers["content-type"]).toBe("image/webp");
+  expect(image.headers["cache-control"]).toBe("private, max-age=31536000, immutable");
+  expect(image.body).toEqual(webp);
+
+  const recipe = RecipeSchema.parse(
+    (await request(app).post(`/api/imports/${id}/approve`).send(draft)).body,
+  );
+  expect(recipe.thumbnail).toEqual({ width: 400, height: 500 });
+  // Kept when the recipe is edited (D20).
+  await request(app).put(`/api/recipes/${recipe.id}`).send(draft);
+  const kept = await request(app).get(`/api/recipes/${recipe.id}/thumbnail`);
+  expect(kept.body).toEqual(webp);
+});
+
+test("an import or a recipe with no picture: its thumbnail is not found", async () => {
+  const id = await insertDone({ draft });
+  expect((await request(app).get(`/api/imports/${id}/thumbnail`)).status).toBe(404);
+  const recipe = RecipeSchema.parse(
+    (await request(app).post(`/api/imports/${id}/approve`).send(draft)).body,
+  );
+  expect((await request(app).get(`/api/recipes/${recipe.id}/thumbnail`)).status).toBe(404);
 });
 
 test("a recipe from pasted text has text as its source, and no link", async () => {

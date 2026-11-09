@@ -8,8 +8,10 @@ import {
   recipesCollection,
   searchRecipes,
   toRecipe,
+  WITHOUT_THUMBNAIL_IMAGE,
   type RecipeDocument,
 } from "../db/recipes.ts";
+import { sendThumbnail } from "./thumbnail.ts";
 import { HttpError, parseInput } from "../errors.ts";
 
 // Every query filters by ownerId: a user only ever sees their own recipes (design §1, §8.3).
@@ -51,9 +53,19 @@ export function recipesRouter(db: Db) {
   });
 
   router.get("/:id", async (req, res) => {
-    const recipe = await recipes.findOne({ _id: parseId(req.params.id), ownerId: req.userId });
+    const recipe = await recipes.findOne(
+      { _id: parseId(req.params.id), ownerId: req.userId },
+      { projection: WITHOUT_THUMBNAIL_IMAGE },
+    );
     if (!recipe) throw recipeNotFound();
     res.json(toRecipe(recipe));
+  });
+
+  // The recipe's picture (§5), apart from the recipe, so lists stay small.
+  router.get("/:id/thumbnail", async (req, res) => {
+    const recipe = await recipes.findOne({ _id: parseId(req.params.id), ownerId: req.userId });
+    if (!recipe?.thumbnail) throw recipeNotFound();
+    sendThumbnail(res, recipe.thumbnail);
   });
 
   // PUT, not PATCH: the form always sends the whole recipe, so an optional field it leaves out
@@ -63,13 +75,13 @@ export function recipesRouter(db: Db) {
     const filter = { _id: parseId(req.params.id), ownerId: req.userId };
     const existing = await recipes.findOne(filter);
     if (!existing) throw recipeNotFound();
-    // Every stored field the form doesn't send is kept here, or replaceOne erases it. When
-    // thumbnail arrives (M6), add it (design D20).
+    // Every stored field the form doesn't send is kept here, or replaceOne erases it (D20).
     const recipe: RecipeDocument = {
       ...input,
       _id: existing._id,
       ownerId: existing.ownerId,
       nutritionPerServing: existing.nutritionPerServing,
+      thumbnail: existing.thumbnail,
       source: existing.source,
       sourceImportId: existing.sourceImportId,
       createdAt: existing.createdAt,
