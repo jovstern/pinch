@@ -1,10 +1,11 @@
 import { RecipeSchema, type Import, type Recipe, type RecipeInput } from "@pinch/shared";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useEffect } from "react";
 import { Link, useNavigate, useParams } from "react-router";
 import { Breadcrumb } from "../../components/ui/Breadcrumb.tsx";
 import { Thumbnail } from "../../components/Thumbnail.tsx";
 import { deleteResource, sendJson } from "../../lib/api.ts";
-import { toastCouldntSave, toastDiscarded, toastSaved } from "../../lib/toasts.tsx";
+import { dismissToast, toastCouldntSave, toastDiscarded, toastSaved } from "../../lib/toasts.tsx";
 import { LazyRecipeForm, usePreloadRecipeForm } from "../recipes/LazyRecipeForm.tsx";
 import { toFormValues } from "../recipes/recipeFormValues.ts";
 import { RecipeLoadError } from "../recipes/RecipeLoadError.tsx";
@@ -26,6 +27,11 @@ export function ReviewImportPage() {
     isFetching,
   } = useQuery(importQuery(id));
   usePreloadRecipeForm();
+  // An effect: the toasts live outside React. The draft's "ready to review" toast (its id is the
+  // import's) has done its job once the draft is open, and from 768 px it would sit over Save.
+  useEffect(() => {
+    dismissToast(id);
+  }, [id]);
   const queryClient = useQueryClient();
   const navigate = useNavigate();
 

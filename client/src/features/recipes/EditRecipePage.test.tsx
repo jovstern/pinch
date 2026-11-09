@@ -92,12 +92,35 @@ test("editing a recipe that doesn't exist shows the not-found page", async () =>
   expect(await screen.findByRole("heading", { name: "Page not found" })).toBeInTheDocument();
 });
 
-test("Cancel goes back to the recipe, unchanged", async () => {
+test("Cancel with no changes goes straight back to the recipe", async () => {
+  stubApi();
+  renderApp(`/recipes/${omelette.id}/edit`);
+
+  await screen.findByLabelText("Title");
+  await userEvent.click(screen.getByRole("link", { name: "Cancel" }));
+
+  expect(await screen.findByRole("heading", { level: 1, name: "Omelette" })).toBeInTheDocument();
+});
+
+test("Cancel with changes asks first; Keep editing keeps them", async () => {
+  stubApi();
+  renderApp(`/recipes/${omelette.id}/edit`);
+
+  await userEvent.type(await screen.findByLabelText("Title"), " with herbs");
+  await userEvent.click(screen.getByRole("button", { name: "Cancel" }));
+  const dialog = screen.getByRole("alertdialog", { name: "Discard your changes?" });
+  await userEvent.click(within(dialog).getByRole("button", { name: "Keep editing" }));
+
+  expect(screen.getByLabelText("Title")).toHaveValue("Omelette with herbs");
+});
+
+test("Discard changes goes back to the recipe, unchanged", async () => {
   const fetch = stubApi();
   renderApp(`/recipes/${omelette.id}/edit`);
 
   await userEvent.type(await screen.findByLabelText("Title"), " with herbs");
-  await userEvent.click(screen.getByRole("link", { name: "Cancel" }));
+  await userEvent.click(screen.getByRole("button", { name: "Cancel" }));
+  await userEvent.click(screen.getByRole("button", { name: "Discard changes" }));
 
   expect(await screen.findByRole("heading", { level: 1, name: "Omelette" })).toBeInTheDocument();
   expect(fetch.mock.calls.some(([, init]) => init?.method === "PUT")).toBe(false);

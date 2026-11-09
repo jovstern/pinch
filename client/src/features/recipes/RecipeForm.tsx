@@ -1,8 +1,8 @@
 import { fieldErrors, RecipeInputSchema, type Recipe, type RecipeInput } from "@pinch/shared";
-import { revalidateLogic, useForm } from "@tanstack/react-form";
-import { useRef, type ReactNode, type Ref } from "react";
+import { revalidateLogic, useForm, useSelector } from "@tanstack/react-form";
 import { Plus, X } from "lucide-react";
-import { Link } from "react-router";
+import { useEffect, useRef, type ReactNode, type Ref } from "react";
+import { Link, useNavigate } from "react-router";
 import { Button } from "../../components/ui/Button.tsx";
 import { FieldError } from "../../components/FieldError.tsx";
 import { TextField } from "../../components/TextField.tsx";
@@ -74,6 +74,22 @@ export function RecipeForm({
     },
   });
 
+  // Anything typed, ticked, added or removed that isn't as it was when the form opened.
+  const changed = useSelector(form.store, (state) => !state.isDefaultValue);
+  // An effect: the browser's own "Leave site?" when the tab is closed or reloaded with changes.
+  // Links inside the app don't ask: that needs a data router's useBlocker, and Pinch's router is
+  // declarative (D21). Cancel and Discard ask instead (LeaveButton).
+  useEffect(() => {
+    if (!changed) return;
+    const ask = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+    };
+    window.addEventListener("beforeunload", ask);
+    return () => {
+      window.removeEventListener("beforeunload", ask);
+    };
+  }, [changed]);
+
   async function submit() {
     await form.handleSubmit();
     // ui-craft: after a failed submit, focus moves to the first field to fix. React has drawn
@@ -106,7 +122,8 @@ export function RecipeForm({
 
         <form.Field name="ingredients" mode="array">
           {(list) => (
-            <fieldset className="grid gap-2">
+            // More space between rows than inside one, where a row takes two lines (a phone).
+            <fieldset className="grid gap-3 sm:gap-2">
               <legend className="mb-3 font-display text-xl font-semibold">Ingredients</legend>
               <FieldError errors={list.state.meta.errors} />
               {/* The columns' names, once over the rows (each box is named for screen readers
@@ -274,6 +291,17 @@ export function RecipeForm({
                 )
               }
             </form.Subscribe>
+            {/* What's left to fix, by the button that needs it: the errors themselves may be far
+                up the page. Each one is announced under its field, so this line isn't. */}
+            <form.Subscribe selector={(state) => countErrors(state.fieldMeta)}>
+              {(count) =>
+                count > 0 && (
+                  <p className="text-sm text-danger">
+                    {count === 1 ? "1 thing" : `${String(count)} things`} to fix before saving
+                  </p>
+                )
+              }
+            </form.Subscribe>
             <form.Subscribe
               selector={(state) => ({
                 isSubmitting: state.isSubmitting,
@@ -286,7 +314,12 @@ export function RecipeForm({
                 const discarding = leave.kind === "discard" && leave.discarding;
                 return (
                   <div className="flex gap-2">
-                    <LeaveButton leave={leave} busy={isSubmitting || discarding} title={title} />
+                    <LeaveButton
+                      leave={leave}
+                      busy={isSubmitting || discarding}
+                      title={title}
+                      changed={changed}
+                    />
                     <Button type="submit" disabled={isSubmitting || discarding} className="flex-1">
                       {isSubmitting ? "Saving…" : submitLabel}
                     </Button>
@@ -307,9 +340,31 @@ type LeaveButtonProps = {
   busy: boolean;
   // The title as it is now, for the question.
   title: string;
+  // Anything not as it was when the form opened.
+  changed: boolean;
 };
 
-function LeaveButton({ leave, busy, title }: LeaveButtonProps) {
+function LeaveButton({ leave, busy, title, changed }: LeaveButtonProps) {
+  const navigate = useNavigate();
+  // With changes, Cancel asks first (design §14).
+  if (leave.kind === "cancel" && changed) {
+    return (
+      <LeaveDialog
+        trigger={
+          <Button type="button" variant="outline" className="w-28">
+            Cancel
+          </Button>
+        }
+        title="Discard your changes?"
+        description="What you've changed here won't be saved."
+        confirmLabel="Discard changes"
+        keepLabel="Keep editing"
+        onConfirm={() => {
+          void navigate(leave.to, { replace: true });
+        }}
+      />
+    );
+  }
   if (leave.kind === "cancel") {
     return (
       <Button asChild variant="outline" className="w-28">
@@ -393,6 +448,13 @@ function AddButton({ ref, onClick, children }: AddButtonProps) {
       {children}
     </Button>
   );
+}
+
+// How many fields show an error (a row's, a list's, a box's).
+function countErrors(fieldMeta: Record<string, { errors: unknown[] } | undefined>) {
+  return Object.values(fieldMeta).filter((meta) =>
+    meta?.errors.some((message) => typeof message === "string"),
+  ).length;
 }
 
 // The API names a field "ingredients.0.name"; TanStack Form names it "ingredients[0].name".

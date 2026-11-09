@@ -15,13 +15,15 @@ const focusRing =
 // Placed by width in JS, not CSS: Sonner takes one position, and its own phone rule (under
 // 600 px) keeps it, so a bottom-right Toaster would sit at the bottom on a phone, over the
 // floating button and the thumb. The media query is read as it changes: a turned phone follows.
-export function Toaster() {
-  const isWide = useMediaQuery(wide);
+// The editor keeps them at the top on every width: at the bottom they'd sit over its Save
+// (pinned to the bottom up to 1024 px, at the foot of the right column from there).
+export function Toaster({ onEditor }: { onEditor: boolean }) {
+  const atBottom = useMediaQuery(wide) && !onEditor;
   return (
     <Sonner
-      position={isWide ? "bottom-right" : "top-center"}
+      position={atBottom ? "bottom-right" : "top-center"}
       // Both: Sonner's phone rule (mobileOffset) stops at 600 px, the header's at 768.
-      offset={isWide ? undefined : belowHeader}
+      offset={atBottom ? undefined : belowHeader}
       mobileOffset={belowHeader}
       // Sonner's own dark colours (the close button's hover) follow the system, as Pinch's do.
       theme="system"

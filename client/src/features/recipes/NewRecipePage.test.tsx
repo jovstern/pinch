@@ -117,6 +117,8 @@ test("an incomplete recipe says what to fix, and focuses the first field", async
   expect(screen.getByText("A step can't be empty.")).toBeInTheDocument();
   expect(screen.getByLabelText("Title")).toHaveFocus();
   expect(screen.getByLabelText("Title")).toHaveAccessibleDescription("Give the recipe a title.");
+  // By the Save button, what's left in all.
+  expect(screen.getByText("4 things to fix before saving")).toBeInTheDocument();
   expect(fetch.mock.calls.some(([, init]) => init?.method === "POST")).toBe(false);
 });
 
@@ -251,6 +253,33 @@ test("an error stays with its row when a row above it is removed", async () => {
   expect(ingredient(1).getByRole("alert")).toHaveTextContent("Name the ingredient.");
   expect(ingredient(2).getByLabelText("Ingredient")).toHaveValue("jam");
   expect(ingredient(2).queryByRole("alert")).not.toBeInTheDocument();
+});
+
+test("the count by Save goes down as each error is fixed", async () => {
+  stubApi(() => Response.json(saved, { status: 201 }));
+  renderApp("/recipes/new");
+
+  await userEvent.click(await screen.findByRole("button", { name: "Save recipe" }));
+  expect(await screen.findByText("3 things to fix before saving")).toBeInTheDocument();
+  await userEvent.type(screen.getByLabelText("Title"), "Toast");
+  await userEvent.type(ingredient(1).getByLabelText("Ingredient"), "bread");
+
+  expect(screen.getByText("1 thing to fix before saving")).toBeInTheDocument();
+});
+
+test("closing the tab with changes asks first; without them it doesn't", async () => {
+  stubApi(() => Response.json(saved, { status: 201 }));
+  renderApp("/recipes/new");
+
+  const title = await screen.findByLabelText("Title");
+  const untouched = new Event("beforeunload", { cancelable: true });
+  window.dispatchEvent(untouched);
+  expect(untouched.defaultPrevented).toBe(false);
+
+  await userEvent.type(title, "Toast");
+  const changed = new Event("beforeunload", { cancelable: true });
+  window.dispatchEvent(changed);
+  expect(changed.defaultPrevented).toBe(true);
 });
 
 test("every Save checks the whole form again, even while errors still show", async () => {
