@@ -3,14 +3,23 @@ import type { Collection, UpdateFilter } from "mongodb";
 import { setTimeout } from "node:timers/promises";
 import type { Logger } from "pino";
 import { claimNextImport, LEASE_MS, type ImportDocument } from "../db/imports.ts";
+import type { StoredThumbnail } from "../db/thumbnail.ts";
+
+// What an extractor may do as it goes: say each step as it starts it, save the post's picture
+// when it has one (design §5), and log what's worth knowing (each line carries the import's id
+// and attempt).
+export type Attempt = {
+  setStep: (step: ImportStep) => Promise<void>;
+  setThumbnail: (thumbnail: StoredThumbnail) => Promise<void>;
+  log: Logger;
+};
 
 // Turns an import's input into a draft: geminiExtract, or fakeExtract for e2e. It must stop when
-// the signal aborts: that's the attempt's deadline. It says each step as it starts it. Unknown:
-// runImport checks what it makes.
+// the signal aborts: that's the attempt's deadline. Unknown: runImport checks what it makes.
 export type Extract = (
   input: ImportDocument["input"],
   signal: AbortSignal,
-  setStep: (step: ImportStep) => Promise<void>,
+  attempt: Attempt,
 ) => Promise<unknown>;
 
 // With nothing to do, look again after this long (design §4.3).
@@ -78,6 +87,8 @@ type RunImportDeps = {
 // goes up to workLoop, which logs it and goes on.
 export async function runImport({ imports, extract, logger, job, deadline }: RunImportDeps) {
   const log = logger.child({ importId: job._id.toHexString(), attempt: job.attempts });
+  // How long the attempt took, on its last line: imports take 5–60 s (§12, M6).
+  const started = Date.now();
 
   // Every write is only while the job is still this attempt's. The user may have deleted it,
   // or, had this attempt outlived its lease, another worker claimed it and attempts went up.
@@ -85,12 +96,17 @@ export async function runImport({ imports, extract, logger, job, deadline }: Run
   const ours = { _id: job._id, status: "processing" as const, attempts: job.attempts };
   async function save(update: UpdateFilter<ImportDocument>, done: string) {
     const { matchedCount } = await imports.updateOne(ours, update);
-    if (matchedCount === 0) log.warn("import deleted or claimed again: nothing saved");
-    else log.info(done);
+    const ms = Date.now() - started;
+    if (matchedCount === 0) log.warn({ ms }, "import deleted or claimed again: nothing saved");
+    else log.info({ ms }, done);
   }
   // Progress, not an outcome: not logged. Each end below unsets it.
   async function setStep(step: ImportStep) {
     await imports.updateOne(ours, { $set: { step, updatedAt: new Date() } });
+  }
+  // As the step; kept whatever the end: a retry makes the same picture again.
+  async function setThumbnail(thumbnail: StoredThumbnail) {
+    await imports.updateOne(ours, { $set: { thumbnail, updatedAt: new Date() } });
   }
 
   // Its worker died on the last try (claimed again after its lease ran out): no more tries.
@@ -102,7 +118,9 @@ export async function runImport({ imports, extract, logger, job, deadline }: Run
   let draft: RecipeDraft;
   try {
     // Checked like a POST body: what the extractor makes is never trusted as it is (§9).
-    draft = RecipeDraftSchema.parse(await extract(job.input, deadline, setStep));
+    draft = RecipeDraftSchema.parse(
+      await extract(job.input, deadline, { setStep, setThumbnail, log }),
+    );
   } catch (error) {
     if (error instanceof NoRetryError) {
       await save(failedUpdate(error.message, true), `import failed: ${error.message}`);
@@ -134,7 +152,9 @@ export async function runImport({ imports, extract, logger, job, deadline }: Run
   await save(
     {
       $set: { status: "ready", draft, updatedAt: new Date() },
-      $unset: { leaseUntil: "", step: "" },
+      // Screenshots are kept only until the draft is made (design §4.1): a failed attempt keeps
+      // them, for the next try.
+      $unset: { leaseUntil: "", step: "", "input.images": "" },
     },
     "import ready",
   );

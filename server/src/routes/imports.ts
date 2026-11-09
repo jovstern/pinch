@@ -1,12 +1,17 @@
 import {
   dailyLimitMessage,
   ImportInputSchema,
+  MAX_SCREENSHOT_BYTES,
+  MAX_SCREENSHOTS,
   RecipeInputSchema,
+  screenshotsMessage,
   type ImportList,
   type Platform,
+  type Recipe,
 } from "@pinch/shared";
-import express from "express";
-import { ObjectId, type Db } from "mongodb";
+import express, { type RequestHandler } from "express";
+import multer from "multer";
+import { ObjectId, type Binary, type Db } from "mongodb";
 import {
   IMPORT_LIFETIME_MS,
   IMPORT_LIST_LIMIT,
@@ -15,8 +20,11 @@ import {
   type ImportDocument,
 } from "../db/imports.ts";
 import { insertRecipeOnce, recipesCollection, toRecipe } from "../db/recipes.ts";
+import { WITHOUT_MEDIA } from "../db/thumbnail.ts";
 import { countImport, usageCollection } from "../db/usage.ts";
 import { HttpError, parseInput } from "../errors.ts";
+import { readScreenshot } from "../screenshots.ts";
+import { sendThumbnail } from "./thumbnail.ts";
 
 // Imports turn a link, or a post's text, into a draft recipe (design §4). The API only records
 // the job; the worker does it. As with recipes, every query filters by ownerId.
@@ -31,21 +39,29 @@ export function importsRouter(db: Db) {
     const sent = parseInput(ImportInputSchema, req.body);
     // After the input is checked: one refused as invalid doesn't count.
     if (!(await countImport(usage, req.userId))) throw dailyLimit();
-    const now = new Date();
-    const job: ImportDocument = {
-      _id: new ObjectId(),
-      ownerId: req.userId,
-      status: "pending",
-      input:
-        sent.type === "link"
-          ? { type: "link", url: sent.url, platform: platformOf(sent.url) }
-          : sent,
-      attempts: 0,
-      nextAttemptAt: now,
-      createdAt: now,
-      updatedAt: now,
-      expiresAt: new Date(now.getTime() + IMPORT_LIFETIME_MS),
-    };
+    const job = newImport(
+      req.userId,
+      sent.type === "link" ? { type: "link", url: sent.url, platform: platformOf(sent.url) } : sent,
+    );
+    await imports.insertOne(job);
+    res.status(202).location(`/api/imports/${job._id.toHexString()}`).json(toImport(job));
+  });
+
+  // Screenshots of a post (§1, §4.1): a form with up to 4 images, not JSON. Each is read and
+  // made smaller here, so what's kept is known to be an image, and small.
+  router.post("/screenshots", receiveScreenshots, async (req, res) => {
+    const files = Array.isArray(req.files) ? req.files : [];
+    if (files.length === 0) throw invalidScreenshots();
+    // One that isn't an image refuses them all, as invalid input. One at a time: each may be
+    // a few million pixels to decode.
+    const images: Binary[] = [];
+    try {
+      for (const file of files) images.push(await readScreenshot(file.buffer));
+    } catch {
+      throw invalidScreenshots();
+    }
+    if (!(await countImport(usage, req.userId))) throw dailyLimit();
+    const job = newImport(req.userId, { type: "images", count: images.length, images });
     await imports.insertOne(job);
     res.status(202).location(`/api/imports/${job._id.toHexString()}`).json(toImport(job));
   });
@@ -54,7 +70,7 @@ export function importsRouter(db: Db) {
   // cap is a guard, never reached in use (node-api.md: never an unbounded list).
   router.get("/", async (req, res) => {
     const found = await imports
-      .find({ ownerId: req.userId })
+      .find({ ownerId: req.userId }, { projection: WITHOUT_MEDIA })
       .sort({ createdAt: -1, _id: -1 })
       .limit(IMPORT_LIST_LIMIT)
       .toArray();
@@ -62,9 +78,23 @@ export function importsRouter(db: Db) {
   });
 
   router.get("/:id", async (req, res) => {
-    const job = await imports.findOne({ _id: parseId(req.params.id), ownerId: req.userId });
+    const job = await imports.findOne(
+      { _id: parseId(req.params.id), ownerId: req.userId },
+      { projection: WITHOUT_MEDIA },
+    );
     if (!job) throw importNotFound();
     res.json(toImport(job));
+  });
+
+  // The draft's picture (§5), apart from the import, so the list stays small.
+  router.get("/:id/thumbnail", async (req, res) => {
+    const job = await imports.findOne(
+      { _id: parseId(req.params.id), ownerId: req.userId },
+      { projection: { thumbnail: 1 } },
+    );
+    // No picture: as good as no import, for an <img>.
+    if (!job?.thumbnail) throw importNotFound();
+    sendThumbnail(res, job.thumbnail);
   });
 
   // Saves the reviewed draft, as the user edited it, as a recipe, then deletes the import
@@ -87,10 +117,9 @@ export function importsRouter(db: Db) {
       // The model's estimate, not in the form (D14, D20): from the draft (there, as it's ready),
       // never from the body.
       nutritionPerServing: job.draft?.nutritionPerServing,
-      source:
-        job.input.type === "link"
-          ? { type: job.input.platform, url: job.input.url }
-          : { type: "text" },
+      // The worker's, as the nutrition: never from the body (§5).
+      thumbnail: job.thumbnail,
+      source: sourceOf(job.input),
       sourceImportId: job._id,
       createdAt: now,
       updatedAt: now,
@@ -120,7 +149,7 @@ export function importsRouter(db: Db) {
         $set: { status: "pending", attempts: 0, nextAttemptAt: now, updatedAt: now },
         $unset: { error: "", noRetry: "" },
       },
-      { returnDocument: "after" },
+      { returnDocument: "after", projection: WITHOUT_MEDIA },
     );
     // Changed since it was read (retried in another tab, or deleted).
     if (!job) throw importNotFailed();
@@ -166,4 +195,50 @@ function dailyLimit() {
 
 function importNotFound() {
   return new HttpError(404, "import_not_found", "This import doesn't exist.");
+}
+
+// A new import of the user's, waiting for the worker (§4.2).
+function newImport(ownerId: ObjectId, input: ImportDocument["input"]): ImportDocument {
+  const now = new Date();
+  return {
+    _id: new ObjectId(),
+    ownerId,
+    status: "pending",
+    input,
+    attempts: 0,
+    nextAttemptAt: now,
+    createdAt: now,
+    updatedAt: now,
+    expiresAt: new Date(now.getTime() + IMPORT_LIFETIME_MS),
+  };
+}
+
+// Where a recipe came from (§6): its link, or the text or the screenshots ("image") it was
+// made from.
+function sourceOf(input: ImportDocument["input"]): Recipe["source"] {
+  if (input.type === "link") return { type: input.platform, url: input.url };
+  if (input.type === "text") return { type: "text" };
+  return { type: "image" };
+}
+
+// The form's images, in memory (never on disk): at most 4, of 10 MB each, and nothing else (no
+// text fields, which multer would otherwise take, any number of them).
+const screenshotsUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { files: MAX_SCREENSHOTS, fileSize: MAX_SCREENSHOT_BYTES, fields: 0 },
+}).array("images", MAX_SCREENSHOTS);
+
+// Every error from the upload is the client's: multer's (too many, too big, another field) and
+// busboy's (a malformed form). All are a 400, as invalid input. (multer's middleware returns
+// nothing to wait for: it calls back; void says so.)
+const receiveScreenshots: RequestHandler = (req, res, next) => {
+  void screenshotsUpload(req, res, (error: unknown) => {
+    next(error ? invalidScreenshots() : undefined);
+  });
+};
+
+function invalidScreenshots() {
+  return new HttpError(400, "invalid_input", "Some fields are not valid.", {
+    images: screenshotsMessage,
+  });
 }
