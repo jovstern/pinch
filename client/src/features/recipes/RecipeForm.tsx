@@ -1,6 +1,6 @@
 import { fieldErrors, RecipeInputSchema, type Recipe, type RecipeInput } from "@pinch/shared";
 import { revalidateLogic, useForm } from "@tanstack/react-form";
-import { useRef, type ReactNode } from "react";
+import { useRef, type ReactNode, type Ref } from "react";
 import { Plus, X } from "lucide-react";
 import { Link } from "react-router";
 import { Button } from "../../components/ui/Button.tsx";
@@ -41,6 +41,10 @@ export function RecipeForm({
   save,
 }: RecipeFormProps) {
   const formRef = useRef<HTMLFormElement>(null);
+  // Where focus goes when the last row's ✕ takes itself away (any other row's ✕ stays, as the
+  // row after it moves up under it).
+  const addIngredientRef = useRef<HTMLButtonElement>(null);
+  const addStepRef = useRef<HTMLButtonElement>(null);
   const form = useForm({
     defaultValues,
     // Checked on the first Save, then on every change after it (TanStack's revalidateLogic):
@@ -149,7 +153,9 @@ export function RecipeForm({
                       label={`Remove ingredient ${position}`}
                       disabled={list.state.value.length === 1}
                       onClick={() => {
+                        const last = index === list.state.value.length - 1;
                         list.removeValue(index);
+                        if (last) addIngredientRef.current?.focus();
                       }}
                       className="col-start-4 row-start-1 sm:col-start-auto sm:row-start-auto"
                     />
@@ -157,6 +163,7 @@ export function RecipeForm({
                 );
               })}
               <AddButton
+                ref={addIngredientRef}
                 onClick={() => {
                   list.pushValue(emptyIngredient);
                 }}
@@ -204,13 +211,16 @@ export function RecipeForm({
                       label={`Remove step ${position}`}
                       disabled={list.state.value.length === 1}
                       onClick={() => {
+                        const last = index === list.state.value.length - 1;
                         list.removeValue(index);
+                        if (last) addStepRef.current?.focus();
                       }}
                     />
                   </div>
                 );
               })}
               <AddButton
+                ref={addStepRef}
                 onClick={() => {
                   list.pushValue("");
                 }}
@@ -364,9 +374,21 @@ function RemoveButton({
   );
 }
 
-function AddButton({ onClick, children }: { onClick: () => void; children: ReactNode }) {
+type AddButtonProps = {
+  ref: Ref<HTMLButtonElement>;
+  onClick: () => void;
+  children: ReactNode;
+};
+
+function AddButton({ ref, onClick, children }: AddButtonProps) {
   return (
-    <Button type="button" variant="ghost" onClick={onClick} className="-ml-3 justify-self-start">
+    <Button
+      ref={ref}
+      type="button"
+      variant="ghost"
+      onClick={onClick}
+      className="-ml-3 justify-self-start"
+    >
       <Plus aria-hidden="true" className="size-4" />
       {children}
     </Button>

@@ -217,6 +217,40 @@ test("a tag chosen in Add tag shows as a chip, and its ✕ removes it", async ()
   await userEvent.click(screen.getByRole("button", { name: "Remove spicy" }));
 
   expect(screen.queryByRole("button", { name: "Remove spicy" })).not.toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Add tag" })).toHaveFocus();
+});
+
+test("removing the last row moves focus to its list's Add button", async () => {
+  stubApi(() => Response.json(saved, { status: 201 }));
+  renderApp("/recipes/new");
+
+  await userEvent.click(await screen.findByRole("button", { name: "Add ingredient" }));
+  await userEvent.click(screen.getByRole("button", { name: "Remove ingredient 2" }));
+  expect(screen.getByRole("button", { name: "Add ingredient" })).toHaveFocus();
+
+  await userEvent.click(screen.getByRole("button", { name: "Add step" }));
+  await userEvent.click(screen.getByRole("button", { name: "Remove step 2" }));
+  expect(screen.getByRole("button", { name: "Add step" })).toHaveFocus();
+});
+
+test("an error stays with its row when a row above it is removed", async () => {
+  stubApi(() => Response.json(saved, { status: 201 }));
+  renderApp("/recipes/new");
+
+  await userEvent.type(await screen.findByLabelText("Title"), "Toast");
+  await userEvent.type(screen.getByLabelText("Step 1"), "Toast the bread.");
+  await userEvent.type(ingredient(1).getByLabelText("Ingredient"), "bread");
+  await userEvent.click(screen.getByRole("button", { name: "Add ingredient" }));
+  await userEvent.click(screen.getByRole("button", { name: "Add ingredient" }));
+  await userEvent.type(ingredient(3).getByLabelText("Ingredient"), "jam");
+  await userEvent.click(screen.getByRole("button", { name: "Save recipe" }));
+  expect(await ingredient(2).findByRole("alert")).toHaveTextContent("Name the ingredient.");
+  await userEvent.click(screen.getByRole("button", { name: "Remove ingredient 1" }));
+
+  // The empty row is now the first, with its message; "jam" moved up without one.
+  expect(ingredient(1).getByRole("alert")).toHaveTextContent("Name the ingredient.");
+  expect(ingredient(2).getByLabelText("Ingredient")).toHaveValue("jam");
+  expect(ingredient(2).queryByRole("alert")).not.toBeInTheDocument();
 });
 
 test("every Save checks the whole form again, even while errors still show", async () => {

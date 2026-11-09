@@ -1,5 +1,5 @@
 import { Plus, X } from "lucide-react";
-import { useId } from "react";
+import { useId, useRef } from "react";
 import { FieldError } from "../../components/FieldError.tsx";
 import { Button } from "../../components/ui/Button.tsx";
 import {
@@ -18,13 +18,16 @@ type RecipeTagsProps = {
   errors: unknown[];
 };
 
-// A recipe's tags in the editor (design §14): the chosen ones as chips with ✕, and Add tag, which
-// opens every tag by facet in a sheet (as My recipes' Filters), so the column stays short.
+// A recipe's tags in the editor (design §14): the chosen ones as chips with ✕, and Add tag,
+// which opens every tag by facet in a sheet (as My recipes' Filters), so the column stays short.
 export function RecipeTags({ selected, onChange, errors }: RecipeTagsProps) {
   // As in TextField: Add tag is marked invalid and points to the error (over 20 tags), so the
-  // form's focus after a failed Save lands on it, just under the message.
+  // form's focus after a failed Save lands on it, just above the message. A button marked
+  // invalid is unusual, but it's the one control on the page the tags are changed with.
   const errorId = useId();
   const invalid = errors.some((message) => typeof message === "string");
+  // A chip's ✕ takes itself away: focus moves to Add tag, the next thing in the row.
+  const addTagRef = useRef<HTMLButtonElement>(null);
 
   return (
     <fieldset>
@@ -42,6 +45,7 @@ export function RecipeTags({ selected, onChange, errors }: RecipeTagsProps) {
               aria-label={`Remove ${tagLabel(tag)}`}
               onClick={() => {
                 onChange(selected.filter((other) => other !== tag));
+                addTagRef.current?.focus();
               }}
               className="min-w-11 rounded-full px-0 text-muted-foreground"
             >
@@ -53,6 +57,7 @@ export function RecipeTags({ selected, onChange, errors }: RecipeTagsProps) {
           <Sheet>
             <SheetTrigger asChild>
               <Button
+                ref={addTagRef}
                 variant="outline"
                 aria-invalid={invalid}
                 aria-describedby={invalid ? errorId : undefined}

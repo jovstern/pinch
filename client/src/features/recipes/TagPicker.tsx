@@ -7,8 +7,8 @@ type TagPickerProps = {
   legend: string;
   selected: string[];
   onChange: (tags: string[]) => void;
-  // "chips" (the editor's Add tag, the Filters sheet), or "list": a column of checkboxes for a narrow panel
-  // (My recipes from 1024 px, as in the wireframe).
+  // "chips" (the editor's Add tag, the Filters sheet), or "list": a column of checkboxes for a
+  // narrow panel (My recipes from 1024 px, as in the wireframe).
   look?: "chips" | "list";
 };
 
