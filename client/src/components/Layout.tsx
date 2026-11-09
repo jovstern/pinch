@@ -9,7 +9,7 @@ import { Header } from "./Header.tsx";
 // is there shows once it is: Sonner gives a new Toaster the toasts still open. No fallback: there
 // is nothing to show until a toast is sent. A chunk that won't load means no toasts, not a broken
 // page (the ErrorBoundary is around the page, not the frame).
-const Toaster = lazy<ComponentType<{ onEditor: boolean }>>(() =>
+const Toaster = lazy<ComponentType<{ alwaysTop: boolean }>>(() =>
   import("./ui/Toaster.tsx").then(
     (module) => ({ default: module.Toaster }),
     () => ({ default: () => null }),
@@ -52,7 +52,9 @@ export function Layout() {
         </ErrorBoundary>
       </main>
       <Suspense>
-        <Toaster onEditor={onEditor} />
+        {/* At the top in the editor on every width: at the bottom they'd sit over its Save
+            (pinned to the bottom up to 1024 px, at the foot of the right column from there). */}
+        <Toaster alwaysTop={onEditor} />
       </Suspense>
     </>
   );

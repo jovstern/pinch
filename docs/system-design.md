@@ -516,8 +516,9 @@ off-screen". Toasts sit at the top on a phone, under the header, and bottom righ
 Leaving the editor with changes asks once: Cancel ("Discard your changes?"), a draft's Discard
 (always, as it deletes it), and closing or reloading the tab (the browser's own question). A
 link inside the app (a breadcrumb, a tab, Back) doesn't ask: that needs a data router's
-`useBlocker`, and the router is declarative (D21). Two columns from 1024 px:
-what you edit most (title, ingredients, steps) on the left, the picture, source, details, tags
-and Save on the right, which stays in view (and scrolls itself on a short screen). On a phone
-the page reads in the same order (picture, source, details and tags after the steps), so the
-keyboard and the eye go the same way; the Save bar's buttons are a phone's width up to 1024 px.
+`useBlocker`, and the router is declarative (D21). Two columns from 1024 px: what you edit most
+(title, ingredients, steps) on the left, the picture, source, details, tags and Save on the
+right, which stays in view (and scrolls itself on a short screen). On a phone the page reads in
+the same order (source, details and tags after the steps; only the picture comes first, as on a
+recipe's page), so the keyboard and the eye go the same way; the Save bar's buttons are a
+phone's width up to 1024 px.

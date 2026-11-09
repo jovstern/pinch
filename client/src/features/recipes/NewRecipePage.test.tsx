@@ -282,6 +282,21 @@ test("closing the tab with changes asks first; without them it doesn't", async (
   expect(changed.defaultPrevented).toBe(true);
 });
 
+test("once saved, closing the tab no longer asks", async () => {
+  stubApi(() => Response.json(saved, { status: 201 }));
+  renderApp("/recipes/new");
+
+  await userEvent.type(await screen.findByLabelText("Title"), "Toast");
+  await userEvent.type(ingredient(1).getByLabelText("Ingredient"), "bread");
+  await userEvent.type(screen.getByLabelText("Step 1"), "Toast the bread.");
+  await userEvent.click(screen.getByRole("button", { name: "Save recipe" }));
+  await screen.findByRole("heading", { level: 1, name: "Toast" });
+
+  const leaving = new Event("beforeunload", { cancelable: true });
+  window.dispatchEvent(leaving);
+  expect(leaving.defaultPrevented).toBe(false);
+});
+
 test("every Save checks the whole form again, even while errors still show", async () => {
   stubApi(() => Response.json(saved, { status: 201 }));
   renderApp("/recipes/new");

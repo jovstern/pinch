@@ -169,10 +169,10 @@ test("the draft's picture shows, from the import", async () => {
   stubApi({ ...ready, thumbnail: { width: 400, height: 225 } });
   renderApp(`/imports/${ready.id}`);
 
-  expect(await screen.findByRole("presentation")).toHaveAttribute(
-    "src",
-    `/api/imports/${ready.id}/thumbnail`,
-  );
+  // Twice: first on a phone, in the right column from 1024 px (CSS shows one; jsdom has no CSS).
+  for (const picture of await screen.findAllByRole("presentation")) {
+    expect(picture).toHaveAttribute("src", `/api/imports/${ready.id}/thumbnail`);
+  }
 });
 
 test("an import with no draft yet says it isn't ready", async () => {

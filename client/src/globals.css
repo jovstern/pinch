@@ -130,3 +130,11 @@ body {
   outline: 2px solid var(--color-ring);
   outline-offset: 2px;
 }
+
+/* A field focused or scrolled to (the first error after Save) stays clear of the editor's Save
+   bar, pinned to the bottom below 1024 px (RecipeForm). */
+@media (width < 64rem) {
+  html:has([data-save-bar]) {
+    scroll-padding-bottom: 10rem;
+  }
+}

@@ -56,9 +56,6 @@ export function TextField({
     "aria-invalid": invalid,
     "aria-describedby": describedBy.length > 0 ? describedBy.join(" ") : undefined,
   };
-  // Focused (the first error after Save) or scrolled to, a box stays clear of the editor's Save
-  // bar, pinned to the bottom on a phone.
-  const clearOfSaveBar = "scroll-mb-36 lg:scroll-mb-0";
 
   return (
     <div className={className}>
@@ -70,7 +67,7 @@ export function TextField({
         // screen.
         <Textarea
           {...shared}
-          className={`max-h-80 ${clearOfSaveBar}`}
+          className="max-h-80"
           onChange={(event) => {
             field.handleChange(event.target.value);
           }}
@@ -78,7 +75,6 @@ export function TextField({
       ) : (
         <Input
           inputMode={inputMode}
-          className={clearOfSaveBar}
           {...shared}
           onChange={(event) => {
             field.handleChange(event.target.value);

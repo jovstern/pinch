@@ -112,6 +112,9 @@ export function RecipeForm({
       {/* What you edit most, on the left from 1024 px; the rest beside it (design §14). In this
           order on a phone too, so the keyboard and the eye go the same way on every width. */}
       <div className="grid gap-8">
+        {/* The picture first on a phone, as on the recipe's page; beside, in the right column,
+            from 1024 px. */}
+        {picture && <div className="lg:hidden">{picture}</div>}
         {intro}
         <form.Field name="title">
           {(field) => <TextField field={field} label="Title" placeholder="e.g. Red lentil soup" />}
@@ -252,7 +255,7 @@ export function RecipeForm({
       {/* In view as the left column scrolls, from 1024 px; it scrolls itself on a short screen,
           so Save is always within reach. */}
       <div className="grid gap-6 lg:sticky lg:top-4 lg:max-h-[calc(100dvh-2rem)] lg:overflow-y-auto lg:rounded-card lg:border lg:border-border lg:p-5">
-        {picture}
+        {picture && <div className="hidden lg:block">{picture}</div>}
         <p className="text-sm text-muted-foreground">
           Source: <RecipeSource source={source} />
         </p>
@@ -279,7 +282,10 @@ export function RecipeForm({
 
         {/* The Save bar: pinned to the bottom on a phone, in thumb reach on any length of recipe,
             above the home bar where there is one; the column's end from 1024 px. */}
-        <div className="fixed inset-x-0 bottom-0 z-10 border-t border-border bg-background px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] lg:static lg:border-0 lg:p-0">
+        <div
+          data-save-bar
+          className="fixed inset-x-0 bottom-0 z-10 border-t border-border bg-background px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] lg:static lg:border-0 lg:p-0"
+        >
           {/* As wide as a phone's from 768 px, where the whole width would be a long reach. */}
           <div className="grid gap-2 md:mx-auto md:max-w-xl lg:max-w-none">
             <form.Subscribe selector={(state) => state.errorMap.onSubmit}>
