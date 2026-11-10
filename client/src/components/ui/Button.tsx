@@ -18,13 +18,16 @@ const buttonVariants = cva(
         // A fill, not a bordered box (plan §6: depth from surfaces, not lines).
         secondary:
           "bg-secondary text-secondary-foreground hover:not-aria-disabled:bg-border active:not-aria-disabled:bg-border/70",
+        // The exception to that: an action that sits over or beside other controls (Write a
+        // recipe, floating over the list), so "Pinch it" stays the one filled button (pass-02 §13).
+        outline:
+          "border border-input bg-background hover:not-aria-disabled:bg-secondary active:not-aria-disabled:bg-border",
+        // No surface until hovered: a small tool beside a field (Paste) or a quiet way in
+        // (Or add screenshots).
+        ghost: "hover:not-aria-disabled:bg-secondary active:not-aria-disabled:bg-border",
         // Only for what can't be undone.
         destructive:
           "bg-destructive text-destructive-foreground hover:not-aria-disabled:bg-destructive/90 active:not-aria-disabled:bg-destructive/80",
-        // A destructive action that isn't the page's main one (or only opens a question): it
-        // shouldn't shout.
-        "destructive-ghost":
-          "text-destructive hover:not-aria-disabled:bg-destructive/10 active:not-aria-disabled:bg-destructive/20",
       },
     },
     defaultVariants: { variant: "default" },

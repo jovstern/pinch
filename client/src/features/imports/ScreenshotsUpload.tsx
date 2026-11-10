@@ -7,9 +7,11 @@ import {
   screenshotsMessage,
 } from "@pinch/shared";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { ImagePlus } from "lucide-react";
 import { useId, useState } from "react";
 import { Button } from "../../components/ui/Button.tsx";
 import { ApiError, sendForm } from "../../lib/api.ts";
+import { toastPinching } from "../../lib/toasts.tsx";
 import { importListQuery } from "./importQueries.ts";
 
 // The second way in on / (design §1, §14): screenshots of a post whose link and text won't do.
@@ -28,8 +30,9 @@ export function ScreenshotsUpload() {
       return sendForm("/api/imports/screenshots", form, ImportSchema);
     },
     onSuccess: () => {
-      // The new import shows in the list, which starts polling and announces it.
+      // The new import shows in the list, which starts polling.
       void queryClient.invalidateQueries({ queryKey: importListQuery.queryKey });
+      toastPinching();
     },
   });
 
@@ -48,11 +51,13 @@ export function ScreenshotsUpload() {
 
   const message = errorMessage(refused, upload.error);
   return (
-    <div className="mt-3">
-      {/* A label with Button's secondary look: the file input inside it is hidden, so the label
+    <div className="mt-2">
+      {/* Quiet, under the field: the paste is the main way in (design §14). A label with
+          Button's ghost look: the file input inside it is hidden, so the label
           shows its focus (as TagPicker's chips), and relative keeps the input inside it. */}
-      <Button asChild variant="secondary">
-        <label className="relative cursor-pointer has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-focus-visible:outline-ring">
+      <Button asChild variant="ghost">
+        <label className="relative -ml-2 cursor-pointer px-2 text-sm font-medium text-muted-foreground has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-focus-visible:outline-ring">
+          <ImagePlus aria-hidden="true" className="size-4" />
           {upload.isPending ? "Sending…" : "Or add screenshots"}
           <input
             type="file"
@@ -69,11 +74,11 @@ export function ScreenshotsUpload() {
           />
         </label>
       </Button>
-      <p id={hintId} className="mt-1 text-sm text-text-muted">
+      <p id={hintId} className="text-sm text-muted-foreground">
         Up to {MAX_SCREENSHOTS} screenshots of the recipe, when its link and text won't do.
       </p>
       {message && (
-        <p id={errorId} role="alert" className="mt-1 text-sm text-danger">
+        <p id={errorId} role="alert" className="mt-1 text-sm text-destructive">
           {message}
         </p>
       )}
