@@ -283,8 +283,10 @@ recipe (§8), which has no marks.
 A recipe's `emoji` is its face when it has no picture (D25): one emoji, which the model picks for
 the draft and approve copies, as the nutrition; a recipe written by hand gets the one its title
 names, from a short list of dishes in English and Hebrew (`server/src/titleEmoji.ts`: "soup" 🍲,
-"סלט" 🥗), or none. Like the marks it is a hint, so it never fails a draft: anything but one
-emoji (one grapheme, pictographic) is dropped, whenever the schema reads it. The user doesn't
+"סלט" 🥗; the first match in the list wins), or none. Like the marks it is a hint, so it never
+fails a draft: the check keeps exactly one pictographic grapheme (an emoji, a ZWJ sequence or one
+with a skin tone, at most 16 code units) and drops anything else, flags and keycaps included,
+whenever the schema reads it; a browser without `Intl.Segmenter` drops them all. The user doesn't
 write it, and editing keeps it (D20); a recipe with none (saved before it, or a title the list
 doesn't know) shows a plate, 🍽️.
 

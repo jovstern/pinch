@@ -71,8 +71,8 @@ export const NutritionSchema = z.object({
 // A recipe's face when it has no picture (design D25): one emoji for the dish, which the model
 // picks. Only a hint, as the marks below, so it never fails a draft or a recipe: anything but
 // one emoji (two, a word, "", not a string) is dropped, as if it weren't there. One emoji is one
-// grapheme, which a ZWJ sequence or a skin tone still is, and pictographic; the length cap keeps
-// out a "grapheme" padded with a thousand combining marks.
+// grapheme, which a ZWJ sequence or a skin tone still is, and pictographic (so a flag or a keycap
+// is dropped too); the length cap keeps out a "grapheme" padded with a thousand combining marks.
 export const EmojiSchema = z
   .string()
   .trim()
@@ -80,8 +80,13 @@ export const EmojiSchema = z
   .optional()
   .catch(undefined);
 
+// Older browsers (Firefox before 125) have no Segmenter. There every emoji is dropped rather than
+// thrown: catch doesn't catch what a transform throws, and a throw would fail the whole list.
+const segmenter = typeof Intl.Segmenter === "function" ? new Intl.Segmenter() : undefined;
+
 function isOneEmoji(text: string) {
-  const graphemes = [...new Intl.Segmenter().segment(text)];
+  if (!segmenter) return false;
+  const graphemes = [...segmenter.segment(text)];
   return text.length <= 16 && graphemes.length === 1 && /\p{Extended_Pictographic}/u.test(text);
 }
 

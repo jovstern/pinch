@@ -13,6 +13,12 @@ test("the narrower dish wins, and a keyword counts only at a word's start", () =
   expect(titleEmoji("Veggie bowl")).toBeUndefined();
 });
 
+test("a Hebrew word matches after a one-letter prefix, and cookies come before a cake", () => {
+  expect(titleEmoji("המרק של סבתא")).toBe("🍲");
+  expect(titleEmoji("עוגת שוקולד")).toBe("🍰");
+  expect(titleEmoji("עוגיות חמאה")).toBe("🍪");
+});
+
 test("a title that names no dish it knows gets none", () => {
   expect(titleEmoji("Mujadara")).toBeUndefined();
 });
