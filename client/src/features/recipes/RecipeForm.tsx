@@ -4,6 +4,7 @@ import { Plus, X } from "lucide-react";
 import { lazy, Suspense, useEffect, useRef, useState, type ReactNode, type Ref } from "react";
 import { Link, useNavigate } from "react-router";
 import { Button } from "../../components/ui/Button.tsx";
+import { ErrorBoundary } from "../../components/ErrorBoundary.tsx";
 import { FieldError } from "../../components/FieldError.tsx";
 import { TextField } from "../../components/TextField.tsx";
 import { ApiError } from "../../lib/api.ts";
@@ -13,7 +14,8 @@ import { RecipeTags } from "./RecipeTags.tsx";
 
 // The question is its own chunk (Radix's AlertDialog), fetched on the press of Cancel or Discard,
 // as DeleteRecipeDialog is: with Add tag's sheet, Radix's dialog was ~12 kB of the editor's
-// first load, for a question most edits never ask (docs/metrics/m08.md).
+// first load, for a question most edits never ask (docs/metrics/m08.md). No busy cue on the
+// button while it loads, as for Filters (FiltersButton).
 const LeaveDialog = lazy(async () => ({
   default: (await import("./LeaveDialog.tsx")).LeaveDialog,
 }));
@@ -433,16 +435,20 @@ function LeaveButton({ leave, busy, title, changed }: LeaveButtonProps) {
       >
         {button}
       </Button>
+      {/* A question that won't load (offline, a new deploy) just doesn't open: caught here, not
+          by the page's ErrorBoundary, which would replace the form and what's typed in it. */}
       {asking && (
-        <Suspense>
-          <LeaveDialog
-            {...question}
-            onClose={() => {
-              setAsking(false);
-            }}
-            focusOnClose={() => buttonRef.current?.focus()}
-          />
-        </Suspense>
+        <ErrorBoundary fallback={null}>
+          <Suspense>
+            <LeaveDialog
+              {...question}
+              onClose={() => {
+                setAsking(false);
+              }}
+              focusOnClose={() => buttonRef.current?.focus()}
+            />
+          </Suspense>
+        </ErrorBoundary>
       )}
     </>
   );
