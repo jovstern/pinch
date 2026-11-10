@@ -30,13 +30,7 @@ export function FiltersPanel({ selected, onChange, onClear }: FiltersPanelProps)
           </Button>
         )}
       </div>
-      <TagPicker
-        legend="Filter by tags"
-        legendClassName="sr-only"
-        selected={selected}
-        onChange={onChange}
-        look="list"
-      />
+      <TagPicker legend="Filter by tags" selected={selected} onChange={onChange} look="list" />
     </aside>
   );
 }
