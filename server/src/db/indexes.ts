@@ -1,18 +1,21 @@
 import type { Db } from "mongodb";
 import { importsCollection } from "./imports.ts";
-import { recipesCollection } from "./recipes.ts";
+import { recipesCollection, TITLE_COLLATION } from "./recipes.ts";
 import { usageCollection } from "./usage.ts";
 
 // Every query the app runs has its index here (design §6, mongodb.md); `npm run db:indexes`
 // creates them. One that already exists is left as it is, so it's safe to run again.
 export async function createIndexes(db: Db) {
   await recipesCollection(db).createIndexes([
-    // My recipes, newest first, and the cursor's next page (findNewestRecipes).
+    // My recipes, newest first, and the cursor's next page (findRecipes).
     { key: { ownerId: 1, createdAt: -1, _id: -1 } },
     // The same, filtered by tags. The index holds one entry per tag of a recipe (multikey), so
     // the scan reads the recipes with the first tag and checks the others on each (design §7).
     { key: { ownerId: 1, tags: 1, createdAt: -1, _id: -1 } },
-    // Text search inside my recipes (searchRecipes). A collection has at most one text index;
+    // My recipes A–Z. Its collation ignores case, as the sort does (TITLE_COLLATION): a query
+    // uses an index on text only when their collations match.
+    { key: { ownerId: 1, title: 1, _id: 1 }, collation: TITLE_COLLATION },
+    // Text search inside my recipes (findRecipes with q). A collection has at most one text index;
     // ownerId before it means every search must name the owner, which it always does.
     { key: { ownerId: 1, title: "text", "ingredients.name": "text" } },
     // One recipe per import, so approve is safe to repeat (design §4.4). Sparse: recipes made by

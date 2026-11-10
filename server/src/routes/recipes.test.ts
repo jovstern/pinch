@@ -7,7 +7,7 @@ import { z } from "zod";
 import { createApp } from "../app.ts";
 import { loadConfig } from "../config.ts";
 import { createIndexes } from "../db/indexes.ts";
-import { findNewestRecipes, recipesCollection, searchRecipes } from "../db/recipes.ts";
+import { findRecipes, recipesCollection, type RecipeDocument } from "../db/recipes.ts";
 import { createTestDb } from "../testDb.ts";
 
 const config = loadConfig(process.env);
@@ -213,9 +213,9 @@ test("the list's second page reads its index from the cursor on, not the page be
   if (!cursor) throw new Error("expected 120 recipes");
 
   const explain = ExplainSchema.parse(
-    await findNewestRecipes(recipesCollection(db), ownerId, { after: cursor }).explain(
-      "executionStats",
-    ),
+    await findRecipes(recipesCollection(db), ownerId, {
+      after: { value: cursor.createdAt, _id: cursor._id },
+    }).explain("executionStats"),
   );
 
   // An index scan in the index's own order (no SORT stage)...
@@ -277,7 +277,7 @@ test("the list filtered by tags reads the tags index, only the recipes it answer
   const { ownerId } = await insertManyRecipes();
 
   const explain = ExplainSchema.parse(
-    await findNewestRecipes(recipesCollection(db), ownerId, {
+    await findRecipes(recipesCollection(db), ownerId, {
       tags: ["cuisine:italian", "meal:dinner"],
     }).explain("executionStats"),
   );
@@ -325,15 +325,16 @@ async function insertSearchableRecipes() {
   return { ownerId, userApp };
 }
 
-test("GET /api/recipes?q= finds my recipes by title and ingredient, the best match first", async () => {
+test("GET /api/recipes?q= finds my recipes by title and ingredient, newest first", async () => {
   const { userApp } = await insertSearchableRecipes();
 
   const response = await request(userApp).get("/api/recipes").query({ q: "eggs" });
 
-  // "eggs" finds "egg" too (stemming). Egg salad matches in the title and an ingredient, so it
-  // comes first. The other tests' omelettes (eggs too) belong to the default user, not this one.
+  // "eggs" finds "egg" too (stemming). The best matches are kept, then shown in the order asked:
+  // newest first when none is. The other tests' omelettes (eggs too) belong to the default user,
+  // not this one.
   const list = RecipeListSchema.parse(response.body);
-  expect(list.items.map((recipe) => recipe.title)).toEqual(["Egg salad", "Shakshuka"]);
+  expect(list.items.map((recipe) => recipe.title)).toEqual(["Shakshuka", "Egg salad"]);
   expect(list.nextCursor).toBeNull();
 });
 
@@ -371,16 +372,171 @@ test("GET /api/recipes answers 400 for a search over 200 characters", async () =
 test("a search reads the text index, not the whole collection (§6)", async () => {
   const { ownerId } = await insertSearchableRecipes();
 
-  const explain = ExplainSchema.parse(
-    await searchRecipes(recipesCollection(db), ownerId, "tomato").explain("executionStats"),
-  );
+  // The pipeline goes on after the query (the best by score, then the order asked), so explain
+  // puts the query's own plan in its first stage.
+  const { stages } = z
+    .object({ stages: z.tuple([z.object({ $cursor: ExplainSchema })], z.unknown()) })
+    .parse(
+      await findRecipes(recipesCollection(db), ownerId, { q: "tomato" }).explain("executionStats"),
+    );
+  const explain = stages[0].$cursor;
 
-  // Only the two matches are read; sorting by score needs them all, so a SORT stage is expected.
+  // Only the two matches are read.
   const plan = JSON.stringify(explain.queryPlanner.winningPlan);
   expect(plan).toContain('"indexName":"ownerId_1_title_text_ingredients.name_text"');
-  expect(plan).toContain('"stage":"SORT"');
   expect(plan).not.toContain("COLLSCAN");
   expect(explain.executionStats).toMatchObject({ nReturned: 2, totalDocsExamined: 2 });
+});
+
+// A user of their own with these recipes, written straight to the database, the first the
+// oldest. Returns the app that acts as them and their id.
+async function insertRecipesOfNewUser(recipes: Partial<RecipeDocument>[]) {
+  const ownerId = new ObjectId();
+  const start = Date.now();
+  await recipesCollection(db).insertMany(
+    recipes.map((recipe, i) => ({
+      ...omelette,
+      _id: new ObjectId(),
+      ownerId,
+      source: { type: "manual" as const },
+      createdAt: new Date(start + i),
+      updatedAt: new Date(start + i),
+      ...recipe,
+    })),
+  );
+  const userApp = createApp({
+    logger: pino({ level: "silent" }),
+    db,
+    devUserId: ownerId.toHexString(),
+  });
+  return { ownerId, userApp };
+}
+
+async function listTitles(userApp: typeof app, query: Record<string, string>) {
+  const response = await request(userApp).get("/api/recipes").query(query);
+  return RecipeListSchema.parse(response.body).items.map((recipe) => recipe.title);
+}
+
+test("GET /api/recipes?source= lists the recipes from any of the sources", async () => {
+  const { userApp } = await insertRecipesOfNewUser([
+    { title: "Reel", source: { type: "instagram", url: "https://www.instagram.com/reel/a" } },
+    { title: "Video", source: { type: "youtube", url: "https://youtu.be/a" } },
+    { title: "By hand" },
+    { title: "Pasted", source: { type: "text" } },
+  ]);
+
+  expect(await listTitles(userApp, { source: "instagram,manual" })).toEqual(["By hand", "Reel"]);
+});
+
+test("GET /api/recipes?time= lists the recipes that take at most that long, prep and cook together", async () => {
+  const { userApp } = await insertRecipesOfNewUser([
+    { title: "Both, 30", prepMinutes: 10, cookMinutes: 20 },
+    { title: "Both, 31", prepMinutes: 11, cookMinutes: 20 },
+    { title: "Cook only, 25", cookMinutes: 25 },
+    { title: "Prep only, 5", prepMinutes: 5 },
+    { title: "No time" },
+  ]);
+
+  // A recipe with no time isn't known to be quick, so a time filter leaves it out.
+  expect(await listTitles(userApp, { time: "30" })).toEqual([
+    "Prep only, 5",
+    "Cook only, 25",
+    "Both, 30",
+  ]);
+});
+
+test("GET /api/recipes?sort=quickest lists the least total time first, and no time last", async () => {
+  const { userApp } = await insertRecipesOfNewUser([
+    { title: "No time" },
+    { title: "40", prepMinutes: 10, cookMinutes: 30 },
+    { title: "5", prepMinutes: 5 },
+    { title: "20", cookMinutes: 20 },
+  ]);
+
+  expect(await listTitles(userApp, { sort: "quickest" })).toEqual(["5", "20", "40", "No time"]);
+});
+
+test("GET /api/recipes?sort=az lists by title, whatever the case", async () => {
+  const { userApp } = await insertRecipesOfNewUser([
+    { title: "banana bread" },
+    { title: "Apple pie" },
+    { title: "Carrot cake" },
+  ]);
+
+  expect(await listTitles(userApp, { sort: "az" })).toEqual([
+    "Apple pie",
+    "banana bread",
+    "Carrot cake",
+  ]);
+});
+
+test("the cursor leads through every page of Quickest and of A–Z, each recipe once", async () => {
+  // 120 recipes; many share a time or a title, so pages split recipes with the same value.
+  const { userApp } = await insertRecipesOfNewUser(
+    Array.from({ length: 120 }, (_, i) => ({
+      title: `Recipe ${String(i % 7)}`,
+      cookMinutes: i % 4 === 0 ? undefined : i % 9,
+    })),
+  );
+
+  for (const sort of ["quickest", "az"]) {
+    const ids = [];
+    let cursor: string | undefined;
+    do {
+      const response = await request(userApp).get("/api/recipes").query({ sort, cursor });
+      const page = RecipeListSchema.parse(response.body);
+      ids.push(...page.items.map((recipe) => recipe.id));
+      cursor = page.nextCursor ?? undefined;
+    } while (cursor);
+    expect(new Set(ids).size).toBe(120);
+  }
+});
+
+test("GET /api/recipes?q=&sort= shows the matches in the order asked", async () => {
+  const { userApp } = await insertSearchableRecipes();
+
+  expect(await listTitles(userApp, { q: "eggs", sort: "az" })).toEqual(["Egg salad", "Shakshuka"]);
+});
+
+test("GET /api/recipes answers 400 for a sort, time or source not in the lists", async () => {
+  const response = await request(app)
+    .get("/api/recipes")
+    .query({ sort: "oldest", time: "45", source: "tiktok" });
+
+  expect(response.status).toBe(400);
+  expect(response.body).toMatchObject({
+    error: {
+      fields: {
+        sort: "Sort by newest, quickest or az.",
+        time: "Pick a time of 15, 30 or 60.",
+        "source.0": "Pick a source from the list.",
+      },
+    },
+  });
+});
+
+test("GET /api/recipes answers 400 for a cursor from another order", async () => {
+  const response = await request(app)
+    .get("/api/recipes")
+    .query({ sort: "quickest", cursor: `Omelette_${new ObjectId().toHexString()}` });
+
+  expect(response.status).toBe(400);
+  expect(response.body).toMatchObject({
+    error: { fields: { cursor: "This cursor isn't valid." } },
+  });
+});
+
+test("A–Z reads the title index in order, only the recipes it answers (§6)", async () => {
+  const { ownerId } = await insertManyRecipes();
+
+  const explain = ExplainSchema.parse(
+    await findRecipes(recipesCollection(db), ownerId, { sort: "az" }).explain("executionStats"),
+  );
+
+  const plan = JSON.stringify(explain.queryPlanner.winningPlan);
+  expect(plan).toContain('"indexName":"ownerId_1_title_1__id_1"');
+  expect(plan).not.toMatch(/COLLSCAN|"SORT"/);
+  expect(explain.executionStats).toMatchObject({ nReturned: 51, totalDocsExamined: 51 });
 });
 
 test("PUT /api/recipes/:id replaces what the user can edit and clears what they left out", async () => {

@@ -94,8 +94,23 @@ export const RecipeSchema = RecipeInputSchema.extend({
   updatedAt: z.iso.datetime(),
 });
 
-// GET /api/recipes, newest first, a page at a time. nextCursor asks for the next page, and is
-// null on the last one (design §7).
+// My recipes' Sort and Filters (design §7), as GET /api/recipes and the page's address take them.
+// The order: newest first (the default), the least total time first, or by title.
+export const RecipeSortSchema = z.enum(
+  ["newest", "quickest", "az"],
+  "Sort by newest, quickest or az.",
+);
+// The most minutes a recipe takes, prep and cook together ("30 min or less").
+export const TimeLimitSchema = z.enum(["15", "30", "60"], "Pick a time of 15, 30 or 60.");
+// Where a recipe came from: the three sites, or written by hand ("manual"). Pasted text and
+// screenshots aren't among them (the design's Filters have no place for them).
+export const ListSourceSchema = SourceSchema.shape.type.extract(
+  ["instagram", "youtube", "facebook", "manual"],
+  "Pick a source from the list.",
+);
+
+// GET /api/recipes, a page at a time. nextCursor asks for the next page, and is null on the last
+// one (design §7).
 export const RecipeListSchema = z.object({
   items: z.array(RecipeSchema),
   nextCursor: z.string().nullable(),
@@ -108,3 +123,6 @@ export type RecipeDraft = z.infer<typeof RecipeDraftSchema>;
 export type Thumbnail = z.infer<typeof ThumbnailSchema>;
 export type Recipe = z.infer<typeof RecipeSchema>;
 export type RecipeList = z.infer<typeof RecipeListSchema>;
+export type RecipeSort = z.infer<typeof RecipeSortSchema>;
+export type TimeLimit = z.infer<typeof TimeLimitSchema>;
+export type ListSource = z.infer<typeof ListSourceSchema>;

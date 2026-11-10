@@ -273,6 +273,7 @@ Every query that answers imports leaves them out.
 |---|---|---|
 | recipes | `{ ownerId: 1, tags: 1, createdAt: -1, _id: -1 }` | My recipes, filtered by tags, newest first |
 | recipes | `{ ownerId: 1, createdAt: -1, _id: -1 }` | My recipes, no filter, cursor pagination |
+| recipes | `{ ownerId: 1, title: 1, _id: 1 }`, collation `en`, strength 2 | My recipes A–Z, whatever the case |
 | recipes | `{ ownerId: 1, title: "text", "ingredients.name": "text" }` | Text search inside my recipes |
 | recipes | `{ sourceImportId: 1 }` unique, sparse | Idempotent approve |
 | imports | `{ status: 1, nextAttemptAt: 1 }` | The worker's claim query |
@@ -321,9 +322,20 @@ Queries:
   reads 51 documents for a page of 51 (`explain`, in a test), `meal:dinner,cuisine:italian`
   reads 101. Either is fast at this scale, and never more than my recipes with that one tag; if
   it matters later, the route can put the narrower facet first.
-- **Text search:** `{ ownerId, $text: { $search: q } }` plus the same tag filter, sorted by text
-  score, first 50 results. At POC scale that is enough; no deep pagination for search. A
-  recipe matches if any word of `q` is in its title or an ingredient's name. The text index
+- **Sort, Time and Source** (M8 F1): `sort` is `newest` (the default), `quickest` or `az`; each
+  sorts by one value, then `_id` the same way, and the cursor is that value and the `_id`
+  (`<ms>_<id>`, `<minutes>_<id>`, `<title>_<id>`). A–Z ignores case (a collation, `en` strength
+  2, and an index with the same one). A recipe's time is prep and cook together, or the one it
+  has; one with neither counts as longer than any (Quickest puts it last, a time filter leaves it
+  out). No recipe stores that sum, so `time=15|30|60` is an `$expr` and Quickest an `$addFields`
+  before the sort: both read every one of my recipes the other filters leave, rather than an
+  index (one household's library: hundreds, at most a few thousand). `source=instagram,manual`
+  is any of the sources (`manual` is "Written by me"; pasted text and screenshots have no
+  filter). The query is one aggregation, so every filter and order goes together.
+- **Text search:** `{ ownerId, $text: { $search: q } }` plus the same filters; its 50 best
+  matches by text score, then shown in the order asked (newest first by default). At POC scale
+  that is enough; no deep pagination for search. A recipe matches if any word of `q` is in its
+  title or an ingredient's name. The text index
   stems English ("eggs" finds "egg"); Mongo has no Hebrew stemmer, so Hebrew matches whole
   words only ("חריף" doesn't find "חריפה"). Quotes ask for a phrase and a leading "-" leaves a
   word out (Mongo's `$search` syntax); a search of only stop words ("the") finds nothing.
@@ -339,7 +351,7 @@ the request's user (§8.3), never from the body or the URL.
 GET    /api/health                     the process is up
 GET    /api/ready                      the database is reachable
 
-GET    /api/recipes?q=…&tags=cuisine:italian,flavor:spicy&cursor=…   → { items, nextCursor }
+GET    /api/recipes?q=…&tags=cuisine:italian,flavor:spicy&source=instagram,manual&time=30&sort=quickest&cursor=…   → { items, nextCursor }
 POST   /api/recipes                    create by hand
 GET    /api/recipes/:id
 PUT    /api/recipes/:id                replace what the user can edit (the form sends it all)

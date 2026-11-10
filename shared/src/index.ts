@@ -24,19 +24,25 @@ export {
 } from "./import.ts";
 export {
   IngredientSchema,
+  ListSourceSchema,
   NutritionSchema,
   RecipeDraftSchema,
   RecipeInputSchema,
   RecipeListSchema,
   RecipeSchema,
+  RecipeSortSchema,
   SourceSchema,
   ThumbnailSchema,
+  TimeLimitSchema,
   type Ingredient,
+  type ListSource,
   type Nutrition,
   type Recipe,
   type RecipeDraft,
   type RecipeInput,
   type RecipeList,
+  type RecipeSort,
   type Thumbnail,
+  type TimeLimit,
 } from "./recipe.ts";
 export { isTag, tagFacets, TagSchema, type TagFacet } from "./tags.ts";
