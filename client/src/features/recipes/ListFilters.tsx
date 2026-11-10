@@ -1,7 +1,7 @@
 import { Search } from "lucide-react";
 import { useId, useState, type RefObject } from "react";
 import { Input } from "../../components/ui/Input.tsx";
-import { FiltersSheet } from "./FiltersSheet.tsx";
+import { FiltersButton } from "./FiltersButton.tsx";
 import type { RecipeFilters } from "./recipeQueries.ts";
 import { TagChips } from "./TagChips.tsx";
 
@@ -65,7 +65,7 @@ export function ListFilters({ filters, onChange, onChangeTags, searchRef }: List
         {/* From 1024 px the Filters are a panel beside the grid (FiltersPanel), and the
             common tags are among them. */}
         <div className="lg:hidden">
-          <FiltersSheet selected={filters.tags} onChange={onChangeTags} />
+          <FiltersButton selected={filters.tags} onChange={onChangeTags} />
         </div>
       </div>
       <div className="lg:hidden">

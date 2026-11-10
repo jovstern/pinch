@@ -1,4 +1,3 @@
-import type { ReactNode } from "react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -7,34 +6,45 @@ import {
   AlertDialogDescription,
   AlertDialogFooter,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from "../../components/ui/AlertDialog.tsx";
 import { Button } from "../../components/ui/Button.tsx";
 
 type LeaveDialogProps = {
-  // The button that opens it (a draft's Discard).
-  trigger: ReactNode;
   title: string;
   description: string;
   confirmLabel: string;
   keepLabel: string;
   onConfirm: () => void;
+  onClose: () => void;
+  // Where focus goes when it closes: the button that opened it (RecipeForm's LeaveButton), as
+  // for DeleteRecipeDialog, which has no Trigger either.
+  focusOnClose: () => void;
 };
 
-// Leaving the editor loses what's in it, so it asks once first (design §14). Opened by its own
-// trigger, so focus goes back to it on Keep.
+// Leaving the editor loses what's in it, so it asks once first (design §14).
 export function LeaveDialog({
-  trigger,
   title,
   description,
   confirmLabel,
   keepLabel,
   onConfirm,
+  onClose,
+  focusOnClose,
 }: LeaveDialogProps) {
   return (
-    <AlertDialog>
-      <AlertDialogTrigger asChild>{trigger}</AlertDialogTrigger>
-      <AlertDialogContent>
+    // Open while it's on the page; closing (Keep, Escape, the answer) asks to be taken away.
+    <AlertDialog
+      open
+      onOpenChange={(opening) => {
+        if (!opening) onClose();
+      }}
+    >
+      <AlertDialogContent
+        onCloseAutoFocus={(event) => {
+          event.preventDefault();
+          focusOnClose();
+        }}
+      >
         <AlertDialogTitle className="text-lg font-semibold">{title}</AlertDialogTitle>
         <AlertDialogDescription dir="auto" className="mt-2 text-pretty text-text-muted">
           {description}
