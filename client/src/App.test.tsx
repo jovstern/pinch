@@ -30,7 +30,7 @@ test("an unknown address shows the not-found page with a way back", () => {
 test("the header has the two tabs, Write a recipe and the avatar", () => {
   stubNotFound();
   renderApp("/nope");
-  expect(tab("New recipe")).toHaveAttribute("href", "/");
+  expect(tab("Add recipe")).toHaveAttribute("href", "/");
   expect(tab("My recipes")).toHaveAttribute("href", "/recipes");
   expect(screen.getByRole("link", { name: "Write a recipe" })).toHaveAttribute(
     "href",
@@ -44,9 +44,9 @@ test("the header has the two tabs, Write a recipe and the avatar", () => {
 
 // Each page and the tab that owns it (design §14): an inner page keeps its tab selected.
 test.each([
-  ["/", "New recipe"],
-  ["/recipes/new", "New recipe"],
-  ["/imports/6650a1b2c3d4e5f600000001", "New recipe"],
+  ["/", "Add recipe"],
+  ["/recipes/new", "Add recipe"],
+  ["/imports/6650a1b2c3d4e5f600000001", "Add recipe"],
   ["/recipes", "My recipes"],
   ["/recipes?tags=meal:breakfast", "My recipes"],
   ["/recipes/6650a1b2c3d4e5f600000001", "My recipes"],
@@ -55,7 +55,7 @@ test.each([
 ])("at %s, %s is the selected tab", (path, selected) => {
   stubNotFound();
   renderApp(path);
-  const other = selected === "New recipe" ? "My recipes" : "New recipe";
+  const other = selected === "Add recipe" ? "My recipes" : "Add recipe";
   expect(tab(selected)).toHaveAttribute("aria-current", "page");
   expect(tab(other)).not.toHaveAttribute("aria-current");
 });
@@ -72,7 +72,7 @@ test("on Write a recipe, its link says it's the current page", () => {
 test("a page of neither tab selects none", () => {
   stubNotFound();
   renderApp("/nope");
-  expect(tab("New recipe")).not.toHaveAttribute("aria-current");
+  expect(tab("Add recipe")).not.toHaveAttribute("aria-current");
   expect(tab("My recipes")).not.toHaveAttribute("aria-current");
 });
 
@@ -96,19 +96,19 @@ function stubImports(statuses: ("ready" | "failed")[]) {
   );
 }
 
-test("New recipe counts the drafts ready to review, on every page", async () => {
+test("Add recipe counts the drafts ready to review, on every page", async () => {
   stubImports(["ready", "ready", "failed"]);
   renderApp("/nope");
-  expect(await screen.findByRole("link", { name: "New recipe 2 ready to review" })).toHaveAttribute(
+  expect(await screen.findByRole("link", { name: "Add recipe 2 ready to review" })).toHaveAttribute(
     "href",
     "/",
   );
 });
 
-test("with no draft ready, New recipe has no count", async () => {
+test("with no draft ready, Add recipe has no count", async () => {
   stubImports(["failed"]);
   renderApp("/");
   // The queue shows the imports, so the header has them too.
   expect(await screen.findByText("No recipe in this post.")).toBeInTheDocument();
-  expect(tab("New recipe")).toHaveAccessibleName("New recipe");
+  expect(tab("Add recipe")).toHaveAccessibleName("Add recipe");
 });

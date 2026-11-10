@@ -5,11 +5,15 @@ import {
   textMessage,
   type Import,
 } from "@pinch/shared";
-import { fireEvent, screen, waitFor, within } from "@testing-library/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, test, vi } from "vitest";
+import { MemoryRouter } from "react-router";
 import { renderApp } from "../../test-utils.tsx";
+import { ImportList } from "./ImportList.tsx";
 import { pollInterval } from "./importQueries.ts";
+import { ScreenshotsUpload } from "./ScreenshotsUpload.tsx";
 
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -291,7 +295,7 @@ test("one still cooking shows a disabled Cooking… where Review will be", async
   renderApp("/");
 
   expect(await screen.findByText("Fetching the video…")).toBeInTheDocument();
-  expect(screen.getByRole("heading", { name: "Cooking…" })).toBeInTheDocument();
+  expect(screen.getByRole("heading", { name: "1 in progress" })).toBeInTheDocument();
   expect(screen.getByRole("button", { name: "Cooking…" })).toBeDisabled();
   expect(screen.queryByRole("link", { name: "Review" })).not.toBeInTheDocument();
 });
@@ -300,8 +304,36 @@ test("a ready one is named by its draft's title, and counted in the heading", as
   stubApi([[importOf({ status: "ready", draft }), importOf({ id: "6650a1b2c3d4e5f600000002" })]]);
   renderApp("/");
 
-  expect(await screen.findByRole("heading", { name: "Cooking… · 1 ready" })).toBeInTheDocument();
+  expect(
+    await screen.findByRole("heading", { name: "1 ready · 1 in progress" }),
+  ).toBeInTheDocument();
   expect(screen.getByRole("link", { name: "Review" })).toHaveAccessibleDescription("Tomato pasta");
+});
+
+test("the heading counts what's ready, in progress and failed, a stalled one as failed", async () => {
+  stubApi([
+    [
+      importOf({ status: "ready", draft }),
+      importOf({ id: "6650a1b2c3d4e5f600000002" }),
+      importOf({ id: "6650a1b2c3d4e5f600000003", status: "failed" }),
+      importOf({ id: "6650a1b2c3d4e5f600000004", stalled: true }),
+    ],
+  ]);
+  renderApp("/");
+
+  expect(
+    await screen.findByRole("heading", { name: "1 ready · 1 in progress · 2 failed" }),
+  ).toBeInTheDocument();
+});
+
+test("Or write it yourself leads to the empty editor", () => {
+  stubApi([[]]);
+  renderApp("/");
+
+  expect(screen.getByRole("link", { name: "Or write it yourself" })).toHaveAttribute(
+    "href",
+    "/recipes/new",
+  );
 });
 
 test("a ready one counts its things to look at", async () => {
@@ -626,10 +658,24 @@ test("polling runs only while the worker has a link in hand", () => {
 
 const screenshot = (name: string) => new File(["png"], name, { type: "image/png" });
 
+// Screenshots are hidden from / for now (ImportPage), so their picker is tested on its own, above
+// the queue as it was on the page.
+function renderScreenshots() {
+  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  render(
+    <QueryClientProvider client={queryClient}>
+      <MemoryRouter>
+        <ScreenshotsUpload />
+        <ImportList focusPasteBox={() => undefined} />
+      </MemoryRouter>
+    </QueryClientProvider>,
+  );
+}
+
 test("chosen screenshots are sent at once, as a form, and show in the list", async () => {
   const shots = importOf({ input: { type: "images", count: 2 } });
   const fetch = stubApi([[], [shots]], () => Response.json(shots, { status: 202 }));
-  renderApp("/");
+  renderScreenshots();
 
   await userEvent.upload(screen.getByLabelText("Or add screenshots"), [
     screenshot("one.png"),
@@ -645,7 +691,7 @@ test("chosen screenshots are sent at once, as a form, and show in the list", asy
 
 test("more than 4 screenshots, or one too big, are refused before anything is sent", async () => {
   const fetch = stubApi([[]]);
-  renderApp("/");
+  renderScreenshots();
   const picker = screen.getByLabelText("Or add screenshots");
 
   await userEvent.upload(
@@ -665,7 +711,7 @@ test("the API's reason for refusing the screenshots is shown, and tied to the pi
   stubApi([[]], () =>
     Response.json({ error: { fields: { images: "Not an image." } } }, { status: 400 }),
   );
-  renderApp("/");
+  renderScreenshots();
 
   const picker = screen.getByLabelText("Or add screenshots");
   await userEvent.upload(picker, [screenshot("one.png")]);
@@ -683,7 +729,7 @@ test("a pick while screenshots are sending sends nothing more", async () => {
     return Promise.resolve(Response.json({ items: [], nextCursor: null }));
   });
   vi.stubGlobal("fetch", fetch);
-  renderApp("/");
+  renderScreenshots();
 
   await userEvent.upload(screen.getByLabelText("Or add screenshots"), [screenshot("one.png")]);
   await userEvent.upload(await screen.findByLabelText("Sending…"), [screenshot("two.png")]);
@@ -694,7 +740,7 @@ test("a pick while screenshots are sending sends nothing more", async () => {
 
 test("screenshots past the day's cap say so", async () => {
   stubApi([[]], () => Response.json({ error: { code: "daily_limit" } }, { status: 429 }));
-  renderApp("/");
+  renderScreenshots();
 
   await userEvent.upload(screen.getByLabelText("Or add screenshots"), [screenshot("one.png")]);
 

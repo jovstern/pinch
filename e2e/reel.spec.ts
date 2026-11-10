@@ -42,17 +42,19 @@ test("paste a reel, review the draft with its picture, save it, cook it", async 
   await expect(page.getByRole("heading", { level: 1, name: "My recipes" })).toBeVisible();
 });
 
-// The fallback: screenshots chosen on / become a draft, the first one its picture.
+// The fallback: screenshots become a draft, the first one its picture. Their picker is hidden on /
+// for now (ImportPage), so they're sent as it sends them, and the draft is reviewed on the page.
 test("add screenshots, review the draft made from them", async ({ page }) => {
   // A 1×1 PNG: the fake extractor doesn't read it; the API checks it's an image.
   const screenshot = Buffer.from(
     "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg==",
     "base64",
   );
+  const sent = await page.request.post("/api/imports/screenshots", {
+    multipart: { images: { name: "recipe.png", mimeType: "image/png", buffer: screenshot } },
+  });
+  expect(sent.status()).toBe(202);
   await page.goto("/");
-  await page
-    .getByLabel("Or add screenshots")
-    .setInputFiles([{ name: "recipe.png", mimeType: "image/png", buffer: screenshot }]);
 
   // By its count: once ready, the card is named by the draft's title.
   const shots = page.getByRole("listitem").filter({ hasText: "1 image" });
@@ -64,5 +66,5 @@ test("add screenshots, review the draft made from them", async ({ page }) => {
   await expect(page.getByRole("presentation")).toBeVisible();
   await page.getByRole("button", { name: "Discard" }).click();
   await page.getByRole("alertdialog").getByRole("button", { name: "Discard draft" }).click();
-  await expect(page.getByRole("heading", { level: 1, name: "New recipe" })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: "Add recipe" })).toBeVisible();
 });

@@ -75,7 +75,7 @@ export function ReviewImportPage() {
   });
 
   // An address typed or kept from before, of an import gone (404), not done yet, or failed: no
-  // draft yet, and the way back is New recipe, where the queue is (design §14).
+  // draft yet, and the way back is Add recipe, where the queue is (design §14).
   const noDraft = (
     <>
       <title>No draft yet · Pinch</title>
@@ -84,7 +84,7 @@ export function ReviewImportPage() {
         This import has no recipe to review: it's still cooking, it failed, or it's gone.
       </p>
       <Link to="/" className="mt-3 inline-block font-semibold text-accent-strong underline">
-        Back to New recipe
+        Back to Add recipe
       </Link>
     </>
   );
@@ -100,7 +100,7 @@ export function ReviewImportPage() {
   return (
     <>
       <title>{`Review ${job.draft.title} · Pinch`}</title>
-      <Breadcrumb links={[{ label: "New recipe", to: "/" }]} page={`Review: ${job.draft.title}`} />
+      <Breadcrumb links={[{ label: "Add recipe", to: "/" }]} page={`Review: ${job.draft.title}`} />
       {/* The breadcrumbs name the page, so its heading is for screen readers. */}
       <h1 className="sr-only">{`Review ${job.draft.title}`}</h1>
       <LazyRecipeForm

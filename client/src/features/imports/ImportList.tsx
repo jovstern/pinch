@@ -18,10 +18,6 @@ import { importListQuery } from "./importQueries.ts";
 export function ImportList({ focusPasteBox }: { focusPasteBox: () => void }) {
   const { data, isLoadingError, refetch, isFetching } = useQuery(importListQuery);
   const imports = data?.items ?? [];
-  const ready = imports.filter((job) => job.status === "ready").length;
-  const cooking = imports.some(
-    (job) => (job.status === "pending" || job.status === "processing") && !job.stalled,
-  );
 
   return (
     <div className="mt-6">
@@ -54,9 +50,10 @@ export function ImportList({ focusPasteBox }: { focusPasteBox: () => void }) {
       )}
       {imports.length > 0 && (
         <>
-          {/* A label over the cards, not a title: the sans face, small. */}
+          {/* A label over the cards, not a title: the sans face, small. It is the list's
+              heading too. */}
           <h2 className="mb-2 font-sans text-sm font-semibold text-muted-foreground">
-            {queueHeading(cooking, ready)}
+            {queueSummary(imports)}
           </h2>
           <ul className="grid gap-3">
             {imports.map((job) => (
@@ -144,10 +141,19 @@ function Action({ job, focusPasteBox }: { job: Import; focusPasteBox: () => void
   );
 }
 
-// "Cooking…" while any is, with how many are ready; "N ready" once none is.
-function queueHeading(cooking: boolean, ready: number) {
-  if (!cooking && ready > 0) return `${String(ready)} ready`;
-  return ready > 0 ? `Cooking… · ${String(ready)} ready` : "Cooking…";
+// "2 ready · 1 in progress · 1 failed" (design §14), leaving out what's none. In progress is
+// waiting or being worked on; a stalled one is counted as failed, as its card says it is stuck.
+function queueSummary(imports: Import[]) {
+  const failed = imports.filter((job) => job.status === "failed" || job.stalled).length;
+  const ready = imports.filter((job) => job.status === "ready").length;
+  const inProgress = imports.length - failed - ready;
+  return [
+    ready > 0 && `${String(ready)} ready`,
+    inProgress > 0 && `${String(inProgress)} in progress`,
+    failed > 0 && `${String(failed)} failed`,
+  ]
+    .filter(Boolean)
+    .join(" · ");
 }
 
 // Ready stands out: it's the one waiting for the user. Stuck is a problem, as failed.

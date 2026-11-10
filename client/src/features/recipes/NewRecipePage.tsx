@@ -33,9 +33,9 @@ export function NewRecipePage() {
   return (
     <>
       <title>Write a recipe · Pinch</title>
-      {/* Under New recipe, as a draft is (design §14): the breadcrumbs name the page, so its
+      {/* Under Add recipe, as a draft is (design §14): the breadcrumbs name the page, so its
           heading is for screen readers. */}
-      <Breadcrumb links={[{ label: "New recipe", to: "/" }]} page="Write a recipe" />
+      <Breadcrumb links={[{ label: "Add recipe", to: "/" }]} page="Write a recipe" />
       <h1 className="sr-only">Write a recipe</h1>
       {/* The faster way, for a recipe that's already written down somewhere. Above the form,
           not its intro: it's the page's largest text, and inside the form it waited for the
@@ -43,7 +43,7 @@ export function NewRecipePage() {
       <p className="mt-4 rounded-card bg-muted p-3 text-sm text-pretty">
         Got the recipe as text?{" "}
         <Link to="/" className="font-semibold underline underline-offset-4">
-          Paste it on New recipe
+          Paste it on Add recipe
         </Link>{" "}
         and Pinch fills this in.
       </p>

@@ -30,28 +30,35 @@ export function Layout() {
   const onEditor = /^\/(recipes\/new|recipes\/[^/]+\/edit|imports\/[^/]+)$/.test(pathname);
   return (
     <>
-      <Header onTabPage={onTabPage} />
-      {/* wrap-anywhere: a long URL or word in a recipe wraps instead of widening the page. Room
-          at the bottom on a phone, so the floating button never covers the last item. */}
-      <main
-        className={cn(
-          "mx-auto max-w-3xl px-4 py-8 wrap-anywhere sm:px-6",
-          // From 1024 px My recipes has a panel beside its grid, and a recipe its picture beside
-          // the title and its ingredients beside the steps (in cook mode too): they take the width.
-          (pathname === "/recipes" || onRecipe) && "max-w-7xl",
-          // The editor's two columns, from 1024 px: what you edit, and the rest with Save.
-          onEditor && "max-w-6xl",
-          // An inner page starts with its breadcrumbs (D24), close under the header: their
-          // 44 px rows have room in them.
-          !onTabPage && "pt-2",
-          onTabPage && "pb-24 md:pb-8",
-        )}
-      >
-        {/* Keyed by address: going to another page clears a failure. */}
-        <ErrorBoundary key={pathname}>
-          <Outlet />
-        </ErrorBoundary>
-      </main>
+      {/* At least the screen's height, so main can take what the header leaves (flex-1). */}
+      <div className="flex min-h-dvh flex-col">
+        <Header onTabPage={onTabPage} />
+        {/* wrap-anywhere: a long URL or word in a recipe wraps instead of widening the page. Room
+          at the bottom on a phone, so the floating button never covers the last item. w-full:
+          a flex item with auto margins would shrink to its content. */}
+        <main
+          className={cn(
+            "mx-auto w-full max-w-3xl flex-1 px-4 py-8 wrap-anywhere sm:px-6",
+            // Add recipe centres its field in the height left (ImportPage): a column, so its
+            // my-auto has the room to share.
+            pathname === "/" && "flex flex-col",
+            // From 1024 px My recipes has a panel beside its grid, and a recipe its picture beside
+            // the title and its ingredients beside the steps (in cook mode too): they take the width.
+            (pathname === "/recipes" || onRecipe) && "max-w-7xl",
+            // The editor's two columns, from 1024 px: what you edit, and the rest with Save.
+            onEditor && "max-w-6xl",
+            // An inner page starts with its breadcrumbs (D24), close under the header: their
+            // 44 px rows have room in them.
+            !onTabPage && "pt-2",
+            onTabPage && "pb-24 md:pb-8",
+          )}
+        >
+          {/* Keyed by address: going to another page clears a failure. */}
+          <ErrorBoundary key={pathname}>
+            <Outlet />
+          </ErrorBoundary>
+        </main>
+      </div>
       {toastSent && (
         <Suspense>
           {/* At the top in the editor on every width: at the bottom they'd sit over its Save

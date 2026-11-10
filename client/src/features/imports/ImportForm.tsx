@@ -1,7 +1,7 @@
 import { dailyLimitMessage, ImportInputSchema, ImportSchema } from "@pinch/shared";
 import { revalidateLogic, useForm } from "@tanstack/react-form";
 import { useQueryClient } from "@tanstack/react-query";
-import { Clipboard } from "lucide-react";
+import { Sparkles } from "lucide-react";
 import { useId, useRef, useState, type RefObject } from "react";
 import { FieldError } from "../../components/FieldError.tsx";
 import { Button } from "../../components/ui/Button.tsx";
@@ -147,7 +147,9 @@ export function ImportForm({ inputRef }: { inputRef: RefObject<HTMLTextAreaEleme
                     className="w-11 shrink-0 px-0 text-muted-foreground"
                     onClick={() => void paste(field.handleChange)}
                   >
-                    <Clipboard aria-hidden="true" className="size-5" />
+                    {/* Sparkles, not a clipboard (the user's pick, 2026-11-10): the field's
+                        mark as well as Paste; its name still says what it does. */}
+                    <Sparkles aria-hidden="true" className="size-5" />
                   </Button>
                 )}
                 <div className={cn("relative min-w-0 flex-1", grown && "order-first basis-full")}>

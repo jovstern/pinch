@@ -26,7 +26,7 @@ const tabClass =
 export function Header({ onTabPage }: { onTabPage: boolean }) {
   const { pathname } = useLocation();
   const tab = tabOf(pathname);
-  // The same query as the queue on New recipe, so the count moves as it polls (§4.2).
+  // The same query as the queue on Add recipe, so the count moves as it polls (§4.2).
   const { data } = useQuery(importListQuery);
   const ready = data?.items.filter((job) => job.status === "ready").length ?? 0;
 
@@ -39,10 +39,10 @@ export function Header({ onTabPage }: { onTabPage: boolean }) {
         className="flex flex-1 rounded-control bg-muted p-1 md:w-88 md:flex-none"
       >
         <Link to="/" aria-current={tab === "new" ? "page" : undefined} className={tabClass}>
-          New recipe
+          Add recipe
           {/* A bare "2" says nothing to a screen reader: the hidden words say what it counts
-              ("New recipe 2 ready to review"). Not an aria-label: axe reads the visible text as
-              "New recipe2", which no label contains (label-content-name-mismatch). The spaces
+              ("Add recipe 2 ready to review"). Not an aria-label: axe reads the visible text as
+              "Add recipe2", which no label contains (label-content-name-mismatch). The spaces
               part the words when read; flex drops them on screen. */}
           {ready > 0 && (
             <>

@@ -43,7 +43,7 @@ export function FiltersButton({ filters, onChange }: FiltersButtonProps) {
       >
         <SlidersHorizontal aria-hidden="true" className="size-4" />
         Filters
-        {/* "Filters 2 applied" to a screen reader (as the New recipe tab's count). */}
+        {/* "Filters 2 applied" to a screen reader (as the Add recipe tab's count). */}
         {count > 0 && (
           <>
             {" "}

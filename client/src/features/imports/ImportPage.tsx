@@ -1,25 +1,41 @@
+import { PenLine } from "lucide-react";
 import { useRef } from "react";
+import { Link } from "react-router";
+import { Button } from "../../components/ui/Button.tsx";
 import { useHeadingFocus } from "../../lib/useHeadingFocus.ts";
 import { ImportForm } from "./ImportForm.tsx";
 import { ImportList } from "./ImportList.tsx";
-import { ScreenshotsUpload } from "./ScreenshotsUpload.tsx";
 
-// The New recipe tab, at / (design §14, D24): paste a link or a post's text (or add
-// screenshots), and the queue of what's being turned into recipes.
+// The Add recipe tab, at / (design §14, D24): paste a link or a post's text, and the queue of
+// what's being turned into recipes.
 export function ImportPage() {
   // The paste box, where focus goes after an import is retried or dismissed.
   const pasteBoxRef = useRef<HTMLTextAreaElement>(null);
   const headingRef = useHeadingFocus();
   return (
     <>
-      <title>New recipe · Pinch</title>
+      <title>Add recipe · Pinch</title>
       {/* The selected tab names the page on screen; the heading names it for screen readers. */}
       <h1 ref={headingRef} tabIndex={-1} className="sr-only">
-        New recipe
+        Add recipe
       </h1>
-      <ImportForm inputRef={pasteBoxRef} />
-      <ScreenshotsUpload />
-      <ImportList focusPasteBox={() => pasteBoxRef.current?.focus()} />
+      {/* In the middle of the height the header leaves (main is a column here: Layout). As the
+          queue grows the block grows, and once it no longer fits my-auto is 0: the field is at
+          the top and the page scrolls. Not justify-center, which would push the top out of
+          reach. */}
+      <div className="my-auto">
+        <ImportForm inputRef={pasteBoxRef} />
+        {/* Screenshots: hidden for now (user, 2026-11-10). <ScreenshotsUpload /> */}
+        {/* The other way in, quiet: the paste is the main one (design §14). Write a recipe's
+            pen, as in the header. */}
+        <Button asChild variant="link" className="mt-1 px-0 text-sm">
+          <Link to="/recipes/new">
+            <PenLine aria-hidden="true" className="size-4" />
+            Or write it yourself
+          </Link>
+        </Button>
+        <ImportList focusPasteBox={() => pasteBoxRef.current?.focus()} />
+      </div>
     </>
   );
 }
