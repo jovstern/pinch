@@ -419,3 +419,108 @@ Colour per class of suggestion; bulk accept "only works with high-confidence sug
 
 **Not readable this pass:** web.dev's web-share-target article (404), caniuse's `share_target`
 table, Letterboxd's about pages (403).
+
+## Pass 2 — capture, review, the add/browse split and recall, 2026-11-09
+
+Questions from the user (pass-02.md §1): pinching takes too many steps and confirms nothing;
+review is a long form that hides what the model read or doubted; the paste field and the
+library need a clear split ("maybe tabs"); every recipe needs a picture to be remembered by.
+Products already in pass 1 are not repeated.
+
+### D. Direct products (not in pass 1)
+
+**D1. Honeydew** — <https://apps.apple.com/us/app/honeydew-meal-planner/id6714449541>
+4.8★/1.9K; $6.99/mo or $39.99/yr. Imports "YouTube cooking videos and Facebook and Instagram
+Reels", screenshots, notes, pasted URL or text; translates "foreign-language recipes into
+English" (review, Jun 2025). Complaints: "Don't Use with Recipe Videos" (23 Jul 2025) — "the
+ingredients are all wrong, cooking times incorrect"; "BUYER BEWARE!" (4 Sep 2025) — "a download
+glitch when saving a second recipe while the first was still downloading" and 100+ trial
+recipes lost. Phone only. **Borrow:** a second pinch while the first runs is an ordinary
+queued item, never a collision.
+
+**D2. Plan to Eat** — <https://apps.apple.com/au/app/plan-to-eat/id1215348056>,
+<https://learn.plantoeat.com/help/app-the-recipe-clipper-extension-for-ios-browsers>,
+<https://addons.mozilla.org/en-US/firefox/addon/plan-to-eat-recipe-clipper/reviews>
+4.7★/117 (AU), $89.99/yr. Capture is five documented steps ending in "a draft recipe will
+import. Tap Save to add the recipe to your Recipe Book": the draft screen is the confirmation.
+Complaints: "appears as though it wasn't saved at all… about three tries" (7 Feb 2019); the
+Firefox clipper "Works most of the time" (Apr 2025, 3 reviews — weak). Web app + phone app;
+release notes: "recipe photos now appear on the planner". **Borrow:** with a 15–60 s wait,
+Pinch needs an explicit "saved, working" state that a five-step flow lacks.
+
+**D3. NYT Cooking Recipe Box** — <https://thenewyorktimeshelpcenter.helpjuice.com/19698276311700-Cooking-Recipe-Box>,
+<https://ixd.prattsi.org/2025/02/design-critique-nyt-cooking-mobile-app/>
+Save is confirmed by the icon's state (the ribbon "is filled in"); everything lands in "All
+Saved Recipes"; premade **Favorites** and **Want to Cook**; "+ Filter" under the search box.
+Pratt (13 Feb 2025): "Recently Saved" and "Your Folders" stacked "take up much of the screen".
+**Borrow:** a state change on the control as the confirmation; one list with filters, not two
+stacked blocks.
+
+**D4. Tasty (BuzzFeed)** — <https://apps.apple.com/us/app/tasty-recipes-cooking-videos/id1217456898>
+4.9★/433K. Two tabs: Discover vs "'My Recipes' page which serves as your very own mobile
+cookbook"; every card a video still. Complaint (Google Play via search snippet — weaker): a
+saved recipe is hard to find "without remembering its name". **Borrow:** the two-tab split
+works at scale; an image grid still needs the title and a filter to restore recall.
+
+### E. Analogues from other domains
+
+**E1. Shazam** — <https://ixd.prattsi.org/2022/02/design-critique-shazam-iphone-app-version-15-3/>,
+<https://www.macstories.net/ios/shazam-8-2-with-spotify-playback-new-home-design/>,
+<https://www.macrumors.com/2025/11/05/shazam-app-liquid-glass/>
+Capture-first home ("a large central Shazam button", "listening" label, each match "saved
+automatically"); since Nov 2025 tabs "Home, Library, and Concerts", with "recently identified
+songs… directly on the Home screen". Complaint: songs tagged from Control Center "are not saved
+to the Shazams list". **Borrow:** capture and its latest results on one screen, the library
+in its own tab; every capture path lands in the same list.
+
+**E2. Things 3** — <https://www.macstories.net/reviews/things-3-beauty-and-delight-in-a-task-manager/>,
+<https://culturedcode.com/things/blog/2017/12/mail-to-things/>
+"Corralling all your to-dos into one place – Things' Inbox – is the critical first step"; the
+Magic Plus button sits lower right; a new item "will just need a name"; Add to Things saves
+"in the background". Mac: sidebar with Inbox first. **Borrow:** an inbox of things to process,
+with a count, distinct from the organised library; capture asks for one thing.
+
+**E3. Dext (+ Veryfi)** — <https://dext.com/uk/products/prepare>,
+<https://faq.veryfi.com/en/articles/5571597-confidence-score-explained>; Dext's Inbox help page
+from a search snippet only (404 on fetch)
+States "In Processing" (open it "to see what has been pulled out so far"), "To Review" =
+"missing some information… you will need to complete before the item can be published",
+"Ready"; a corrected field "logs that change as a reported mistake". Vendor: "Anything Dext is
+unsure of comes to you first" (vendor copy). Veryfi: per-field scores that "are not absolute
+measures of accuracy". **Borrow:** draft states processing → to check (naming what's missing)
+→ ready; flag doubt per field, never show a confidence number as accuracy.
+
+**E4. Pinterest, NN/g, and covers for items with no image** — <https://help.pinterest.com/en/article/edit-a-board>,
+<https://ixd.prattsi.org/2024/09/design-critique-pinterest-ios-app-2/>,
+<https://www.nngroup.com/articles/picture-superiority-effect/>, <https://help.raindrop.io/bookmarks>,
+<https://dev.to/wchr/how-does-dev-to-give-rich-link-image-previews-of-articles-with-no-cover-images-544c>
+Image-first grids; Pratt (18 Sep 2024): Save hidden among share buttons "discourages them from
+pressing 'Save'". NN/g: pictures beat words only when "literal", "distinct from neighboring
+ones" and paired with "text labels". Raindrop grabs the thumbnail automatically; dev.to
+generates a cover "with the title" when none exists. **Borrow:** the post's picture with the
+title always under it; with no picture, a generated cover that is literal (the dish), not a
+grey placeholder.
+
+### Synthesis
+
+Capture-first products (Shazam, Things, Plan to Eat) confirm a capture by a state change plus
+the item appearing in a list right there; Pinch should show the new row at once on the Pinch
+screen with a stage, and a toast with Undo. Dext/Veryfi model review honestly: processing / to
+check (names what's missing) / ready, doubt flagged per field, the source beside the fields.
+Products at scale split add from browse into two tabs (Tasty, Shazam 2025) with the add action
+always one tap away; on desktop the same becomes header tabs or a sidebar. Every library is
+image-first, but Tasty's reviews show images alone don't restore recall: literal + distinct +
+labelled (NN/g).
+
+### Adopt / avoid
+
+- **Adopt:** two tabs, Recipes and Pinch; the queue lives on Pinch with counts; the row
+  appears the instant a link is pasted; review with the post beside the draft and per-field
+  marks; a picture or a literal emoji cover on every card, the title always under it.
+- **Avoid:** two stacked blocks on the library (NYT); confirmation that depends on a route
+  change; a second import colliding with the first (Honeydew); a capture path that doesn't land
+  in the one list (Shazam); confidence numbers presented as accuracy.
+
+**Not readable this pass:** help.dext.com Inbox articles (404; snippet only); quench.me and
+kimola Tasty pages (403/410); TrustRadius and G2 Dext reviews (403); help.pinterest.com save
+pins (404); Business Insider Pinterest how-to (redirect); appshunter.io (403).

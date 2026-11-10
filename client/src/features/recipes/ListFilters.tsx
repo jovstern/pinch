@@ -1,72 +1,76 @@
-import { useId, useState } from "react";
-import { Button } from "../../components/Button.tsx";
+import { Search } from "lucide-react";
+import { useId, useState, type RefObject } from "react";
+import { Input } from "../../components/ui/Input.tsx";
+import { FiltersButton } from "./FiltersButton.tsx";
 import type { RecipeFilters } from "./recipeQueries.ts";
-import { TagPicker } from "./TagPicker.tsx";
+import { TagChips } from "./TagChips.tsx";
 
 type ListFiltersProps = {
   filters: RecipeFilters;
   onChange: (filters: RecipeFilters) => void;
+  onChangeTags: (tags: string[]) => void;
+  // The page focuses the search box after a Clear (RecipeListPage).
+  searchRef: RefObject<HTMLInputElement | null>;
 };
 
-// Search and tag filters above the list (design §7, §14). A search runs on Enter or Search, so
-// each one is a single request; a tag applies as it's ticked.
-export function ListFilters({ filters, onChange }: ListFiltersProps) {
+// The search and, on a phone, the Filters button and the common tags, above the grid (design §7,
+// §14). A search runs on Enter (the keyboard's Search key), not as you type: one request per
+// search rather than one per pause, and no timer. A tag applies as it's ticked.
+export function ListFilters({ filters, onChange, onChangeTags, searchRef }: ListFiltersProps) {
   const searchId = useId();
-  // What's typed. When the address's search changes from elsewhere (Clear, the Pinch link), the
-  // box takes it: React docs, "Storing information from previous renders".
+  // What's typed. When the address's search changes from elsewhere (Clear all, the Pinch link),
+  // the box takes it: React docs, "Storing information from previous renders".
   const [text, setText] = useState(filters.q);
   const [prevQ, setPrevQ] = useState(filters.q);
   if (filters.q !== prevQ) {
     setPrevQ(filters.q);
     setText(filters.q);
   }
-  // Folded unless the address already has tags: 35 chips would push the list off a phone's
-  // screen. Read once, so unticking the last tag doesn't fold it under the user's finger.
-  const [openAtFirst] = useState(filters.tags.length > 0);
-  const count = filters.tags.length;
 
   return (
-    <div className="mt-6">
-      <form
-        role="search"
-        onSubmit={(event) => {
-          event.preventDefault();
-          onChange({ ...filters, q: text.trim() });
-        }}
-        className="flex gap-2"
-      >
-        <label htmlFor={searchId} className="sr-only">
-          Search your recipes
-        </label>
-        <input
-          id={searchId}
-          type="search"
-          value={text}
-          onChange={(event) => {
-            setText(event.target.value);
+    <>
+      <div className="flex gap-2">
+        <form
+          role="search"
+          onSubmit={(event) => {
+            event.preventDefault();
+            onChange({ ...filters, q: text.trim() });
           }}
-          placeholder="Title or ingredient"
-          className="min-h-11 w-full rounded-control border border-border-field bg-surface-raised px-3 py-2"
-        />
-        <Button type="submit" variant="secondary" className="shrink-0">
-          Search
-        </Button>
-      </form>
-
-      <details open={openAtFirst} className="mt-3">
-        {/* Padding, not flex, for its 44 px: flex would hide the open/closed triangle. */}
-        <summary className="cursor-pointer py-2.5 font-semibold">
-          {count === 0 ? "Filter by tags" : `Filter by tags (${String(count)})`}
-        </summary>
-        <TagPicker
-          legend="Filter by tags"
-          legendClassName="sr-only"
-          selected={filters.tags}
-          onChange={(tags) => {
-            onChange({ ...filters, tags });
-          }}
-        />
-      </details>
-    </div>
+          className="relative flex-1"
+        >
+          <label htmlFor={searchId} className="sr-only">
+            Search your recipes
+          </label>
+          <Search
+            aria-hidden="true"
+            className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground"
+          />
+          <Input
+            ref={searchRef}
+            id={searchId}
+            type="search"
+            enterKeyHint="search"
+            value={text}
+            onChange={(event) => {
+              setText(event.target.value);
+              // Emptied (Escape, or deleting the words): the search is over, without
+              // an Enter, so the box and the address never disagree.
+              if (event.target.value === "" && filters.q !== "") onChange({ ...filters, q: "" });
+            }}
+            placeholder="Search recipes"
+            // No native ✕: the browser's own, unlike the rest of Pinch (Escape still empties it).
+            className="pl-9 [&::-webkit-search-cancel-button]:appearance-none"
+          />
+        </form>
+        {/* From 1024 px the Filters are a panel beside the grid (FiltersPanel), and the
+            common tags are among them. */}
+        <div className="lg:hidden">
+          <FiltersButton selected={filters.tags} onChange={onChangeTags} />
+        </div>
+      </div>
+      <div className="lg:hidden">
+        <TagChips selected={filters.tags} onChange={onChangeTags} />
+      </div>
+    </>
   );
 }

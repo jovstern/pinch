@@ -101,3 +101,26 @@ Slices for later milestones are filled in when the milestone starts.
       in both themes (Your imports while loading: left as is, as the list is usually empty and a
       placeholder would jump the other way)
 - [x] End of milestone: UI review, observer, demo
+
+## M8 — Redesign (docs/ux/pass-02.md, wireframes in docs/ux/wireframes/)
+
+The UI first, on the API as it is (where they disagree, the API wins for now):
+
+- [x] R1 shadcn/ui base on Pinch's tokens: `cn`, Button, Input, Badge (D26)
+- [x] R2 The frame: the two tabs, the avatar, Write a recipe; `/` New recipe, `/recipes` My
+      recipes (D24). Breadcrumbs go with each inner page (R6–R8)
+- [x] R3 New recipe: the one-line input that grows, the queue as cards
+- [x] R4 Toasts for every status change
+- [x] R5 My recipes: search, tag chips, Filters (sheet / panel), its states
+- [x] R6 A recipe: breadcrumbs, the source in the subtitle, Cook and ⋯
+- [x] R7 Cook mode: swipe between steps, breadcrumbs instead of Exit
+- [x] R8 The editor: one page for review, writing by hand and editing, with its breadcrumbs
+- [x] End of the UI: UI review, observer, e2e, demo
+
+Then the features the design asks the API for, one PR each:
+
+- [ ] F1 Filters by source and time, and Sort
+- [ ] F2 Things to look at: the model marks fields it is unsure of; marks in the editor, the
+      count on the queue card
+- [ ] F3 A face for every recipe: an emoji from the model (D25)
+- [ ] F4 Undo in the toasts (Pinch it, Delete, Discard)

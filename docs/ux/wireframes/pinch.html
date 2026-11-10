@@ -1,0 +1,785 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Pinch wireframe: Pinch (capture and the queue)</title>
+    <style>
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      body {
+        font:
+          14px/1.45 -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
+          Roboto,
+          "Noto Sans Hebrew",
+          sans-serif;
+        background: #d9d9d9;
+        color: #222;
+        padding: 32px;
+      }
+      h1.page {
+        font:
+          700 28px/1.2 Georgia,
+          serif;
+        margin-bottom: 4px;
+      }
+      p.lede {
+        max-width: 900px;
+        color: #444;
+        margin-bottom: 24px;
+      }
+      .row {
+        display: flex;
+        gap: 40px;
+        align-items: flex-start;
+        margin-bottom: 48px;
+      }
+      .label {
+        font: 600 12px/1 sans-serif;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        color: #555;
+        margin-bottom: 8px;
+      }
+      .frame {
+        background: #fff;
+        border: 1px solid #999;
+        position: relative;
+        overflow: hidden;
+      }
+      .phone {
+        width: 360px;
+        min-height: 780px;
+      }
+      .desk {
+        width: 1440px;
+        min-height: 900px;
+      }
+      .small {
+        min-height: 0;
+      }
+      /* content */
+      .hd {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 12px 16px;
+        border-bottom: 1px solid #ddd;
+      }
+      .mark {
+        font:
+          700 22px Georgia,
+          serif;
+      }
+      .serif {
+        font-family: Georgia, "Times New Roman", serif;
+      }
+      .h1 {
+        font:
+          700 26px/1.2 Georgia,
+          serif;
+      }
+      .h2 {
+        font:
+          700 18px/1.25 Georgia,
+          serif;
+      }
+      .muted {
+        color: #777;
+      }
+      .sm {
+        font-size: 12px;
+      }
+      .b {
+        font-weight: 600;
+      }
+      .box {
+        background: #eee;
+        border-radius: 12px;
+      }
+      .field {
+        border: 1.5px solid #888;
+        border-radius: 12px;
+        background: #fff;
+        min-height: 48px;
+        display: flex;
+        align-items: center;
+        padding: 0 12px;
+        color: #999;
+      }
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 44px;
+        padding: 0 16px;
+        border-radius: 12px;
+        background: #e4e4e4;
+        font-weight: 600;
+        white-space: nowrap;
+      }
+      .btn.p {
+        background: #333;
+        color: #fff;
+      }
+      .btn.q {
+        background: none;
+        color: #555;
+        text-decoration: underline;
+      }
+      .chip {
+        display: inline-flex;
+        align-items: center;
+        min-height: 40px;
+        position: relative;
+        padding: 0 14px;
+        border-radius: 999px;
+        background: #e8e8e8;
+        white-space: nowrap;
+      }
+      .chip::before {
+        content: "";
+        position: absolute;
+        inset: -2px 0;
+      }
+      .chip.on {
+        background: #444;
+        color: #fff;
+      }
+      .chips {
+        display: flex;
+        gap: 8px;
+        overflow: hidden;
+      }
+      .grid {
+        display: grid;
+        gap: 12px;
+      }
+      .tile {
+        aspect-ratio: 4/5;
+        border-radius: 16px;
+        background: #cfcfcf;
+        position: relative;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 64px;
+        overflow: hidden;
+      }
+      .tile.photo {
+        background: repeating-linear-gradient(45deg, #bbb 0 10px, #c6c6c6 10px 20px);
+      }
+      .tile.photo::after {
+        content: "post picture";
+        position: absolute;
+        font-size: 11px;
+        color: #555;
+        background: #eee;
+        padding: 2px 6px;
+        border-radius: 6px;
+      }
+      .tile.emo {
+        background: #e6e6e6;
+      }
+      .glyph {
+        position: absolute;
+        top: 8px;
+        right: 8px;
+        width: 22px;
+        height: 22px;
+        border-radius: 6px;
+        background: #fff;
+        font: 700 11px/22px sans-serif;
+        text-align: center;
+        color: #333;
+      }
+      .card .t {
+        font:
+          600 16px/1.25 Georgia,
+          serif;
+        margin-top: 8px;
+      }
+      .card .m {
+        font-size: 12px;
+        color: #777;
+        margin-top: 2px;
+      }
+      .tabbar {
+        position: absolute;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        height: 68px;
+        border-top: 1px solid #ccc;
+        background: #fafafa;
+        display: flex;
+      }
+      .tabbar div {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 2px;
+        font-size: 12px;
+        color: #777;
+      }
+      .tabbar .on {
+        color: #111;
+        font-weight: 700;
+      }
+      .ico {
+        width: 24px;
+        height: 24px;
+        border-radius: 6px;
+        background: #bbb;
+        position: relative;
+      }
+      .on .ico {
+        background: #333;
+      }
+      .badge {
+        position: absolute;
+        top: -6px;
+        right: -12px;
+        background: #333;
+        color: #fff;
+        border-radius: 999px;
+        font: 700 11px/18px sans-serif;
+        min-width: 18px;
+        text-align: center;
+        padding: 0 5px;
+      }
+      .toast {
+        position: absolute;
+        left: 16px;
+        right: 16px;
+        bottom: 80px;
+        background: #333;
+        color: #fff;
+        border-radius: 12px;
+        padding: 12px 16px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+      .sticky {
+        position: absolute;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        padding: 12px 16px;
+        background: #fafafa;
+        border-top: 1px solid #ccc;
+        display: flex;
+        gap: 8px;
+        align-items: center;
+      }
+      .skel {
+        background: #e9e9e9;
+        border-radius: 8px;
+      }
+      .mk {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        font-size: 12px;
+        font-weight: 600;
+        padding: 2px 8px;
+        border-radius: 999px;
+        background: #ddd;
+      }
+      .mk.chk::before {
+        content: "◆";
+        font-size: 10px;
+      }
+      .mk.miss::before {
+        content: "■";
+        font-size: 10px;
+      }
+      .hl {
+        background: #efefef;
+        border-left: 4px solid #888;
+        padding: 6px 10px;
+        border-radius: 6px;
+      }
+      .hl.miss {
+        border-left-color: #222;
+        border-left-style: double;
+      }
+      ul.plain {
+        list-style: none;
+        display: grid;
+        gap: 8px;
+      }
+      .qrow {
+        display: flex;
+        gap: 12px;
+        align-items: center;
+        padding: 10px;
+        border-radius: 12px;
+        background: #f2f2f2;
+      }
+      .qrow .th {
+        width: 48px;
+        aspect-ratio: 4/5;
+        border-radius: 8px;
+        background: #ccc;
+        flex: none;
+      }
+      .shimmer {
+        background: linear-gradient(90deg, #e2e2e2, #f3f3f3, #e2e2e2);
+      }
+      .sheet {
+        position: absolute;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: #fff;
+        border-radius: 16px 16px 0 0;
+        box-shadow: 0 -6px 24px rgba(0, 0, 0, 0.25);
+        padding: 16px;
+      }
+      .scrim {
+        position: absolute;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.35);
+      }
+      .side {
+        display: flex;
+        gap: 32px;
+      }
+      .n {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 22px;
+        height: 22px;
+        border-radius: 50%;
+        background: #e0245e;
+        color: #fff;
+        font: 700 12px/1 sans-serif;
+        flex: none;
+        vertical-align: middle;
+        margin: 0 4px;
+        box-shadow: 0 0 0 2px #fff;
+      }
+      .callouts {
+        max-width: 1840px;
+        background: #fff;
+        border: 1px solid #bbb;
+        border-radius: 8px;
+        padding: 16px 20px;
+        margin: -24px 0 48px;
+      }
+      .callouts ol {
+        padding-left: 24px;
+        display: grid;
+        gap: 6px;
+      }
+      .callouts li::marker {
+        color: #e0245e;
+        font-weight: 700;
+      }
+      .rtl {
+        direction: rtl;
+        text-align: right;
+      }
+    </style>
+  </head>
+  <body>
+    <div
+      style="
+        background: #fff3c4;
+        border: 2px solid #8a6a00;
+        border-radius: 8px;
+        padding: 10px 14px;
+        margin: 0 0 16px;
+        font: 600 14px sans-serif;
+        color: #221a12;
+      "
+    >
+      Superseded by revision 2: see <a href="home.html">home</a>,
+      <a href="recipes.html">recipes</a>, <a href="recipe.html">recipe</a>,
+      <a href="cook.html">cook</a> and <a href="edit.html">edit</a>. Kept for the record.
+    </div>
+    <h1 class="page">Pinch (capture and the queue)</h1>
+    <p class="lede">
+      Pass 02 · the second tab. One job: get a reel in, and see it become a recipe. The paste field,
+      Paste, screenshots, and every draft on its way, in one place, apart from the library.
+    </p>
+
+    <div class="row">
+      <div>
+        <div class="label">Phone · 360 · two drafts on their way, one ready</div>
+        <div class="frame phone">
+          <div class="hd"><span class="mark">∩ Pinch</span><span class="muted">⋯</span></div>
+          <div style="padding: 16px 16px 80px">
+            <p class="h1">Pinch a recipe</p>
+            <p class="muted sm" style="margin: 4px 0 12px">
+              A link from Instagram, Facebook or YouTube, or the post's text.
+            </p>
+            <div style="display: flex; gap: 8px">
+              <div class="field" style="flex: 1">Paste a link <span class="n">1</span></div>
+              <span class="btn">Paste <span class="n">2</span></span>
+            </div>
+            <span class="btn p" style="width: 100%; margin-top: 8px">Pinch it</span>
+            <p style="margin-top: 8px; text-align: center">
+              <span class="btn q">Add screenshots instead</span> <span class="n">3</span>
+            </p>
+            <p class="b" style="margin: 24px 0 8px">
+              On their way · 1 ready <span class="n">4</span>
+            </p>
+            <ul class="plain">
+              <li class="qrow" style="background: #e4e4e4; border-left: 4px solid #333">
+                <div class="th tile photo" style="font-size: 0"></div>
+                <div style="flex: 1; min-width: 0">
+                  <div class="b serif">Tomato pasta</div>
+                  <div class="sm muted">YouTube · Ready to check · 3 things</div>
+                </div>
+                <b>Check it ›</b><span class="n">5</span>
+              </li>
+              <li class="qrow">
+                <div class="th shimmer" style="position: relative">
+                  <span
+                    class="glyph"
+                    style="
+                      top: 2px;
+                      right: 2px;
+                      width: 16px;
+                      height: 16px;
+                      line-height: 16px;
+                      font-size: 8px;
+                    "
+                    >IG</span
+                  >
+                </div>
+                <div style="flex: 1">
+                  <div class="b">instagram.com/reel/…</div>
+                  <div class="sm muted">Watching the video… <span class="n">6</span></div>
+                </div>
+              </li>
+              <li class="qrow">
+                <div class="th tile photo" style="font-size: 0"></div>
+                <div style="flex: 1">
+                  <div class="b">Facebook reel</div>
+                  <div class="sm">We couldn't find a recipe in this reel.</div>
+                  <div style="margin-top: 6px; display: flex; gap: 6px">
+                    <span class="btn">Paste its text</span><span class="btn q">Dismiss</span>
+                  </div>
+                </div>
+                <span class="n">7</span>
+              </li>
+            </ul>
+          </div>
+          <div class="toast">
+            <span>Pinched. Making your recipe…</span><b>Undo</b><span class="n">8</span>
+          </div>
+          <div class="tabbar">
+            <div><span class="ico"></span>Recipes</div>
+            <div class="on">
+              <span class="ico" style="position: relative">＋<span class="badge">1</span></span
+              >Pinch
+            </div>
+          </div>
+        </div>
+      </div>
+      <div>
+        <div class="label">Desktop · 1440</div>
+        <div class="frame desk">
+          <div class="hd" style="padding: 16px 48px">
+            <span class="mark">∩ Pinch</span>
+            <div style="display: flex; gap: 4px">
+              <span class="chip">Recipes</span
+              ><span class="chip on"
+                >＋ Pinch
+                <span
+                  class="badge"
+                  style="position: static; margin-left: 6px; background: #fff; color: #333"
+                  >1</span
+                ></span
+              >
+            </div>
+            <span class="btn">⋯</span>
+          </div>
+          <div
+            style="
+              max-width: 1200px;
+              margin: 0 auto;
+              padding: 40px 0;
+              display: grid;
+              grid-template-columns: 480px 1fr;
+              gap: 64px;
+            "
+          >
+            <div>
+              <span class="n">9</span>
+              <p class="h1" style="font-size: 31px">Pinch a recipe</p>
+              <p class="muted" style="margin: 6px 0 16px">
+                A link from Instagram, Facebook or YouTube, or the post's text.
+              </p>
+              <div class="field" style="min-height: 56px">
+                Paste a link, or press ⌘V anywhere on this page <span class="n">10</span>
+              </div>
+              <span class="btn p" style="width: 100%; margin-top: 12px">Pinch it</span>
+              <div
+                class="box"
+                style="
+                  margin-top: 16px;
+                  padding: 20px;
+                  text-align: center;
+                  border: 2px dashed #aaa;
+                  background: #f6f6f6;
+                "
+              >
+                Drop up to 4 screenshots here, or <u>choose them</u>
+              </div>
+              <p class="sm muted" style="margin-top: 16px">From 15 used: "5 pinches left today"</p>
+            </div>
+            <div>
+              <p class="h2" style="margin-bottom: 12px">On their way · 1 ready</p>
+              <ul class="plain">
+                <li class="qrow" style="background: #e4e4e4; border-left: 4px solid #333">
+                  <div class="th tile photo" style="font-size: 0; width: 64px"></div>
+                  <div style="flex: 1">
+                    <div class="b serif" style="font-size: 17px">Tomato pasta</div>
+                    <div class="sm muted">YouTube · Ready to check · 3 things to look at</div>
+                  </div>
+                  <b>Check it ›</b>
+                </li>
+                <li class="qrow">
+                  <div class="th shimmer" style="width: 64px"></div>
+                  <div style="flex: 1">
+                    <div class="b">instagram.com/reel/C9x…</div>
+                    <div class="sm muted">Watching the video… usually under a minute</div>
+                  </div>
+                </li>
+                <li class="qrow">
+                  <div class="th tile photo" style="font-size: 0; width: 64px"></div>
+                  <div style="flex: 1">
+                    <div class="b">Facebook reel</div>
+                    <div class="sm">
+                      We couldn't find a recipe in this reel. The caption says "recipe in comments".
+                    </div>
+                  </div>
+                  <span class="btn">Paste its text</span><span class="btn q">Dismiss</span>
+                </li>
+                <li class="qrow">
+                  <div class="th tile photo" style="font-size: 0; width: 64px"></div>
+                  <div style="flex: 1">
+                    <div class="b">YouTube video</div>
+                    <div class="sm">That didn't work three times.</div>
+                  </div>
+                  <span class="btn">Retry</span><span class="btn q">Dismiss</span>
+                </li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="callouts">
+      <ol>
+        <li>
+          <b>A one-line input, not a 4-line textarea.</b> A link is one line (m05 §2); it grows into
+          a textarea only when what's pasted has a space or new line (the M5 rule, kept).
+        </li>
+        <li>
+          <b>Paste button</b>: one tap instead of tap–long-press–Paste (C17,
+          <code>readText()</code> on tap only). Pasting a link pinches it at once: Paste is the
+          confirmation. Saves two of the six steps (plan §2 N1).
+        </li>
+        <li>
+          <b>Screenshots are the fallback, so a quiet link</b>, not a second big button (today "Or
+          add screenshots" competes with Pinch it).
+        </li>
+        <li>
+          <b>The queue lives with capture</b>, under a count: items left, no fake percentage (C6).
+          The library only shows a one-line "ready" link.
+        </li>
+        <li>
+          <b>A ready draft is the strongest row</b>: its picture, the title the model found, the
+          whole row a link ("Check it ›"), so Pinch it stays the one filled button (ui-craft: one
+          primary per view) (today a dashed box with a raw URL, m05 §4).
+        </li>
+        <li>
+          <b>The picture appears as soon as the worker has it</b> (it's saved with the fetching
+          step, design §5), so the row is recognisable within seconds, before the draft exists.
+          Stage words, not a spinner (A14, A16: "stuck loading").
+        </li>
+        <li>
+          <b>A failure names what wasn't found and offers the next path</b>: "no recipe" (no retry
+          helps, D23) → Paste its text; a fetch that failed three times → Retry (desktop shows both)
+          (C7 Expensify; A11 "recipe in comments").
+        </li>
+        <li>
+          <b>Confirmation without a modal</b>: a toast with Undo, 5 s (C5 Gmail), the one way to
+          take it back; kept although the row appears too, because the user named "no confirmation"
+          as a pain. The field empties and keeps focus for the next link.
+        </li>
+        <li>
+          <b>Desktop: capture left, queue right</b>, both visible at once: the user pastes several
+          links from a laptop session and watches them land.
+        </li>
+        <li>
+          <b>⌘V anywhere on the page pinches</b> (desktop only; a paste event on the document,
+          ignored while typing in another field).
+        </li>
+      </ol>
+      <p style="margin-top: 8px">
+        <b>What the user sees first:</b> the field and Paste. <b>Primary action:</b> Pinch it (Paste
+        does it in one tap).
+      </p>
+    </div>
+
+    <div class="row">
+      <div>
+        <div class="label">Phone · empty queue (first visit)</div>
+        <div class="frame phone small" style="height: 620px">
+          <div class="hd"><span class="mark">∩ Pinch</span></div>
+          <div style="padding: 16px">
+            <p class="h1">Pinch a recipe</p>
+            <div style="display: flex; gap: 8px; margin-top: 12px">
+              <div class="field" style="flex: 1">Paste a link</div>
+              <span class="btn">Paste</span>
+            </div>
+            <span class="btn p" style="width: 100%; margin-top: 8px">Pinch it</span>
+            <p class="b" style="margin-top: 24px">How it works <span class="n">11</span></p>
+            <ol style="padding-left: 18px; margin-top: 6px; display: grid; gap: 4px" class="muted">
+              <li>In Instagram, tap Share → Copy link.</li>
+              <li>Come back and tap Paste.</li>
+              <li>In about a minute, check the recipe and save it.</li>
+            </ol>
+          </div>
+          <div class="tabbar">
+            <div><span class="ico"></span>Recipes</div>
+            <div class="on"><span class="ico"></span>Pinch</div>
+          </div>
+        </div>
+      </div>
+      <div>
+        <div class="label">Phone · not a link we know</div>
+        <div class="frame phone small" style="height: 620px">
+          <div class="hd"><span class="mark">∩ Pinch</span></div>
+          <div style="padding: 16px">
+            <p class="h1">Pinch a recipe</p>
+            <div style="display: flex; gap: 8px; margin-top: 12px">
+              <div class="field" style="flex: 1; color: #222; border-width: 2.5px">
+                tiktok.com/@cook/vid…
+              </div>
+              <span class="btn">Paste</span>
+            </div>
+            <p class="sm b" style="margin-top: 6px">
+              ■ That's not a link we can read yet: Instagram, Facebook or YouTube. You can paste the
+              post's text instead. <span class="n">12</span>
+            </p>
+            <span class="btn p" style="width: 100%; margin-top: 8px">Pinch it</span>
+          </div>
+        </div>
+      </div>
+      <div>
+        <div class="label">Phone · day's limit reached</div>
+        <div class="frame phone small" style="height: 620px">
+          <div class="hd"><span class="mark">∩ Pinch</span></div>
+          <div style="padding: 16px">
+            <p class="h1">Pinch a recipe</p>
+            <div style="display: flex; gap: 8px; margin-top: 12px">
+              <div class="field" style="flex: 1; color: #222">instagram.com/reel/DA7…</div>
+              <span class="btn">Paste</span>
+            </div>
+            <p class="sm b" style="margin-top: 6px">
+              ■ You've pinched 20 today, the daily limit. It resets at 02:00; your link stays here.
+              <span class="n">13</span>
+            </p>
+            <span class="btn p" style="width: 100%; margin-top: 8px">Pinch it</span>
+          </div>
+        </div>
+      </div>
+      <div>
+        <div class="label">Phone · couldn't send</div>
+        <div class="frame phone small" style="height: 620px">
+          <div class="hd"><span class="mark">∩ Pinch</span></div>
+          <div style="padding: 16px">
+            <p class="h1">Pinch a recipe</p>
+            <div style="display: flex; gap: 8px; margin-top: 12px">
+              <div class="field" style="flex: 1; color: #222">youtu.be/x8Kc…</div>
+              <span class="btn">Paste</span>
+            </div>
+            <p class="sm b" style="margin-top: 6px">
+              ■ We couldn't send this. Check your connection and try again.
+              <span class="n">14</span>
+            </p>
+            <span class="btn p" style="width: 100%; margin-top: 8px">Try again</span>
+            <p class="sm muted" style="margin-top: 20px">
+              If the queue can't load: "We couldn't load what you're pinching." and Try again, in
+              its place.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="callouts">
+      <ol start="11">
+        <li>
+          <b>First-time help is three numbered steps, in place of the empty queue</b> (iOS has no
+          share target, C15: copy-and-paste is the path to teach).
+        </li>
+        <li>
+          <b>The error says how to fix it, under the field</b>, with an icon, not colour alone
+          (ui-craft forms).
+        </li>
+        <li>
+          <b>The cap names the reset time and keeps what was pasted</b> (ui-craft: nothing the user
+          typed is lost; D22).
+        </li>
+        <li>
+          <b>A failed send says so, keeps the link, and offers Try again</b> (ui-craft: errors say
+          what happened and offer a retry).
+        </li>
+      </ol>
+    </div>
+
+    <script>
+      const R = [
+        ["פנקייק מושלם, גבוה ואוורירי", "photo", "YT", "", "30 min · 11 ingredients"],
+        ["Shakshuka with feta", "photo", "IG", "", "25 min · 8 ingredients"],
+        ["Red lentil soup", "emo", "", "🍲", "30 min · 4 ingredients"],
+        ["Mujadara", "photo", "FB", "", "45 min · 6 ingredients"],
+        ["חומוס ביתי", "emo", "", "🧆", "20 min · 7 ingredients"],
+        ["Spaghetti aglio e olio", "photo", "IG", "", "15 min · 5 ingredients"],
+        ["Chickpea curry", "emo", "", "🍛", "25 min · 9 ingredients"],
+        ["Greek salad", "photo", "YT", "", "10 min · 7 ingredients"],
+        ["Chicken tacos", "emo", "", "🌮", "20 min · 8 ingredients"],
+        ["Chocolate chip cookies", "photo", "IG", "", "25 min · 9 ingredients"],
+      ];
+      function card([t, k, g, e, m]) {
+        return (
+          '<div class="card"><div class="tile ' +
+          k +
+          '">' +
+          e +
+          (g ? '<span class="glyph">' + g + "</span>" : "") +
+          '</div><div class="t" dir="auto">' +
+          t +
+          '</div><div class="m">' +
+          m +
+          "</div></div>"
+        );
+      }
+      function cards(n, from = 0) {
+        return R.slice(from, from + n)
+          .map(card)
+          .join("");
+      }
+      document.querySelectorAll("[data-cards]").forEach((el) => {
+        const [n, f] = el.dataset.cards.split(",").map(Number);
+        el.innerHTML = cards(n, f || 0) + el.innerHTML;
+      });
+    </script>
+  </body>
+</html>

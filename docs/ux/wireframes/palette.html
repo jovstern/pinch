@@ -1,0 +1,296 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Pinch palette</title>
+    <style>
+      * {
+        box-sizing: border-box;
+        margin: 0;
+      }
+      body {
+        font:
+          15px/1.5 -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
+          sans-serif;
+        background: #ddd;
+        padding: 32px;
+        color: #221a12;
+      }
+      h1 {
+        font:
+          700 31px Georgia,
+          serif;
+      }
+      h2 {
+        font:
+          700 20px Georgia,
+          serif;
+        margin: 28px 0 10px;
+      }
+      .cols {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 24px;
+      }
+      .theme {
+        border-radius: 16px;
+        padding: 24px;
+      }
+      .light {
+        background: #fbf8f2;
+        color: #221a12;
+      }
+      .dark {
+        background: #17130f;
+        color: #f3ede4;
+      }
+      .sw {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+        gap: 10px;
+      }
+      .s {
+        border-radius: 12px;
+        padding: 10px;
+        min-height: 84px;
+        font-size: 12px;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        border: 1px solid rgba(128, 128, 128, 0.25);
+      }
+      .s b {
+        font-size: 13px;
+      }
+      .scale {
+        display: flex;
+        border-radius: 12px;
+        overflow: hidden;
+      }
+      .scale div {
+        flex: 1;
+        height: 64px;
+        font: 600 11px/1 sans-serif;
+        padding: 6px;
+      }
+      .tiles {
+        display: grid;
+        grid-template-columns: repeat(5, 1fr);
+        gap: 10px;
+      }
+      .t {
+        aspect-ratio: 4/5;
+        border-radius: 16px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        font-size: 64px;
+      }
+      .t small {
+        font-size: 12px;
+        margin-top: 6px;
+      }
+      .demo {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        align-items: center;
+        margin-top: 12px;
+      }
+      .btn {
+        border-radius: 12px;
+        padding: 11px 16px;
+        font-weight: 600;
+      }
+      .chip {
+        border-radius: 999px;
+        padding: 7px 14px;
+      }
+      .mk {
+        border-radius: 999px;
+        padding: 2px 10px;
+        font-size: 13px;
+        font-weight: 600;
+      }
+      p.note {
+        max-width: 900px;
+        margin-top: 8px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Pinch palette · pass 02</h1>
+    <p class="note">
+      A cook's notebook under a kitchen lamp: warm paper, ink, one paprika accent. The existing
+      tokens are unchanged; pass 02 adds eight: the five cuisine tile tints,
+      <code>check-soft</code>, <code>check-mark</code> and <code>danger-soft</code>. Every text pair
+      is checked in <code>docs/ux/pass-02.md</code> §6.
+    </p>
+
+    <h2>Neutrals, 50–950 (warm stone: the semantic tokens pick from these)</h2>
+    <div class="scale">
+      <div style="background: #fbf8f2">50</div>
+      <div style="background: #f3ede2">100</div>
+      <div style="background: #efe7da">200</div>
+      <div style="background: #e6ded1">300</div>
+      <div style="background: #968979; color: #17130f">400</div>
+      <div style="background: #6e6257; color: #fff">500</div>
+      <div style="background: #544a41; color: #fff">600</div>
+      <div style="background: #3a3029; color: #fff">700</div>
+      <div style="background: #2c241d; color: #fff">800</div>
+      <div style="background: #221c16; color: #fff">900</div>
+      <div style="background: #17130f; color: #fff">950</div>
+    </div>
+
+    <div class="cols">
+      <div class="theme light">
+        <h2 style="margin-top: 0">Light</h2>
+        <div class="sw">
+          <div class="s" style="background: #fbf8f2"><b>surface</b>#FBF8F2 · page</div>
+          <div class="s" style="background: #fff"><b>surface-raised</b>#FFFFFF · cards, sheets</div>
+          <div class="s" style="background: #efe7da"><b>fill</b>#EFE7DA · chips, secondary</div>
+          <div class="s" style="background: #221a12; color: #fff"><b>text</b>#221A12 · ink</div>
+          <div class="s" style="background: #6e6257; color: #fff">
+            <b>text-muted</b>#6E6257 · meta
+          </div>
+          <div class="s" style="background: #a33612; color: #fff">
+            <b>accent-strong</b>#A33612 · the one action
+          </div>
+          <div class="s" style="background: #fbe7df">
+            <b>accent-soft</b>#FBE7DF · selected, active tab
+          </div>
+          <div class="s" style="background: #e8b931"><b>check</b>#E8B931 · mark only</div>
+          <div class="s" style="background: #fbf1d3">
+            <b>check-soft</b> new · #FBF1D3 · field to check
+          </div>
+          <div class="s" style="background: #8a6a00; color: #fff">
+            <b>check-mark</b> new · #8A6A00 · the ◆ glyph
+          </div>
+          <div class="s" style="background: #5e7a3a; color: #fff">
+            <b>cooked</b>#5E7A3A · success
+          </div>
+          <div class="s" style="background: #b3261e; color: #fff">
+            <b>danger</b>#B3261E · delete, failed
+          </div>
+          <div class="s" style="background: #fbe4e1">
+            <b>danger-soft</b> new · #FBE4E1 · missing field
+          </div>
+        </div>
+        <h2>Cuisine tiles (new)</h2>
+        <div class="tiles">
+          <div class="t" style="background: #f8e1d8">🍝<small>tomato</small></div>
+          <div class="t" style="background: #f5e3b8">🧆<small>saffron</small></div>
+          <div class="t" style="background: #dde5c8">🥗<small>olive</small></div>
+          <div class="t" style="background: #dce9e9">🍜<small>sea</small></div>
+          <div class="t" style="background: #eee2ea">🍰<small>plum</small></div>
+        </div>
+        <div class="demo">
+          <span class="btn" style="background: #a33612; color: #fff">Pinch it</span>
+          <span class="btn" style="background: #efe7da">Paste</span>
+          <span class="chip" style="background: #fbe7df; color: #a33612; font-weight: 600"
+            >✓ quick ✕</span
+          >
+          <span class="chip" style="background: #efe7da">dinner</span>
+          <span class="mk" style="background: #fbf1d3; border: 1.5px solid #8a6a00"
+            ><span style="color: #8a6a00">◆</span> check</span
+          >
+          <span class="mk" style="background: #fbe4e1; color: #b3261e">■ missing</span>
+          <span class="mk" style="color: #5e7a3a">✓ Cooked</span>
+        </div>
+      </div>
+      <div class="theme dark">
+        <h2 style="margin-top: 0">Dark</h2>
+        <div class="sw">
+          <div class="s" style="background: #17130f"><b>surface</b>#17130F</div>
+          <div class="s" style="background: #221c16"><b>surface-raised</b>#221C16</div>
+          <div class="s" style="background: #2c241d"><b>fill</b>#2C241D</div>
+          <div class="s" style="background: #f3ede4; color: #17130f"><b>text</b>#F3EDE4</div>
+          <div class="s" style="background: #a89c8f; color: #17130f"><b>text-muted</b>#A89C8F</div>
+          <div class="s" style="background: #f0693a; color: #17130f">
+            <b>accent-strong</b>#F0693A
+          </div>
+          <div class="s" style="background: #3a1d12"><b>accent-soft</b>#3A1D12</div>
+          <div class="s" style="background: #f2c94c; color: #17130f"><b>check</b>#F2C94C</div>
+          <div class="s" style="background: #3a2f12"><b>check-soft</b> new · #3A2F12</div>
+          <div class="s" style="background: #8fb35e; color: #17130f"><b>cooked</b>#8FB35E</div>
+          <div class="s" style="background: #f2706a; color: #17130f"><b>danger</b>#F2706A</div>
+          <div class="s" style="background: #3d1715"><b>danger-soft</b> new · #3D1715</div>
+        </div>
+        <h2>Cuisine tiles (new)</h2>
+        <div class="tiles">
+          <div class="t" style="background: #4a2419">🍝<small>tomato</small></div>
+          <div class="t" style="background: #3e2f16">🧆<small>saffron</small></div>
+          <div class="t" style="background: #29331a">🥗<small>olive</small></div>
+          <div class="t" style="background: #1e3436">🍜<small>sea</small></div>
+          <div class="t" style="background: #3b2434">🍰<small>plum</small></div>
+        </div>
+        <div class="demo">
+          <span class="btn" style="background: #f0693a; color: #17130f">Pinch it</span>
+          <span class="btn" style="background: #2c241d">Paste</span>
+          <span class="chip" style="background: #3a1d12; color: #f0693a; font-weight: 600"
+            >✓ quick ✕</span
+          >
+          <span class="chip" style="background: #2c241d">dinner</span>
+          <span class="mk" style="background: #3a2f12; border: 1.5px solid #f2c94c"
+            ><span style="color: #f2c94c">◆</span> check</span
+          >
+          <span class="mk" style="background: #3d1715; color: #f2706a">■ missing</span>
+          <span class="mk" style="color: #8fb35e">✓ Cooked</span>
+        </div>
+      </div>
+    </div>
+    <h2>Type</h2>
+    <div class="theme light">
+      <div
+        style="
+          font:
+            700 39px/1.15 Georgia,
+            &quot;Fraunces&quot;,
+            serif;
+        "
+      >
+        Shakshuka with feta
+      </div>
+      <div
+        style="
+          font:
+            700 31px/1.2 Georgia,
+            serif;
+          margin-top: 6px;
+        "
+      >
+        פנקייק מושלם, גבוה ואוורירי
+      </div>
+      <div
+        style="
+          font:
+            700 25px/1.25 Georgia,
+            serif;
+          margin-top: 6px;
+        "
+      >
+        Section heading · 25 px
+      </div>
+      <div
+        style="
+          font:
+            600 16px/1.25 Georgia,
+            serif;
+          margin-top: 6px;
+        "
+      >
+        Card title · 16 px, two lines at most
+      </div>
+      <p style="margin-top: 6px">
+        Body 16 px system sans, line height 1.5.
+        <span style="font-variant-numeric: tabular-nums">320 g · 1½ tsp · 8–10 min</span> in tabular
+        numbers.
+      </p>
+      <p style="font-size: 13px; color: #6e6257">Meta 13 px muted · 30 min · 9 ingredients</p>
+    </div>
+  </body>
+</html>

@@ -1,4 +1,4 @@
-import { Button } from "../../components/Button.tsx";
+import { Button } from "../../components/ui/Button.tsx";
 import { NotFoundPage } from "../../components/NotFoundPage.tsx";
 import { ApiError } from "../../lib/api.ts";
 
@@ -15,7 +15,7 @@ export function RecipeLoadError({ error, retry, retrying }: RecipeLoadErrorProps
   return (
     <div role="alert">
       <title>Recipe not loaded · Pinch</title>
-      <h1 className="text-3xl font-bold tracking-tight text-balance">
+      <h1 className="mt-8 text-3xl font-bold tracking-tight text-balance">
         We couldn't load this recipe
       </h1>
       <Button
