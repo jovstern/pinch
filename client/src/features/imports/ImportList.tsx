@@ -1,10 +1,11 @@
-import type { Import, Platform } from "@pinch/shared";
+import type { Import } from "@pinch/shared";
 import { useQuery } from "@tanstack/react-query";
 import { CookingPot, LoaderCircle, TriangleAlert } from "lucide-react";
 import { Link } from "react-router";
 import { Thumbnail } from "../../components/Thumbnail.tsx";
 import { Button } from "../../components/ui/Button.tsx";
 import { Skeleton } from "../../components/ui/Skeleton.tsx";
+import { platformNames } from "../../lib/platformNames.ts";
 import { ImportActions } from "./ImportActions.tsx";
 import { importListQuery } from "./importQueries.ts";
 
@@ -23,16 +24,17 @@ export function ImportList({ focusPasteBox }: { focusPasteBox: () => void }) {
     <div className="mt-6">
       {/* The queue is the page's main content, so a failed load can be asked again (as the
           recipes). */}
+      {/* Centred, as the empty queue. */}
       {isLoadingError && (
-        <div role="alert">
-          <p>We couldn't load your imports.</p>
+        <div role="alert" className="mt-12 text-center">
+          <h2 className="text-xl font-semibold">We couldn't load your imports</h2>
           {/* The status stays "error" while it retries, so the button shows the wait. */}
           <Button
             type="button"
             variant="secondary"
             onClick={() => void refetch()}
             disabled={isFetching}
-            className="mt-3"
+            className="mt-4"
           >
             {isFetching ? "Trying…" : "Try again"}
           </Button>
@@ -152,12 +154,6 @@ function statusColor(job: Import) {
   if (job.stalled || job.status === "failed") return "text-destructive";
   return job.status === "ready" ? "font-semibold text-primary" : "text-muted-foreground";
 }
-
-const platformNames: Record<Platform, string> = {
-  instagram: "Instagram",
-  facebook: "Facebook",
-  youtube: "YouTube",
-};
 
 // The draft's title once there is one; until then what it was made from: a link (by its site),
 // a post's text, pasted, or its screenshots (design §1).
