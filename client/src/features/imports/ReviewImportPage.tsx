@@ -10,7 +10,7 @@ import { focusHeading } from "../../lib/useHeadingFocus.ts";
 import { LazyRecipeForm, usePreloadRecipeForm } from "../recipes/LazyRecipeForm.tsx";
 import { toFormValues } from "../recipes/recipeFormValues.ts";
 import { RecipeLoadError } from "../recipes/RecipeLoadError.tsx";
-import { recipeListsKey, recipeQuery } from "../recipes/recipeQueries.ts";
+import { recipeCountQuery, recipeListsKey, recipeQuery } from "../recipes/recipeQueries.ts";
 import { DraftBanner } from "./DraftBanner.tsx";
 import { importListQuery, importQuery, restoreImport } from "./importQueries.ts";
 
@@ -44,6 +44,7 @@ export function ReviewImportPage() {
       // list: this import would now answer 404 (as DeleteRecipeDialog).
       queryClient.setQueryData(recipeQuery(recipe.id).queryKey, recipe);
       void queryClient.invalidateQueries({ queryKey: recipeListsKey, refetchType: "all" });
+      void queryClient.invalidateQueries({ queryKey: recipeCountQuery.queryKey });
       void queryClient.invalidateQueries({
         queryKey: importListQuery.queryKey,
         refetchType: "all",

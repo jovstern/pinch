@@ -1,6 +1,6 @@
 import { PlatformSchema, type Recipe } from "@pinch/shared";
 import { Link } from "react-router";
-import { EmojiTile } from "../../components/EmojiTile.tsx";
+import { RecipeFace } from "../../components/RecipeFace.tsx";
 import { Thumbnail } from "../../components/Thumbnail.tsx";
 import { Badge } from "../../components/ui/Badge.tsx";
 import { platformNames } from "../../lib/platformNames.ts";
@@ -35,7 +35,7 @@ export function RecipeCard({ recipe, eager }: RecipeCardProps) {
         </p>
       </div>
       {/* 4:5, cropped, so the grid's rows line up whatever the post's shape. Without a picture
-          its emoji (D25), so it doesn't look like a card still loading; if the picture fails, the
+          its face (D25), so it doesn't look like a card still loading; if the picture fails, the
           plain tile stays. */}
       <div className="relative order-first aspect-4/5 overflow-hidden rounded-card bg-muted">
         {recipe.thumbnail ? (
@@ -46,7 +46,11 @@ export function RecipeCard({ recipe, eager }: RecipeCardProps) {
             eager={eager}
           />
         ) : (
-          <EmojiTile emoji={recipe.emoji} className="h-full text-5xl" />
+          <RecipeFace
+            emoji={recipe.emoji}
+            fromVideo={platform !== undefined}
+            className="h-full text-5xl"
+          />
         )}
         {platform && (
           <Badge

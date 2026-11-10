@@ -3,10 +3,9 @@ import { useQuery } from "@tanstack/react-query";
 import { LoaderCircle, TriangleAlert } from "lucide-react";
 import type { ReactNode } from "react";
 import { Link } from "react-router";
-import { EmojiTile } from "../../components/EmojiTile.tsx";
+import { RecipeFace } from "../../components/RecipeFace.tsx";
 import { Thumbnail } from "../../components/Thumbnail.tsx";
 import { Button } from "../../components/ui/Button.tsx";
-import { Skeleton } from "../../components/ui/Skeleton.tsx";
 import { platformNames } from "../../lib/platformNames.ts";
 import { countToLookAt, thingsToLookAt } from "../../lib/thingsToLookAt.ts";
 import { ImportActions } from "./ImportActions.tsx";
@@ -107,13 +106,15 @@ function Picture({ job }: { job: Import }) {
       </div>
     );
   }
-  if (job.status === "ready") {
-    // A text draft, or a post without a picture: the dish's emoji (D25).
-    return (
-      <EmojiTile emoji={job.draft?.emoji} className="h-20 w-16 shrink-0 rounded-control text-3xl" />
-    );
-  }
-  return <Skeleton className="h-20 w-16 shrink-0" />;
+  // A text draft, a post without a picture, or one still cooking: the dish's emoji once the
+  // draft has one, else the pot, with sparkles for a video (D25).
+  return (
+    <RecipeFace
+      emoji={job.draft?.emoji}
+      fromVideo={job.input.type === "link"}
+      className="h-20 w-16 shrink-0 rounded-control text-3xl"
+    />
+  );
 }
 
 // One action in one place (pass-02 §13): while it cooks, a disabled "Cooking…" stands where

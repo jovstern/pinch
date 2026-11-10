@@ -1,6 +1,7 @@
 import {
   isTag,
   ListSourceSchema,
+  RecipeCountSchema,
   RecipeListSchema,
   RecipeSchema,
   RecipeSortSchema,
@@ -63,6 +64,13 @@ export function recipeListQuery(filters: RecipeFilters) {
     placeholderData: keepPreviousData,
   });
 }
+
+// How many recipes the user has, for the My recipes tab (design §14). Refetched where a recipe is
+// added, deleted or restored, as the lists are.
+export const recipeCountQuery = queryOptions({
+  queryKey: ["recipes", "count"],
+  queryFn: () => getJson("/api/recipes/count", RecipeCountSchema),
+});
 
 export function recipeQuery(id: string) {
   return queryOptions({

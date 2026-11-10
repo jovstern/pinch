@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { PenLine, UserRound } from "lucide-react";
 import { Link, useLocation } from "react-router";
 import { importListQuery } from "../features/imports/importQueries.ts";
+import { recipeCountQuery } from "../features/recipes/recipeQueries.ts";
 import { cn } from "../lib/cn.ts";
 import { Badge } from "./ui/Badge.tsx";
 import { Button } from "./ui/Button.tsx";
@@ -29,6 +30,8 @@ export function Header({ onTabPage }: { onTabPage: boolean }) {
   // The same query as the queue on Add recipe, so the count moves as it polls (§4.2).
   const { data } = useQuery(importListQuery);
   const ready = data?.items.filter((job) => job.status === "ready").length ?? 0;
+  // Not awaited by anything: the tab shows its count once it's there.
+  const recipeCount = useQuery(recipeCountQuery).data?.count;
 
   return (
     <header className="flex items-center gap-2 px-4 pt-3 md:gap-4 md:border-b md:border-border md:px-6 md:py-3">
@@ -58,6 +61,14 @@ export function Header({ onTabPage }: { onTabPage: boolean }) {
           className={tabClass}
         >
           My recipes
+          {/* How many there are, quiet: it informs, it doesn't ask for anything (the ready count
+              does). Read as "My recipes 12"; no aria-label, for the reason above. */}
+          {recipeCount !== undefined && recipeCount > 0 && (
+            <>
+              {" "}
+              <span className="text-sm text-muted-foreground tabular-nums">{recipeCount}</span>
+            </>
+          )}
         </Link>
       </nav>
 

@@ -26,11 +26,13 @@ export function renderApp(path: string) {
   );
 }
 
-// Stubs fetch with this one, except GET /api/imports, which answers none: every page asks
-// for the imports (the Header's count), and these tests are about something else.
+// Stubs fetch with this one, except GET /api/imports and /api/recipes/count, which answer none:
+// every page asks for them (the Header's counts), and these tests are about something else.
 export function stubFetch(fetch: (...args: [string, RequestInit?]) => Promise<Response>) {
   // Passed on untouched: toHaveBeenCalledWith tells fetch(path) from fetch(path, undefined).
-  vi.stubGlobal("fetch", (...args: [string, RequestInit?]) =>
-    args[0] === "/api/imports" ? Promise.resolve(Response.json({ items: [] })) : fetch(...args),
-  );
+  vi.stubGlobal("fetch", (...args: [string, RequestInit?]) => {
+    if (args[0] === "/api/imports") return Promise.resolve(Response.json({ items: [] }));
+    if (args[0] === "/api/recipes/count") return Promise.resolve(Response.json({ count: 0 }));
+    return fetch(...args);
+  });
 }

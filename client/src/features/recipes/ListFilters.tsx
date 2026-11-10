@@ -72,9 +72,11 @@ export function ListFilters({ filters, onChange, onChangeTags, searchRef }: List
         <div className="lg:hidden">
           <FiltersButton filters={filters} onChange={onChange} />
         </div>
-        <label className="flex items-center gap-2 text-sm max-lg:hidden">
-          <span className="text-muted-foreground">Sort</span>
+        {/* No visible label (the user's ask, 2026-11-10): the choices name themselves (Newest,
+            Quickest, A–Z); the name is for screen readers. */}
+        <div className="max-lg:hidden">
           <NativeSelect
+            aria-label="Sort"
             value={filters.sort}
             onChange={(event) => {
               const picked = sorts.find(({ value }) => value === event.target.value);
@@ -87,7 +89,7 @@ export function ListFilters({ filters, onChange, onChangeTags, searchRef }: List
               </option>
             ))}
           </NativeSelect>
-        </label>
+        </div>
       </div>
       <div className="lg:hidden">
         <TagChips selected={filters.tags} onChange={onChangeTags} />

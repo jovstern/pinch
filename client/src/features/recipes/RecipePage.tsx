@@ -1,10 +1,10 @@
-import type { Nutrition, Recipe } from "@pinch/shared";
+import { PlatformSchema, type Nutrition, type Recipe } from "@pinch/shared";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useParams } from "react-router";
 import { Badge } from "../../components/ui/Badge.tsx";
 import { Breadcrumb } from "../../components/ui/Breadcrumb.tsx";
 import { Button } from "../../components/ui/Button.tsx";
-import { EmojiTile } from "../../components/EmojiTile.tsx";
+import { RecipeFace } from "../../components/RecipeFace.tsx";
 import { Thumbnail } from "../../components/Thumbnail.tsx";
 import { useHeadingFocus } from "../../lib/useHeadingFocus.ts";
 import { ingredientLine } from "./ingredientLine.ts";
@@ -56,10 +56,11 @@ export function RecipePage() {
             shape="banner"
           />
         ) : (
-          // Its emoji instead (D25): a lower band than a picture's, as there's less to see; edge
+          // Its face instead (D25): a lower band than a picture's, as there's less to see; edge
           // to edge on a phone, as the banner (the same margins), beside the title from 1024 px.
-          <EmojiTile
+          <RecipeFace
             emoji={recipe.emoji}
+            fromVideo={PlatformSchema.safeParse(recipe.source.type).success}
             className="-mx-4 aspect-5/2 text-7xl sm:mx-0 sm:rounded-card lg:aspect-4/3 lg:w-80 lg:shrink-0"
           />
         )}

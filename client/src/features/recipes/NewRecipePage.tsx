@@ -7,7 +7,7 @@ import { toastSaved } from "../../lib/toasts.tsx";
 import { focusHeading } from "../../lib/useHeadingFocus.ts";
 import { LazyRecipeForm } from "./LazyRecipeForm.tsx";
 import { emptyRecipe } from "./recipeFormValues.ts";
-import { recipeListsKey, recipeQuery } from "./recipeQueries.ts";
+import { recipeCountQuery, recipeListsKey, recipeQuery } from "./recipeQueries.ts";
 
 export function NewRecipePage() {
   const queryClient = useQueryClient();
@@ -24,6 +24,7 @@ export function NewRecipePage() {
         queryKey: recipeListsKey,
         refetchType: "all",
       });
+      void queryClient.invalidateQueries({ queryKey: recipeCountQuery.queryKey });
       // replace: Back from the new recipe goes where the user was, not to a blank form.
       void navigate(`/recipes/${recipe.id}`, { replace: true, state: focusHeading });
       toastSaved(recipe.title);

@@ -13,7 +13,7 @@ import { Button } from "../../components/ui/Button.tsx";
 import { deleteResource, sendJson } from "../../lib/api.ts";
 import { toastDeleted, toastRestored } from "../../lib/toasts.tsx";
 import { focusHeading } from "../../lib/useHeadingFocus.ts";
-import { recipeListsKey, recipeQuery } from "./recipeQueries.ts";
+import { recipeCountQuery, recipeListsKey, recipeQuery } from "./recipeQueries.ts";
 
 type DeleteRecipeDialogProps = {
   recipe: Recipe;
@@ -40,6 +40,7 @@ export function DeleteRecipeDialog({ recipe, onClose, focusOnClose }: DeleteReci
         queryKey: recipeListsKey,
         refetchType: "all",
       });
+      void queryClient.invalidateQueries({ queryKey: recipeCountQuery.queryKey });
       void navigate("/recipes", { state: focusHeading });
       // A failure stays in the dialog, by its buttons:
       // the dialog shuts out a toast's.
@@ -60,6 +61,7 @@ export function DeleteRecipeDialog({ recipe, onClose, focusOnClose }: DeleteReci
     );
     queryClient.setQueryData(recipeQuery(recipe.id).queryKey, restored);
     await queryClient.invalidateQueries({ queryKey: recipeListsKey, refetchType: "all" });
+    void queryClient.invalidateQueries({ queryKey: recipeCountQuery.queryKey });
     toastRestored(restored.title, () => {
       void navigate(`/recipes/${recipe.id}`);
     });
