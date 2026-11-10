@@ -106,7 +106,7 @@ test("Cancel with changes asks first; Keep editing keeps them", async () => {
 
   await userEvent.type(await screen.findByLabelText("Title"), " with herbs");
   await userEvent.click(screen.getByRole("button", { name: "Cancel" }));
-  const dialog = screen.getByRole("alertdialog", { name: "Discard your changes?" });
+  const dialog = await screen.findByRole("alertdialog", { name: "Discard your changes?" });
   await userEvent.click(within(dialog).getByRole("button", { name: "Keep editing" }));
 
   expect(screen.getByLabelText("Title")).toHaveValue("Omelette with herbs");

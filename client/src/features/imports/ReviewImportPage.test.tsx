@@ -93,7 +93,7 @@ test("Discard asks first; keeping the draft keeps it", async () => {
   renderApp(`/imports/${ready.id}`);
 
   await userEvent.click(await screen.findByRole("button", { name: "Discard" }));
-  const dialog = screen.getByRole("alertdialog", { name: "Discard this draft?" });
+  const dialog = await screen.findByRole("alertdialog", { name: "Discard this draft?" });
   await userEvent.click(within(dialog).getByRole("button", { name: "Keep reviewing" }));
 
   expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
@@ -110,7 +110,9 @@ test("the question names the draft by its title as it is now", async () => {
   await userEvent.type(title, "Nonna's pasta");
   await userEvent.click(screen.getByRole("button", { name: "Discard" }));
 
-  expect(screen.getByRole("alertdialog")).toHaveTextContent("“Nonna's pasta” won't be saved.");
+  expect(await screen.findByRole("alertdialog")).toHaveTextContent(
+    "“Nonna's pasta” won't be saved.",
+  );
 });
 
 test("Discard doesn't open while the draft is being saved", async () => {
