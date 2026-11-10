@@ -1,5 +1,6 @@
 import { RecipeInputSchema, type RecipeInput } from "@pinch/shared";
 import { ObjectId, type AnyBulkWriteOperation, type Db } from "mongodb";
+import { titleEmoji } from "../titleEmoji.ts";
 import { recipesCollection, type RecipeDocument } from "./recipes.ts";
 
 // Sample recipes, so the list, search and tag filters have something to find (design §6). Two
@@ -158,6 +159,7 @@ export async function seedRecipes(db: Db, ownerId: ObjectId) {
           $setOnInsert: {
             // Parsed like a POST body, so a sample with a typo in a tag fails here.
             ...RecipeInputSchema.parse(sample),
+            emoji: titleEmoji(sample.title),
             ownerId,
             source: { type: "manual" },
             createdAt,

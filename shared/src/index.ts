@@ -23,6 +23,7 @@ export {
   type Platform,
 } from "./import.ts";
 export {
+  EmojiSchema,
   IngredientSchema,
   ListSourceSchema,
   MAX_UNCERTAIN,

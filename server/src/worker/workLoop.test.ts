@@ -189,6 +189,30 @@ test("a list of marks that isn't well formed is dropped, and the draft saved", a
   }
 });
 
+test("a draft keeps its emoji, and drops one that isn't a single emoji", async () => {
+  // One emoji, a ZWJ sequence (one grapheme), then what the model might send instead.
+  const cases = [
+    ["🍲", "🍲"],
+    ["🧑‍🍳", "🧑‍🍳"],
+    ["🍲🥗", undefined],
+    ["soup", undefined],
+    ["", undefined],
+    [null, undefined],
+    [7, undefined],
+  ];
+  for (const [emoji, kept] of cases) {
+    await imports.deleteMany({});
+    await insertImport();
+    const job = await claim();
+
+    await run(job, () => Promise.resolve({ ...draft, emoji }));
+
+    const saved = await imports.findOne({ _id: job._id });
+    expect(saved?.status).toBe("ready");
+    expect(saved?.draft?.emoji).toBe(kept);
+  }
+});
+
 test("a draft keeps no more than 10 things to look at", async () => {
   await insertImport();
   const job = await claim();

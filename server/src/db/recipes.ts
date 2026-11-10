@@ -24,6 +24,9 @@ export type RecipeDocument = RecipeInput & {
   ownerId: ObjectId;
   // Gemini's estimate, from the import's draft (design D14).
   nutritionPerServing?: Nutrition;
+  // The dish's face when there's no picture (D25): the model's, from the draft, or for a recipe
+  // written by hand one its title names (titleEmoji.ts). Older recipes have none.
+  emoji?: string;
   // From the import's draft (§5); a recipe written by hand has none.
   thumbnail?: StoredThumbnail;
   source: Recipe["source"];

@@ -117,6 +117,8 @@ export function importsRouter(db: Db) {
       // The model's estimate, not in the form (D14, D20): from the draft (there, as it's ready),
       // never from the body.
       nutritionPerServing: job.draft?.nutritionPerServing,
+      // The model's too, as the nutrition (D25).
+      emoji: job.draft?.emoji,
       // The worker's, as the nutrition: never from the body (§5).
       thumbnail: job.thumbnail,
       source: sourceOf(job.input),

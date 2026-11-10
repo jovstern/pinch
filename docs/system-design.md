@@ -219,7 +219,7 @@ never fails an import: no picture, no thumbnail.
 |---|---|
 | Instagram / Facebook / YouTube | The post's own picture (`yt-dlp`'s `thumbnail`: the reel's cover, YouTube's image), fetched at once (the platforms' links expire) and resized. Chosen over a frame cut with `ffmpeg`: the cover is the picture the author chose, and one path serves all three |
 | Screenshots | The first screenshot, resized |
-| Text / manual | None → a colored placeholder with the cuisine's emoji |
+| Text / manual | None → the recipe's emoji on a soft tile (D25) |
 
 Served by `GET /api/recipes/:id/thumbnail` (a draft's by `GET /api/imports/:id/thumbnail`) with
 long cache headers; every query that answers recipes or imports leaves the image out, so list
@@ -240,6 +240,7 @@ Recipe {
   tags: [string],                  // "cuisine:italian", "flavor:spicy" — see §7
   servings?, prepMinutes?, cookMinutes?,
   nutritionPerServing?: { calories, proteinG, carbsG, fatG },   // always Gemini's estimate (D14)
+  emoji?: "🍲",                    // its face without a picture (D25): the model's, or its title's
   thumbnail?: { webp: Binary, width, height },   // the image left out of every query that answers
   source: { type: "instagram" | "facebook" | "youtube" | "text" | "image" | "manual", url? },
   sourceImportId?,                 // unique + sparse (§4.4)
@@ -258,6 +259,7 @@ Import {
 
 RecipeDraft = RecipeInput + {
   nutritionPerServing?,
+  emoji?,                          // one food emoji for the dish (§9, D25)
   uncertain?: [{ path, reason }]   // "things to look at": up to 10 (§9); for the review only
 }
 
@@ -277,6 +279,14 @@ reason) is dropped whole; a mark that names no field of the draft (malformed, or
 step), has an empty reason or repeats a field is dropped; the first 10 are kept. The draft's
 schema checks them when the worker saves the draft and again whenever the API reads it. A saved recipe doesn't keep them: approve takes the form's
 recipe (§8), which has no marks.
+
+A recipe's `emoji` is its face when it has no picture (D25): one emoji, which the model picks for
+the draft and approve copies, as the nutrition; a recipe written by hand gets the one its title
+names, from a short list of dishes in English and Hebrew (`server/src/titleEmoji.ts`: "soup" 🍲,
+"סלט" 🥗), or none. Like the marks it is a hint, so it never fails a draft: anything but one
+emoji (one grapheme, pictographic) is dropped, whenever the schema reads it. The user doesn't
+write it, and editing keeps it (D20); a recipe with none (saved before it, or a title the list
+doesn't know) shows a plate, 🍽️.
 
 Uploaded screenshots for the fallback (up to 4 PNG, JPEG or WebP files, each made a JPEG at
 most 1600 px on a side by the API: typically 200–400 KB, under 2 MB at worst) are held on the import (`input.images`) only until the draft is made:
@@ -369,7 +379,7 @@ GET    /api/health                     the process is up
 GET    /api/ready                      the database is reachable
 
 GET    /api/recipes?q=…&tags=cuisine:italian,flavor:spicy&source=instagram,manual&time=30&sort=quickest&cursor=…   → { items, nextCursor } (no sort: newest first, or with q the best match first)
-POST   /api/recipes                    create by hand
+POST   /api/recipes                    create by hand (its emoji from its title, §6)
 GET    /api/recipes/:id
 PUT    /api/recipes/:id                replace what the user can edit (the form sends it all)
 DELETE /api/recipes/:id
@@ -380,7 +390,7 @@ POST   /api/imports/screenshots        a form: up to 4 images (10 MB each) as "i
 GET    /api/imports                    my imports that are not done yet (a ready one's draft with its marks: the queue counts them)
 GET    /api/imports/:id                status, step, error, draft (with its uncertain marks, §6)
 GET    /api/imports/:id/thumbnail      image/webp: the draft's picture
-POST   /api/imports/:id/approve        the edited draft, as POST /api/recipes; nutritionPerServing and the thumbnail from the stored import (D20), the marks dropped → 201 recipe (409 if not ready)
+POST   /api/imports/:id/approve        the edited draft, as POST /api/recipes; nutritionPerServing, the emoji and the thumbnail from the stored import (D20), the marks dropped → 201 recipe (409 if not ready)
 POST   /api/imports/:id/retry          failed → pending, attempts, error and noRetry cleared → 202 (409 if not failed, or noRetry)
 DELETE /api/imports/:id                discard / dismiss
 ```
@@ -437,6 +447,8 @@ changes**. The planned design:
   its path with a short reason (§6): the user's "things to look at" when reviewing. The
   prompt names the paths it may use. A mark never fails an import: a reason is cut to 200
   characters, and a malformed list or a mark that names no field is dropped (§6).
+- And one food emoji that fits the dish (`emoji`), the face of a recipe without a picture (D25).
+  It is a plain string in the response schema; Zod keeps it only if it's one emoji (§6).
 - The recipe is written **in the language of the post**; tags stay English codes (D16).
 - Every call has a **timeout** (the client's: 120 s a request), and the attempt's deadline
   (§4.3) cuts the whole attempt. No retries of its own (the SDK only retries when asked), except
@@ -470,12 +482,12 @@ changes**. The planned design:
 | D17 | The server runs on Node 24's built-in TypeScript type stripping | One fewer dependency; the spike already runs this way | `tsx` (node-api.md's default) |
 | D18 | Schemas in an npm-workspace package `shared/`, used as TypeScript source with no build: its `exports` point at `src/index.ts`; Vite compiles it, and Node type-strips it because the workspace symlink resolves to a path outside `node_modules` | One copy for client and server, no build step | `server/src/schemas/` (node-api.md); a copy on each side; a built package |
 | D19 | MongoDB through the native driver; Zod checks every write, and every response is parsed with its schema, which drops stored fields like `ownerId` | You see the real queries, which suits learning indexes; one schema layer, shared with the client | Mongoose (a second schema layer next to Zod) |
-| D20 | Editing is `PUT`: it replaces what the user can edit and keeps the fields the server owns (`_id`, `ownerId`, `source`, `createdAt`, `sourceImportId`, `nutritionPerServing`, `thumbnail`), listed in the route | The form always sends the whole recipe, so a field the user clears is simply left out; no `null`/`""` rules | `PATCH` with `null` to clear a field |
+| D20 | Editing is `PUT`: it replaces what the user can edit and keeps the fields the server owns (`_id`, `ownerId`, `source`, `createdAt`, `sourceImportId`, `nutritionPerServing`, `emoji`, `thumbnail`), listed in the route | The form always sends the whole recipe, so a field the user clears is simply left out; no `null`/`""` rules | `PATCH` with `null` to clear a field |
 | D21 | React Router (declarative: `<Routes>` in `App.tsx`, `useParams`, `Link`) | A handful of screens; the most familiar API and the least setup, easy to read line by line | TanStack Router (type-safe routes and loaders, more concepts) |
 | D22 | The daily cap (20) counts links pasted and Retry clicks, in a per-user, per-UTC-day counter (`usage`) raised atomically by both routes; past it, 429 | Imports are deleted once done, so counting them would undercount; the unique `{ownerId, day}` index makes two first counts at once safe on a standalone Mongo (as D9); the routes are where a user asks for work; automatic retries (3 a link) aren't counted, so at most 60 Gemini calls a day | Counting each Gemini call in the worker (exact, but a link could be accepted and then fail with "limit reached") |
 | D23 | "Not a recipe" and "too long" fail the import at once (`NoRetryError`, its message shown to the user); every other error is retried | Trying again gives the same answer and costs a Gemini call each time; the user learns why straight away; nor is the user offered a Retry that can't help, and would use one of the day's 20 | Retry everything (3 Gemini calls for a cat video, and a vague message) |
 | D24 | Two tabs, **New recipe** (`/`, the default) and **My recipes** (`/recipes`); the import queue sits under the box on New recipe; every inner page has breadcrumbs (docs/ux/pass-02.md §12–13) | Adding is the main event, so it opens first; the split keeps the form off the library; breadcrumbs say where a page belongs and replace Exit and "‹ Recipes" | One home with the box above the recipes; Recipes as the default tab; a bottom tab bar |
-| D25 | Every recipe has a face: the post's picture, else an emoji the model picks for the dish (an optional `emoji` on the recipe and the draft) on a tinted tile — built with F3 (docs/progress.md) | The picture is what the user remembers; a recipe with none still needs something to recognise | Grey placeholders; generated images |
+| D25 | Every recipe has a face: the post's picture, else an emoji the model picks for the dish (an optional `emoji` on the recipe and the draft) on a soft tile; a recipe written by hand gets one from its title (§6) — built in M8 F3 | The picture is what the user remembers; a recipe with none still needs something to recognise; the title's list keeps it to the server, and the editor's JS at its budget | Grey placeholders; generated images; an emoji field in the editor; a map from the tags on the client |
 | D26 | The UI is built from **shadcn/ui** components, copied into `client/src/components/ui/`, their variables mapped onto Pinch's tokens; controls 44 px tall for touch | Accessible Radix parts (Tabs, Sheet, DropdownMenu, Dialog, toasts) whose code lives in the repo and can be read line by line; one pattern per control | Pinch's own components only; a packaged kit (MUI, Chakra) |
 
 ## 11. Risks

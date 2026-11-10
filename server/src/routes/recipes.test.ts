@@ -34,6 +34,8 @@ test("POST /api/recipes creates a recipe and answers 201 with its location", asy
   expect(response.body).toEqual({
     ...omelette,
     id,
+    // Its face, from its title (D25).
+    emoji: "🍳",
     source: { type: "manual" },
     createdAt,
     updatedAt,
@@ -46,6 +48,24 @@ test("GET /api/recipes/:id answers the recipe that was created", async () => {
   const response = await request(app).get(created.headers.location ?? "");
   expect(response.status).toBe(200);
   expect(response.body).toEqual(created.body);
+});
+
+test("a recipe written by hand gets the emoji its title names, or none, and editing keeps it", async () => {
+  const soup = await request(app)
+    .post("/api/recipes")
+    .send({ ...omelette, title: "Red lentil soup", emoji: "🍕" });
+  const unknown = await request(app)
+    .post("/api/recipes")
+    .send({ ...omelette, title: "Mujadara" });
+
+  // One sent in the body is dropped: the form doesn't send it (D20).
+  const { id } = RecipeSchema.parse(soup.body);
+  expect(soup.body).toMatchObject({ emoji: "🍲" });
+  expect(unknown.body).not.toHaveProperty("emoji");
+  const edited = await request(app)
+    .put(`/api/recipes/${id}`)
+    .send({ ...omelette, title: "Lentil stew" });
+  expect(edited.body).toMatchObject({ emoji: "🍲" });
 });
 
 test("POST /api/recipes answers 400 naming each field that is not valid", async () => {
@@ -571,6 +591,8 @@ test("PUT /api/recipes/:id replaces what the user can edit and clears what they 
     // Left out, so cleared (PUT replaces).
     tags: [],
     id: before.id,
+    // The server's, so kept (D20).
+    emoji: before.emoji,
     source: before.source,
     createdAt: before.createdAt,
     updatedAt: after.updatedAt,

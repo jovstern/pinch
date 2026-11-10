@@ -68,6 +68,23 @@ export const NutritionSchema = z.object({
   fatG: z.number().min(0).max(1000),
 });
 
+// A recipe's face when it has no picture (design D25): one emoji for the dish, which the model
+// picks. Only a hint, as the marks below, so it never fails a draft or a recipe: anything but
+// one emoji (two, a word, "", not a string) is dropped, as if it weren't there. One emoji is one
+// grapheme, which a ZWJ sequence or a skin tone still is, and pictographic; the length cap keeps
+// out a "grapheme" padded with a thousand combining marks.
+export const EmojiSchema = z
+  .string()
+  .trim()
+  .transform((text) => (isOneEmoji(text) ? text : undefined))
+  .optional()
+  .catch(undefined);
+
+function isOneEmoji(text: string) {
+  const graphemes = [...new Intl.Segmenter().segment(text)];
+  return text.length <= 16 && graphemes.length === 1 && /\p{Extended_Pictographic}/u.test(text);
+}
+
 // A field the model was unsure of, or couldn't find in the post, and why: a "thing to look at"
 // on the draft (design §6, §9). The path names the field as the API's errors do (§8.1): "title",
 // "servings", "prepMinutes", "cookMinutes", "steps.2" or "ingredients.3.quantity" (or .unit,
@@ -107,6 +124,7 @@ function markExists(path: string, draft: { steps: unknown[]; ingredients: unknow
 // still be read).
 export const RecipeDraftSchema = RecipeInputSchema.extend({
   nutritionPerServing: NutritionSchema.optional(),
+  emoji: EmojiSchema,
   uncertain: z.array(UncertainFieldSchema).optional().catch(undefined),
 }).overwrite((draft) => {
   if (!draft.uncertain) {
@@ -139,6 +157,7 @@ export const SourceSchema = z.object({
 export const RecipeSchema = RecipeInputSchema.extend({
   id: z.string(),
   nutritionPerServing: NutritionSchema.optional(),
+  emoji: EmojiSchema,
   thumbnail: ThumbnailSchema.optional(),
   source: SourceSchema,
   createdAt: z.iso.datetime(),

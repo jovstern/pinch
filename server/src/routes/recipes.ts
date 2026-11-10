@@ -21,6 +21,7 @@ import {
 } from "../db/recipes.ts";
 import { WITHOUT_MEDIA } from "../db/thumbnail.ts";
 import { HttpError, parseInput } from "../errors.ts";
+import { titleEmoji } from "../titleEmoji.ts";
 import { sendThumbnail } from "./thumbnail.ts";
 
 // Every query filters by ownerId: a user only ever sees their own recipes (design §1, §8.3).
@@ -57,6 +58,8 @@ export function recipesRouter(db: Db) {
       ...input,
       _id: new ObjectId(),
       ownerId: req.userId,
+      // No model to pick one: the title's, if it names a dish we know (D25).
+      emoji: titleEmoji(input.title),
       source: { type: "manual" },
       createdAt: now,
       updatedAt: now,
@@ -98,6 +101,7 @@ export function recipesRouter(db: Db) {
       _id: existing._id,
       ownerId: existing.ownerId,
       nutritionPerServing: existing.nutritionPerServing,
+      emoji: existing.emoji,
       thumbnail: existing.thumbnail,
       source: existing.source,
       sourceImportId: existing.sourceImportId,
