@@ -271,10 +271,11 @@ Usage {                            // the daily cap (D22)
 A draft's `uncertain` marks the fields the model was unsure of, or couldn't find, with a short
 reason: `{ path: "ingredients.3.quantity", reason: "the video says a can" }`. A path names a
 field as the API's errors do (§8.1): `title`, `servings`, `prepMinutes`, `cookMinutes`,
-`steps.N`, or `ingredients.N.quantity` / `.unit` / `.name`. They're a hint, so the draft's
-schema drops a mark that names no field of the draft (malformed, or past the last step), has no
-reason or repeats a field, rather than fail; it checks them when the worker saves the draft and
-again whenever the API reads it. A saved recipe doesn't keep them: approve takes the form's
+`steps.N`, or `ingredients.N.quantity` / `.unit` / `.name`. They're a hint, so they never fail
+a draft: a reason is cut to 200 characters; a list that isn't one (null, a mark with no path or
+reason) is dropped whole; a mark that names no field of the draft (malformed, or past the last
+step), has an empty reason or repeats a field is dropped; the first 10 are kept. The draft's
+schema checks them when the worker saves the draft and again whenever the API reads it. A saved recipe doesn't keep them: approve takes the form's
 recipe (§8), which has no marks.
 
 Uploaded screenshots for the fallback (up to 4 PNG, JPEG or WebP files, each made a JPEG at
@@ -434,7 +435,8 @@ changes**. The planned design:
   the model says so and the import fails with "This doesn't look like a recipe".
 - It also lists, in `uncertain`, up to 10 fields it was unsure of or couldn't find, each by
   its path with a short reason (§6): the user's "things to look at" when reviewing. The
-  prompt names the paths it may use; one that names no field is dropped, not an error.
+  prompt names the paths it may use. A mark never fails an import: a reason is cut to 200
+  characters, and a malformed list or a mark that names no field is dropped (§6).
 - The recipe is written **in the language of the post**; tags stay English codes (D16).
 - Every call has a **timeout** (the client's: 120 s a request), and the attempt's deadline
   (§4.3) cuts the whole attempt. No retries of its own (the SDK only retries when asked), except

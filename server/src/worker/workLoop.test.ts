@@ -148,6 +148,9 @@ test("a run keeps the draft's things to look at, and drops a mark that names no 
         { path: "servings", reason: "" },
         // A field's first mark is kept.
         { path: "ingredients.0.quantity", reason: "Again." },
+        // A dropped mark (no reason) doesn't hide a good one for the same field.
+        { path: "title", reason: "" },
+        { path: "title", reason: "Made up." },
       ],
     }),
   );
@@ -155,7 +158,35 @@ test("a run keeps the draft's things to look at, and drops a mark that names no 
   const saved = await imports.findOne({ _id: job._id });
   expect(saved?.draft?.uncertain).toEqual([
     { path: "ingredients.0.quantity", reason: "Not said in the video." },
+    { path: "title", reason: "Made up." },
   ]);
+});
+
+test("a reason too long is cut, not a failed draft", async () => {
+  await insertImport();
+  const job = await claim();
+
+  const uncertain = [{ path: "title", reason: "x".repeat(201) }];
+  await run(job, () => Promise.resolve({ ...draft, uncertain }));
+
+  const saved = await imports.findOne({ _id: job._id });
+  expect(saved?.status).toBe("ready");
+  expect(saved?.draft?.uncertain).toEqual([{ path: "title", reason: "x".repeat(200) }]);
+});
+
+test("a list of marks that isn't well formed is dropped, and the draft saved", async () => {
+  // null, a mark with no reason, a number for a path: each as the model might send it.
+  for (const uncertain of [null, [{ path: "title" }], [{ path: 3, reason: "A number." }]]) {
+    await imports.deleteMany({});
+    await insertImport();
+    const job = await claim();
+
+    await run(job, () => Promise.resolve({ ...draft, uncertain }));
+
+    const saved = await imports.findOne({ _id: job._id });
+    expect(saved).toMatchObject({ status: "ready", draft });
+    expect(saved?.draft).not.toHaveProperty("uncertain");
+  }
 });
 
 test("a draft keeps no more than 10 things to look at", async () => {

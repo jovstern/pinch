@@ -88,6 +88,10 @@ test("the model is asked for the fields it's unsure of, with their paths, in the
   const schema = JSON.stringify(config?.responseJsonSchema);
   expect(schema).toContain('"uncertain"');
   expect(schema).toContain('"reason"');
+  // The marks' catch adds nothing to their schema (no default): only the list of marks.
+  expect(schema).toContain(
+    '"uncertain":{"type":"array","items":{"type":"object","properties":{"path":{"type":"string"},"reason":{"type":"string"}},"required":["path","reason"]}}',
+  );
   expect(config?.systemInstruction).toContain('"ingredients.N.quantity"');
   expect(config?.systemInstruction).toContain("at most 10");
 });
