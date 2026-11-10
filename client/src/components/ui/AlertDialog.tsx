@@ -1,4 +1,4 @@
-import type { ComponentProps } from "react";
+import type { ComponentProps, ReactNode } from "react";
 import { AlertDialog as AlertDialogPrimitive } from "radix-ui";
 import { cn } from "../../lib/cn.ts";
 
@@ -27,5 +27,15 @@ export function AlertDialogContent({
         {...props}
       />
     </AlertDialogPrimitive.Portal>
+  );
+}
+
+// The answers, as shadcn's footer: stacked full width on a phone, the main one on top (so a
+// long "Discard changes" never wraps beside "Keep editing"); in a row at the right from 640 px.
+export function AlertDialogFooter({ children }: { children: ReactNode }) {
+  return (
+    <div className="mt-6 flex flex-col-reverse gap-2 *:w-full sm:flex-row sm:justify-end sm:gap-3 sm:*:w-auto">
+      {children}
+    </div>
   );
 }

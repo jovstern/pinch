@@ -30,7 +30,7 @@ export function StepCard({
   const durations = stepDurations(step);
 
   return (
-    <div className="h-full rounded-card border border-border bg-card p-5 md:p-8">
+    <div className="rounded-card border border-border bg-card p-5 md:p-8">
       {/* dir="auto": a Hebrew step reads right to left, as in the form (TextField). */}
       <p
         dir="auto"

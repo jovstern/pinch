@@ -1,10 +1,12 @@
 import { RecipeSchema, type Import, type Recipe, type RecipeInput } from "@pinch/shared";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useEffect } from "react";
 import { Link, useNavigate, useParams } from "react-router";
 import { Breadcrumb } from "../../components/ui/Breadcrumb.tsx";
 import { Thumbnail } from "../../components/Thumbnail.tsx";
-import { deleteResource, sendJson } from "../../lib/api.ts";
-import { toastCouldntSave, toastDiscarded, toastSaved } from "../../lib/toasts.tsx";
+import { ApiError, deleteResource, sendJson } from "../../lib/api.ts";
+import { dismissToast, toastCouldntSave, toastDiscarded, toastSaved } from "../../lib/toasts.tsx";
+import { focusHeading } from "../../lib/useHeadingFocus.ts";
 import { LazyRecipeForm, usePreloadRecipeForm } from "../recipes/LazyRecipeForm.tsx";
 import { toFormValues } from "../recipes/recipeFormValues.ts";
 import { RecipeLoadError } from "../recipes/RecipeLoadError.tsx";
@@ -26,6 +28,11 @@ export function ReviewImportPage() {
     isFetching,
   } = useQuery(importQuery(id));
   usePreloadRecipeForm();
+  // An effect: the toasts live outside React. The draft's "ready to review" toast (its id is the
+  // import's) has done its job once the draft is open, and from 768 px it would sit over Save.
+  useEffect(() => {
+    dismissToast(id);
+  }, [id]);
   const queryClient = useQueryClient();
   const navigate = useNavigate();
 
@@ -42,7 +49,7 @@ export function ReviewImportPage() {
         refetchType: "all",
       });
       // replace: Back from the recipe goes to the list, not to a draft that no longer exists.
-      void navigate(`/recipes/${recipe.id}`, { replace: true });
+      void navigate(`/recipes/${recipe.id}`, { replace: true, state: focusHeading });
       toastSaved(recipe.title);
     },
   });
@@ -56,7 +63,7 @@ export function ReviewImportPage() {
         queryKey: importListQuery.queryKey,
         refetchType: "all",
       });
-      void navigate("/", { replace: true });
+      void navigate("/", { replace: true, state: focusHeading });
       toastDiscarded(job?.draft?.title);
     },
     onError: () => {
@@ -66,24 +73,28 @@ export function ReviewImportPage() {
     },
   });
 
+  // An address typed or kept from before, of an import gone (404), not done yet, or failed: no
+  // draft yet, and the way back is New recipe, where the queue is (design §14).
+  const noDraft = (
+    <>
+      <title>No draft yet · Pinch</title>
+      <h1 className="mt-8 text-3xl font-bold tracking-tight text-balance">No draft yet</h1>
+      <p className="mt-3 text-pretty text-text-muted">
+        This import has no recipe to review: it's still cooking, it failed, or it's gone.
+      </p>
+      <Link to="/" className="mt-3 inline-block font-semibold text-accent-strong underline">
+        Back to New recipe
+      </Link>
+    </>
+  );
+
   if (status === "pending") return <p className="text-text-muted">Loading the recipe…</p>;
   if (isLoadingError) {
+    if (error instanceof ApiError && error.status === 404) return noDraft;
     return <RecipeLoadError error={error} retry={() => void refetch()} retrying={isFetching} />;
   }
-  // An address typed or kept from before, of an import not done yet or failed. A draft is there
-  // exactly when the import is ready, and checking it tells TypeScript it's there.
-  if (job.draft === undefined) {
-    return (
-      <>
-        <title>Not ready · Pinch</title>
-        <h1 className="text-3xl font-bold tracking-tight text-balance">Not ready to review</h1>
-        <p className="mt-3 text-pretty text-text-muted">This import has no recipe to review.</p>
-        <Link to="/" className="mt-3 inline-block font-semibold text-accent-strong underline">
-          Back to New recipe
-        </Link>
-      </>
-    );
-  }
+  // A draft is there exactly when the import is ready, and checking it tells TypeScript it's there.
+  if (job.draft === undefined) return noDraft;
 
   return (
     <>
