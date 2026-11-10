@@ -3,7 +3,8 @@ import { ExternalLink, Sparkles } from "lucide-react";
 import { platformNames } from "../../lib/platformNames.ts";
 
 // At the top of a draft (design §14, shadcn's Alert): where Pinch read it, and the way back to
-// the post to compare. Which fields to check waits for the API (M8 F2).
+// the post to compare. The things to look at are counted under it, and marked on their fields
+// (RecipeForm).
 export function DraftBanner({ input }: { input: Import["input"] }) {
   return (
     <div className="flex gap-3 rounded-card border border-border p-4">

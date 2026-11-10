@@ -198,3 +198,41 @@ test("an import that doesn't exist has no draft either, and leads back to New re
   ).toBeInTheDocument();
   expect(screen.getByRole("link", { name: "Back to New recipe" })).toHaveAttribute("href", "/");
 });
+
+test("a draft's things to look at are marked on their fields, and editing a field clears its mark", async () => {
+  const marked: Import = {
+    ...ready,
+    draft: {
+      ...draft,
+      ingredients: [{ name: "spaghetti" }, { name: "tomatoes" }],
+      steps: ["Boil it.", "Toss it."],
+      uncertain: [
+        { path: "ingredients.1.quantity", reason: "The video says “a can”." },
+        { path: "steps.1", reason: "Too fast to follow." },
+      ],
+    },
+  };
+  stubApi(marked);
+  renderApp(`/imports/${ready.id}`);
+
+  // Each marked box is read with its reason; the count sits under the banner.
+  const amounts = await screen.findAllByLabelText("Amount");
+  expect(amounts[1]).toHaveAccessibleDescription("To look at: The video says “a can”.");
+  expect(amounts[0]).not.toHaveAccessibleDescription();
+  expect(screen.getByText(/2 things to look at/)).toBeInTheDocument();
+
+  // Go to the first: focus on the first marked box.
+  await userEvent.click(screen.getByRole("button", { name: "Go to the first" }));
+  expect(amounts[1]).toHaveFocus();
+
+  // Typing in it clears its mark, and the count.
+  await userEvent.type(amounts[1] as HTMLElement, "400");
+  expect(amounts[1]).not.toHaveAccessibleDescription();
+  expect(screen.getByText(/1 thing to look at/)).toBeInTheDocument();
+
+  // Removing the first step moves the second's mark up with it.
+  await userEvent.click(screen.getByRole("button", { name: "Remove step 1" }));
+  expect(screen.getByLabelText("Step 1")).toHaveAccessibleDescription(
+    "To look at: Too fast to follow.",
+  );
+});

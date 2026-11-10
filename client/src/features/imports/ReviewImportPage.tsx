@@ -105,6 +105,7 @@ export function ReviewImportPage() {
       <LazyRecipeForm
         intro={<DraftBanner input={job.input} />}
         defaultValues={toFormValues(job.draft)}
+        uncertain={job.draft.uncertain}
         source={sourceOf(job.input)}
         picture={
           job.thumbnail && (

@@ -66,9 +66,11 @@ export function toastPinching() {
 
 // The import's id is the toast's: a ready one takes the place of its failure, and the failure
 // can be closed once it's retried or gone (importToasts.ts).
-export function toastReady(id: string, title: string, review: () => void) {
+// lookAt: what the draft asks the user to check ("3 things to look at"), when it asks anything.
+export function toastReady(id: string, title: string, review: () => void, lookAt?: string) {
   showToast("success", `${title} is ready to review`, {
     id,
+    description: lookAt,
     duration: long,
     action: { label: "Review", onClick: review },
   });

@@ -304,6 +304,19 @@ test("a ready one is named by its draft's title, and counted in the heading", as
   expect(screen.getByRole("link", { name: "Review" })).toHaveAccessibleDescription("Tomato pasta");
 });
 
+test("a ready one counts its things to look at", async () => {
+  const uncertain = [
+    { path: "title", reason: "Not said." },
+    { path: "servings", reason: "Not said." },
+  ];
+  stubApi([[importOf({ status: "ready", draft: { ...draft, uncertain } })]]);
+  renderApp("/");
+
+  expect(await screen.findByText(/Ready to review/)).toHaveTextContent(
+    "Ready to review · ◆ 2 things to look at",
+  );
+});
+
 test("when the queue can't load, Try again asks again", async () => {
   let gets = 0;
   const fetch = vi.fn((path: string) => {
@@ -424,7 +437,14 @@ test("an import that becomes ready or fails says so once in a toast, with its ne
   stubApi([
     [importOf({ status: "processing" }), importOf({ id: other, status: "processing" })],
     [failed, importOf({ id: other })],
-    [failed, importOf({ id: other, status: "ready", draft })],
+    [
+      failed,
+      importOf({
+        id: other,
+        status: "ready",
+        draft: { ...draft, uncertain: [{ path: "title", reason: "Not said." }] },
+      }),
+    ],
   ]);
   renderApp("/");
 
@@ -437,6 +457,10 @@ test("an import that becomes ready or fails says so once in a toast, with its ne
   expect(
     within(toastOf("Tomato pasta is ready to review")).getByRole("button", { name: "Review" }),
   ).toBeVisible();
+  // With what the draft asks the user to check.
+  expect(
+    within(toastOf("Tomato pasta is ready to review")).getByText("1 thing to look at"),
+  ).toBeInTheDocument();
   expect(screen.getAllByText("Couldn't read that video")).toHaveLength(1);
   const failure = toastOf("Couldn't read that video");
   expect(within(failure).getByText("It may be private.")).toBeInTheDocument();
