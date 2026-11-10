@@ -1,8 +1,9 @@
 import type { Import } from "@pinch/shared";
 import { useQuery } from "@tanstack/react-query";
-import { CookingPot, LoaderCircle, TriangleAlert } from "lucide-react";
+import { LoaderCircle, TriangleAlert } from "lucide-react";
 import type { ReactNode } from "react";
 import { Link } from "react-router";
+import { EmojiTile } from "../../components/EmojiTile.tsx";
 import { Thumbnail } from "../../components/Thumbnail.tsx";
 import { Button } from "../../components/ui/Button.tsx";
 import { Skeleton } from "../../components/ui/Skeleton.tsx";
@@ -110,11 +111,9 @@ function Picture({ job }: { job: Import }) {
     );
   }
   if (job.status === "ready") {
-    // A text or screenshots draft: no picture from a post.
+    // A text draft, or a post without a picture: the dish's emoji (D25).
     return (
-      <div className="flex h-20 w-16 shrink-0 items-center justify-center rounded-control bg-muted text-muted-foreground">
-        <CookingPot aria-hidden="true" className="size-6" />
-      </div>
+      <EmojiTile emoji={job.draft?.emoji} className="h-20 w-16 shrink-0 rounded-control text-3xl" />
     );
   }
   return <Skeleton className="h-20 w-16 shrink-0" />;

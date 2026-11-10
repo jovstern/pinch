@@ -4,6 +4,7 @@ import { Link, useParams } from "react-router";
 import { Badge } from "../../components/ui/Badge.tsx";
 import { Breadcrumb } from "../../components/ui/Breadcrumb.tsx";
 import { Button } from "../../components/ui/Button.tsx";
+import { EmojiTile } from "../../components/EmojiTile.tsx";
 import { Thumbnail } from "../../components/Thumbnail.tsx";
 import { useHeadingFocus } from "../../lib/useHeadingFocus.ts";
 import { ingredientLine } from "./ingredientLine.ts";
@@ -43,11 +44,18 @@ export function RecipePage() {
       <Breadcrumb links={[{ label: "My recipes", to: "/recipes" }]} page={recipe.title} />
       {/* The picture above the title on a phone, beside it from 1024 px (design §14). */}
       <div className="mt-2 lg:flex lg:items-start lg:gap-12">
-        {recipe.thumbnail && (
+        {recipe.thumbnail ? (
           <Thumbnail
             src={`/api/recipes/${recipe.id}/thumbnail`}
             size={recipe.thumbnail}
             shape="banner"
+          />
+        ) : (
+          // Its emoji instead (D25): a lower band than a picture's, as there's less to see; edge
+          // to edge on a phone, as the banner (the same margins), beside the title from 1024 px.
+          <EmojiTile
+            emoji={recipe.emoji}
+            className="-mx-4 aspect-5/2 text-7xl sm:mx-0 sm:rounded-card lg:aspect-4/3 lg:w-80 lg:shrink-0"
           />
         )}
         <div className="mt-4 min-w-0 lg:mt-0">

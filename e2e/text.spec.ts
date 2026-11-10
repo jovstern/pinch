@@ -1,7 +1,7 @@
 import { expect, test } from "./fixtures.ts";
 
 // M5's demo (pr-demo skill): a post's text, pasted in the same box as a link, becomes a draft,
-// which is saved as a recipe with its nutrition estimate. The fake extractor stands in for
+// which is saved as a recipe with its nutrition estimate and its emoji. The fake extractor stands in for
 // Gemini (design §9), so the draft is its fixed one. The pauses let a viewer follow the video.
 // It deletes the recipe it made, as import.spec.ts does: the files share one database.
 test("paste a recipe's text, review the draft, save it with its nutrition", async ({ page }) => {
@@ -19,6 +19,8 @@ test("paste a recipe's text, review the draft, save it with its nutrition", asyn
   const text = page.getByRole("listitem").filter({ hasText: "Tomato pasta for 2" });
   await expect(text).toContainText(/Waiting to start…|Working on it…/);
   await expect(text.getByText("Ready to review")).toBeVisible({ timeout: 15_000 });
+  // A text has no picture: the card shows the dish's emoji, the model's pick (D25).
+  await expect(text).toContainText("🍝");
   await page.waitForTimeout(1000);
   await text.getByRole("link", { name: "Review" }).click();
 
@@ -32,6 +34,15 @@ test("paste a recipe's text, review the draft, save it with its nutrition", asyn
   ).toBeVisible();
   await expect(page.getByText(/≈ 520 kcal · 18 g protein/)).toBeVisible();
   await page.waitForTimeout(2000);
+  // The emoji came with it, and is its face in My recipes.
+  await page
+    .getByRole("navigation", { name: "Breadcrumb" })
+    .getByRole("link", { name: "My recipes" })
+    .click();
+  const card = page.getByRole("link", { name: /Tomato pasta \(from text\)/ });
+  await expect(card).toContainText("🍝");
+  await page.waitForTimeout(1000);
+  await card.click();
 
   await page.getByRole("button", { name: "More actions" }).click();
   await page.getByRole("menuitem", { name: "Delete…" }).click();
