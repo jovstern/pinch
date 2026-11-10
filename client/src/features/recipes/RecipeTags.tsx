@@ -1,5 +1,6 @@
 import { Plus, X } from "lucide-react";
 import { lazy, Suspense, useId, useRef, useState } from "react";
+import { ErrorBoundary } from "../../components/ErrorBoundary.tsx";
 import { FieldError } from "../../components/FieldError.tsx";
 import { Button } from "../../components/ui/Button.tsx";
 import { tagLabel } from "./tagLabels.ts";
@@ -71,17 +72,21 @@ export function RecipeTags({ selected, onChange, errors }: RecipeTagsProps) {
             <Plus aria-hidden="true" className="size-4" />
             Add tag
           </Button>
+          {/* A sheet that won't load (offline, a new deploy) just doesn't open: caught here, not
+              by the page's ErrorBoundary, which would replace the form and what's typed in it. */}
           {picking && (
-            <Suspense>
-              <TagsSheet
-                selected={selected}
-                onChange={onChange}
-                onClose={() => {
-                  setPicking(false);
-                }}
-                focusOnClose={() => addTagRef.current?.focus()}
-              />
-            </Suspense>
+            <ErrorBoundary fallback={null}>
+              <Suspense>
+                <TagsSheet
+                  selected={selected}
+                  onChange={onChange}
+                  onClose={() => {
+                    setPicking(false);
+                  }}
+                  focusOnClose={() => addTagRef.current?.focus()}
+                />
+              </Suspense>
+            </ErrorBoundary>
           )}
         </li>
       </ul>

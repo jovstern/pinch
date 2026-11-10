@@ -1,12 +1,15 @@
 import { SlidersHorizontal } from "lucide-react";
 import { lazy, Suspense, useRef, useState } from "react";
+import { ErrorBoundary } from "../../components/ErrorBoundary.tsx";
 import { Badge } from "../../components/ui/Badge.tsx";
 import { Button } from "../../components/ui/Button.tsx";
 
 // The sheet (Radix's Dialog: its focus trap, scroll lock and the rest, ~12 kB) is its own chunk,
 // fetched on the first press, as DeleteRecipeDialog is: in My recipes' first load it put every
 // page over its JS budget, for a button only a phone shows (docs/metrics/m08.md). On a slow link
-// the first press waits a moment for it, as Add tag's and the editor's questions do.
+// the first press waits a moment for it, as Add tag's and the editor's questions do. No busy cue
+// on the button meanwhile, unlike ⋯: it can't tell when the sheet has arrived (the sheet opens
+// over it), and a cue kept while it's open dims it behind the sheet, which axe counts as contrast.
 const FiltersSheet = lazy(async () => ({
   default: (await import("./FiltersSheet.tsx")).FiltersSheet,
 }));
@@ -46,17 +49,21 @@ export function FiltersButton({ selected, onChange }: FiltersButtonProps) {
           </>
         )}
       </Button>
+      {/* A sheet that won't load (offline, a new deploy) just doesn't open: caught here, not by
+          the page's ErrorBoundary, which would replace My recipes for a sheet. */}
       {open && (
-        <Suspense>
-          <FiltersSheet
-            selected={selected}
-            onChange={onChange}
-            onClose={() => {
-              setOpen(false);
-            }}
-            focusOnClose={() => buttonRef.current?.focus()}
-          />
-        </Suspense>
+        <ErrorBoundary fallback={null}>
+          <Suspense>
+            <FiltersSheet
+              selected={selected}
+              onChange={onChange}
+              onClose={() => {
+                setOpen(false);
+              }}
+              focusOnClose={() => buttonRef.current?.focus()}
+            />
+          </Suspense>
+        </ErrorBoundary>
       )}
     </>
   );
