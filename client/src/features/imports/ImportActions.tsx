@@ -6,9 +6,9 @@ import { toastCouldntSave, toastDismissed } from "../../lib/toasts.tsx";
 import { importListQuery, restoreImport, retryImport } from "./importQueries.ts";
 
 // What a failed import offers (design §4.2): Retry puts it back in the queue for three more
-// tries; Dismiss deletes it, and its toast's Undo brings it back (D27). A stalled one (no worker is taking it, §4.3), and a failure no retry
-// can fix (D23), offer only Dismiss. Either way the list is asked again, and a retried one is
-// polled.
+// tries; Dismiss deletes it, and its toast's Undo brings it back (D27). A stalled one (no worker
+// is taking it, §4.3), and a failure no retry can fix (D23), offer only Dismiss. Either way the
+// list is asked again, and a retried one is polled.
 // Once it's done the buttons are gone, so focus moves to the paste box (focusPasteBox) rather
 // than falling to the page.
 export function ImportActions({ job, focusPasteBox }: { job: Import; focusPasteBox: () => void }) {

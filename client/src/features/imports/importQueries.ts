@@ -1,6 +1,6 @@
 import { ImportListSchema, ImportSchema, type ImportList } from "@pinch/shared";
 import { queryOptions, type QueryClient } from "@tanstack/react-query";
-import { deleteResource, getJson, sendJson } from "../../lib/api.ts";
+import { ApiError, deleteResource, getJson, sendJson } from "../../lib/api.ts";
 import { dismissToast, toastCancelled } from "../../lib/toasts.tsx";
 
 // My imports, newest first: few, as done ones are deleted (design §4.1). One request for all of
@@ -41,9 +41,14 @@ export async function restoreImport(queryClient: QueryClient, id: string) {
 }
 
 // Undo of Pinch it: deleted, whatever the worker has got to; its draft never shows (§4.3). Its
-// ready toast closes, if it got that far.
+// ready toast closes, if it got that far. Already gone (a 404: discarded or dismissed meanwhile, in
+// another tab) is as good as cancelled.
 export async function cancelImport(queryClient: QueryClient, id: string) {
-  await deleteResource(`/api/imports/${id}`);
+  try {
+    await deleteResource(`/api/imports/${id}`);
+  } catch (error) {
+    if (!(error instanceof ApiError && error.status === 404)) throw error;
+  }
   dismissToast(id);
   await queryClient.invalidateQueries({ queryKey: importListQuery.queryKey });
   toastCancelled();

@@ -569,7 +569,8 @@ Delete's stays in its dialog. **Undo** (D27) is on Pinch it's toast (5 s: it can
 then "Cancelled") and on deleted, discarded and dismissed (8 s). The user stays where they are:
 an undone delete says "Back in My recipes" with View (Delete has left the recipe's page); an undone
 discard or dismiss puts the import back in the queue, and the queue's own toast says it's ready to
-review (Review) or failed (Retry). An Undo that fails says "Couldn't undo", with Try again. Alt+T
+review (Review) or failed (Retry). An Undo that fails says "Couldn't undo", with Try again; one
+whose item is gone for good (a 404) says "Can't undo · It's already gone", without. Alt+T
 (Sonner's) moves the keyboard to the toasts, and Tab reaches Undo. A status change toasts even when
 its card shows it too: one rule everywhere, chosen over ui-craft's "toasts only for things
 off-screen". Toasts sit at the top on a phone, under the header, and bottom right from 768 px

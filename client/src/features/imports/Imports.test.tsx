@@ -475,6 +475,31 @@ test("when Undo fails, a toast says so, and Try again undoes it", async () => {
   expect(await screen.findByText("No.")).toBeInTheDocument();
 });
 
+test("Undo of something already gone says so, without Try again", async () => {
+  const failed = importOf({ status: "failed", attempts: 3, error: "No." });
+  stubApi([[failed], []], () => new Response(null, { status: 404 }));
+  renderApp("/");
+
+  await userEvent.click(await screen.findByRole("button", { name: "Dismiss" }));
+  fireEvent.click(within(await findToast("Dismissed")).getByRole("button", { name: "Undo" }));
+
+  const toast = await findToast("Can't undo");
+  expect(toast).toHaveTextContent("It's already gone");
+  expect(within(toast).queryByRole("button", { name: "Try again" })).not.toBeInTheDocument();
+});
+
+test("Undo of Pinch it, when the import is already gone, is as good as cancelled", async () => {
+  stubApi([[], [importOf({})], []], undefined, () => new Response(null, { status: 404 }));
+  renderApp("/");
+
+  await userEvent.type(screen.getByRole("textbox", { name: "Pinch a recipe from a reel" }), reel);
+  await userEvent.click(screen.getByRole("button", { name: "Pinch it" }));
+  fireEvent.click(within(await findToast("Pinching it")).getByRole("button", { name: "Undo" }));
+
+  expect(await screen.findByText("Cancelled")).toBeInTheDocument();
+  expect(screen.queryByText("Can't undo")).not.toBeInTheDocument();
+});
+
 async function findToast(text: string) {
   await screen.findByText(text);
   return toastOf(text);

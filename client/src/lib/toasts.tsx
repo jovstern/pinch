@@ -1,6 +1,7 @@
 import { LoaderCircle } from "lucide-react";
 import { useSyncExternalStore } from "react";
 import type { ExternalToast } from "sonner";
+import { ApiError } from "./api.ts";
 
 // Every toast in the app, by name, with how long it stays (design §14; the table in the
 // wireframe home.html).
@@ -56,11 +57,16 @@ export function dismissToast(id: string) {
 
 // Undo, on the toasts of a send or a delete (design D27). What it does is the caller's: a request,
 // then the queries to refresh. Sonner closes the toast as it's pressed; a failure says so, with
-// Try again.
+// Try again. A 404 isn't the connection: what it would bring back is gone (deleted for good, or in
+// another tab), and Try again would only fail again.
 function undoAction(undo: () => Promise<void>) {
   const run = () => {
-    undo().catch(() => {
-      toastCouldntSave(run, "Couldn't undo");
+    undo().catch((error: unknown) => {
+      if (error instanceof ApiError && error.status === 404) {
+        showToast("error", "Can't undo", { description: "It's already gone", duration: normal });
+      } else {
+        toastCouldntSave(run, "Couldn't undo");
+      }
     });
   };
   return { label: "Undo", onClick: run };
