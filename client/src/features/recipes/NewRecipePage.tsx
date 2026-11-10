@@ -4,6 +4,7 @@ import { Link, useNavigate } from "react-router";
 import { Breadcrumb } from "../../components/ui/Breadcrumb.tsx";
 import { sendJson } from "../../lib/api.ts";
 import { toastSaved } from "../../lib/toasts.tsx";
+import { focusHeading } from "../../lib/useHeadingFocus.ts";
 import { LazyRecipeForm } from "./LazyRecipeForm.tsx";
 import { emptyRecipe } from "./recipeFormValues.ts";
 import { recipeListsKey, recipeQuery } from "./recipeQueries.ts";
@@ -24,7 +25,7 @@ export function NewRecipePage() {
         refetchType: "all",
       });
       // replace: Back from the new recipe goes where the user was, not to a blank form.
-      void navigate(`/recipes/${recipe.id}`, { replace: true });
+      void navigate(`/recipes/${recipe.id}`, { replace: true, state: focusHeading });
       toastSaved(recipe.title);
     },
   });
@@ -36,17 +37,17 @@ export function NewRecipePage() {
           heading is for screen readers. */}
       <Breadcrumb links={[{ label: "New recipe", to: "/" }]} page="Write a recipe" />
       <h1 className="sr-only">Write a recipe</h1>
+      {/* The faster way, for a recipe that's already written down somewhere. Above the form,
+          not its intro: it's the page's largest text, and inside the form it waited for the
+          form's chunk to paint (LCP 2.6 s, docs/metrics/m08.md). */}
+      <p className="mt-4 rounded-card bg-muted p-3 text-sm text-pretty">
+        Got the recipe as text?{" "}
+        <Link to="/" className="font-semibold underline underline-offset-4">
+          Paste it on New recipe
+        </Link>{" "}
+        and Pinch fills this in.
+      </p>
       <LazyRecipeForm
-        intro={
-          // The faster way, for a recipe that's already written down somewhere.
-          <p className="rounded-card bg-muted p-3 text-sm text-pretty">
-            Got the recipe as text?{" "}
-            <Link to="/" className="font-semibold underline underline-offset-4">
-              Paste it on New recipe
-            </Link>{" "}
-            and Pinch fills this in.
-          </p>
-        }
         defaultValues={emptyRecipe}
         source={{ type: "manual" }}
         submitLabel="Save recipe"

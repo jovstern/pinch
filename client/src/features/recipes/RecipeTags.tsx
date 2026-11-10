@@ -1,16 +1,16 @@
 import { Plus, X } from "lucide-react";
-import { useId, useRef } from "react";
+import { lazy, Suspense, useId, useRef, useState } from "react";
+import { ErrorBoundary } from "../../components/ErrorBoundary.tsx";
 import { FieldError } from "../../components/FieldError.tsx";
 import { Button } from "../../components/ui/Button.tsx";
-import {
-  Sheet,
-  SheetClose,
-  SheetContent,
-  SheetTitle,
-  SheetTrigger,
-} from "../../components/ui/Sheet.tsx";
 import { tagLabel } from "./tagLabels.ts";
-import { TagPicker } from "./TagPicker.tsx";
+
+// The sheet is its own chunk, fetched on the first press of Add tag, as My recipes' Filters
+// sheet (FiltersButton): with the editor's LeaveDialog, Radix's dialog was ~12 kB of the
+// editor's first load (docs/metrics/m08.md).
+const TagsSheet = lazy(async () => ({
+  default: (await import("./TagsSheet.tsx")).TagsSheet,
+}));
 
 type RecipeTagsProps = {
   selected: string[];
@@ -28,6 +28,8 @@ export function RecipeTags({ selected, onChange, errors }: RecipeTagsProps) {
   const invalid = errors.some((message) => typeof message === "string");
   // A chip's ✕ takes itself away: focus moves to Add tag, the next thing in the row.
   const addTagRef = useRef<HTMLButtonElement>(null);
+  // The sheet is open while it's on the page: closing takes it away.
+  const [picking, setPicking] = useState(false);
 
   return (
     <fieldset>
@@ -54,35 +56,38 @@ export function RecipeTags({ selected, onChange, errors }: RecipeTagsProps) {
           </li>
         ))}
         <li>
-          <Sheet>
-            <SheetTrigger asChild>
-              <Button
-                ref={addTagRef}
-                variant="outline"
-                aria-invalid={invalid}
-                aria-describedby={invalid ? errorId : undefined}
-                className="rounded-full"
-              >
-                <Plus aria-hidden="true" className="size-4" />
-                Add tag
-              </Button>
-            </SheetTrigger>
-            {/* Centred and narrower from 640 px, where the full width would be a long row. */}
-            <SheetContent aria-describedby={undefined} className="sm:mx-auto sm:max-w-xl">
-              <SheetTitle className="px-4 pt-5 pb-2 font-sans text-lg font-semibold">
-                Tags
-              </SheetTitle>
-              <div className="overflow-y-auto px-4 pb-4">
-                <TagPicker legend="Tags" selected={selected} onChange={onChange} />
-              </div>
-              {/* Tags apply as they're ticked: Done only closes it. Above the home bar. */}
-              <div className="border-t border-border p-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
-                <SheetClose asChild>
-                  <Button className="w-full">Done</Button>
-                </SheetClose>
-              </div>
-            </SheetContent>
-          </Sheet>
+          <Button
+            ref={addTagRef}
+            type="button"
+            variant="outline"
+            aria-haspopup="dialog"
+            aria-expanded={picking}
+            aria-invalid={invalid}
+            aria-describedby={invalid ? errorId : undefined}
+            className="rounded-full"
+            onClick={() => {
+              setPicking(true);
+            }}
+          >
+            <Plus aria-hidden="true" className="size-4" />
+            Add tag
+          </Button>
+          {/* A sheet that won't load (offline, a new deploy) just doesn't open: caught here, not
+              by the page's ErrorBoundary, which would replace the form and what's typed in it. */}
+          {picking && (
+            <ErrorBoundary fallback={null}>
+              <Suspense>
+                <TagsSheet
+                  selected={selected}
+                  onChange={onChange}
+                  onClose={() => {
+                    setPicking(false);
+                  }}
+                  focusOnClose={() => addTagRef.current?.focus()}
+                />
+              </Suspense>
+            </ErrorBoundary>
+          )}
         </li>
       </ul>
       <FieldError id={errorId} errors={errors} />

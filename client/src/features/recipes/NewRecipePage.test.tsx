@@ -40,7 +40,7 @@ function ingredient(number: number) {
   return within(screen.getByRole("group", { name: `Ingredient ${String(number)}` }));
 }
 
-test("saves a new recipe and shows it", async () => {
+test("saves a new recipe and shows it, its title focused", async () => {
   const fetch = stubApi(() => Response.json(saved, { status: 201 }));
   renderApp("/recipes/new");
 
@@ -54,12 +54,13 @@ test("saves a new recipe and shows it", async () => {
   await userEvent.type(ingredient(2).getByLabelText("Note"), "soft");
   await userEvent.type(screen.getByLabelText("Step 1"), "Toast the bread.");
   await userEvent.click(screen.getByRole("button", { name: "Add tag" }));
-  await userEvent.click(screen.getByRole("checkbox", { name: "breakfast" }));
+  await userEvent.click(await screen.findByRole("checkbox", { name: "breakfast" }));
   await userEvent.click(screen.getByRole("checkbox", { name: "quick" }));
   await userEvent.click(screen.getByRole("button", { name: "Done" }));
   await userEvent.click(screen.getByRole("button", { name: "Save recipe" }));
 
-  expect(await screen.findByRole("heading", { level: 1, name: "Toast" })).toBeInTheDocument();
+  // Focus on the new page's title, not lost to the page (useHeadingFocus).
+  expect(await screen.findByRole("heading", { level: 1, name: "Toast" })).toHaveFocus();
   expect(screen.getByText("Saved to My recipes")).toBeInTheDocument();
   // Blank optional fields aren't sent; the numbers are numbers. (Keys in the schema's order.)
   expect(fetch).toHaveBeenCalledWith("/api/recipes", {
@@ -117,6 +118,8 @@ test("an incomplete recipe says what to fix, and focuses the first field", async
   expect(screen.getByText("A step can't be empty.")).toBeInTheDocument();
   expect(screen.getByLabelText("Title")).toHaveFocus();
   expect(screen.getByLabelText("Title")).toHaveAccessibleDescription("Give the recipe a title.");
+  // By the Save button, what's left in all.
+  expect(screen.getByText("4 things to fix before saving")).toBeInTheDocument();
   expect(fetch.mock.calls.some(([, init]) => init?.method === "POST")).toBe(false);
 });
 
@@ -212,7 +215,7 @@ test("a tag chosen in Add tag shows as a chip, and its ✕ removes it", async ()
   renderApp("/recipes/new");
 
   await userEvent.click(await screen.findByRole("button", { name: "Add tag" }));
-  await userEvent.click(screen.getByRole("checkbox", { name: "spicy" }));
+  await userEvent.click(await screen.findByRole("checkbox", { name: "spicy" }));
   await userEvent.click(screen.getByRole("button", { name: "Done" }));
   await userEvent.click(screen.getByRole("button", { name: "Remove spicy" }));
 
@@ -251,6 +254,48 @@ test("an error stays with its row when a row above it is removed", async () => {
   expect(ingredient(1).getByRole("alert")).toHaveTextContent("Name the ingredient.");
   expect(ingredient(2).getByLabelText("Ingredient")).toHaveValue("jam");
   expect(ingredient(2).queryByRole("alert")).not.toBeInTheDocument();
+});
+
+test("the count by Save goes down as each error is fixed", async () => {
+  stubApi(() => Response.json(saved, { status: 201 }));
+  renderApp("/recipes/new");
+
+  await userEvent.click(await screen.findByRole("button", { name: "Save recipe" }));
+  expect(await screen.findByText("3 things to fix before saving")).toBeInTheDocument();
+  await userEvent.type(screen.getByLabelText("Title"), "Toast");
+  await userEvent.type(ingredient(1).getByLabelText("Ingredient"), "bread");
+
+  expect(screen.getByText("1 thing to fix before saving")).toBeInTheDocument();
+});
+
+test("closing the tab with changes asks first; without them it doesn't", async () => {
+  stubApi(() => Response.json(saved, { status: 201 }));
+  renderApp("/recipes/new");
+
+  const title = await screen.findByLabelText("Title");
+  const untouched = new Event("beforeunload", { cancelable: true });
+  window.dispatchEvent(untouched);
+  expect(untouched.defaultPrevented).toBe(false);
+
+  await userEvent.type(title, "Toast");
+  const changed = new Event("beforeunload", { cancelable: true });
+  window.dispatchEvent(changed);
+  expect(changed.defaultPrevented).toBe(true);
+});
+
+test("once saved, closing the tab no longer asks", async () => {
+  stubApi(() => Response.json(saved, { status: 201 }));
+  renderApp("/recipes/new");
+
+  await userEvent.type(await screen.findByLabelText("Title"), "Toast");
+  await userEvent.type(ingredient(1).getByLabelText("Ingredient"), "bread");
+  await userEvent.type(screen.getByLabelText("Step 1"), "Toast the bread.");
+  await userEvent.click(screen.getByRole("button", { name: "Save recipe" }));
+  await screen.findByRole("heading", { level: 1, name: "Toast" });
+
+  const leaving = new Event("beforeunload", { cancelable: true });
+  window.dispatchEvent(leaving);
+  expect(leaving.defaultPrevented).toBe(false);
 });
 
 test("every Save checks the whole form again, even while errors still show", async () => {
