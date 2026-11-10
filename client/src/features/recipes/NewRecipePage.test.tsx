@@ -54,7 +54,7 @@ test("saves a new recipe and shows it, its title focused", async () => {
   await userEvent.type(ingredient(2).getByLabelText("Note"), "soft");
   await userEvent.type(screen.getByLabelText("Step 1"), "Toast the bread.");
   await userEvent.click(screen.getByRole("button", { name: "Add tag" }));
-  await userEvent.click(screen.getByRole("checkbox", { name: "breakfast" }));
+  await userEvent.click(await screen.findByRole("checkbox", { name: "breakfast" }));
   await userEvent.click(screen.getByRole("checkbox", { name: "quick" }));
   await userEvent.click(screen.getByRole("button", { name: "Done" }));
   await userEvent.click(screen.getByRole("button", { name: "Save recipe" }));
@@ -215,7 +215,7 @@ test("a tag chosen in Add tag shows as a chip, and its ✕ removes it", async ()
   renderApp("/recipes/new");
 
   await userEvent.click(await screen.findByRole("button", { name: "Add tag" }));
-  await userEvent.click(screen.getByRole("checkbox", { name: "spicy" }));
+  await userEvent.click(await screen.findByRole("checkbox", { name: "spicy" }));
   await userEvent.click(screen.getByRole("button", { name: "Done" }));
   await userEvent.click(screen.getByRole("button", { name: "Remove spicy" }));
 

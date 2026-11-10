@@ -50,7 +50,7 @@ test("shows the recipe in the form, saves the whole of it, and focuses its title
   // Its tag shows as a chip; remove it and add another.
   await userEvent.click(screen.getByRole("button", { name: "Remove breakfast" }));
   await userEvent.click(screen.getByRole("button", { name: "Add tag" }));
-  await userEvent.click(screen.getByRole("checkbox", { name: "spicy" }));
+  await userEvent.click(await screen.findByRole("checkbox", { name: "spicy" }));
   await userEvent.click(screen.getByRole("button", { name: "Done" }));
   await userEvent.click(screen.getByRole("button", { name: "Save changes" }));
 

@@ -179,7 +179,7 @@ test("the Filters sheet applies a tag as it's ticked and counts it on its button
   renderApp("/recipes");
 
   await userEvent.click(await screen.findByRole("button", { name: "Filters" }));
-  const sheet = screen.getByRole("dialog", { name: "Filters" });
+  const sheet = await screen.findByRole("dialog", { name: "Filters" });
   await userEvent.click(within(sheet).getByRole("checkbox", { name: "breakfast" }));
   await waitFor(() => {
     expect(fetch).toHaveBeenLastCalledWith("/api/recipes?tags=meal%3Abreakfast");
