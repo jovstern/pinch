@@ -20,21 +20,20 @@ const DeleteRecipeDialog = lazy(async () => ({
   default: (await loadDialog()).DeleteRecipeDialog,
 }));
 
-type RecipeMenuProps = {
-  recipe: Recipe;
-  // Open as it appears: ⋯ was pressed while this chunk was on its way (LazyRecipeMenu).
-  defaultOpen: boolean;
-};
-
 // ⋯ beside Cook (design §14): what a recipe page does less often than cooking.
-export function RecipeMenu({ recipe, defaultOpen }: RecipeMenuProps) {
+export function RecipeMenu({ recipe }: { recipe: Recipe }) {
   // Open while it's on the page: closing takes it away, and a failed attempt with it.
   const [deleting, setDeleting] = useState(false);
   const triggerRef = useRef<HTMLButtonElement>(null);
   return (
     <>
+      {/* Not modal: a modal menu hides the rest of the page from screen readers (aria-hidden on
+          the header and main), which axe counts as violations (docs/metrics/m08.md). Focus still
+          stays in the menu (Tab doesn't leave it) and a press outside closes it. */}
       <DropdownMenu
-        defaultOpen={defaultOpen}
+        modal={false}
+        // Open as it appears: it appears when ⋯ is pressed (LazyRecipeMenu).
+        defaultOpen
         onOpenChange={(open) => {
           if (open) void loadDialog();
         }}

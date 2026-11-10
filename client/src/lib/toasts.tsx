@@ -1,4 +1,5 @@
 import { LoaderCircle } from "lucide-react";
+import { useSyncExternalStore } from "react";
 import type { ExternalToast } from "sonner";
 
 // Every toast in the app, by name, with how long it stays (design §14; the table in the
@@ -10,9 +11,33 @@ const long = seconds(8);
 // An error stays until it's closed, so it can't be missed.
 const untilClosed = Infinity;
 
+// Whether a toast has been sent yet. The Layout mounts the Toaster only then: fetched as the app
+// started, it and Sonner were on every page's path to its first paint, ~0.2 s of LCP
+// (docs/metrics/m08.md). A toast sent before the Toaster is there shows once it is: Sonner gives
+// a new Toaster the toasts still open.
+let toastSent = false;
+const listeners = new Set<() => void>();
+
+// The store React reads it from (useSyncExternalStore: it lives outside React).
+export function useToastSent() {
+  return useSyncExternalStore(
+    (listener) => {
+      listeners.add(listener);
+      return () => listeners.delete(listener);
+    },
+    () => toastSent,
+  );
+}
+
 // Sonner is its own chunk, as the Toaster is (Layout): it keeps ~9 kB out of the first load. If
 // it can't be fetched, nothing is shown: a toast is a nicety, and the page shows the change too.
 function showToast(kind: "message" | "success" | "error", title: string, options: ExternalToast) {
+  if (!toastSent) {
+    toastSent = true;
+    listeners.forEach((listener) => {
+      listener();
+    });
+  }
   import("sonner").then(
     ({ toast }) => toast[kind](title, options),
     () => undefined,
@@ -20,6 +45,9 @@ function showToast(kind: "message" | "success" | "error", title: string, options
 }
 
 export function dismissToast(id: string) {
+  // None sent, none to close: Sonner isn't fetched for nothing (the review page closes its
+  // draft's toast as it opens).
+  if (!toastSent) return;
   import("sonner").then(
     ({ toast }) => toast.dismiss(id),
     () => undefined,

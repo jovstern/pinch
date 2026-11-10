@@ -29,7 +29,7 @@ type RecipeFormProps = {
   // Shown, not edited: the API keeps a recipe's source and picture (D20), and has no upload.
   source: Recipe["source"];
   picture?: ReactNode;
-  // At the top of the left column: a draft's banner, or the tip on writing by hand.
+  // At the top of the left column: a draft's banner (Review).
   intro?: ReactNode;
   submitLabel: string;
   leave: Leave;
