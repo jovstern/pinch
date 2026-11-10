@@ -40,7 +40,7 @@ function ingredient(number: number) {
   return within(screen.getByRole("group", { name: `Ingredient ${String(number)}` }));
 }
 
-test("saves a new recipe and shows it", async () => {
+test("saves a new recipe and shows it, its title focused", async () => {
   const fetch = stubApi(() => Response.json(saved, { status: 201 }));
   renderApp("/recipes/new");
 
@@ -54,12 +54,13 @@ test("saves a new recipe and shows it", async () => {
   await userEvent.type(ingredient(2).getByLabelText("Note"), "soft");
   await userEvent.type(screen.getByLabelText("Step 1"), "Toast the bread.");
   await userEvent.click(screen.getByRole("button", { name: "Add tag" }));
-  await userEvent.click(screen.getByRole("checkbox", { name: "breakfast" }));
+  await userEvent.click(await screen.findByRole("checkbox", { name: "breakfast" }));
   await userEvent.click(screen.getByRole("checkbox", { name: "quick" }));
   await userEvent.click(screen.getByRole("button", { name: "Done" }));
   await userEvent.click(screen.getByRole("button", { name: "Save recipe" }));
 
-  expect(await screen.findByRole("heading", { level: 1, name: "Toast" })).toBeInTheDocument();
+  // Focus on the new page's title, not lost to the page (useHeadingFocus).
+  expect(await screen.findByRole("heading", { level: 1, name: "Toast" })).toHaveFocus();
   expect(screen.getByText("Saved to My recipes")).toBeInTheDocument();
   // Blank optional fields aren't sent; the numbers are numbers. (Keys in the schema's order.)
   expect(fetch).toHaveBeenCalledWith("/api/recipes", {
@@ -214,7 +215,7 @@ test("a tag chosen in Add tag shows as a chip, and its ✕ removes it", async ()
   renderApp("/recipes/new");
 
   await userEvent.click(await screen.findByRole("button", { name: "Add tag" }));
-  await userEvent.click(screen.getByRole("checkbox", { name: "spicy" }));
+  await userEvent.click(await screen.findByRole("checkbox", { name: "spicy" }));
   await userEvent.click(screen.getByRole("button", { name: "Done" }));
   await userEvent.click(screen.getByRole("button", { name: "Remove spicy" }));
 

@@ -6,11 +6,13 @@ import {
   AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
+  AlertDialogFooter,
   AlertDialogTitle,
 } from "../../components/ui/AlertDialog.tsx";
 import { Button } from "../../components/ui/Button.tsx";
 import { deleteResource } from "../../lib/api.ts";
 import { toastDeleted } from "../../lib/toasts.tsx";
+import { focusHeading } from "../../lib/useHeadingFocus.ts";
 import { recipeListsKey } from "./recipeQueries.ts";
 
 type DeleteRecipeDialogProps = {
@@ -38,7 +40,7 @@ export function DeleteRecipeDialog({ recipe, onClose, focusOnClose }: DeleteReci
         queryKey: recipeListsKey,
         refetchType: "all",
       });
-      void navigate("/recipes");
+      void navigate("/recipes", { state: focusHeading });
       // A failure stays in the dialog, by its buttons:
       // the dialog shuts out a toast's.
       toastDeleted(recipe.title);
@@ -68,7 +70,7 @@ export function DeleteRecipeDialog({ recipe, onClose, focusOnClose }: DeleteReci
             It couldn't be deleted. Try again.
           </p>
         )}
-        <div className="mt-6 flex justify-end gap-3">
+        <AlertDialogFooter>
           <AlertDialogCancel asChild>
             <Button variant="secondary">Keep it</Button>
           </AlertDialogCancel>
@@ -84,7 +86,7 @@ export function DeleteRecipeDialog({ recipe, onClose, focusOnClose }: DeleteReci
           >
             {deletion.isPending ? "Deleting…" : "Delete"}
           </Button>
-        </div>
+        </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>
   );

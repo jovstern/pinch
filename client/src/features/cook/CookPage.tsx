@@ -63,6 +63,8 @@ export function CookPage() {
     />
   );
 
+  const timerBar = <TimerBar timers={timers} now={now} onStop={stop} />;
+
   return (
     <article>
       <title>{`Cooking ${recipe.title} · Pinch`}</title>
@@ -87,7 +89,7 @@ export function CookPage() {
 
       {/* As on the recipe's page: from 1024 px the checklist sits on the left, beside the steps;
           on a phone it's folded under them, as the step is what matters at the stove. */}
-      <div className="mt-8 lg:mt-10 lg:grid lg:grid-cols-[minmax(0,22rem)_1fr] lg:items-start lg:gap-12">
+      <div className="mt-8 lg:mt-10 lg:grid lg:grid-cols-[minmax(16rem,22rem)_minmax(0,1fr)] lg:items-start lg:gap-12">
         {wide && (
           <section className="rounded-card border border-border p-5">
             <h2 id={allId} className="text-xl font-semibold">
@@ -113,19 +115,22 @@ export function CookPage() {
             // replace, as the form's Cancel: the phone's Back then doesn't reopen cook mode.
             void navigate(recipePath, { replace: true });
           }}
-        />
-
-        {!wide && (
-          <details className="mt-8">
-            <summary id={allId} className="cursor-pointer py-2.5 font-semibold">
-              All ingredients ({recipe.ingredients.length})
-            </summary>
-            {checklist}
-          </details>
-        )}
+          timers={!wide && timerBar}
+        >
+          {!wide && (
+            <details className="mt-4">
+              <summary id={allId} className="cursor-pointer py-2.5 font-semibold">
+                All ingredients ({recipe.ingredients.length})
+              </summary>
+              {checklist}
+            </details>
+          )}
+        </StepCarousel>
       </div>
 
-      <TimerBar timers={timers} now={now} onStop={stop} />
+      {/* From 1024 px the timers sit under both columns, kept at the bottom of the screen. Below
+          it they're in the steps' footer, with Back and Next. */}
+      {wide && <div className="sticky bottom-0 mt-8">{timerBar}</div>}
     </article>
   );
 }

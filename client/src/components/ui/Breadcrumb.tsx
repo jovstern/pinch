@@ -13,14 +13,15 @@ type BreadcrumbProps = {
 // says where it belongs (D24). The links are React Router's. Where Pinch departs from shadcn: one
 // prop per part instead of six parts to compose, as the pages only ever pass links and a page;
 // each link 44 px tall for touch; one row, where only the recipe's title is cut with an
-// ellipsis, never the first crumb (the way back).
+// ellipsis, never the first crumb (the way back), and at 28 characters on every width, so a long
+// title never pushes "Cook" or "Edit" to the far side of a wide screen.
 export function Breadcrumb({ links, page }: BreadcrumbProps) {
   return (
     <nav aria-label="Breadcrumb">
       <ol className="-mx-1 flex items-center gap-1 text-sm text-muted-foreground">
         {links.map((link, index) => (
           <Fragment key={link.to}>
-            <li className={index === 0 ? "shrink-0" : "min-w-0"}>
+            <li className={index === 0 ? "shrink-0" : "max-w-[28ch] min-w-0"}>
               <Link
                 to={link.to}
                 dir="auto"
@@ -36,7 +37,7 @@ export function Breadcrumb({ links, page }: BreadcrumbProps) {
         ))}
         {/* The title is the page itself (My recipes › title) or the link before it (My recipes ›
             title › Cook): only the title gives way, so "Cook" or "Edit" stays whole. */}
-        <li className={links.length > 1 ? "shrink-0" : "min-w-0"}>
+        <li className={links.length > 1 ? "shrink-0" : "max-w-[28ch] min-w-0"}>
           <span
             aria-current="page"
             dir="auto"
