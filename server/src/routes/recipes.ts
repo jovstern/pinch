@@ -19,12 +19,14 @@ import {
   type RecipeCursor,
   type RecipeDocument,
 } from "../db/recipes.ts";
+import { NOT_DELETED } from "../db/softDelete.ts";
 import { WITHOUT_MEDIA } from "../db/thumbnail.ts";
 import { HttpError, parseInput } from "../errors.ts";
 import { titleEmoji } from "../titleEmoji.ts";
 import { sendThumbnail } from "./thumbnail.ts";
 
 // Every query filters by ownerId: a user only ever sees their own recipes (design §1, §8.3).
+// And every read leaves out the deleted ones, kept a while for Undo (D27).
 export function recipesRouter(db: Db) {
   const recipes = recipesCollection(db);
   const router = express.Router();
@@ -70,7 +72,7 @@ export function recipesRouter(db: Db) {
 
   router.get("/:id", async (req, res) => {
     const recipe = await recipes.findOne(
-      { _id: parseId(req.params.id), ownerId: req.userId },
+      { _id: parseId(req.params.id), ownerId: req.userId, ...NOT_DELETED },
       { projection: WITHOUT_MEDIA },
     );
     if (!recipe) throw recipeNotFound();
@@ -80,7 +82,7 @@ export function recipesRouter(db: Db) {
   // The recipe's picture (§5), apart from the recipe, so lists stay small.
   router.get("/:id/thumbnail", async (req, res) => {
     const recipe = await recipes.findOne(
-      { _id: parseId(req.params.id), ownerId: req.userId },
+      { _id: parseId(req.params.id), ownerId: req.userId, ...NOT_DELETED },
       { projection: { thumbnail: 1 } },
     );
     // No picture: as good as no recipe, for an <img>.
@@ -92,7 +94,7 @@ export function recipesRouter(db: Db) {
   // is cleared rather than kept (design §8).
   router.put("/:id", async (req, res) => {
     const input = parseInput(RecipeInputSchema, req.body);
-    const filter = { _id: parseId(req.params.id), ownerId: req.userId };
+    const filter = { _id: parseId(req.params.id), ownerId: req.userId, ...NOT_DELETED };
     const existing = await recipes.findOne(filter);
     if (!existing) throw recipeNotFound();
     // Every stored field the form doesn't send is kept here, or replaceOne erases it (D20).
@@ -114,13 +116,27 @@ export function recipesRouter(db: Db) {
     res.json(toRecipe(recipe));
   });
 
+  // Kept a while, to undo (D27): it's only marked deleted, and every read above leaves it out.
+  // Deleting it again is a 404, as for any recipe that isn't there.
   router.delete("/:id", async (req, res) => {
-    const { deletedCount } = await recipes.deleteOne({
-      _id: parseId(req.params.id),
-      ownerId: req.userId,
-    });
-    if (deletedCount === 0) throw recipeNotFound();
+    const { matchedCount } = await recipes.updateOne(
+      { _id: parseId(req.params.id), ownerId: req.userId, ...NOT_DELETED },
+      { $set: { deletedAt: new Date() } },
+    );
+    if (matchedCount === 0) throw recipeNotFound();
     res.status(204).end();
+  });
+
+  // Undo of a delete: the recipe is back as it was. Safe to repeat: one that isn't deleted is
+  // answered as it is. Once the TTL has deleted it for good (D27), it's a 404.
+  router.post("/:id/restore", async (req, res) => {
+    const recipe = await recipes.findOneAndUpdate(
+      { _id: parseId(req.params.id), ownerId: req.userId },
+      { $unset: { deletedAt: "" } },
+      { returnDocument: "after", projection: WITHOUT_MEDIA },
+    );
+    if (!recipe) throw recipeNotFound();
+    res.json(toRecipe(recipe));
   });
 
   return router;

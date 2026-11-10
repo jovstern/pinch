@@ -14,6 +14,7 @@ import {
   type Filter,
   type ObjectId,
 } from "mongodb";
+import { NOT_DELETED } from "./softDelete.ts";
 import { WITHOUT_MEDIA, type StoredThumbnail } from "./thumbnail.ts";
 
 // A recipe as it is stored (design §6). A field added here that the form doesn't send must
@@ -34,6 +35,8 @@ export type RecipeDocument = RecipeInput & {
   sourceImportId?: ObjectId;
   createdAt: Date;
   updatedAt: Date;
+  // Set by DELETE, unset by restore: a deleted recipe is kept a while for Undo (D27).
+  deletedAt?: Date;
 };
 
 export function recipesCollection(db: Db) {
@@ -52,7 +55,8 @@ export function toRecipe(recipe: RecipeDocument): Recipe {
 }
 
 // Saves a recipe approved from an import, or answers the one an earlier approve of the same
-// import already made: the unique sourceImportId index lets only one in (design §4.4).
+// import already made: the unique sourceImportId index lets only one in (design §4.4). That one,
+// if the user has deleted it since, comes back: approving is asking for it (D27).
 export async function insertRecipeOnce(
   recipes: Collection<RecipeDocument>,
   recipe: RecipeDocument,
@@ -63,10 +67,11 @@ export async function insertRecipeOnce(
   } catch (error) {
     // 11000 is Mongo's duplicate key.
     if (!(error instanceof MongoServerError && error.code === 11000)) throw error;
-    const made = await recipes.findOne({
-      sourceImportId: recipe.sourceImportId,
-      ownerId: recipe.ownerId,
-    });
+    const made = await recipes.findOneAndUpdate(
+      { sourceImportId: recipe.sourceImportId, ownerId: recipe.ownerId },
+      { $unset: { deletedAt: "" } },
+      { returnDocument: "after" },
+    );
     // Deleted since the insert failed: rare, and a 500 then, as any database error.
     if (!made) throw error;
     return made;
@@ -142,7 +147,7 @@ export function findRecipes(
   ownerId: ObjectId,
   { q, tags = [], sources = [], maxMinutes, sort, after }: RecipeListOptions = {},
 ) {
-  const filter: Filter<RecipeDocument> = { ownerId };
+  const filter: Filter<RecipeDocument> = { ownerId, ...NOT_DELETED };
   if (q) filter.$text = { $search: q };
   if (tags.length > 0) filter.tags = { $all: tags };
   if (sources.length > 0) filter["source.type"] = { $in: sources };

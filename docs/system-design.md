@@ -132,9 +132,18 @@ stateDiagram-v2
   processing --> failed: lease expired on the 3rd attempt
   failed --> pending: user clicks Retry
   ready --> [*]: approve → recipe created, import deleted
-  ready --> [*]: discard → import deleted
-  failed --> [*]: dismiss → import deleted
+  ready --> deleted: discard
+  failed --> deleted: dismiss
+  pending --> deleted: Pinch it's Undo
+  processing --> deleted: Pinch it's Undo (the attempt saves nothing)
+  deleted --> ready: Undo a discard (restore)
+  deleted --> failed: Undo a dismiss (restore)
+  deleted --> [*]: an hour later (TTL)
 ```
+
+"Deleted" isn't a status: it's `deletedAt` set on the import, whatever its status, which restore
+unsets (D27). Every read leaves deleted imports out, the claim never takes one, and the worker's
+writes skip one, so an import deleted while it's processing never turns ready.
 
 `step` (`fetching | analyzing`) is shown inside `processing` for progress. The extractor sets
 it as each part starts (a link is fetched, then analyzed; a text is only analyzed), only while
@@ -180,6 +189,12 @@ of an attempt clears it.
   stalled though the workers are busy. Fine for one user; a worker heartbeat would be exact.
 - **Expiry.** Every import has `expiresAt` = 7 days; a **TTL index** makes Mongo delete abandoned
   imports by itself.
+- **Deleted while it runs** (D27). DELETE only sets `deletedAt`. The claim asks for jobs without
+  it, and every write of an attempt (step, picture, draft, failure, retry) matches the job only
+  while it's still `processing`, at this attempt's count, and not deleted. Each check-and-write
+  is one document's `updateOne`, atomic without a transaction (D9): a delete lands wholly before
+  a write (which then updates nothing) or after it (a ready, deleted import: never shown, and
+  gone with the TTL). So Pinch it's Undo, at any moment, means the draft never shows.
 
 ### 4.4 Approve is idempotent
 
@@ -244,7 +259,8 @@ Recipe {
   thumbnail?: { webp: Binary, width, height },   // the image left out of every query that answers
   source: { type: "instagram" | "facebook" | "youtube" | "text" | "image" | "manual", url? },
   sourceImportId?,                 // unique + sparse (§4.4)
-  createdAt, updatedAt
+  createdAt, updatedAt,
+  deletedAt?                       // set by DELETE, unset by restore; TTL an hour later (D27)
 }
 
 Import {
@@ -254,7 +270,8 @@ Import {
   input: { type: "link" | "text" | "images", url?, platform?, text?, count?, images? },
   attempts, nextAttemptAt, leaseUntil?, error?, noRetry?,
   draft?: RecipeDraft, thumbnail?: { webp: Binary, width, height },   // named as on a recipe
-  createdAt, updatedAt, expiresAt   // TTL
+  createdAt, updatedAt, expiresAt,  // TTL
+  deletedAt?                       // as a recipe's (D27)
 }
 
 RecipeDraft = RecipeInput + {
@@ -304,6 +321,7 @@ Every query that answers imports leaves them out.
 | recipes | `{ ownerId: 1, title: 1, _id: 1 }`, collation `en`, strength 2 | My recipes A–Z, whatever the case |
 | recipes | `{ ownerId: 1, title: "text", "ingredients.name": "text" }` | Text search inside my recipes |
 | recipes | `{ sourceImportId: 1 }` unique, sparse | Idempotent approve |
+| recipes, imports | `{ deletedAt: 1 }` TTL (`expireAfterSeconds: 3600`), partial: only documents that have it | A deleted one goes for good an hour later (D27); no read can use it, so it never competes with the others |
 | imports | `{ status: 1, nextAttemptAt: 1 }` | The worker's claim query |
 | imports | `{ ownerId: 1, createdAt: -1, _id: -1 }` | "My imports" list in the UI |
 | imports | `{ expiresAt: 1 }` TTL (`expireAfterSeconds: 0`) | Automatic cleanup |
@@ -311,7 +329,8 @@ Every query that answers imports leaves them out.
 | usage | `{ expiresAt: 1 }` TTL | Old days go |
 
 Every index is checked with `.explain("executionStats")`: expect `IXSCAN`, and
-`totalDocsExamined` close to `nReturned`.
+`totalDocsExamined` close to `nReturned` (a search fetches each match twice, by the text match
+and the not-deleted check, D27: still only the matches).
 
 **Sample data:** `npm run db:seed` adds ten sample recipes for the dev user (§8.3), so the
 list, search and filters have something to find; the e2e run seeds its own database the same
@@ -384,7 +403,8 @@ GET    /api/recipes?q=…&tags=cuisine:italian,flavor:spicy&source=instagram,man
 POST   /api/recipes                    create by hand (its emoji from its title, §6)
 GET    /api/recipes/:id
 PUT    /api/recipes/:id                replace what the user can edit (the form sends it all)
-DELETE /api/recipes/:id
+DELETE /api/recipes/:id                kept an hour, to undo (D27) → 204
+POST   /api/recipes/:id/restore        Undo of a delete → 200 recipe (404 once it's gone for good)
 GET    /api/recipes/:id/thumbnail      image/webp
 
 POST   /api/imports                    { type: "link", url } | { type: "text", text }  → 202 import (429 past the daily cap)
@@ -394,7 +414,8 @@ GET    /api/imports/:id                status, step, error, draft (with its unce
 GET    /api/imports/:id/thumbnail      image/webp: the draft's picture
 POST   /api/imports/:id/approve        the edited draft, as POST /api/recipes; nutritionPerServing, the emoji and the thumbnail from the stored import (D20), the marks dropped → 201 recipe (409 if not ready)
 POST   /api/imports/:id/retry          failed → pending, attempts, error and noRetry cleared → 202 (409 if not failed, or noRetry)
-DELETE /api/imports/:id                discard / dismiss
+DELETE /api/imports/:id                discard / dismiss / Pinch it's Undo: kept an hour (D27) → 204
+POST   /api/imports/:id/restore        Undo of a discard or a dismiss → 200 import, as it was
 ```
 
 One set of **Zod schemas** defines the Gemini output, the API input and the TypeScript types,
@@ -491,6 +512,7 @@ changes**. The planned design:
 | D24 | Two tabs, **New recipe** (`/`, the default) and **My recipes** (`/recipes`); the import queue sits under the box on New recipe; every inner page has breadcrumbs (docs/ux/pass-02.md §12–13) | Adding is the main event, so it opens first; the split keeps the form off the library; breadcrumbs say where a page belongs and replace Exit and "‹ Recipes" | One home with the box above the recipes; Recipes as the default tab; a bottom tab bar |
 | D25 | Every recipe has a face: the post's picture, else an emoji the model picks for the dish (an optional `emoji` on the recipe and the draft) on a soft tile; a recipe written by hand gets one from its title (§6) — built in M8 F3 | The picture is what the user remembers; a recipe with none still needs something to recognise; the title's list keeps it to the server, and the editor's JS at its budget | Grey placeholders; generated images; an emoji field in the editor; a map from the tags on the client |
 | D26 | The UI is built from **shadcn/ui** components, copied into `client/src/components/ui/`, their variables mapped onto Pinch's tokens; controls 44 px tall for touch | Accessible Radix parts (Tabs, Sheet, DropdownMenu, Dialog, toasts) whose code lives in the repo and can be read line by line; one pattern per control | Pinch's own components only; a packaged kit (MUI, Chakra) |
+| D27 | Undo in the toasts is a **soft delete**: DELETE sets `deletedAt` on the recipe or import, every read (lists, search, a recipe, its picture, edit, cook, the queue, its badge, approve, retry, the worker's claim and saves) leaves those out, `POST …/restore` unsets it, and a partial TTL index deletes them for good an hour later. Pinch it's Undo is the same DELETE: the worker's writes are conditional on the job not being deleted (§4.3), so a cancelled import never turns ready. Built in M8 F4 | Undo needs the thing to still exist; the server is the one place every tab and the worker agree on, and a closed tab can't lose a delete; one field and one filter for both collections, one atomic `updateOne` per write (no transactions, D9). Cancelling counts against the day's cap (D22): the request was already counted | Sending the DELETE only once the toast's 8 s are over (lost if the tab closes, other tabs show the deleted one meanwhile); a `cancelled` status for imports (a second mechanism next to the recipes' delete); moving deleted documents to a trash collection (two writes, no transaction) |
 
 ## 11. Risks
 
@@ -542,8 +564,14 @@ breadcrumbs under the header, and the tab they belong to stays selected. Every a
 a recipe's status confirms itself in a toast, with the next step when there is one: sent,
 ready to review (Review; its description counts the things to look at), failed (Retry), saved, changes saved, deleted, discarded, couldn't save
 (Try again). Saved has no View: saving already opens the recipe. Couldn't save is for the
-one-click actions (Dismiss, Discard, the toast's Retry); a form keeps its error by its fields, and
-Delete's stays in its dialog. Undo waits for the API (M8 F4). A status change toasts even when
+one-click actions (Dismiss, Discard, the toast's Retry, Undo); a form keeps its error by its fields, and
+Delete's stays in its dialog. **Undo** (D27) is on Pinch it's toast (5 s: it cancels the import,
+then "Cancelled") and on deleted, discarded and dismissed (8 s). The user stays where they are:
+an undone delete says "Back in My recipes" with View (Delete has left the recipe's page); an undone
+discard or dismiss puts the import back in the queue, and the queue's own toast says it's ready to
+review (Review) or failed (Retry). An Undo that fails says "Couldn't undo", with Try again; one
+whose item is gone for good (a 404) says "Can't undo · It's already gone", without. Alt+T
+(Sonner's) moves the keyboard to the toasts, and Tab reaches Undo. A status change toasts even when
 its card shows it too: one rule everywhere, chosen over ui-craft's "toasts only for things
 off-screen". Toasts sit at the top on a phone, under the header, and bottom right from 768 px
 (except in the editor, where they stay at the top, clear of its Save; opening a draft closes its
