@@ -7,7 +7,13 @@ import { platformNames } from "../../lib/platformNames.ts";
 
 // A recipe in My recipes' grid (design §14): its picture, where it came from, its title, and the
 // two things that decide what to cook tonight. One link, so the grid is one tab stop a recipe.
-export function RecipeCard({ recipe }: { recipe: Recipe }) {
+type RecipeCardProps = {
+  recipe: Recipe;
+  // Its picture loads at once, not when it nears the screen: the first row's (RecipeListPage).
+  eager: boolean;
+};
+
+export function RecipeCard({ recipe, eager }: RecipeCardProps) {
   // Instagram, YouTube or Facebook; a recipe written by hand (or from text) has no label.
   const platform = PlatformSchema.safeParse(recipe.source.type).data;
   return (
@@ -37,6 +43,7 @@ export function RecipeCard({ recipe }: { recipe: Recipe }) {
             src={`/api/recipes/${recipe.id}/thumbnail`}
             size={recipe.thumbnail}
             shape="cover"
+            eager={eager}
           />
         ) : (
           <div className="flex h-full items-center justify-center text-muted-foreground">

@@ -277,9 +277,11 @@ export function RecipeListPage() {
               aria-busy={isPlaceholderData}
               className={cn(gridClasses, isPlaceholderData && "opacity-60")}
             >
-              {recipes.map((recipe) => (
+              {recipes.map((recipe, index) => (
                 <li key={recipe.id}>
-                  <RecipeCard recipe={recipe} />
+                  {/* The first row on a phone (two columns): its pictures are the page's largest
+                      thing, so they don't wait to be found near the screen (docs/metrics/m08.md). */}
+                  <RecipeCard recipe={recipe} eager={index < 2} />
                 </li>
               ))}
             </ul>

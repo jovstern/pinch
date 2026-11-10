@@ -1,16 +1,24 @@
 import { fieldErrors, RecipeInputSchema, type Recipe, type RecipeInput } from "@pinch/shared";
 import { revalidateLogic, useForm, useSelector } from "@tanstack/react-form";
 import { Plus, X } from "lucide-react";
-import { useEffect, useRef, type ReactNode, type Ref } from "react";
+import { lazy, Suspense, useEffect, useRef, useState, type ReactNode, type Ref } from "react";
 import { Link, useNavigate } from "react-router";
 import { Button } from "../../components/ui/Button.tsx";
+import { ErrorBoundary } from "../../components/ErrorBoundary.tsx";
 import { FieldError } from "../../components/FieldError.tsx";
 import { TextField } from "../../components/TextField.tsx";
 import { ApiError } from "../../lib/api.ts";
-import { LeaveDialog } from "./LeaveDialog.tsx";
 import { emptyIngredient, toInput, type RecipeFormValues } from "./recipeFormValues.ts";
 import { RecipeSource } from "./RecipeSource.tsx";
 import { RecipeTags } from "./RecipeTags.tsx";
+
+// The question is its own chunk (Radix's AlertDialog), fetched on the press of Cancel or Discard,
+// as DeleteRecipeDialog is: with Add tag's sheet, Radix's dialog was ~12 kB of the editor's
+// first load, for a question most edits never ask (docs/metrics/m08.md). No busy cue on the
+// button while it loads, as for Filters (FiltersButton).
+const LeaveDialog = lazy(async () => ({
+  default: (await import("./LeaveDialog.tsx")).LeaveDialog,
+}));
 
 // The way out beside Save: Cancel, back to an address, or a draft's Discard, which deletes it.
 type Leave =
@@ -21,7 +29,7 @@ type RecipeFormProps = {
   // Shown, not edited: the API keeps a recipe's source and picture (D20), and has no upload.
   source: Recipe["source"];
   picture?: ReactNode;
-  // At the top of the left column: a draft's banner, or the tip on writing by hand.
+  // At the top of the left column: a draft's banner (Review).
   intro?: ReactNode;
   submitLabel: string;
   leave: Leave;
@@ -376,26 +384,11 @@ type LeaveButtonProps = {
 
 function LeaveButton({ leave, busy, title, changed }: LeaveButtonProps) {
   const navigate = useNavigate();
-  // With changes, Cancel asks first (design §14).
-  if (leave.kind === "cancel" && changed) {
-    return (
-      <LeaveDialog
-        trigger={
-          <Button type="button" variant="outline" className="w-28">
-            Cancel
-          </Button>
-        }
-        title="Discard your changes?"
-        description="What you've changed here won't be saved."
-        confirmLabel="Discard changes"
-        keepLabel="Keep editing"
-        onConfirm={() => {
-          void navigate(leave.to, { replace: true });
-        }}
-      />
-    );
-  }
-  if (leave.kind === "cancel") {
+  // The question is open while it's on the page: closing takes it away.
+  const [asking, setAsking] = useState(false);
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  // Without changes, Cancel just goes.
+  if (leave.kind === "cancel" && !changed) {
     return (
       <Button asChild variant="outline" className="w-28">
         {/* replace, as after a save: Back never returns to the form. */}
@@ -405,28 +398,59 @@ function LeaveButton({ leave, busy, title, changed }: LeaveButtonProps) {
       </Button>
     );
   }
+  // With changes, Cancel asks first (design §14); a draft's Discard always does.
+  const { button, ...question } =
+    leave.kind === "cancel"
+      ? {
+          button: "Cancel",
+          title: "Discard your changes?",
+          description: "What you've changed here won't be saved.",
+          confirmLabel: "Discard changes",
+          keepLabel: "Keep editing",
+          onConfirm: () => {
+            void navigate(leave.to, { replace: true });
+          },
+        }
+      : {
+          button: leave.discarding ? "Discarding…" : "Discard",
+          title: "Discard this draft?",
+          description: title.trim() ? `“${title.trim()}” won't be saved.` : "It won't be saved.",
+          confirmLabel: "Discard draft",
+          keepLabel: "Keep reviewing",
+          onConfirm: leave.discard,
+        };
   return (
-    <LeaveDialog
-      trigger={
-        // Not disabled while busy, so focus stays on it (as Show more): it just doesn't open.
-        <Button
-          type="button"
-          variant="outline"
-          aria-disabled={busy}
-          onClick={(event) => {
-            if (busy) event.preventDefault();
-          }}
-          className="w-28"
-        >
-          {leave.discarding ? "Discarding…" : "Discard"}
-        </Button>
-      }
-      title="Discard this draft?"
-      description={title.trim() ? `“${title.trim()}” won't be saved.` : "It won't be saved."}
-      confirmLabel="Discard draft"
-      keepLabel="Keep reviewing"
-      onConfirm={leave.discard}
-    />
+    <>
+      {/* Not disabled while busy, so focus stays on it (as Show more): it just doesn't open. */}
+      <Button
+        ref={buttonRef}
+        type="button"
+        variant="outline"
+        aria-haspopup="dialog"
+        aria-disabled={busy}
+        onClick={() => {
+          if (!busy) setAsking(true);
+        }}
+        className="w-28"
+      >
+        {button}
+      </Button>
+      {/* A question that won't load (offline, a new deploy) just doesn't open: caught here, not
+          by the page's ErrorBoundary, which would replace the form and what's typed in it. */}
+      {asking && (
+        <ErrorBoundary fallback={null}>
+          <Suspense>
+            <LeaveDialog
+              {...question}
+              onClose={() => {
+                setAsking(false);
+              }}
+              focusOnClose={() => buttonRef.current?.focus()}
+            />
+          </Suspense>
+        </ErrorBoundary>
+      )}
+    </>
   );
 }
 

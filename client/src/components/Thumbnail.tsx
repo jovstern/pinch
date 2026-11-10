@@ -12,6 +12,9 @@ type ThumbnailProps = {
   // "banner": a recipe's (design §14): a 5:4 band, edge to edge on a phone; from 1024 px 320 px
   // wide beside the title, at its own shape, no taller than 4:5.
   shape: "tile" | "cover" | "full" | "banner";
+  // A tile or cover at the top of its page (My recipes' first row): loaded as "full" and
+  // "banner" are.
+  eager?: boolean;
   className?: string;
 };
 
@@ -31,13 +34,13 @@ const shapeClasses = {
 
 // A recipe's picture, from its post. Decorative (alt=""): its title is always beside it. Its box
 // is the right size before the image loads (width and height from the API), so nothing jumps.
-export function Thumbnail({ src, size, shape, className = "" }: ThumbnailProps) {
+export function Thumbnail({ src, size, shape, eager = false, className = "" }: ThumbnailProps) {
   // A picture that doesn't load (gone, offline) is as no picture: no broken-image icon. Kept by
   // its address, so another picture in the same place is tried.
   const [failedSrc, setFailedSrc] = useState<string>();
   if (failedSrc === src) return null;
   // The top of a page: often its largest thing, and the last to arrive (page, JS, data, then it).
-  const onTop = shape === "full" || shape === "banner";
+  const onTop = shape === "full" || shape === "banner" || eager;
   return (
     <img
       src={src}

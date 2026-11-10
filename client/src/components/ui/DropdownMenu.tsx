@@ -13,17 +13,18 @@ export function DropdownMenuContent({
   sideOffset = 4,
   ...props
 }: ComponentProps<typeof DropdownMenuPrimitive.Content>) {
+  // No Portal, unlike shadcn's: the menu stays where its trigger is, inside the page's landmarks,
+  // as a menu that isn't modal must (axe's "region"; RecipeMenu). Radix places it with position:
+  // fixed, so the boxes around it don't clip it.
   return (
-    <DropdownMenuPrimitive.Portal>
-      <DropdownMenuPrimitive.Content
-        sideOffset={sideOffset}
-        className={cn(
-          "z-50 min-w-48 rounded-control border border-border bg-popover p-1 text-popover-foreground shadow-sheet",
-          className,
-        )}
-        {...props}
-      />
-    </DropdownMenuPrimitive.Portal>
+    <DropdownMenuPrimitive.Content
+      sideOffset={sideOffset}
+      className={cn(
+        "z-50 min-w-48 rounded-control border border-border bg-popover p-1 text-popover-foreground shadow-sheet",
+        className,
+      )}
+      {...props}
+    />
   );
 }
 
