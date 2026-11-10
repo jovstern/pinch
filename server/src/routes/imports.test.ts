@@ -229,13 +229,61 @@ test("GET /api/imports lists my imports, newest first", async () => {
   expect(newer).toBeLessThan(ids.indexOf(ImportSchema.parse(first.body).id));
 });
 
-test("DELETE /api/imports/:id deletes it, then it's not found", async () => {
+test("DELETE /api/imports/:id deletes it, then it's not found, nor in the list", async () => {
   const created = await request(app).post("/api/imports").send({ type: "link", url: reel });
   const { id } = ImportSchema.parse(created.body);
 
   expect((await request(app).delete(`/api/imports/${id}`)).status).toBe(204);
   expect((await request(app).get(`/api/imports/${id}`)).status).toBe(404);
   expect((await request(app).delete(`/api/imports/${id}`)).status).toBe(404);
+  const list = ImportListSchema.parse((await request(app).get("/api/imports")).body);
+  expect(list.items.map((job) => job.id)).not.toContain(id);
+  // Kept, to undo (D27), until the TTL index deletes it.
+  const stored = await importsCollection(db).findOne({ _id: new ObjectId(id) });
+  expect(stored?.deletedAt).toBeInstanceOf(Date);
+});
+
+test("a deleted draft can't be approved, a deleted failure can't be retried", async () => {
+  const ready = await insertDone({ draft });
+  const failed = await insertDone({ status: "failed", error: "No." });
+  await request(app).delete(`/api/imports/${ready}`);
+  await request(app).delete(`/api/imports/${failed}`);
+
+  expect((await request(app).post(`/api/imports/${ready}/approve`).send(draft)).status).toBe(404);
+  expect((await request(app).post(`/api/imports/${failed}/retry`)).status).toBe(404);
+});
+
+test("POST /api/imports/:id/restore brings a discarded draft back as it was", async () => {
+  const id = await insertDone({ draft });
+  const before = (await request(app).get(`/api/imports/${id}`)).body as unknown;
+  await request(app).delete(`/api/imports/${id}`);
+
+  const restored = await request(app).post(`/api/imports/${id}/restore`);
+  expect(restored.status).toBe(200);
+  expect(restored.body).toEqual(before);
+  const list = ImportListSchema.parse((await request(app).get("/api/imports")).body);
+  expect(list.items.map((job) => job.id)).toContain(id);
+  expect((await request(app).post(`/api/imports/${id}/approve`).send(draft)).status).toBe(201);
+});
+
+test("restore of an import that isn't there, or another user's, is not found", async () => {
+  const others = await importsCollection(db).insertOne({
+    _id: new ObjectId(),
+    ownerId: new ObjectId(),
+    status: "failed",
+    input: { type: "link", url: reel, platform: "instagram" },
+    attempts: 3,
+    nextAttemptAt: new Date(),
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    expiresAt: new Date(Date.now() + IMPORT_LIFETIME_MS),
+    deletedAt: new Date(),
+  });
+  const other = others.insertedId.toHexString();
+
+  expect((await request(app).post(`/api/imports/${other}/restore`)).status).toBe(404);
+  const missing = new ObjectId().toHexString();
+  expect((await request(app).post(`/api/imports/${missing}/restore`)).status).toBe(404);
 });
 
 test("an import no worker has taken, long after it was due, is stalled", async () => {
@@ -352,6 +400,21 @@ test("approving again after a crash between the two writes still makes one recip
   const made = await recipesCollection(db).countDocuments({ sourceImportId: new ObjectId(id) });
   expect(made).toBe(1);
   expect((await request(app).get(`/api/imports/${id}`)).status).toBe(404);
+});
+
+test("approving again brings back the recipe the first approve made, if it was deleted since", async () => {
+  const id = await insertDone({ draft });
+  const first = await request(app).post(`/api/imports/${id}/approve`).send(draft);
+  const { id: recipeId } = RecipeSchema.parse(first.body);
+  await request(app).delete(`/api/recipes/${recipeId}`);
+  // As if the first approve had stopped after the recipe, before deleting the import.
+  await insertDone({ _id: new ObjectId(id), draft });
+
+  const second = await request(app).post(`/api/imports/${id}/approve`).send(draft);
+
+  expect(second.status).toBe(201);
+  expect(second.body).toEqual(first.body);
+  expect((await request(app).get(`/api/recipes/${recipeId}`)).status).toBe(200);
 });
 
 test("approve refuses an import with no draft yet, an invalid recipe and a missing import", async () => {

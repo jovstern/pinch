@@ -132,9 +132,18 @@ stateDiagram-v2
   processing --> failed: lease expired on the 3rd attempt
   failed --> pending: user clicks Retry
   ready --> [*]: approve → recipe created, import deleted
-  ready --> [*]: discard → import deleted
-  failed --> [*]: dismiss → import deleted
+  ready --> deleted: discard
+  failed --> deleted: dismiss
+  pending --> deleted: Pinch it's Undo
+  processing --> deleted: Pinch it's Undo (the attempt saves nothing)
+  deleted --> ready: Undo a discard (restore)
+  deleted --> failed: Undo a dismiss (restore)
+  deleted --> [*]: an hour later (TTL)
 ```
+
+"Deleted" isn't a status: it's `deletedAt` set on the import, whatever its status, which restore
+unsets (D27). Every read leaves deleted imports out, the claim never takes one, and the worker's
+writes skip one, so an import deleted while it's processing never turns ready.
 
 `step` (`fetching | analyzing`) is shown inside `processing` for progress. The extractor sets
 it as each part starts (a link is fetched, then analyzed; a text is only analyzed), only while
@@ -180,6 +189,12 @@ of an attempt clears it.
   stalled though the workers are busy. Fine for one user; a worker heartbeat would be exact.
 - **Expiry.** Every import has `expiresAt` = 7 days; a **TTL index** makes Mongo delete abandoned
   imports by itself.
+- **Deleted while it runs** (D27). DELETE only sets `deletedAt`. The claim asks for jobs without
+  it, and every write of an attempt (step, picture, draft, failure, retry) matches the job only
+  while it's still `processing`, at this attempt's count, and not deleted. Each check-and-write
+  is one document's `updateOne`, atomic without a transaction (D9): a delete lands wholly before
+  a write (which then updates nothing) or after it (a ready, deleted import: never shown, and
+  gone with the TTL). So Pinch it's Undo, at any moment, means the draft never shows.
 
 ### 4.4 Approve is idempotent
 
@@ -244,7 +259,8 @@ Recipe {
   thumbnail?: { webp: Binary, width, height },   // the image left out of every query that answers
   source: { type: "instagram" | "facebook" | "youtube" | "text" | "image" | "manual", url? },
   sourceImportId?,                 // unique + sparse (§4.4)
-  createdAt, updatedAt
+  createdAt, updatedAt,
+  deletedAt?                       // set by DELETE, unset by restore; TTL an hour later (D27)
 }
 
 Import {
@@ -254,7 +270,8 @@ Import {
   input: { type: "link" | "text" | "images", url?, platform?, text?, count?, images? },
   attempts, nextAttemptAt, leaseUntil?, error?, noRetry?,
   draft?: RecipeDraft, thumbnail?: { webp: Binary, width, height },   // named as on a recipe
-  createdAt, updatedAt, expiresAt   // TTL
+  createdAt, updatedAt, expiresAt,  // TTL
+  deletedAt?                       // as a recipe's (D27)
 }
 
 RecipeDraft = RecipeInput + {
@@ -304,6 +321,7 @@ Every query that answers imports leaves them out.
 | recipes | `{ ownerId: 1, title: 1, _id: 1 }`, collation `en`, strength 2 | My recipes A–Z, whatever the case |
 | recipes | `{ ownerId: 1, title: "text", "ingredients.name": "text" }` | Text search inside my recipes |
 | recipes | `{ sourceImportId: 1 }` unique, sparse | Idempotent approve |
+| recipes, imports | `{ deletedAt: 1 }` TTL (`expireAfterSeconds: 3600`), partial: only documents that have it | A deleted one goes for good an hour later (D27); no read can use it, so it never competes with the others |
 | imports | `{ status: 1, nextAttemptAt: 1 }` | The worker's claim query |
 | imports | `{ ownerId: 1, createdAt: -1, _id: -1 }` | "My imports" list in the UI |
 | imports | `{ expiresAt: 1 }` TTL (`expireAfterSeconds: 0`) | Automatic cleanup |
@@ -311,7 +329,8 @@ Every query that answers imports leaves them out.
 | usage | `{ expiresAt: 1 }` TTL | Old days go |
 
 Every index is checked with `.explain("executionStats")`: expect `IXSCAN`, and
-`totalDocsExamined` close to `nReturned`.
+`totalDocsExamined` close to `nReturned` (a search fetches each match twice, by the text match
+and the not-deleted check, D27: still only the matches).
 
 **Sample data:** `npm run db:seed` adds ten sample recipes for the dev user (§8.3), so the
 list, search and filters have something to find; the e2e run seeds its own database the same
@@ -384,7 +403,8 @@ GET    /api/recipes?q=…&tags=cuisine:italian,flavor:spicy&source=instagram,man
 POST   /api/recipes                    create by hand (its emoji from its title, §6)
 GET    /api/recipes/:id
 PUT    /api/recipes/:id                replace what the user can edit (the form sends it all)
-DELETE /api/recipes/:id
+DELETE /api/recipes/:id                kept an hour, to undo (D27) → 204
+POST   /api/recipes/:id/restore        Undo of a delete → 200 recipe (404 once it's gone for good)
 GET    /api/recipes/:id/thumbnail      image/webp
 
 POST   /api/imports                    { type: "link", url } | { type: "text", text }  → 202 import (429 past the daily cap)
@@ -394,7 +414,8 @@ GET    /api/imports/:id                status, step, error, draft (with its unce
 GET    /api/imports/:id/thumbnail      image/webp: the draft's picture
 POST   /api/imports/:id/approve        the edited draft, as POST /api/recipes; nutritionPerServing, the emoji and the thumbnail from the stored import (D20), the marks dropped → 201 recipe (409 if not ready)
 POST   /api/imports/:id/retry          failed → pending, attempts, error and noRetry cleared → 202 (409 if not failed, or noRetry)
-DELETE /api/imports/:id                discard / dismiss
+DELETE /api/imports/:id                discard / dismiss / Pinch it's Undo: kept an hour (D27) → 204
+POST   /api/imports/:id/restore        Undo of a discard or a dismiss → 200 import, as it was
 ```
 
 One set of **Zod schemas** defines the Gemini output, the API input and the TypeScript types,
@@ -491,6 +512,7 @@ changes**. The planned design:
 | D24 | Two tabs, **New recipe** (`/`, the default) and **My recipes** (`/recipes`); the import queue sits under the box on New recipe; every inner page has breadcrumbs (docs/ux/pass-02.md §12–13) | Adding is the main event, so it opens first; the split keeps the form off the library; breadcrumbs say where a page belongs and replace Exit and "‹ Recipes" | One home with the box above the recipes; Recipes as the default tab; a bottom tab bar |
 | D25 | Every recipe has a face: the post's picture, else an emoji the model picks for the dish (an optional `emoji` on the recipe and the draft) on a soft tile; a recipe written by hand gets one from its title (§6) — built in M8 F3 | The picture is what the user remembers; a recipe with none still needs something to recognise; the title's list keeps it to the server, and the editor's JS at its budget | Grey placeholders; generated images; an emoji field in the editor; a map from the tags on the client |
 | D26 | The UI is built from **shadcn/ui** components, copied into `client/src/components/ui/`, their variables mapped onto Pinch's tokens; controls 44 px tall for touch | Accessible Radix parts (Tabs, Sheet, DropdownMenu, Dialog, toasts) whose code lives in the repo and can be read line by line; one pattern per control | Pinch's own components only; a packaged kit (MUI, Chakra) |
+| D27 | Undo in the toasts is a **soft delete**: DELETE sets `deletedAt` on the recipe or import, every read (lists, search, a recipe, its picture, edit, cook, the queue, its badge, approve, retry, the worker's claim and saves) leaves those out, `POST …/restore` unsets it, and a partial TTL index deletes them for good an hour later. Pinch it's Undo is the same DELETE: the worker's writes are conditional on the job not being deleted (§4.3), so a cancelled import never turns ready. Built in M8 F4 | Undo needs the thing to still exist; the server is the one place every tab and the worker agree on, and a closed tab can't lose a delete; one field and one filter for both collections, one atomic `updateOne` per write (no transactions, D9). Cancelling counts against the day's cap (D22): the request was already counted | Sending the DELETE only once the toast's 8 s are over (lost if the tab closes, other tabs show the deleted one meanwhile); a `cancelled` status for imports (a second mechanism next to the recipes' delete); moving deleted documents to a trash collection (two writes, no transaction) |
 
 ## 11. Risks
 
@@ -542,8 +564,14 @@ breadcrumbs under the header, and the tab they belong to stays selected. Every a
 a recipe's status confirms itself in a toast, with the next step when there is one: sent,
 ready to review (Review; its description counts the things to look at), failed (Retry), saved, changes saved, deleted, discarded, couldn't save
 (Try again). Saved has no View: saving already opens the recipe. Couldn't save is for the
-one-click actions (Dismiss, Discard, the toast's Retry); a form keeps its error by its fields, and
-Delete's stays in its dialog. Undo waits for the API (M8 F4). A status change toasts even when
+one-click actions (Dismiss, Discard, the toast's Retry, Undo); a form keeps its error by its fields, and
+Delete's stays in its dialog. **Undo** (D27) is on Pinch it's toast (5 s: it cancels the import,
+then "Cancelled") and on deleted, discarded and dismissed (8 s). The user stays where they are:
+an undone delete says "Back in My recipes" with View (Delete has left the recipe's page); an undone
+discard or dismiss puts the import back in the queue, and the queue's own toast says it's ready to
+review (Review) or failed (Retry). An Undo that fails says "Couldn't undo", with Try again; one
+whose item is gone for good (a 404) says "Can't undo · It's already gone", without. Alt+T
+(Sonner's) moves the keyboard to the toasts, and Tab reaches Undo. A status change toasts even when
 its card shows it too: one rule everywhere, chosen over ui-craft's "toasts only for things
 off-screen". Toasts sit at the top on a phone, under the header, and bottom right from 768 px
 (except in the editor, where they stay at the top, clear of its Save; opening a draft closes its
@@ -551,9 +579,9 @@ off-screen". Toasts sit at the top on a phone, under the header, and bottom righ
 
 | Address | Screen | Its job | States |
 |---|---|---|---|
-| `/` | New recipe | One input for a link or a post's text (it grows into a textarea, up to 6 lines, once the text wraps or has a new line, and a link stays one line; one word is a link, anything with a space or a new line is text, as before; Enter sends, Shift+Enter a new line), Paste (into the field, not sent), **Pinch it**; add up to 4 screenshots. Under it the queue, "Cooking… · N ready" ("N ready" once nothing cooks): each import as a card with its picture (or a placeholder while it cooks), its title or link, and where it has got to ("Ready to review · ◆ 3 things to look at" when the model marked fields, §6); a ready one offers Review, one still cooking a disabled "Cooking…" button in Review's place, a failed one Retry (unless D23) and Dismiss, a stalled one Dismiss | Empty queue (one line on what Pinch does, the three platforms); the queue can't load (Try again); a link from another site or too short a text refused under the input; 429 says the day's limit |
-| `/recipes` | My recipes | Search (titles and ingredients; it runs on Enter), tag chips (five common tags, fixed: counting the household's most-used needs an API of its own), and Filters (§7): Sort (Newest, Quickest, A–Z; while searching, Best match comes first and is the default, and the others are followed only once picked), Time (Any, 15 min or less, 30 min or less, 1 hour or less), Source (Instagram, YouTube, Facebook, Written by me), then the five tag facets. On a phone they are a bottom sheet of chips (a dialog in the middle from 768 px, as every sheet), each applied as it's picked; its Clear takes the filters off and keeps the order, and "Show N recipes" closes it, counting what the list has loaded ("Show 50+ recipes" when more pages follow, "Show the 50 best" for a full search); the Filters button counts the filters on, not the order. From 1024 px they are a panel of radios and checkboxes on the left (no per-value counts: one more query per value), Sort is a select beside the search (shadcn's NativeSelect), the applied filters also repeat as removable chips by the count, and a "Skip the filters" button (shown while focused) takes the keyboard past the panel to the search. Clear all and Clear filters keep the order. Filters live in the address (`/recipes?q=egg&tags=meal:dinner&source=instagram&time=30&sort=quickest`; the default order is left out, and a value written twice is read once). A grid of cards (2 columns, 3 from 768 px, 4 from 1024, 5 from 1280): picture with its site's name on it (none for a hand-written recipe; a pot where there's no picture), title, then time and ingredient count ("10 min · 2 ingredients") | Loading (cards' shape), no recipes yet (a way to New recipe), none match (names the search and tags; Clear filters, or Clear search when only a search is on, and Search all recipes for the words when tags were also on), error (centred, as the empty states; Try again); 50 at a time, then Show more |
-| `/recipes/:id` | A recipe | Breadcrumbs *My recipes › title*; the picture; the title and a subtitle naming the source (Instagram, YouTube, Facebook: a link to the post, named by its site until the API keeps the author; "From pasted text" or "From screenshots" for an import without a link; or "Written by you"), serves and times; tags (each opens My recipes filtered by it); **Cook**; ⋯ with Edit, Share ("coming soon") and Delete (asks first); nutrition ≈; ingredients beside the steps from 1024 px; Comments ("coming soon") | Loading, error (Try again), not found |
+| `/` | New recipe | One input for a link or a post's text (it grows into a textarea, up to 6 lines, once the text wraps or has a new line, and a link stays one line; one word is a link, anything with a space or a new line is text, as before; Enter sends, Shift+Enter a new line), Paste (into the field, not sent), **Pinch it**; add up to 4 screenshots. Under it the queue, "Cooking… · N ready" ("N ready" once nothing cooks): each import as a card with its picture (or a placeholder while it cooks; a ready draft without a picture, its emoji, D25), its title or link, and where it has got to ("Ready to review · ◆ 3 things to look at" when the model marked fields, §6); a ready one offers Review, one still cooking a disabled "Cooking…" button in Review's place, a failed one Retry (unless D23) and Dismiss, a stalled one Dismiss | Empty queue (one line on what Pinch does, the three platforms); the queue can't load (Try again); a link from another site or too short a text refused under the input; 429 says the day's limit |
+| `/recipes` | My recipes | Search (titles and ingredients; it runs on Enter), tag chips (five common tags, fixed: counting the household's most-used needs an API of its own), and Filters (§7): Sort (Newest, Quickest, A–Z; while searching, Best match comes first and is the default, and the others are followed only once picked), Time (Any, 15 min or less, 30 min or less, 1 hour or less), Source (Instagram, YouTube, Facebook, Written by me), then the five tag facets. On a phone they are a bottom sheet of chips (a dialog in the middle from 768 px, as every sheet), each applied as it's picked; its Clear takes the filters off and keeps the order, and "Show N recipes" closes it, counting what the list has loaded ("Show 50+ recipes" when more pages follow, "Show the 50 best" for a full search); the Filters button counts the filters on, not the order. From 1024 px they are a panel of radios and checkboxes on the left (no per-value counts: one more query per value), Sort is a select beside the search (shadcn's NativeSelect), the applied filters also repeat as removable chips by the count, and a "Skip the filters" button (shown while focused) takes the keyboard past the panel to the search. Clear all and Clear filters keep the order. Filters live in the address (`/recipes?q=egg&tags=meal:dinner&source=instagram&time=30&sort=quickest`; the default order is left out, and a value written twice is read once). A grid of cards (2 columns, 3 from 768 px, 4 from 1024, 5 from 1280): picture with its site's name on it (none for a hand-written recipe; where there's no picture, the recipe's emoji on a soft tile, D25, or a plate 🍽️ when it has none), title, then time and ingredient count ("10 min · 2 ingredients") | Loading (cards' shape), no recipes yet (a way to New recipe), none match (names the search and tags; Clear filters, or Clear search when only a search is on, and Search all recipes for the words when tags were also on), error (centred, as the empty states; Try again); 50 at a time, then Show more |
+| `/recipes/:id` | A recipe | Breadcrumbs *My recipes › title*; the picture (without one, its emoji on a soft band, lower than a picture's: D25); the title and a subtitle naming the source (Instagram, YouTube, Facebook: a link to the post, named by its site until the API keeps the author; "From pasted text" or "From screenshots" for an import without a link; or "Written by you"), serves and times; tags (each opens My recipes filtered by it); **Cook**; ⋯ with Edit, Share ("coming soon") and Delete (asks first); nutrition ≈; ingredients beside the steps from 1024 px; Comments ("coming soon") | Loading (none when opened from My recipes: the list's copy shows while it loads), error (Try again), not found |
 | `/recipes/:id/cook` | Cook mode | Breadcrumbs *My recipes › title › Cook* (no Exit), the source in the subtitle; one step per card, swiped sideways (native scroll snap; the next card peeks 24 px, and a tap on it brings it in; the step is set once the row has stopped for 100 ms), ‹ › and dots kept for those who don't swipe (dots up to 7 steps), Back and Next instead from 768 px, and the ← → keys (not from a field, menu or dialog); "Step 2 of 6" and a bar; the step's ingredients on its card, all of them folded below (a panel on the left from 1024 px), ticked off in both at once; on the last step › or Next turns into Done; timers, Wake Lock and Done as before (§14 of M7: started once, kept at the bottom, ringing at zero, ended on leaving), and below 1024 px the timers and the ‹ › (Back, Next) row share one footer pinned to the bottom, so a short phone never hides one under the other; a timer reads "19:58 left · 20 min timer"; each card is as tall as its step, from 768 px a card fills the row (no peek) | Loading (the step's shape), error (Try again), not found |
 | `/recipes/new` | Write a recipe | The editor, empty (breadcrumbs *New recipe › Write a recipe*), under a tip: got it as text? Paste it on New recipe. Title (examples as placeholders), description, ingredients as amount · unit · name rows with a note (on its own line on a phone) and ✕, steps as numbered boxes with ✕, Add ingredient and Add step (Paste a list and reordering aren't built: nothing parses a pasted line yet, and the form never had an order to change); then the source ("Written by you"), serves and times, and tags as chips with ✕ and Add tag (a sheet of the facets, as Filters); Cancel and **Save recipe** pinned to the bottom. No picture by hand, and no Change picture or source link: the API has no upload and keeps the source (D20) | Each error under its field from the first Save (§8.1), focus on the first, "N things to fix before saving" above the Save bar; saving; failed (keeps what was typed) |
 | `/recipes/:id/edit` | Edit a recipe | The same editor, filled, with its picture (*My recipes › title › Edit*); Cancel and **Save changes** | Loading, error, not found; then as Write a recipe |

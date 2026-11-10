@@ -50,6 +50,9 @@
      Windows, Noto Serif Hebrew on Android), so it's the same before and after Fraunces swaps in. */
   --font-display:
     "Fraunces", "Fraunces Fallback", "Times New Roman", "Noto Serif Hebrew", Georgia, serif;
+  /* A recipe's emoji (D25): the colour emoji fonts first, so a text font's plain glyph for it
+     never draws it in grey. */
+  --font-emoji: "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif;
 
   /* Shape (plan §6): cards and sheets round, controls less so, chips full (rounded-full). One
      soft shadow, for what floats over the page (the dialog). */

@@ -268,14 +268,27 @@ test("a run whose job another worker claimed again saves nothing", async () => {
   });
 });
 
-test("a run whose job the user deleted saves nothing", async () => {
+test("a run whose job the user deleted saves nothing: it never turns ready", async () => {
   await insertImport();
   const job = await claim();
-  await imports.deleteOne({ _id: job._id });
+  // As DELETE /api/imports/:id does (Pinch it's Undo, say): kept, marked deleted (D27).
+  await imports.updateOne({ _id: job._id }, { $set: { deletedAt: new Date() } });
 
   await run(job);
 
-  expect(await imports.countDocuments()).toBe(0);
+  expect(await imports.findOne({ _id: job._id })).toMatchObject({
+    status: "processing",
+    deletedAt: expect.any(Date) as Date,
+  });
+  expect(await imports.findOne({ _id: job._id })).not.toHaveProperty("draft");
+});
+
+test("a deleted job is never claimed, waiting or held by a worker that died", async () => {
+  const longAgo = new Date(Date.now() - LEASE_MS - 1000);
+  await insertImport({ deletedAt: new Date() });
+  await insertImport({ status: "processing", leaseUntil: longAgo, deletedAt: new Date() });
+
+  expect(await claimNextImport(imports, new Date())).toBeNull();
 });
 
 test("a failed attempt is tried again after 10 s, then 60 s, then the import is failed", async () => {
