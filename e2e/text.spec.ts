@@ -15,16 +15,17 @@ test("paste a recipe's text, review the draft, save it with its nutrition", asyn
   await page.waitForTimeout(1000);
   await page.getByRole("button", { name: "Pinch it" }).click();
 
-  const text = page.getByRole("listitem").filter({ hasText: "Pasted text" });
+  // By its text: once ready, the card is named by the draft's title.
+  const text = page.getByRole("listitem").filter({ hasText: "Tomato pasta for 2" });
   await expect(text).toContainText(/Waiting to start…|Working on it…/);
   await expect(text.getByText("Ready to review")).toBeVisible({ timeout: 15_000 });
   await page.waitForTimeout(1000);
-  await text.getByRole("link", { name: "Review the recipe" }).click();
+  await text.getByRole("link", { name: "Review" }).click();
 
-  await expect(page.getByText("Made from the text you pasted.")).toBeVisible();
+  await expect(page.getByText("Pinch read this from the text you pasted")).toBeVisible();
   await expect(page.getByLabel("Title")).toHaveValue("Tomato pasta (from text)");
   await page.waitForTimeout(1500);
-  await page.getByRole("button", { name: "Save recipe" }).click();
+  await page.getByRole("button", { name: "Save to My recipes" }).click();
 
   await expect(
     page.getByRole("heading", { level: 1, name: "Tomato pasta (from text)" }),
@@ -32,7 +33,8 @@ test("paste a recipe's text, review the draft, save it with its nutrition", asyn
   await expect(page.getByText(/≈ 520 kcal · 18 g protein/)).toBeVisible();
   await page.waitForTimeout(2000);
 
-  await page.getByRole("button", { name: "Delete" }).click();
+  await page.getByRole("button", { name: "More actions" }).click();
+  await page.getByRole("menuitem", { name: "Delete…" }).click();
   await page.getByRole("alertdialog").getByRole("button", { name: "Delete" }).click();
   await expect(page.getByRole("heading", { level: 1, name: "My recipes" })).toBeVisible();
 });

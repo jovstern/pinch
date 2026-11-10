@@ -8,6 +8,7 @@ import { Button } from "../../components/ui/Button.tsx";
 import { Textarea } from "../../components/ui/Textarea.tsx";
 import { ApiError, sendJson } from "../../lib/api.ts";
 import { cn } from "../../lib/cn.ts";
+import { toastPinching } from "../../lib/toasts.tsx";
 import { importListQuery } from "./importQueries.ts";
 
 // Paste reads the clipboard, where the browser lets a page ask for it (a secure page, and not
@@ -60,6 +61,7 @@ export function ImportForm({ inputRef }: { inputRef: RefObject<HTMLTextAreaEleme
       form.reset();
       setGrown(false);
       void queryClient.invalidateQueries({ queryKey: importListQuery.queryKey });
+      toastPinching();
     },
   });
 
@@ -217,7 +219,7 @@ export function ImportForm({ inputRef }: { inputRef: RefObject<HTMLTextAreaEleme
       <form.Subscribe selector={(state) => state.errorMap.onSubmit}>
         {(error) =>
           typeof error === "string" && (
-            <p role="alert" className="mt-1 text-sm text-danger">
+            <p role="alert" className="mt-1 text-sm text-destructive">
               {error}
             </p>
           )

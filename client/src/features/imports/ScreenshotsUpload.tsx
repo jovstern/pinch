@@ -11,6 +11,7 @@ import { ImagePlus } from "lucide-react";
 import { useId, useState } from "react";
 import { Button } from "../../components/ui/Button.tsx";
 import { ApiError, sendForm } from "../../lib/api.ts";
+import { toastPinching } from "../../lib/toasts.tsx";
 import { importListQuery } from "./importQueries.ts";
 
 // The second way in on / (design §1, §14): screenshots of a post whose link and text won't do.
@@ -29,8 +30,9 @@ export function ScreenshotsUpload() {
       return sendForm("/api/imports/screenshots", form, ImportSchema);
     },
     onSuccess: () => {
-      // The new import shows in the list, which starts polling and announces it.
+      // The new import shows in the list, which starts polling.
       void queryClient.invalidateQueries({ queryKey: importListQuery.queryKey });
+      toastPinching();
     },
   });
 
@@ -72,11 +74,11 @@ export function ScreenshotsUpload() {
           />
         </label>
       </Button>
-      <p id={hintId} className="text-sm text-text-muted">
+      <p id={hintId} className="text-sm text-muted-foreground">
         Up to {MAX_SCREENSHOTS} screenshots of the recipe, when its link and text won't do.
       </p>
       {message && (
-        <p id={errorId} role="alert" className="mt-1 text-sm text-danger">
+        <p id={errorId} role="alert" className="mt-1 text-sm text-destructive">
           {message}
         </p>
       )}

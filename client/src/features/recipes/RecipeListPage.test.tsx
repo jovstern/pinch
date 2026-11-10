@@ -27,11 +27,15 @@ test("lists each recipe as a link to it, with what it needs", async () => {
 
   const link = await screen.findByRole("link", { name: /Omelette/ });
   expect(link).toHaveAttribute("href", `/recipes/${omelette.id}`);
-  expect(link).toHaveTextContent("2 ingredients · 10 min");
+  expect(link).toHaveTextContent("10 min · 2 ingredients");
 });
 
-test("a recipe from a post shows its picture as a tile in its card", async () => {
-  const fromReel = { ...omelette, thumbnail: { width: 281, height: 500 } };
+test("a recipe from a post shows its picture and its site in its card", async () => {
+  const fromReel = {
+    ...omelette,
+    thumbnail: { width: 281, height: 500 },
+    source: { type: "instagram" as const, url: "https://www.instagram.com/reel/abc/" },
+  };
   stubFetch(vi.fn().mockResolvedValue(Response.json({ items: [fromReel], nextCursor: null })));
   renderApp("/recipes");
 
@@ -40,8 +44,8 @@ test("a recipe from a post shows its picture as a tile in its card", async () =>
     "src",
     `/api/recipes/${omelette.id}/thumbnail`,
   );
-  // Decorative: the link is still named by the title and what it needs.
-  expect(link).toHaveAccessibleName("Omelette 2 ingredients · 10 min");
+  // Decorative: the link is named by the title first, then what it needs and where it's from.
+  expect(link).toHaveAccessibleName("Omelette 10 min · 2 ingredients Instagram");
 });
 
 test("one ingredient is counted in the singular", async () => {
@@ -50,7 +54,7 @@ test("one ingredient is counted in the singular", async () => {
   renderApp("/recipes");
 
   expect(await screen.findByRole("link", { name: /Omelette/ })).toHaveTextContent(
-    "1 ingredient · 5 min",
+    "5 min · 1 ingredient",
   );
 });
 
@@ -135,10 +139,11 @@ test("a search asks the API, says how many match, and leaves focus in the box", 
   expect(search).toHaveFocus();
 });
 
-test("tags in the address filter the list, open, and unticking the last one clears it", async () => {
+test("tags in the address tick the Filters, and unticking the last one clears them", async () => {
   const fetch = stubList();
   renderApp("/recipes?tags=meal:breakfast");
 
+  // The panel's checkbox (from 1024 px; jsdom has no widths, so it's always in the page).
   const breakfast = await screen.findByRole("checkbox", { name: "breakfast" });
   expect(breakfast).toBeChecked();
   expect(fetch).toHaveBeenCalledWith("/api/recipes?tags=meal%3Abreakfast");
@@ -148,22 +153,114 @@ test("tags in the address filter the list, open, and unticking the last one clea
   await waitFor(() => {
     expect(fetch).toHaveBeenLastCalledWith("/api/recipes");
   });
-  // Still open: it doesn't fold away under the user's finger.
-  expect(screen.getByRole("checkbox", { name: "breakfast" })).toBeVisible();
 });
 
-test("when nothing matches, it says so and offers to clear the search and filters", async () => {
+test("a common tag's chip turns its tag on and off in the address", async () => {
+  const fetch = stubList();
+  renderApp("/recipes");
+
+  const chips = await screen.findByRole("group", { name: "Common tags" });
+  await userEvent.click(within(chips).getByRole("button", { name: "breakfast" }));
+  expect(await screen.findByText("1 recipe matches.")).toHaveAttribute("role", "status");
+  expect(fetch).toHaveBeenLastCalledWith("/api/recipes?tags=meal%3Abreakfast");
+  expect(within(chips).getByRole("button", { name: "breakfast" })).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
+
+  await userEvent.click(within(chips).getByRole("button", { name: "breakfast" }));
+  await waitFor(() => {
+    expect(fetch).toHaveBeenLastCalledWith("/api/recipes");
+  });
+});
+
+test("the Filters sheet applies a tag as it's ticked and counts it on its button", async () => {
+  const fetch = stubList();
+  renderApp("/recipes");
+
+  await userEvent.click(await screen.findByRole("button", { name: "Filters" }));
+  const sheet = await screen.findByRole("dialog", { name: "Filters" });
+  await userEvent.click(within(sheet).getByRole("checkbox", { name: "breakfast" }));
+  await waitFor(() => {
+    expect(fetch).toHaveBeenLastCalledWith("/api/recipes?tags=meal%3Abreakfast");
+  });
+
+  await userEvent.click(within(sheet).getByRole("button", { name: "Show recipes" }));
+  expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Filters 1 applied" })).toHaveFocus();
+});
+
+test("Clear all clears the search and the tags", async () => {
+  const fetch = stubList();
+  renderApp("/recipes?q=eggs&tags=meal:breakfast");
+
+  await userEvent.click(await screen.findByRole("button", { name: "Clear all" }));
+
+  await waitFor(() => {
+    expect(fetch).toHaveBeenLastCalledWith("/api/recipes");
+  });
+  expect(screen.getByRole("searchbox")).toHaveValue("");
+  expect(screen.getByRole("checkbox", { name: "breakfast" })).not.toBeChecked();
+  expect(screen.getByRole("searchbox")).toHaveFocus();
+});
+
+test("an applied tag's ✕ takes it off", async () => {
+  const fetch = stubList();
+  renderApp("/recipes?tags=meal:breakfast,diet:vegan");
+
+  await userEvent.click(await screen.findByRole("button", { name: "Remove vegan" }));
+
+  await waitFor(() => {
+    expect(fetch).toHaveBeenLastCalledWith("/api/recipes?tags=meal%3Abreakfast");
+  });
+  expect(screen.getByRole("searchbox")).toHaveFocus();
+});
+
+test("Skip the filters goes past the Filters panel to the search box", async () => {
+  stubList();
+  renderApp("/recipes");
+
+  await userEvent.click(await screen.findByRole("button", { name: "Skip the filters" }));
+
+  expect(screen.getByRole("searchbox")).toHaveFocus();
+});
+
+test("emptying the search box ends the search, without Enter", async () => {
+  const fetch = stubList();
+  renderApp("/recipes?q=eggs");
+
+  await userEvent.clear(await screen.findByRole("searchbox"));
+
+  await waitFor(() => {
+    expect(fetch).toHaveBeenLastCalledWith("/api/recipes");
+  });
+});
+
+test("when nothing matches, it says what was asked and offers to clear the search and filters", async () => {
   const fetch = stubList();
   renderApp("/recipes?q=soup&tags=cuisine:italian");
 
   expect(await screen.findByText("No recipes match.")).toHaveAttribute("role", "status");
+  expect(screen.getByText("“soup”, italian")).toBeInTheDocument();
   expect(screen.getByRole("searchbox")).toHaveValue("soup");
 
-  await userEvent.click(screen.getByRole("link", { name: "Clear the search and filters" }));
+  await userEvent.click(screen.getByRole("button", { name: "Clear filters" }));
 
   expect(await screen.findByRole("link", { name: /Omelette/ })).toBeInTheDocument();
   expect(fetch).toHaveBeenLastCalledWith("/api/recipes");
   expect(screen.getByRole("searchbox")).toHaveValue("");
+  // The button went with the filters: the keyboard carries on from the search box.
+  expect(screen.getByRole("searchbox")).toHaveFocus();
+});
+
+test("with only a search matching nothing, it offers to clear the search", async () => {
+  const fetch = stubList();
+  renderApp("/recipes?q=soup");
+
+  await userEvent.click(await screen.findByRole("button", { name: "Clear search" }));
+
+  expect(await screen.findByRole("link", { name: /Omelette/ })).toBeInTheDocument();
+  expect(fetch).toHaveBeenLastCalledWith("/api/recipes");
 });
 
 test("Show more keeps the filter when it asks for the next page", async () => {
@@ -178,6 +275,23 @@ test("Show more keeps the filter when it asks for the next page", async () => {
 
   expect(await screen.findByRole("link", { name: /Toast/ })).toBeInTheDocument();
   expect(fetch).toHaveBeenLastCalledWith("/api/recipes?tags=meal%3Abreakfast&cursor=next-page");
+});
+
+test("with a search and tags matching nothing, it offers the search without the tags", async () => {
+  const fetch = vi
+    .fn()
+    .mockResolvedValueOnce(Response.json({ items: [], nextCursor: null }))
+    .mockResolvedValueOnce(Response.json({ items: [omelette], nextCursor: null }));
+  stubFetch(fetch);
+  renderApp("/recipes?q=eggs&tags=cuisine:italian");
+
+  await userEvent.click(
+    await screen.findByRole("button", { name: "Search all recipes for “eggs”" }),
+  );
+
+  expect(await screen.findByText("1 recipe matches.")).toHaveAttribute("role", "status");
+  expect(fetch).toHaveBeenLastCalledWith("/api/recipes?q=eggs");
+  expect(screen.getByRole("searchbox")).toHaveFocus();
 });
 
 test("a tag in the address that isn't in the lists is left out", async () => {

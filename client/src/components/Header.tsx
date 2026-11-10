@@ -63,13 +63,14 @@ export function Header({ onTabPage }: { onTabPage: boolean }) {
 
       {/* One link, placed by width: floating on a phone (in thumb reach, on the tabs' pages
           only), in the header from 768 px on every page. On a phone it comes after the tabs
-          in the tab order though it shows at the bottom: fine for the header's one action. */}
+          in the tab order though it shows at the bottom: fine for the header's one action.
+          z-10: over My recipes' cards, which are positioned (the site's label on the picture). */}
       <Button
         asChild
         variant="outline"
         className={cn(
           "md:static md:ml-auto md:inline-flex md:rounded-control md:shadow-none",
-          onTabPage ? "fixed right-4 bottom-5 rounded-full shadow-sheet" : "hidden",
+          onTabPage ? "fixed right-4 bottom-5 z-10 rounded-full shadow-sheet" : "hidden",
         )}
       >
         <Link to="/recipes/new" aria-current={pathname === "/recipes/new" ? "page" : undefined}>
