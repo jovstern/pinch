@@ -48,9 +48,10 @@ export function ImportActions({ job, focusPasteBox }: { job: Import; focusPasteB
     <div className="mt-2 md:mt-0">
       {/* Where Review is on a ready card: Retry, the way forward, rightmost. */}
       <div className="flex justify-end gap-2">
+        {/* Quiet, not red: the card already says what went wrong, and Dismiss only clears it. */}
         <Button
           type="button"
-          variant="destructive-ghost"
+          variant="ghost"
           onClick={() => {
             if (!busy) dismiss.mutate();
           }}

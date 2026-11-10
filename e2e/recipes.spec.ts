@@ -11,13 +11,13 @@ test("write a recipe, find it in the list, edit it, delete it", async ({ page })
   await page.getByLabel("Serves").fill("2");
   await page.getByLabel("Amount").fill("4");
   await page.getByLabel("Ingredient", { exact: true }).fill("eggs");
-  await page.getByRole("button", { name: "Add an ingredient" }).click();
+  await page.getByRole("button", { name: "Add ingredient" }).click();
   const second = page.getByRole("group", { name: "Ingredient 2" });
   await second.getByLabel("Amount").fill("400");
   await second.getByLabel("Unit").fill("g");
   await second.getByLabel("Ingredient", { exact: true }).fill("tomatoes");
   await page.getByRole("textbox", { name: "Step 1" }).fill("Simmer the tomatoes.");
-  await page.getByRole("button", { name: "Add a step" }).click();
+  await page.getByRole("button", { name: "Add step" }).click();
   await page.getByRole("textbox", { name: "Step 2" }).fill("Crack in the eggs and cover.");
   await page.getByRole("button", { name: "Save recipe" }).click();
 

@@ -113,9 +113,9 @@ The UI first, on the API as it is (where they disagree, the API wins for now):
 - [x] R4 Toasts for every status change
 - [x] R5 My recipes: search, tag chips, Filters (sheet / panel), its states
 - [x] R6 A recipe: breadcrumbs, the source in the subtitle, Cook and ⋯
-- [ ] R7 Cook mode: swipe between steps, breadcrumbs instead of Exit
-- [ ] R8 The editor: one page for review, writing by hand and editing, with its breadcrumbs
-- [ ] End of the UI: UI review, observer, e2e, demo
+- [x] R7 Cook mode: swipe between steps, breadcrumbs instead of Exit
+- [x] R8 The editor: one page for review, writing by hand and editing, with its breadcrumbs
+- [x] End of the UI: UI review, observer, e2e, demo
 
 Then the features the design asks the API for, one PR each:
 

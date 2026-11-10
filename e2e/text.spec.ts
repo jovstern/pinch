@@ -22,10 +22,10 @@ test("paste a recipe's text, review the draft, save it with its nutrition", asyn
   await page.waitForTimeout(1000);
   await text.getByRole("link", { name: "Review" }).click();
 
-  await expect(page.getByText("Made from the text you pasted.")).toBeVisible();
+  await expect(page.getByText("Pinch read this from the text you pasted")).toBeVisible();
   await expect(page.getByLabel("Title")).toHaveValue("Tomato pasta (from text)");
   await page.waitForTimeout(1500);
-  await page.getByRole("button", { name: "Save recipe" }).click();
+  await page.getByRole("button", { name: "Save to My recipes" }).click();
 
   await expect(
     page.getByRole("heading", { level: 1, name: "Tomato pasta (from text)" }),
