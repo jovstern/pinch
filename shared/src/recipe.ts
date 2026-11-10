@@ -68,10 +68,50 @@ export const NutritionSchema = z.object({
   fatG: z.number().min(0).max(1000),
 });
 
-// What the worker makes (§4.1): a recipe as the user would write it, and the nutrition
-// estimate, which only the model gives.
+// A field the model was unsure of, or couldn't find in the post, and why: a "thing to look at"
+// on the draft (design §6, §9). The path names the field as the API's errors do (§8.1): "title",
+// "servings", "prepMinutes", "cookMinutes", "steps.2" or "ingredients.3.quantity" (or .unit,
+// .name), counting from 0.
+export const UncertainFieldSchema = z.object({
+  path: z.string(),
+  reason: z.string().trim().max(200),
+});
+
+// The most marks a draft keeps: a few things to look at, not the whole recipe.
+export const MAX_UNCERTAIN = 10;
+
+const markablePath =
+  /^(?:title|servings|prepMinutes|cookMinutes|steps\.(0|[1-9]\d*)|ingredients\.(0|[1-9]\d*)\.(?:quantity|unit|name))$/;
+
+// Whether a mark's path names a field of this draft: one of the paths above, and a step or an
+// ingredient it has.
+function markExists(path: string, draft: { steps: unknown[]; ingredients: unknown[] }) {
+  const match = markablePath.exec(path);
+  if (!match) return false;
+  const [, step, ingredient] = match;
+  if (step !== undefined) return Number(step) < draft.steps.length;
+  if (ingredient !== undefined) return Number(ingredient) < draft.ingredients.length;
+  return true;
+}
+
+// What the worker makes (§4.1): a recipe as the user would write it, the nutrition estimate,
+// which only the model gives, and the fields to look at. A mark is only a hint, so one that
+// names no field of the draft (a path malformed, or past the last step), has no reason, or
+// repeats one, is dropped, not an error; and only the first MAX_UNCERTAIN are kept. Checked on
+// every parse, so when the worker saves the draft and when the API reads it (overwrite: a
+// transform that keeps the type, and the schema an object, so its shape can still be read).
 export const RecipeDraftSchema = RecipeInputSchema.extend({
   nutritionPerServing: NutritionSchema.optional(),
+  uncertain: z.array(UncertainFieldSchema).optional(),
+}).overwrite((draft) => {
+  if (!draft.uncertain) return draft;
+  const paths = new Set<string>();
+  const uncertain = draft.uncertain.filter((mark) => {
+    const keep = mark.reason !== "" && !paths.has(mark.path) && markExists(mark.path, draft);
+    paths.add(mark.path);
+    return keep;
+  });
+  return { ...draft, uncertain: uncertain.slice(0, MAX_UNCERTAIN) };
 });
 
 // A recipe's (or a draft's) picture, from its post (design §5): its size, so the page keeps
@@ -120,6 +160,7 @@ export type Ingredient = z.infer<typeof IngredientSchema>;
 export type RecipeInput = z.infer<typeof RecipeInputSchema>;
 export type Nutrition = z.infer<typeof NutritionSchema>;
 export type RecipeDraft = z.infer<typeof RecipeDraftSchema>;
+export type UncertainField = z.infer<typeof UncertainFieldSchema>;
 export type Thumbnail = z.infer<typeof ThumbnailSchema>;
 export type Recipe = z.infer<typeof RecipeSchema>;
 export type RecipeList = z.infer<typeof RecipeListSchema>;

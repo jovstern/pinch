@@ -1,5 +1,5 @@
 import { FileState, GoogleGenAI, type File, type PartUnion } from "@google/genai";
-import { RecipeDraftSchema } from "@pinch/shared";
+import { MAX_UNCERTAIN, RecipeDraftSchema } from "@pinch/shared";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -46,8 +46,13 @@ minutes, and tags from the allowed list. Use the post's text, and its video (the
 text on screen) or its screenshots when there are some; the text often has the quantities.
 Write the recipe in the language of the post; tags are codes, so keep them as they are. Leave
 out anything you can't tell rather than guessing. The exception: estimate the calories and the
-grams of protein, carbs and fat in one serving, from the ingredients and the servings. If the
-post is not a recipe, set isRecipe to false.`;
+grams of protein, carbs and fat in one serving, from the ingredients and the servings. In
+uncertain, list the fields you were unsure of or couldn't find in the post, for the user to look
+at: at most ${String(MAX_UNCERTAIN)}, each with a short reason in the recipe's language (e.g. "the
+video doesn't say how much"). A field's path is "title", "servings", "prepMinutes",
+"cookMinutes", "steps.N", or "ingredients.N.quantity", "ingredients.N.unit" or
+"ingredients.N.name", where N counts from 0. Leave it empty when you're sure of everything. If
+the post is not a recipe, set isRecipe to false.`;
 
 export const NOT_A_RECIPE = "This doesn't look like a recipe.";
 export const TOO_LONG = "This video is over 3 minutes. Pinch reads shorter ones.";

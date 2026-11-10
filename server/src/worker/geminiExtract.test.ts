@@ -77,6 +77,21 @@ test("a YouTube link is sent to Gemini with its caption and the recipe's schema,
   expect(JSON.stringify(request?.config?.responseJsonSchema)).toContain('"nutritionPerServing"');
 });
 
+test("the model is asked for the fields it's unsure of, with their paths, in the schema and the prompt", async () => {
+  const generate = vi
+    .spyOn(ai.models, "generateContent")
+    .mockResolvedValue(answer(JSON.stringify(recipe)));
+
+  await extract(youtube, noDeadline, quiet);
+
+  const config = generate.mock.calls[0]?.[0].config;
+  const schema = JSON.stringify(config?.responseJsonSchema);
+  expect(schema).toContain('"uncertain"');
+  expect(schema).toContain('"reason"');
+  expect(config?.systemInstruction).toContain('"ingredients.N.quantity"');
+  expect(config?.systemInstruction).toContain("at most 10");
+});
+
 test("a link is fetched, then analyzed; a text is only analyzed", async () => {
   vi.spyOn(ai.models, "generateContent").mockResolvedValue(answer(JSON.stringify(recipe)));
   const steps: string[] = [];

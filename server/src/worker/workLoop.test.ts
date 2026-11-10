@@ -132,6 +132,44 @@ test("a run saves the draft and lets go of the job", async () => {
   expect(saved).not.toHaveProperty("leaseUntil");
 });
 
+test("a run keeps the draft's things to look at, and drops a mark that names no field of it", async () => {
+  await insertImport();
+  const job = await claim();
+
+  await run(job, () =>
+    Promise.resolve({
+      ...draft,
+      uncertain: [
+        { path: "ingredients.0.quantity", reason: " Not said in the video. " },
+        // Past the last step, not a field, a number written oddly, and no reason: dropped.
+        { path: "steps.1", reason: "Gone." },
+        { path: "description", reason: "Not a markable field." },
+        { path: "steps.00", reason: "Malformed." },
+        { path: "servings", reason: "" },
+        // A field's first mark is kept.
+        { path: "ingredients.0.quantity", reason: "Again." },
+      ],
+    }),
+  );
+
+  const saved = await imports.findOne({ _id: job._id });
+  expect(saved?.draft?.uncertain).toEqual([
+    { path: "ingredients.0.quantity", reason: "Not said in the video." },
+  ]);
+});
+
+test("a draft keeps no more than 10 things to look at", async () => {
+  await insertImport();
+  const job = await claim();
+  const steps = Array.from({ length: 12 }, (_, i) => `Step ${String(i + 1)}.`);
+  const uncertain = steps.map((_, i) => ({ path: `steps.${String(i)}`, reason: "Unclear." }));
+
+  await run(job, () => Promise.resolve({ ...draft, steps, uncertain }));
+
+  const saved = await imports.findOne({ _id: job._id });
+  expect(saved?.draft?.uncertain).toEqual(uncertain.slice(0, 10));
+});
+
 test("a run shows its step while it's working, and clears it when it's done", async () => {
   const { _id } = await insertImport();
   let stepWhileWorking: unknown;

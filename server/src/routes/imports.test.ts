@@ -167,6 +167,32 @@ const draft: RecipeInput = {
   tags: [],
 };
 
+test("a draft's things to look at are sent with it, and a mark whose field is gone is dropped", async () => {
+  // As stored before the draft lost a step: the API checks the marks as it reads them.
+  const id = await insertDone({
+    draft: {
+      ...draft,
+      uncertain: [
+        { path: "steps.0", reason: "The video skips it." },
+        { path: "steps.3", reason: "No longer there." },
+      ],
+    },
+  });
+
+  const kept = [{ path: "steps.0", reason: "The video skips it." }];
+  const job = ImportSchema.parse((await request(app).get(`/api/imports/${id}`)).body);
+  expect(job.draft?.uncertain).toEqual(kept);
+  // The queue counts them from the list.
+  const list = ImportListSchema.parse((await request(app).get("/api/imports")).body);
+  expect(list.items.find((item) => item.id === id)?.draft?.uncertain).toEqual(kept);
+
+  // They're for the review only: the saved recipe has none.
+  const approved = await request(app).post(`/api/imports/${id}/approve`).send(draft);
+  const { id: recipeId } = RecipeSchema.parse(approved.body);
+  const recipe = await recipesCollection(db).findOne({ _id: new ObjectId(recipeId) });
+  expect(recipe).not.toHaveProperty("uncertain");
+});
+
 test("another user's import is not found", async () => {
   const theirs = new ObjectId();
   const now = new Date();

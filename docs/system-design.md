@@ -109,8 +109,9 @@ Mongo is the only shared state. There is no Redis, no queue service and no objec
    - **Text / screenshots** (fallback) → send them to Gemini as they are: no `yt-dlp`, no
      video. Pasted text is the post's text, so it's fenced as data like a caption (§9).
 3. Gemini gets the video and the caption together and returns JSON that matches our recipe
-   schema (structured output). The worker **validates it with Zod**, makes the thumbnail
-   (§5), saves `draft` on the import, sets `status: "ready"`.
+   schema (structured output), with the fields it was unsure of marked (§6, §9). The worker
+   **validates it with Zod**, makes the thumbnail (§5), saves `draft` on the import, sets
+   `status: "ready"`.
 4. **Cleanup in `finally`**: delete the temp file and the Gemini file. Media lives for about a minute.
 5. The client polls `GET /api/imports` (all of them in one request) every 2 s while any is
    pending or processing, then stops; a ready one is opened for review.
@@ -255,12 +256,26 @@ Import {
   createdAt, updatedAt, expiresAt   // TTL
 }
 
+RecipeDraft = RecipeInput + {
+  nutritionPerServing?,
+  uncertain?: [{ path, reason }]   // "things to look at": up to 10 (§9); for the review only
+}
+
 Usage {                            // the daily cap (D22)
   ownerId, day: "2026-11-07",      // the UTC day
   imports,                         // links pasted + Retry clicks that day
   expiresAt                        // TTL: two days later
 }
 ```
+
+A draft's `uncertain` marks the fields the model was unsure of, or couldn't find, with a short
+reason: `{ path: "ingredients.3.quantity", reason: "the video says a can" }`. A path names a
+field as the API's errors do (§8.1): `title`, `servings`, `prepMinutes`, `cookMinutes`,
+`steps.N`, or `ingredients.N.quantity` / `.unit` / `.name`. They're a hint, so the draft's
+schema drops a mark that names no field of the draft (malformed, or past the last step), has no
+reason or repeats a field, rather than fail; it checks them when the worker saves the draft and
+again whenever the API reads it. A saved recipe doesn't keep them: approve takes the form's
+recipe (§8), which has no marks.
 
 Uploaded screenshots for the fallback (up to 4 PNG, JPEG or WebP files, each made a JPEG at
 most 1600 px on a side by the API: typically 200–400 KB, under 2 MB at worst) are held on the import (`input.images`) only until the draft is made:
@@ -361,10 +376,10 @@ GET    /api/recipes/:id/thumbnail      image/webp
 
 POST   /api/imports                    { type: "link", url } | { type: "text", text }  → 202 import (429 past the daily cap)
 POST   /api/imports/screenshots        a form: up to 4 images (10 MB each) as "images"  → 202 import { type: "images", count }
-GET    /api/imports                    my imports that are not done yet
-GET    /api/imports/:id                status, step, error, draft
+GET    /api/imports                    my imports that are not done yet (a ready one's draft with its marks: the queue counts them)
+GET    /api/imports/:id                status, step, error, draft (with its uncertain marks, §6)
 GET    /api/imports/:id/thumbnail      image/webp: the draft's picture
-POST   /api/imports/:id/approve        the edited draft, as POST /api/recipes; nutritionPerServing and the thumbnail from the stored import (D20) → 201 recipe (409 if not ready)
+POST   /api/imports/:id/approve        the edited draft, as POST /api/recipes; nutritionPerServing and the thumbnail from the stored import (D20), the marks dropped → 201 recipe (409 if not ready)
 POST   /api/imports/:id/retry          failed → pending, attempts, error and noRetry cleared → 202 (409 if not failed, or noRetry)
 DELETE /api/imports/:id                discard / dismiss
 ```
@@ -417,6 +432,9 @@ changes**. The planned design:
 - The prompt asks for: title, ingredients with quantities and units, steps, servings, times, tags
   from the fixed lists only, and a nutrition estimate per serving. If the video isn't a recipe,
   the model says so and the import fails with "This doesn't look like a recipe".
+- It also lists, in `uncertain`, up to 10 fields it was unsure of or couldn't find, each by
+  its path with a short reason (§6): the user's "things to look at" when reviewing. The
+  prompt names the paths it may use; one that names no field is dropped, not an error.
 - The recipe is written **in the language of the post**; tags stay English codes (D16).
 - Every call has a **timeout** (the client's: 120 s a request), and the attempt's deadline
   (§4.3) cuts the whole attempt. No retries of its own (the SDK only retries when asked), except
