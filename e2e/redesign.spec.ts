@@ -50,7 +50,8 @@ for (const phone of [false, true]) {
         // The chip's label: its checkbox is hidden inside it (TagPicker).
         await page.getByRole("dialog").getByText("italian", { exact: true }).click();
         await page.waitForTimeout(1000);
-        await page.getByRole("button", { name: "Show recipes" }).click();
+        // "Show 3 recipes": how many depends on the other files' recipes.
+        await page.getByRole("button", { name: /^Show \d+ recipes?$/ }).click();
       } else {
         // Not check(): the tick shows once the address has the tag, a moment after the click.
         await page.getByRole("checkbox", { name: "italian" }).click();

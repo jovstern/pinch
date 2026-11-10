@@ -1,6 +1,7 @@
 import type { Db } from "mongodb";
 import { importsCollection } from "./imports.ts";
 import { recipesCollection, TITLE_COLLATION } from "./recipes.ts";
+import { DELETED_KEPT_SECONDS } from "./softDelete.ts";
 import { usageCollection } from "./usage.ts";
 
 // Every query the app runs has its index here (design §6, mongodb.md); `npm run db:indexes`
@@ -21,6 +22,7 @@ export async function createIndexes(db: Db) {
     // One recipe per import, so approve is safe to repeat (design §4.4). Sparse: recipes made by
     // hand have no sourceImportId, and aren't in it.
     { key: { sourceImportId: 1 }, unique: true, sparse: true },
+    deletedTtl,
   ]);
   await importsCollection(db).createIndexes([
     // My imports, newest first; _id breaks ties, as for recipes (GET /api/imports).
@@ -32,6 +34,7 @@ export async function createIndexes(db: Db) {
     // TTL: Mongo deletes an import once its expiresAt has passed, checking about once a minute
     // (design §4.3).
     { key: { expiresAt: 1 }, expireAfterSeconds: 0 },
+    deletedTtl,
   ]);
   await usageCollection(db).createIndexes([
     // One count per user per day (countImport), unique so two firsts can't make two.
@@ -40,3 +43,12 @@ export async function createIndexes(db: Db) {
     { key: { expiresAt: 1 }, expireAfterSeconds: 0 },
   ]);
 }
+
+// TTL: Mongo deletes a recipe or an import for good once it has been deleted this long (D27).
+// Partial, holding only the deleted ones: no read can use it (they all ask for documents without
+// deletedAt), so it never competes with the indexes above.
+const deletedTtl = {
+  key: { deletedAt: 1 },
+  expireAfterSeconds: DELETED_KEPT_SECONDS,
+  partialFilterExpression: { deletedAt: { $exists: true } },
+};

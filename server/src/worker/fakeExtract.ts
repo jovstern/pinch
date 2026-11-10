@@ -50,5 +50,11 @@ export async function fakeExtract(
     cookMinutes: 20,
     tags: ["cuisine:italian", "meal:dinner"],
     nutritionPerServing: { calories: 520, proteinG: 18, carbsG: 92, fatG: 8 },
+    emoji: "🍝",
+    // Two things to look at, as the model marks them (design §9), so dev and e2e show marks.
+    uncertain: [
+      { path: "ingredients.1.quantity", reason: "The video says “a can”." },
+      { path: "servings", reason: "The video doesn't say how many it serves." },
+    ],
   };
 }

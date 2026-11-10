@@ -28,7 +28,7 @@ export function TagsSheet({ selected, onChange, onClose, focusOnClose }: TagsShe
         }}
       >
         <SheetTitle className="px-4 pt-5 pb-2 font-sans text-lg font-semibold">Tags</SheetTitle>
-        <div className="overflow-y-auto px-4 pb-4">
+        <div className="overflow-y-auto px-4 pt-4 pb-4">
           <TagPicker legend="Tags" selected={selected} onChange={onChange} />
         </div>
         {/* Tags apply as they're ticked: Done only closes it. Above the home bar. */}

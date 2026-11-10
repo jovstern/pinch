@@ -3,12 +3,12 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "../../components/ui/Button.tsx";
 import { ApiError, deleteResource } from "../../lib/api.ts";
 import { toastCouldntSave, toastDismissed } from "../../lib/toasts.tsx";
-import { importListQuery, retryImport } from "./importQueries.ts";
+import { importListQuery, restoreImport, retryImport } from "./importQueries.ts";
 
 // What a failed import offers (design §4.2): Retry puts it back in the queue for three more
-// tries; Dismiss deletes it. A stalled one (no worker is taking it, §4.3), and a failure no retry
-// can fix (D23), offer only Dismiss. Either way the list is asked again, and a retried one is
-// polled.
+// tries; Dismiss deletes it, and its toast's Undo brings it back (D27). A stalled one (no worker
+// is taking it, §4.3), and a failure no retry can fix (D23), offer only Dismiss. Either way the
+// list is asked again, and a retried one is polled.
 // Once it's done the buttons are gone, so focus moves to the paste box (focusPasteBox) rather
 // than falling to the page.
 export function ImportActions({ job, focusPasteBox }: { job: Import; focusPasteBox: () => void }) {
@@ -24,12 +24,12 @@ export function ImportActions({ job, focusPasteBox }: { job: Import; focusPasteB
     onSuccess: focusPasteBox,
     onSettled: refreshList,
   });
-  // No question first, as Discard on the review page: pasting it again brings it back.
+  // No question first: Undo in its toast brings it back.
   const dismiss = useMutation({
     mutationFn: () => deleteResource(`/api/imports/${job.id}`),
     onSuccess: () => {
       focusPasteBox();
-      toastDismissed();
+      toastDismissed(() => restoreImport(queryClient, job.id));
     },
     // A toast, so Try again is one tap. Retry's failure stays by the card instead: its 429 says
     // the day's limit, which Try again can't fix.

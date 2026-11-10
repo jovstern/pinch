@@ -23,6 +23,9 @@ type TextFieldProps = {
   inputMode?: "numeric";
   // Always shown under the input, and read with it.
   hint?: string;
+  // A draft's "thing to look at" (design §14): the id of its note, which the form shows under
+  // the field's row. The box is dashed while it's marked, and read with the note.
+  markId?: string;
   className?: string;
 };
 
@@ -36,6 +39,7 @@ export function TextField({
   multiline,
   inputMode,
   hint,
+  markId,
   className = "",
 }: TextFieldProps) {
   const id = useId();
@@ -44,6 +48,7 @@ export function TextField({
   const invalid = field.state.meta.errors.some((message) => typeof message === "string");
   const describedBy = [];
   if (hint) describedBy.push(hintId);
+  if (markId) describedBy.push(markId);
   if (invalid) describedBy.push(errorId);
   const shared = {
     id,
@@ -55,7 +60,11 @@ export function TextField({
     onBlur: field.handleBlur,
     "aria-invalid": invalid,
     "aria-describedby": describedBy.length > 0 ? describedBy.join(" ") : undefined,
+    // The form's "Go to the first" finds marked boxes by it.
+    "data-marked": markId ? true : undefined,
   };
+  // A dashed edge, not colour alone; red still wins when the field is invalid.
+  const marked = markId ? "border-2 border-dashed border-check-mark" : "";
 
   return (
     <div className={className}>
@@ -67,7 +76,7 @@ export function TextField({
         // screen.
         <Textarea
           {...shared}
-          className="max-h-80"
+          className={`max-h-80 ${marked}`}
           onChange={(event) => {
             field.handleChange(event.target.value);
           }}
@@ -75,6 +84,7 @@ export function TextField({
       ) : (
         <Input
           inputMode={inputMode}
+          className={marked}
           {...shared}
           onChange={(event) => {
             field.handleChange(event.target.value);
