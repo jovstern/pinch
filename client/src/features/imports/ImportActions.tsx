@@ -15,7 +15,7 @@ export function ImportActions({ job, focusPasteBox }: { job: Import; focusPasteB
   const queryClient = useQueryClient();
   // Also after a failure: the import may have changed or gone since the list loaded (another tab),
   // and the list then shows it as it is. Awaited, so "Retrying…" lasts until the list is fresh
-  // and the failed import never flashes back (as DeleteRecipeButton).
+  // and the failed import never flashes back (as DeleteRecipeDialog).
   async function refreshList() {
     await queryClient.invalidateQueries({ queryKey: importListQuery.queryKey });
   }
@@ -48,9 +48,10 @@ export function ImportActions({ job, focusPasteBox }: { job: Import; focusPasteB
     <div className="mt-2 md:mt-0">
       {/* Where Review is on a ready card: Retry, the way forward, rightmost. */}
       <div className="flex justify-end gap-2">
+        {/* Quiet, not red: the card already says what went wrong, and Dismiss only clears it. */}
         <Button
           type="button"
-          variant="destructive-ghost"
+          variant="ghost"
           onClick={() => {
             if (!busy) dismiss.mutate();
           }}

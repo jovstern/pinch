@@ -14,6 +14,10 @@ type TextFieldApi = {
 type TextFieldProps = {
   field: TextFieldApi;
   label: string;
+  // For a row of boxes under column names (a recipe's ingredients): read, not shown.
+  hideLabel?: boolean;
+  // An example, not instructions: the label says what goes in.
+  placeholder?: string;
   multiline?: boolean;
   // "numeric" for numbers: a text input with the number keyboard, so nothing typed is lost.
   inputMode?: "numeric";
@@ -27,6 +31,8 @@ type TextFieldProps = {
 export function TextField({
   field,
   label,
+  hideLabel,
+  placeholder,
   multiline,
   inputMode,
   hint,
@@ -43,6 +49,7 @@ export function TextField({
     id,
     name: field.name,
     value: field.state.value,
+    placeholder,
     // Hebrew reads right to left, English left to right: each box follows what's typed in it.
     dir: "auto",
     onBlur: field.handleBlur,
@@ -52,7 +59,7 @@ export function TextField({
 
   return (
     <div className={className}>
-      <label htmlFor={id} className="mb-1 block text-sm font-semibold">
+      <label htmlFor={id} className={hideLabel ? "sr-only" : "mb-1 block text-sm font-semibold"}>
         {label}
       </label>
       {multiline ? (

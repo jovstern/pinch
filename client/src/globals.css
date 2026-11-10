@@ -130,3 +130,13 @@ body {
   outline: 2px solid var(--color-ring);
   outline-offset: 2px;
 }
+
+/* A field focused or scrolled to (the first error after Save) stays clear of the editor's Save
+   bar, and a checkbox of cook mode clear of its footer: both pinned to the bottom below 1024 px
+   (RecipeForm, StepCarousel). 10rem covers the footer with a timer or two; with more running (rare)
+   it can still sit over a focused box. */
+@media (width < 64rem) {
+  html:has([data-save-bar], [data-cook-footer]) {
+    scroll-padding-bottom: 10rem;
+  }
+}
