@@ -1,8 +1,8 @@
 import { expect, test } from "./fixtures.ts";
 
 // M5's demo (pr-demo skill): a post's text, pasted in the same box as a link, becomes a draft,
-// which is saved as a recipe with its nutrition estimate and its emoji. The fake extractor stands in for
-// Gemini (design §9), so the draft is its fixed one. The pauses let a viewer follow the video.
+// which is saved as a recipe with its nutrition estimate and its emoji. The fake extractor stands
+// in for Gemini (design §9), so the draft is its fixed one. The pauses let a viewer follow the video.
 // It deletes the recipe it made, as import.spec.ts does: the files share one database.
 test("paste a recipe's text, review the draft, save it with its nutrition", async ({ page }) => {
   await page.goto("/");

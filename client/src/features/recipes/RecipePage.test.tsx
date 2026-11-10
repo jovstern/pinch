@@ -216,3 +216,20 @@ async function chooseDelete() {
   await userEvent.click(await screen.findByRole("button", { name: "More actions" }));
   await userEvent.click(await screen.findByRole("menuitem", { name: "Delete…" }));
 }
+
+test("a recipe opened from My recipes shows at once, from the list, while it loads", async () => {
+  // The list answers; the recipe itself never does.
+  stubFetch(
+    vi.fn((path: string) =>
+      path === "/api/recipes"
+        ? Promise.resolve(Response.json({ items: [omelette], nextCursor: null }))
+        : new Promise<Response>(() => undefined),
+    ),
+  );
+  renderApp("/recipes");
+
+  await userEvent.click(await screen.findByRole("link", { name: /Omelette/ }));
+
+  expect(screen.getByRole("heading", { level: 1, name: "Omelette" })).toBeInTheDocument();
+  expect(screen.queryByText("Loading the recipe…")).not.toBeInTheDocument();
+});

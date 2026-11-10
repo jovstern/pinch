@@ -1,5 +1,5 @@
 import type { Nutrition, Recipe } from "@pinch/shared";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useParams } from "react-router";
 import { Badge } from "../../components/ui/Badge.tsx";
 import { Breadcrumb } from "../../components/ui/Breadcrumb.tsx";
@@ -13,12 +13,13 @@ import { LazyRecipeMenu } from "./LazyRecipeMenu.tsx";
 import { RecipeLoadError } from "./RecipeLoadError.tsx";
 import { RecipeSkeleton } from "./RecipeSkeleton.tsx";
 import { RecipeSource } from "./RecipeSource.tsx";
-import { filterParams, noFilters, recipeQuery } from "./recipeQueries.ts";
+import { filterParams, listedRecipe, noFilters, recipeQuery } from "./recipeQueries.ts";
 import { tagLabel } from "./tagLabels.ts";
 
 export function RecipePage() {
   // The route is "recipes/:id", so the id is always there.
   const { id = "" } = useParams();
+  const queryClient = useQueryClient();
   const {
     status,
     isLoadingError,
@@ -26,7 +27,11 @@ export function RecipePage() {
     error,
     refetch,
     isFetching,
-  } = useQuery(recipeQuery(id));
+  } = useQuery({
+    ...recipeQuery(id),
+    // From My recipes' list while the recipe itself loads: placeholder, not cached as its own.
+    placeholderData: () => listedRecipe(queryClient, id),
+  });
   const headingRef = useHeadingFocus();
 
   if (status === "pending") return <RecipeSkeleton />;

@@ -15,7 +15,7 @@ export function EmojiTile({ emoji = "🍽️", className }: EmojiTileProps) {
     <div
       aria-hidden="true"
       className={cn(
-        "flex items-center justify-center bg-muted leading-none select-none",
+        "flex items-center justify-center bg-muted font-emoji leading-none select-none",
         className,
       )}
     >
