@@ -11,6 +11,15 @@ export const sortNames: Record<RecipeSort, string> = {
   az: "A–Z",
 };
 
+// Sort's choices. The first is blank, the API's own order: newest first, or while searching, the
+// best match first, so a search shows Best match until another order is picked (design §14).
+export function sortChoices(searching: boolean) {
+  const named = choicesOf(sortNames);
+  return searching
+    ? [{ value: "" as const, label: "Best match" }, ...named]
+    : [{ value: "" as const, label: "Newest" }, ...named.filter(({ value }) => value !== "newest")];
+}
+
 export const timeNames: Record<TimeLimit, string> = {
   "15": "15 min or less",
   "30": "30 min or less",

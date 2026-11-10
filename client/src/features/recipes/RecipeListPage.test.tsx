@@ -221,6 +221,41 @@ test("Sort beside the search puts the order in the address", async () => {
   });
 });
 
+test("while searching, Sort shows Best match and sends no order until one is picked", async () => {
+  const fetch = stubList();
+  renderApp("/recipes?q=eggs");
+
+  const sort = await screen.findByRole("combobox", { name: "Sort" });
+  expect(sort).toHaveDisplayValue("Best match");
+  expect(fetch).toHaveBeenCalledWith("/api/recipes?q=eggs");
+
+  await userEvent.selectOptions(sort, "Newest");
+  await waitFor(() => {
+    expect(fetch).toHaveBeenLastCalledWith("/api/recipes?q=eggs&sort=newest");
+  });
+});
+
+test("the Filters sheet says when a search shows only its 50 best", async () => {
+  const items = Array.from({ length: 50 }, (_, i) => ({
+    ...omelette,
+    id: `6650a1b2c3d4e5f6000000${String(i).padStart(2, "0")}`,
+  }));
+  stubFetch(vi.fn().mockResolvedValue(Response.json({ items, nextCursor: null })));
+  renderApp("/recipes?q=eggs");
+
+  await userEvent.click(await screen.findByRole("button", { name: "Filters" }));
+  const sheet = await screen.findByRole("dialog", { name: "Filters" });
+  expect(within(sheet).getByRole("button", { name: "Show the 50 best" })).toBeInTheDocument();
+});
+
+test("a value written twice in the address is read once", async () => {
+  const fetch = stubList();
+  renderApp("/recipes?tags=meal:breakfast,meal:breakfast&source=instagram,instagram");
+
+  expect(await screen.findByText("1 recipe matches.")).toBeInTheDocument();
+  expect(fetch).toHaveBeenCalledWith("/api/recipes?tags=meal%3Abreakfast&source=instagram");
+});
+
 test("a source and a time in the address tick the panel, and each one's ✕ takes it off", async () => {
   const fetch = stubList();
   renderApp("/recipes?source=instagram,manual&time=30");

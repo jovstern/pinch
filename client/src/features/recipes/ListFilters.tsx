@@ -1,8 +1,8 @@
-import { RecipeSortSchema } from "@pinch/shared";
 import { Search } from "lucide-react";
 import { useId, useState, type RefObject } from "react";
 import { Input } from "../../components/ui/Input.tsx";
-import { choicesOf, sortNames } from "./filterLabels.ts";
+import { NativeSelect } from "../../components/ui/NativeSelect.tsx";
+import { sortChoices } from "./filterLabels.ts";
 import { FiltersButton } from "./FiltersButton.tsx";
 import type { RecipeFilters } from "./recipeQueries.ts";
 import { TagChips } from "./TagChips.tsx";
@@ -16,10 +16,12 @@ type ListFiltersProps = {
 };
 
 // The search and, on a phone, the Filters button and the common tags, from 1024 px Sort, above
-// the grid (design §7, §14). A search runs on Enter (the keyboard's Search key), not as you type: one request per
-// search rather than one per pause, and no timer. A tag applies as it's ticked.
+// the grid (design §7, §14). A search runs on Enter (the keyboard's Search key), not as you
+// type: one request per search rather than one per pause, and no timer. A tag applies as it's
+// ticked.
 export function ListFilters({ filters, onChange, onChangeTags, searchRef }: ListFiltersProps) {
   const searchId = useId();
+  const sorts = sortChoices(filters.q !== "");
   // What's typed. When the address's search changes from elsewhere (Clear all, the Pinch link),
   // the box takes it: React docs, "Storing information from previous renders".
   const [text, setText] = useState(filters.q);
@@ -66,25 +68,25 @@ export function ListFilters({ filters, onChange, onChangeTags, searchRef }: List
         </form>
         {/* From 1024 px the Filters are a panel beside the grid (FiltersPanel), and the
             common tags are among them; Sort is here, as the wireframe has it. On a phone Sort is
-            in the Filters sheet. A native select: the platform's own list, on every device. */}
+            in the Filters sheet. */}
         <div className="lg:hidden">
           <FiltersButton filters={filters} onChange={onChange} />
         </div>
         <label className="flex items-center gap-2 text-sm max-lg:hidden">
           <span className="text-muted-foreground">Sort</span>
-          <select
+          <NativeSelect
             value={filters.sort}
             onChange={(event) => {
-              onChange({ ...filters, sort: RecipeSortSchema.parse(event.target.value) });
+              const picked = sorts.find(({ value }) => value === event.target.value);
+              onChange({ ...filters, sort: picked?.value ?? "" });
             }}
-            className="h-11 rounded-control border border-input bg-card px-3 text-base"
           >
-            {choicesOf(sortNames).map(({ value, label }) => (
+            {sorts.map(({ value, label }) => (
               <option key={value} value={value}>
                 {label}
               </option>
             ))}
-          </select>
+          </NativeSelect>
         </label>
       </div>
       <div className="lg:hidden">

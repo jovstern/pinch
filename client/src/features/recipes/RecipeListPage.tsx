@@ -14,6 +14,7 @@ import { appliedFilters } from "./filterLabels.ts";
 import {
   filterParams,
   noFilters,
+  PAGE_SIZE,
   readFilters,
   recipeListQuery,
   withoutFilters,
@@ -314,9 +315,6 @@ export function RecipeListPage() {
 // 2 columns on a phone, 3 at 768, 4 at 1024 (beside the Filters panel), 5 from 1280 (design §14).
 const gridClasses =
   "mt-4 grid grid-cols-2 gap-x-3 gap-y-5 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5";
-
-// The API's page, and how many a search answers (design §7).
-const PAGE_SIZE = 50;
 
 // "3 recipes match". A page with more after it says so rather than count them all; a search
 // answers only its best 50 (design §7), so a full one says that.

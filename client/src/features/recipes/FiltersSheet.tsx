@@ -2,7 +2,7 @@ import { useInfiniteQuery } from "@tanstack/react-query";
 import { Button } from "../../components/ui/Button.tsx";
 import { Sheet, SheetClose, SheetContent, SheetTitle } from "../../components/ui/Sheet.tsx";
 import { FilterChoices } from "./FilterChoices.tsx";
-import { recipeListQuery, withoutFilters, type RecipeFilters } from "./recipeQueries.ts";
+import { PAGE_SIZE, recipeListQuery, withoutFilters, type RecipeFilters } from "./recipeQueries.ts";
 
 type FiltersSheetProps = {
   filters: RecipeFilters;
@@ -56,7 +56,7 @@ export function FiltersSheet({ filters, onChange, onClose, focusOnClose }: Filte
             <Button className="flex-2">
               {count === undefined || isPlaceholderData
                 ? "Show recipes"
-                : showCount(count, hasNextPage)}
+                : showCount(count, hasNextPage, filters.q !== "")}
             </Button>
           </SheetClose>
         </div>
@@ -66,8 +66,10 @@ export function FiltersSheet({ filters, onChange, onClose, focusOnClose }: Filte
 }
 
 // "Show 4 recipes". The list comes a page at a time, so a full page with more after it says
-// "50+" rather than count them all (design §7).
-function showCount(count: number, more: boolean) {
+// "50+" rather than count them all; a search answers only its best 50 (design §7), so a full one
+// says that, as the page's count does.
+function showCount(count: number, more: boolean, searching: boolean) {
   if (more) return `Show ${String(count)}+ recipes`;
+  if (searching && count === PAGE_SIZE) return `Show the ${String(PAGE_SIZE)} best`;
   return count === 1 ? "Show 1 recipe" : `Show ${String(count)} recipes`;
 }

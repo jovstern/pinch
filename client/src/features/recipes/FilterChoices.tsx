@@ -1,5 +1,5 @@
 import { ChoiceGroup } from "./ChoiceGroup.tsx";
-import { choicesOf, sortNames, sourceNames, timeNames } from "./filterLabels.ts";
+import { choicesOf, sortChoices, sourceNames, timeNames } from "./filterLabels.ts";
 import type { RecipeFilters } from "./recipeQueries.ts";
 import { TagPicker } from "./TagPicker.tsx";
 
@@ -21,7 +21,7 @@ export function FilterChoices({ filters, onChange, withSort, look }: FilterChoic
         <ChoiceGroup
           legend="Sort"
           type="radio"
-          choices={choicesOf(sortNames)}
+          choices={sortChoices(filters.q !== "")}
           selected={[filters.sort]}
           onChange={(sort) => {
             onChange({ ...filters, sort });
