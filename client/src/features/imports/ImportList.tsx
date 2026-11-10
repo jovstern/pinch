@@ -1,11 +1,11 @@
-import type { Import, Platform } from "@pinch/shared";
+import type { Import } from "@pinch/shared";
 import { useQuery } from "@tanstack/react-query";
 import { CookingPot, LoaderCircle, TriangleAlert } from "lucide-react";
-import { useState } from "react";
 import { Link } from "react-router";
 import { Thumbnail } from "../../components/Thumbnail.tsx";
 import { Button } from "../../components/ui/Button.tsx";
 import { Skeleton } from "../../components/ui/Skeleton.tsx";
+import { platformNames } from "../../lib/platformNames.ts";
 import { ImportActions } from "./ImportActions.tsx";
 import { importListQuery } from "./importQueries.ts";
 
@@ -20,40 +20,21 @@ export function ImportList({ focusPasteBox }: { focusPasteBox: () => void }) {
     (job) => (job.status === "pending" || job.status === "processing") && !job.stalled,
   );
 
-  // What a screen reader hears: only what just changed, one import at a time, not the whole list
-  // (ui-craft: aria-live for async results). Worked out as each new list arrives, from the one
-  // before: React docs, "Storing information from previous renders" (as ListFilters). Kept
-  // simple: one change per poll is said, and the same words twice in a row aren't said again.
-  const [prevData, setPrevData] = useState(data);
-  const [announcement, setAnnouncement] = useState("");
-  if (data !== prevData) {
-    setPrevData(data);
-    // The first list isn't news: it's what the page shows.
-    if (prevData !== undefined && data !== undefined) {
-      const before = new Map(prevData.items.map((job) => [job.id, job.status]));
-      const changed = data.items.find((job) => before.get(job.id) !== job.status);
-      if (changed) setAnnouncement(`${title(changed)}: ${statusText(changed)}`);
-    }
-  }
-
   return (
     <div className="mt-6">
-      {/* Always on the page: a live region must be there before its text changes. */}
-      <p role="status" className="sr-only">
-        {announcement}
-      </p>
       {/* The queue is the page's main content, so a failed load can be asked again (as the
           recipes). */}
+      {/* Centred, as the empty queue. */}
       {isLoadingError && (
-        <div role="alert">
-          <p>We couldn't load your imports.</p>
+        <div role="alert" className="mt-12 text-center">
+          <h2 className="text-xl font-semibold">We couldn't load your imports</h2>
           {/* The status stays "error" while it retries, so the button shows the wait. */}
           <Button
             type="button"
             variant="secondary"
             onClick={() => void refetch()}
             disabled={isFetching}
-            className="mt-3"
+            className="mt-4"
           >
             {isFetching ? "Trying…" : "Try again"}
           </Button>
@@ -173,12 +154,6 @@ function statusColor(job: Import) {
   if (job.stalled || job.status === "failed") return "text-destructive";
   return job.status === "ready" ? "font-semibold text-primary" : "text-muted-foreground";
 }
-
-const platformNames: Record<Platform, string> = {
-  instagram: "Instagram",
-  facebook: "Facebook",
-  youtube: "YouTube",
-};
 
 // The draft's title once there is one; until then what it was made from: a link (by its site),
 // a post's text, pasted, or its screenshots (design §1).

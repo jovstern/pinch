@@ -1,6 +1,6 @@
 import { ImportListSchema, ImportSchema, type ImportList } from "@pinch/shared";
 import { queryOptions } from "@tanstack/react-query";
-import { getJson } from "../../lib/api.ts";
+import { getJson, sendJson } from "../../lib/api.ts";
 
 // My imports, newest first: few, as done ones are deleted (design §4.1). One request for all of
 // them, asked again every 2 s while the worker has any of them in hand, so each one's status
@@ -24,4 +24,10 @@ export function importQuery(id: string) {
     queryKey: ["imports", "detail", id],
     queryFn: () => getJson(`/api/imports/${id}`, ImportSchema),
   });
+}
+
+// Back in the queue for three more tries (design §4.2): from a failed card or its toast. No
+// body: the address says which import.
+export function retryImport(id: string) {
+  return sendJson("POST", `/api/imports/${id}/retry`, undefined, ImportSchema);
 }

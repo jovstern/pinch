@@ -1,8 +1,9 @@
-import { dailyLimitMessage, ImportSchema, type Import } from "@pinch/shared";
+import { dailyLimitMessage, type Import } from "@pinch/shared";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "../../components/ui/Button.tsx";
-import { ApiError, deleteResource, sendJson } from "../../lib/api.ts";
-import { importListQuery } from "./importQueries.ts";
+import { ApiError, deleteResource } from "../../lib/api.ts";
+import { toastCouldntSave, toastDismissed } from "../../lib/toasts.tsx";
+import { importListQuery, retryImport } from "./importQueries.ts";
 
 // What a failed import offers (design §4.2): Retry puts it back in the queue for three more
 // tries; Dismiss deletes it. A stalled one (no worker is taking it, §4.3), and a failure no retry
@@ -14,20 +15,29 @@ export function ImportActions({ job, focusPasteBox }: { job: Import; focusPasteB
   const queryClient = useQueryClient();
   // Also after a failure: the import may have changed or gone since the list loaded (another tab),
   // and the list then shows it as it is. Awaited, so "Retrying…" lasts until the list is fresh
-  // and the failed import never flashes back (as DeleteRecipeButton).
+  // and the failed import never flashes back (as DeleteRecipeDialog).
   async function refreshList() {
     await queryClient.invalidateQueries({ queryKey: importListQuery.queryKey });
   }
   const retry = useMutation({
-    // No body: the address says which import.
-    mutationFn: () => sendJson("POST", `/api/imports/${job.id}/retry`, undefined, ImportSchema),
+    mutationFn: retryImport,
     onSuccess: focusPasteBox,
     onSettled: refreshList,
   });
   // No question first, as Discard on the review page: pasting it again brings it back.
   const dismiss = useMutation({
     mutationFn: () => deleteResource(`/api/imports/${job.id}`),
-    onSuccess: focusPasteBox,
+    onSuccess: () => {
+      focusPasteBox();
+      toastDismissed();
+    },
+    // A toast, so Try again is one tap. Retry's failure stays by the card instead: its 429 says
+    // the day's limit, which Try again can't fix.
+    onError: () => {
+      toastCouldntSave(() => {
+        dismiss.mutate();
+      });
+    },
     onSettled: refreshList,
   });
   // Not disabled while busy: a disabled button drops focus to the page (as Show more).
@@ -38,9 +48,10 @@ export function ImportActions({ job, focusPasteBox }: { job: Import; focusPasteB
     <div className="mt-2 md:mt-0">
       {/* Where Review is on a ready card: Retry, the way forward, rightmost. */}
       <div className="flex justify-end gap-2">
+        {/* Quiet, not red: the card already says what went wrong, and Dismiss only clears it. */}
         <Button
           type="button"
-          variant="destructive-ghost"
+          variant="ghost"
           onClick={() => {
             if (!busy) dismiss.mutate();
           }}
@@ -54,7 +65,7 @@ export function ImportActions({ job, focusPasteBox }: { job: Import; focusPasteB
             type="button"
             variant="outline"
             onClick={() => {
-              if (!busy) retry.mutate();
+              if (!busy) retry.mutate(job.id);
             }}
             aria-disabled={busy}
             aria-describedby={`import-${job.id}`}
@@ -68,11 +79,6 @@ export function ImportActions({ job, focusPasteBox }: { job: Import; focusPasteB
           {retry.error instanceof ApiError && retry.error.status === 429
             ? dailyLimitMessage
             : "It couldn't be retried. Try again."}
-        </p>
-      )}
-      {dismiss.isError && (
-        <p role="alert" className="mt-1 text-right text-sm text-destructive">
-          It couldn't be dismissed. Try again.
         </p>
       )}
     </div>

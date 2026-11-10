@@ -13,10 +13,9 @@ test("find a recipe by a word and a tag, and keep the search on reload", async (
   await expect(page.getByRole("link", { name: /Mujadara/ })).toBeVisible();
   await page.waitForTimeout(1000);
 
-  // The fold's summary (the tag group's hidden legend has the same words).
-  await page.locator("summary", { hasText: "Filter by tags" }).click();
-  // The chip: its checkbox is visually hidden, so it's the label that gets the click.
-  await page.locator("details label", { hasText: "comfort" }).click();
+  // The Filters panel on the left (Desktop Chrome is 1280 px wide). click, not check: the box
+  // follows the address, which changes a moment after the click, and check() wants it at once.
+  await page.getByRole("checkbox", { name: "comfort" }).click();
   await expect(page.getByText("1 recipe matches.")).toHaveAttribute("role", "status");
   await expect(page.getByRole("link", { name: /Red lentil soup/ })).toHaveCount(0);
   await expect(page).toHaveURL("/recipes?q=lentils&tags=fit%3Acomfort");
