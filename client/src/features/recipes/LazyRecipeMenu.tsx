@@ -13,7 +13,19 @@ import { Button } from "../../components/ui/Button.tsx";
 // menu wasn't there to see the key), so ↓ takes one press more; and a chunk that won't load (a
 // deploy since the page was opened) fails the page, caught by Layout's ErrorBoundary, where
 // before only Delete would have.
-const loadMenu = () => import("./RecipeMenu.tsx");
+// Set once the chunk is in: a press then swaps the menu in straight away, so the stand-in isn't
+// dimmed as busy for the moment between.
+let menuLoaded = false;
+const loadMenu = () =>
+  import("./RecipeMenu.tsx").then((module) => {
+    menuLoaded = true;
+    return module;
+  });
+// Ahead of a press. A failure here shows nothing: the press asks for the chunk again, and a
+// failure then is the page's ErrorBoundary's.
+function preloadMenu() {
+  loadMenu().catch(() => undefined);
+}
 const RecipeMenu = lazy(async () => ({
   default: (await loadMenu()).RecipeMenu,
 }));
@@ -26,10 +38,11 @@ export function LazyRecipeMenu({ recipe }: { recipe: Recipe }) {
       variant="outline"
       aria-label="More actions"
       aria-haspopup="menu"
-      aria-busy={pressed}
+      aria-expanded={false}
+      aria-busy={pressed && !menuLoaded}
       className="px-3 aria-busy:cursor-progress aria-busy:opacity-60"
-      onPointerEnter={() => void loadMenu()}
-      onFocus={() => void loadMenu()}
+      onPointerEnter={preloadMenu}
+      onFocus={preloadMenu}
       onClick={() => {
         setPressed(true);
       }}
