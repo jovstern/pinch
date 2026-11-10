@@ -1,8 +1,11 @@
 import { RecipeSchema, type RecipeInput } from "@pinch/shared";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useParams } from "react-router";
+import { Breadcrumb } from "../../components/ui/Breadcrumb.tsx";
+import { Thumbnail } from "../../components/Thumbnail.tsx";
 import { sendJson } from "../../lib/api.ts";
 import { toastChangesSaved } from "../../lib/toasts.tsx";
+import { focusHeading } from "../../lib/useHeadingFocus.ts";
 import { LazyRecipeForm, usePreloadRecipeForm } from "./LazyRecipeForm.tsx";
 import { toFormValues } from "./recipeFormValues.ts";
 import { RecipeLoadError } from "./RecipeLoadError.tsx";
@@ -33,7 +36,7 @@ export function EditRecipePage() {
         refetchType: "all",
       });
       // replace: Back never returns to the form; it goes to the recipe page Edit was opened from.
-      void navigate(`/recipes/${id}`, { replace: true });
+      void navigate(`/recipes/${id}`, { replace: true, state: focusHeading });
       toastChangesSaved();
     },
   });
@@ -48,11 +51,25 @@ export function EditRecipePage() {
   return (
     <>
       <title>{`Edit ${recipe.title} · Pinch`}</title>
-      <h1 className="text-3xl font-bold tracking-tight text-balance">Edit recipe</h1>
+      <Breadcrumb
+        links={[
+          { label: "My recipes", to: "/recipes" },
+          { label: recipe.title, to: `/recipes/${id}` },
+        ]}
+        page="Edit"
+      />
+      {/* The breadcrumbs name the page, so its heading is for screen readers. */}
+      <h1 className="sr-only">{`Edit ${recipe.title}`}</h1>
       <LazyRecipeForm
         defaultValues={toFormValues(recipe)}
+        source={recipe.source}
+        picture={
+          recipe.thumbnail && (
+            <Thumbnail src={`/api/recipes/${id}/thumbnail`} size={recipe.thumbnail} shape="full" />
+          )
+        }
         submitLabel="Save changes"
-        cancelTo={`/recipes/${id}`}
+        leave={{ kind: "cancel", to: `/recipes/${id}` }}
         save={update.mutateAsync}
       />
     </>
