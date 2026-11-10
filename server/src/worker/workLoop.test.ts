@@ -132,6 +132,99 @@ test("a run saves the draft and lets go of the job", async () => {
   expect(saved).not.toHaveProperty("leaseUntil");
 });
 
+test("a run keeps the draft's things to look at, and drops a mark that names no field of it", async () => {
+  await insertImport();
+  const job = await claim();
+
+  await run(job, () =>
+    Promise.resolve({
+      ...draft,
+      uncertain: [
+        { path: "ingredients.0.quantity", reason: " Not said in the video. " },
+        // Past the last step, not a field, a number written oddly, and no reason: dropped.
+        { path: "steps.1", reason: "Gone." },
+        { path: "description", reason: "Not a markable field." },
+        { path: "steps.00", reason: "Malformed." },
+        { path: "servings", reason: "" },
+        // A field's first mark is kept.
+        { path: "ingredients.0.quantity", reason: "Again." },
+        // A dropped mark (no reason) doesn't hide a good one for the same field.
+        { path: "title", reason: "" },
+        { path: "title", reason: "Made up." },
+      ],
+    }),
+  );
+
+  const saved = await imports.findOne({ _id: job._id });
+  expect(saved?.draft?.uncertain).toEqual([
+    { path: "ingredients.0.quantity", reason: "Not said in the video." },
+    { path: "title", reason: "Made up." },
+  ]);
+});
+
+test("a reason too long is cut, not a failed draft", async () => {
+  await insertImport();
+  const job = await claim();
+
+  const uncertain = [{ path: "title", reason: "x".repeat(201) }];
+  await run(job, () => Promise.resolve({ ...draft, uncertain }));
+
+  const saved = await imports.findOne({ _id: job._id });
+  expect(saved?.status).toBe("ready");
+  expect(saved?.draft?.uncertain).toEqual([{ path: "title", reason: "x".repeat(200) }]);
+});
+
+test("a list of marks that isn't well formed is dropped, and the draft saved", async () => {
+  // null, a mark with no reason, a number for a path: each as the model might send it.
+  for (const uncertain of [null, [{ path: "title" }], [{ path: 3, reason: "A number." }]]) {
+    await imports.deleteMany({});
+    await insertImport();
+    const job = await claim();
+
+    await run(job, () => Promise.resolve({ ...draft, uncertain }));
+
+    const saved = await imports.findOne({ _id: job._id });
+    expect(saved).toMatchObject({ status: "ready", draft });
+    expect(saved?.draft).not.toHaveProperty("uncertain");
+  }
+});
+
+test("a draft keeps its emoji, and drops one that isn't a single emoji", async () => {
+  // One emoji, a ZWJ sequence (one grapheme), then what the model might send instead.
+  const cases = [
+    ["🍲", "🍲"],
+    ["🧑‍🍳", "🧑‍🍳"],
+    ["🍲🥗", undefined],
+    ["soup", undefined],
+    ["", undefined],
+    [null, undefined],
+    [7, undefined],
+  ];
+  for (const [emoji, kept] of cases) {
+    await imports.deleteMany({});
+    await insertImport();
+    const job = await claim();
+
+    await run(job, () => Promise.resolve({ ...draft, emoji }));
+
+    const saved = await imports.findOne({ _id: job._id });
+    expect(saved?.status).toBe("ready");
+    expect(saved?.draft?.emoji).toBe(kept);
+  }
+});
+
+test("a draft keeps no more than 10 things to look at", async () => {
+  await insertImport();
+  const job = await claim();
+  const steps = Array.from({ length: 12 }, (_, i) => `Step ${String(i + 1)}.`);
+  const uncertain = steps.map((_, i) => ({ path: `steps.${String(i)}`, reason: "Unclear." }));
+
+  await run(job, () => Promise.resolve({ ...draft, steps, uncertain }));
+
+  const saved = await imports.findOne({ _id: job._id });
+  expect(saved?.draft?.uncertain).toEqual(uncertain.slice(0, 10));
+});
+
 test("a run shows its step while it's working, and clears it when it's done", async () => {
   const { _id } = await insertImport();
   let stepWhileWorking: unknown;
@@ -175,14 +268,27 @@ test("a run whose job another worker claimed again saves nothing", async () => {
   });
 });
 
-test("a run whose job the user deleted saves nothing", async () => {
+test("a run whose job the user deleted saves nothing: it never turns ready", async () => {
   await insertImport();
   const job = await claim();
-  await imports.deleteOne({ _id: job._id });
+  // As DELETE /api/imports/:id does (Pinch it's Undo, say): kept, marked deleted (D27).
+  await imports.updateOne({ _id: job._id }, { $set: { deletedAt: new Date() } });
 
   await run(job);
 
-  expect(await imports.countDocuments()).toBe(0);
+  expect(await imports.findOne({ _id: job._id })).toMatchObject({
+    status: "processing",
+    deletedAt: expect.any(Date) as Date,
+  });
+  expect(await imports.findOne({ _id: job._id })).not.toHaveProperty("draft");
+});
+
+test("a deleted job is never claimed, waiting or held by a worker that died", async () => {
+  const longAgo = new Date(Date.now() - LEASE_MS - 1000);
+  await insertImport({ deletedAt: new Date() });
+  await insertImport({ status: "processing", leaseUntil: longAgo, deletedAt: new Date() });
+
+  expect(await claimNextImport(imports, new Date())).toBeNull();
 });
 
 test("a failed attempt is tried again after 10 s, then 60 s, then the import is failed", async () => {

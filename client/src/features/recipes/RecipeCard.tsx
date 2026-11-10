@@ -1,6 +1,6 @@
 import { PlatformSchema, type Recipe } from "@pinch/shared";
-import { CookingPot } from "lucide-react";
 import { Link } from "react-router";
+import { EmojiTile } from "../../components/EmojiTile.tsx";
 import { Thumbnail } from "../../components/Thumbnail.tsx";
 import { Badge } from "../../components/ui/Badge.tsx";
 import { platformNames } from "../../lib/platformNames.ts";
@@ -35,8 +35,8 @@ export function RecipeCard({ recipe, eager }: RecipeCardProps) {
         </p>
       </div>
       {/* 4:5, cropped, so the grid's rows line up whatever the post's shape. Without a picture
-          a pot, as in the queue, so it doesn't look like a card still loading; if the picture
-          fails, the plain tile stays. */}
+          its emoji (D25), so it doesn't look like a card still loading; if the picture fails, the
+          plain tile stays. */}
       <div className="relative order-first aspect-4/5 overflow-hidden rounded-card bg-muted">
         {recipe.thumbnail ? (
           <Thumbnail
@@ -46,9 +46,7 @@ export function RecipeCard({ recipe, eager }: RecipeCardProps) {
             eager={eager}
           />
         ) : (
-          <div className="flex h-full items-center justify-center text-muted-foreground">
-            <CookingPot aria-hidden="true" className="size-8" />
-          </div>
+          <EmojiTile emoji={recipe.emoji} className="h-full text-5xl" />
         )}
         {platform && (
           <Badge

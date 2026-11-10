@@ -12,7 +12,7 @@ import { toFormValues } from "../recipes/recipeFormValues.ts";
 import { RecipeLoadError } from "../recipes/RecipeLoadError.tsx";
 import { recipeListsKey, recipeQuery } from "../recipes/recipeQueries.ts";
 import { DraftBanner } from "./DraftBanner.tsx";
-import { importListQuery, importQuery } from "./importQueries.ts";
+import { importListQuery, importQuery, restoreImport } from "./importQueries.ts";
 
 // The draft the worker made, in the recipe form: nothing is saved until the user has checked it
 // and pressed Save (design D1). Save approves it (§4.4), Discard deletes it.
@@ -64,7 +64,8 @@ export function ReviewImportPage() {
         refetchType: "all",
       });
       void navigate("/", { replace: true, state: focusHeading });
-      toastDiscarded(job?.draft?.title);
+      // Undo puts it back in the queue, on /, where the user now is (D27).
+      toastDiscarded(job?.draft?.title, () => restoreImport(queryClient, id));
     },
     onError: () => {
       toastCouldntSave(() => {
@@ -105,6 +106,7 @@ export function ReviewImportPage() {
       <LazyRecipeForm
         intro={<DraftBanner input={job.input} />}
         defaultValues={toFormValues(job.draft)}
+        uncertain={job.draft.uncertain}
         source={sourceOf(job.input)}
         picture={
           job.thumbnail && (

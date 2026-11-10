@@ -101,6 +101,35 @@ test("Delete asks first, then deletes the recipe and goes back to the list, focu
   expect(fetch).toHaveBeenCalledWith(`/api/recipes/${omelette.id}`, { method: "DELETE" });
 });
 
+test("Undo on Delete's toast restores the recipe, and View opens it", async () => {
+  const fetch = stubApi();
+  renderApp(`/recipes/${omelette.id}`);
+
+  await chooseDelete();
+  const dialog = await screen.findByRole("alertdialog", { name: "Delete this recipe?" });
+  await userEvent.click(within(dialog).getByRole("button", { name: "Delete" }));
+  await screen.findByRole("heading", { level: 1, name: "My recipes" });
+  // fireEvent: userEvent's pointer down makes Sonner capture the pointer, which jsdom can't.
+  fireEvent.click(await toastButton("Deleted Omelette", "Undo"));
+
+  expect(fetch).toHaveBeenCalledWith(`/api/recipes/${omelette.id}/restore`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: undefined,
+  });
+  // Where the user is: My recipes. The toast offers the way back to it.
+  expect(screen.getByRole("heading", { level: 1, name: "My recipes" })).toBeInTheDocument();
+  fireEvent.click(await toastButton("Back in My recipes", "View"));
+  expect(await screen.findByRole("heading", { level: 1, name: "Omelette" })).toBeInTheDocument();
+});
+
+// A button on the toast that says this (Sonner's list item).
+async function toastButton(text: string, name: string) {
+  const toast = (await screen.findByText(text)).closest("li");
+  if (toast === null) throw new Error(`"${text}" isn't in a toast`);
+  return within(toast).getByRole("button", { name });
+}
+
 test("Keep it closes the question without deleting", async () => {
   const fetch = stubApi();
   renderApp(`/recipes/${omelette.id}`);
@@ -216,3 +245,20 @@ async function chooseDelete() {
   await userEvent.click(await screen.findByRole("button", { name: "More actions" }));
   await userEvent.click(await screen.findByRole("menuitem", { name: "Delete…" }));
 }
+
+test("a recipe opened from My recipes shows at once, from the list, while it loads", async () => {
+  // The list answers; the recipe itself never does.
+  stubFetch(
+    vi.fn((path: string) =>
+      path === "/api/recipes"
+        ? Promise.resolve(Response.json({ items: [omelette], nextCursor: null }))
+        : new Promise<Response>(() => undefined),
+    ),
+  );
+  renderApp("/recipes");
+
+  await userEvent.click(await screen.findByRole("link", { name: /Omelette/ }));
+
+  expect(screen.getByRole("heading", { level: 1, name: "Omelette" })).toBeInTheDocument();
+  expect(screen.queryByText("Loading the recipe…")).not.toBeInTheDocument();
+});

@@ -37,6 +37,9 @@
   /* Each with an icon or text, never colour alone: "check this" marks, cooked and success.
      Check is a fill or a mark, never a text colour: it is too light to read. */
   --color-check: #e8b931;
+  /* The ◆ of a "thing to look at" and its field's dashed edge: check, dark enough for a glyph
+     and an edge (UI, 3:1): 4.78:1 on the page, 5.07:1 on a card; in dark, 10.6:1 or more. */
+  --color-check-mark: #8a6a00;
   --color-cooked: #5e7a3a;
   /* Only for what can't be undone (delete). Its label is on-accent too. */
   --color-danger: #b3261e;
@@ -47,6 +50,9 @@
      Windows, Noto Serif Hebrew on Android), so it's the same before and after Fraunces swaps in. */
   --font-display:
     "Fraunces", "Fraunces Fallback", "Times New Roman", "Noto Serif Hebrew", Georgia, serif;
+  /* A recipe's emoji (D25): the colour emoji fonts first, so a text font's plain glyph for it
+     never draws it in grey. */
+  --font-emoji: "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif;
 
   /* Shape (plan §6): cards and sheets round, controls less so, chips full (rounded-full). One
      soft shadow, for what floats over the page (the dialog). */
@@ -102,6 +108,7 @@
     /* Ink, not white: white on the lighter dark-theme accent wouldn't pass AA. */
     --color-on-accent: #17130f;
     --color-check: #f2c94c;
+    --color-check-mark: #f2c94c;
     --color-cooked: #8fb35e;
     --color-danger: #f2706a;
   }

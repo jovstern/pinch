@@ -1,39 +1,55 @@
-import { RecipeInputSchema, TagSchema, type RecipeList } from "@pinch/shared";
+import {
+  ListSourceSchema,
+  RecipeInputSchema,
+  RecipeSortSchema,
+  TagSchema,
+  TimeLimitSchema,
+  type RecipeList,
+  type RecipeSort,
+} from "@pinch/shared";
 import express from "express";
 import { ObjectId, type Db } from "mongodb";
 import { z } from "zod";
 import {
-  findNewestRecipes,
+  findRecipes,
   PAGE_SIZE,
   recipesCollection,
-  searchRecipes,
   toRecipe,
+  type ListedRecipe,
+  type RecipeCursor,
   type RecipeDocument,
 } from "../db/recipes.ts";
+import { NOT_DELETED } from "../db/softDelete.ts";
 import { WITHOUT_MEDIA } from "../db/thumbnail.ts";
 import { HttpError, parseInput } from "../errors.ts";
+import { titleEmoji } from "../titleEmoji.ts";
 import { sendThumbnail } from "./thumbnail.ts";
 
 // Every query filters by ownerId: a user only ever sees their own recipes (design §1, §8.3).
+// And every read leaves out the deleted ones, kept a while for Undo (D27).
 export function recipesRouter(db: Db) {
   const recipes = recipesCollection(db);
   const router = express.Router();
 
   router.get("/", async (req, res) => {
-    const { q, tags, cursor } = parseInput(ListQuerySchema, req.query);
-    // A search answers its best matches as one page, so it has no cursor; one sent with it is
-    // ignored (design §7).
-    if (q) {
-      const matches = await searchRecipes(recipes, req.userId, q, { tags }).toArray();
-      res.json({ items: matches.map(toRecipe), nextCursor: null } satisfies RecipeList);
-      return;
-    }
-    const found = await findNewestRecipes(recipes, req.userId, { tags, after: cursor }).toArray();
+    const { q, tags, source, time, sort, cursor } = parseInput(ListQuerySchema, req.query);
+    const found = await findRecipes(recipes, req.userId, {
+      q,
+      tags,
+      sources: source,
+      maxMinutes: time,
+      sort,
+      // A search answers its best matches as one page, so it has no cursor; one sent with it is
+      // ignored (design §7).
+      after: q ? undefined : cursor,
+    }).toArray();
     const items = found.slice(0, PAGE_SIZE);
     const last = items.at(-1);
     // Only when there is one more recipe after this page: the last page says null. (`last` is
     // always there when there is more; the check is for TypeScript.)
-    const nextCursor = found.length > PAGE_SIZE && last ? toCursorText(last) : null;
+    // A search has no next page, so a cursor's order is always the list's: newest if none.
+    const nextCursor =
+      found.length > PAGE_SIZE && last ? toCursorText(last, sort ?? "newest") : null;
     res.json({ items: items.map(toRecipe), nextCursor } satisfies RecipeList);
   });
 
@@ -44,6 +60,8 @@ export function recipesRouter(db: Db) {
       ...input,
       _id: new ObjectId(),
       ownerId: req.userId,
+      // No model to pick one: the title's, if it names a dish we know (D25).
+      emoji: titleEmoji(input.title),
       source: { type: "manual" },
       createdAt: now,
       updatedAt: now,
@@ -54,7 +72,7 @@ export function recipesRouter(db: Db) {
 
   router.get("/:id", async (req, res) => {
     const recipe = await recipes.findOne(
-      { _id: parseId(req.params.id), ownerId: req.userId },
+      { _id: parseId(req.params.id), ownerId: req.userId, ...NOT_DELETED },
       { projection: WITHOUT_MEDIA },
     );
     if (!recipe) throw recipeNotFound();
@@ -64,7 +82,7 @@ export function recipesRouter(db: Db) {
   // The recipe's picture (§5), apart from the recipe, so lists stay small.
   router.get("/:id/thumbnail", async (req, res) => {
     const recipe = await recipes.findOne(
-      { _id: parseId(req.params.id), ownerId: req.userId },
+      { _id: parseId(req.params.id), ownerId: req.userId, ...NOT_DELETED },
       { projection: { thumbnail: 1 } },
     );
     // No picture: as good as no recipe, for an <img>.
@@ -76,7 +94,7 @@ export function recipesRouter(db: Db) {
   // is cleared rather than kept (design §8).
   router.put("/:id", async (req, res) => {
     const input = parseInput(RecipeInputSchema, req.body);
-    const filter = { _id: parseId(req.params.id), ownerId: req.userId };
+    const filter = { _id: parseId(req.params.id), ownerId: req.userId, ...NOT_DELETED };
     const existing = await recipes.findOne(filter);
     if (!existing) throw recipeNotFound();
     // Every stored field the form doesn't send is kept here, or replaceOne erases it (D20).
@@ -85,6 +103,7 @@ export function recipesRouter(db: Db) {
       _id: existing._id,
       ownerId: existing.ownerId,
       nutritionPerServing: existing.nutritionPerServing,
+      emoji: existing.emoji,
       thumbnail: existing.thumbnail,
       source: existing.source,
       sourceImportId: existing.sourceImportId,
@@ -97,46 +116,97 @@ export function recipesRouter(db: Db) {
     res.json(toRecipe(recipe));
   });
 
+  // Kept a while, to undo (D27): it's only marked deleted, and every read above leaves it out.
+  // Deleting it again is a 404, as for any recipe that isn't there.
   router.delete("/:id", async (req, res) => {
-    const { deletedCount } = await recipes.deleteOne({
-      _id: parseId(req.params.id),
-      ownerId: req.userId,
-    });
-    if (deletedCount === 0) throw recipeNotFound();
+    const { matchedCount } = await recipes.updateOne(
+      { _id: parseId(req.params.id), ownerId: req.userId, ...NOT_DELETED },
+      { $set: { deletedAt: new Date() } },
+    );
+    if (matchedCount === 0) throw recipeNotFound();
     res.status(204).end();
+  });
+
+  // Undo of a delete: the recipe is back as it was. Safe to repeat: one that isn't deleted is
+  // answered as it is. Once the TTL has deleted it for good (D27), it's a 404.
+  router.post("/:id/restore", async (req, res) => {
+    const recipe = await recipes.findOneAndUpdate(
+      { _id: parseId(req.params.id), ownerId: req.userId },
+      { $unset: { deletedAt: "" } },
+      { returnDocument: "after", projection: WITHOUT_MEDIA },
+    );
+    if (!recipe) throw recipeNotFound();
+    res.json(toRecipe(recipe));
   });
 
   return router;
 }
 
-// The list's query string (design §8). q is a search; blank means none. Tags are
-// comma-separated: "cuisine:italian,meal:dinner".
-// The cursor is the last recipe's time and id, "<ms>_<id>": the client sends back the nextCursor
-// it was given and never reads it (§7).
-const ListQuerySchema = z.object({
-  q: z
-    .string("Search for one thing at a time.")
-    .trim()
-    .max(200, "Keep the search under 200 characters.")
-    .optional(),
-  tags: z
-    .string("Send the tags once, comma-separated.")
-    .transform((text) => text.split(","))
-    .pipe(z.array(TagSchema).max(20, "Filter by up to 20 tags."))
-    .optional(),
-  cursor: z
-    .string("This cursor isn't valid.")
-    .regex(/^\d{1,15}_[0-9a-f]{24}$/, "This cursor isn't valid.")
-    // The id is the last 24 characters; the time is what comes before the "_".
-    .transform((text) => ({
-      createdAt: new Date(Number(text.slice(0, -25))),
-      _id: new ObjectId(text.slice(-24)),
-    }))
-    .optional(),
-});
+// The list's query string (design §8). q is a search; blank means none. Tags and sources are
+// comma-separated: "cuisine:italian,meal:dinner", "instagram,manual". time is the most minutes a
+// recipe takes; sort the order: when left out, newest first, or with q, the best match first.
+// The cursor is the order, the last recipe's value in it and its id, "<order>:<value>_<id>": the
+// client sends back the nextCursor it was given and never reads it (§7).
+const ListQuerySchema = z
+  .object({
+    q: z
+      .string("Search for one thing at a time.")
+      .trim()
+      .max(200, "Keep the search under 200 characters.")
+      .optional(),
+    tags: z
+      .string("Send the tags once, comma-separated.")
+      .transform((text) => text.split(","))
+      .pipe(z.array(TagSchema).max(20, "Filter by up to 20 tags."))
+      .optional(),
+    source: z
+      .string("Send the sources once, comma-separated.")
+      .transform((text) => text.split(","))
+      .pipe(z.array(ListSourceSchema))
+      .optional(),
+    time: TimeLimitSchema.transform(Number).optional(),
+    sort: RecipeSortSchema.optional(),
+    cursor: z.string("This cursor isn't valid.").optional(),
+  })
+  // The cursor must belong to the order asked (it's read by it), so it's checked once sort is
+  // known.
+  .transform(({ cursor, ...query }, context) => {
+    if (cursor === undefined) return { ...query, cursor: undefined };
+    const after = parseCursor(cursor, query.sort ?? "newest");
+    if (!after) {
+      context.issues.push({
+        code: "custom",
+        path: ["cursor"],
+        message: "This cursor isn't valid.",
+        input: cursor,
+      });
+      return z.NEVER;
+    }
+    return { ...query, cursor: after };
+  });
 
-function toCursorText(recipe: RecipeDocument) {
-  return `${String(recipe.createdAt.getTime())}_${recipe._id.toHexString()}`;
+// "<order>:<value>_<id>": the id is the last 24 characters, the value what comes between the
+// order's ":" and the "_" before it. Newest's value is the time in milliseconds and Quickest's the
+// minutes, both whole numbers; A–Z's is the title, which may hold a "_" or ":" of its own.
+function parseCursor(text: string, sort: RecipeSort): RecipeCursor | undefined {
+  if (!text.startsWith(`${sort}:`)) return undefined;
+  const rest = text.slice(sort.length + 1);
+  if (!/^.{1,200}_[0-9a-f]{24}$/s.test(rest)) return undefined;
+  const value = rest.slice(0, -25);
+  const _id = new ObjectId(rest.slice(-24));
+  if (sort === "az") return { value, _id };
+  if (!/^\d{1,15}$/.test(value)) return undefined;
+  return { value: sort === "newest" ? new Date(Number(value)) : Number(value), _id };
+}
+
+function toCursorText(recipe: ListedRecipe, sort: RecipeSort) {
+  return `${sort}:${cursorValue(recipe, sort)}_${recipe._id.toHexString()}`;
+}
+
+function cursorValue(recipe: ListedRecipe, sort: RecipeSort) {
+  if (sort === "newest") return String(recipe.createdAt.getTime());
+  if (sort === "quickest") return String(recipe.totalMinutes);
+  return recipe.title;
 }
 
 // An id that can't exist is simply not found (mongodb.md: validate ids before querying).

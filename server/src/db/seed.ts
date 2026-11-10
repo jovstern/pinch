@@ -1,5 +1,6 @@
 import { RecipeInputSchema, type RecipeInput } from "@pinch/shared";
 import { ObjectId, type AnyBulkWriteOperation, type Db } from "mongodb";
+import { titleEmoji } from "../titleEmoji.ts";
 import { recipesCollection, type RecipeDocument } from "./recipes.ts";
 
 // Sample recipes, so the list, search and tag filters have something to find (design §6). Two
@@ -144,7 +145,8 @@ export const sampleRecipes: RecipeInput[] = [
 
 // Adds the samples that aren't there, as the dev user's (design §8.3). Each has a fixed id, so
 // they belong to one owner, and $setOnInsert writes only when the upsert inserts: running it
-// again leaves an edited sample as it is and puts back a deleted one (mongodb.md: idempotent).
+// again leaves an edited sample as it is and puts back a deleted one, whether still kept for Undo
+// (D27) or gone (mongodb.md: idempotent).
 export async function seedRecipes(db: Db, ownerId: ObjectId) {
   const now = Date.now();
   const writes: AnyBulkWriteOperation<RecipeDocument>[] = sampleRecipes.map((sample, index) => {
@@ -158,11 +160,13 @@ export async function seedRecipes(db: Db, ownerId: ObjectId) {
           $setOnInsert: {
             // Parsed like a POST body, so a sample with a typo in a tag fails here.
             ...RecipeInputSchema.parse(sample),
+            emoji: titleEmoji(sample.title),
             ownerId,
             source: { type: "manual" },
             createdAt,
             updatedAt: createdAt,
           },
+          $unset: { deletedAt: "" },
         },
         upsert: true,
       },

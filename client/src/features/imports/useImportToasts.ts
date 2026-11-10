@@ -10,6 +10,7 @@ import {
   toastImportFailed,
   toastReady,
 } from "../../lib/toasts.tsx";
+import { countToLookAt, thingsToLookAt } from "../../lib/thingsToLookAt.ts";
 import { importListQuery, retryImport } from "./importQueries.ts";
 
 // What a failed import couldn't read, by what it was made from.
@@ -62,9 +63,15 @@ export function useImportToasts() {
     for (const job of data.items) {
       if (statuses.get(job.id) === job.status) continue;
       if (job.status === "ready") {
-        toastReady(job.id, job.draft?.title ?? "Your recipe", () => {
-          void navigate(`/imports/${job.id}`);
-        });
+        const count = countToLookAt(job);
+        toastReady(
+          job.id,
+          job.draft?.title ?? "Your recipe",
+          () => {
+            void navigate(`/imports/${job.id}`);
+          },
+          count > 0 ? thingsToLookAt(count) : undefined,
+        );
       }
       if (job.status === "failed") {
         // No Retry when no retry can fix it (D23).
