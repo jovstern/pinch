@@ -5,6 +5,7 @@ import { Badge } from "../../components/ui/Badge.tsx";
 import { Breadcrumb } from "../../components/ui/Breadcrumb.tsx";
 import { Button } from "../../components/ui/Button.tsx";
 import { Thumbnail } from "../../components/Thumbnail.tsx";
+import { useHeadingFocus } from "../../lib/useHeadingFocus.ts";
 import { ingredientLine } from "./ingredientLine.ts";
 import { keepRangesTogether } from "./ranges.ts";
 import { LazyRecipeMenu } from "./LazyRecipeMenu.tsx";
@@ -25,6 +26,7 @@ export function RecipePage() {
     refetch,
     isFetching,
   } = useQuery(recipeQuery(id));
+  const headingRef = useHeadingFocus();
 
   if (status === "pending") return <RecipeSkeleton />;
 
@@ -40,7 +42,7 @@ export function RecipePage() {
       <title>{`${recipe.title} · Pinch`}</title>
       <Breadcrumb links={[{ label: "My recipes", to: "/recipes" }]} page={recipe.title} />
       {/* The picture above the title on a phone, beside it from 1024 px (design §14). */}
-      <div className="mt-2 lg:flex lg:items-end lg:gap-12">
+      <div className="mt-2 lg:flex lg:items-start lg:gap-12">
         {recipe.thumbnail && (
           <Thumbnail
             src={`/api/recipes/${recipe.id}/thumbnail`}
@@ -49,7 +51,12 @@ export function RecipePage() {
           />
         )}
         <div className="mt-4 min-w-0 lg:mt-0">
-          <h1 dir="auto" className="text-3xl font-bold tracking-tight text-balance">
+          <h1
+            ref={headingRef}
+            tabIndex={-1}
+            dir="auto"
+            className="text-3xl font-bold tracking-tight text-balance"
+          >
             {recipe.title}
           </h1>
           {/* One block, so the nutrition sits close under the source and details. */}
@@ -104,7 +111,7 @@ export function RecipePage() {
 
       {/* From 1024 px the ingredients sit in a panel beside the steps, so the whole recipe fits
           without scrolling back (design §14). */}
-      <div className="mt-8 lg:mt-10 lg:grid lg:grid-cols-[minmax(0,22rem)_1fr] lg:items-start lg:gap-12">
+      <div className="mt-8 lg:mt-10 lg:grid lg:grid-cols-[minmax(16rem,22rem)_minmax(0,1fr)] lg:items-start lg:gap-12">
         <section className="lg:rounded-card lg:border lg:border-border lg:p-5">
           {/* Each list is named by its heading, for screen readers (and the tests). */}
           <h2 id="ingredients" className="text-xl font-semibold">
