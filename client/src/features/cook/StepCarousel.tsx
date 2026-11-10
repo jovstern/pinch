@@ -135,7 +135,7 @@ export function StepCarousel({ steps, card, onDone, children, timers }: StepCaro
           focused under it scrolls clear of it (globals.css). */}
       <div
         data-cook-footer
-        className="sticky bottom-0 mt-4 border-t border-border bg-surface py-2 md:mt-6 lg:static lg:border-0"
+        className="sticky bottom-0 mt-4 border-t border-border bg-background py-2 md:mt-6 lg:static lg:border-0"
       >
         {/* Each stays the same button from step to step (aria-disabled, not disabled; Next turns
           into Done), so a keyboard's focus stays on it. Small around the dots on a phone (Next a

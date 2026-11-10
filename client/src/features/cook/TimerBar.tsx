@@ -14,6 +14,7 @@ export function TimerBar({ timers, now, onStop }: TimerBarProps) {
   return (
     <ul
       aria-label="Timers"
+      // Its top border separates it from Back and Next above it in cook mode's footer: meant.
       className="grid max-h-[40dvh] gap-1 overflow-y-auto border-t border-border bg-surface py-2"
     >
       {timers.map((timer) => {
