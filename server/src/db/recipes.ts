@@ -14,6 +14,7 @@ import {
   type Filter,
   type ObjectId,
 } from "mongodb";
+import { NOT_DELETED } from "./softDelete.ts";
 import { WITHOUT_MEDIA, type StoredThumbnail } from "./thumbnail.ts";
 
 // A recipe as it is stored (design §6). A field added here that the form doesn't send must
@@ -34,6 +35,8 @@ export type RecipeDocument = RecipeInput & {
   sourceImportId?: ObjectId;
   createdAt: Date;
   updatedAt: Date;
+  // Set by DELETE, unset by restore: a deleted recipe is kept a while for Undo (D27).
+  deletedAt?: Date;
 };
 
 export function recipesCollection(db: Db) {
@@ -142,7 +145,7 @@ export function findRecipes(
   ownerId: ObjectId,
   { q, tags = [], sources = [], maxMinutes, sort, after }: RecipeListOptions = {},
 ) {
-  const filter: Filter<RecipeDocument> = { ownerId };
+  const filter: Filter<RecipeDocument> = { ownerId, ...NOT_DELETED };
   if (q) filter.$text = { $search: q };
   if (tags.length > 0) filter.tags = { $all: tags };
   if (sources.length > 0) filter["source.type"] = { $in: sources };
