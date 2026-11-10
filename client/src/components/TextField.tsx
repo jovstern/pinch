@@ -1,5 +1,7 @@
-import { useId, type Ref } from "react";
+import { useId } from "react";
 import { FieldError } from "./FieldError.tsx";
+import { Input } from "./ui/Input.tsx";
+import { Textarea } from "./ui/Textarea.tsx";
 
 // What TextField needs from a TanStack Form field, so it fits any text field of any form.
 type TextFieldApi = {
@@ -12,13 +14,15 @@ type TextFieldApi = {
 type TextFieldProps = {
   field: TextFieldApi;
   label: string;
+  // For a row of boxes under column names (a recipe's ingredients): read, not shown.
+  hideLabel?: boolean;
+  // An example, not instructions: the label says what goes in.
+  placeholder?: string;
   multiline?: boolean;
   // "numeric" for numbers: a text input with the number keyboard, so nothing typed is lost.
   inputMode?: "numeric";
   // Always shown under the input, and read with it.
   hint?: string;
-  // The textarea itself (multiline only: the paste box on /), to move focus to it.
-  inputRef?: Ref<HTMLTextAreaElement>;
   className?: string;
 };
 
@@ -27,10 +31,11 @@ type TextFieldProps = {
 export function TextField({
   field,
   label,
+  hideLabel,
+  placeholder,
   multiline,
   inputMode,
   hint,
-  inputRef,
   className = "",
 }: TextFieldProps) {
   const id = useId();
@@ -44,37 +49,33 @@ export function TextField({
     id,
     name: field.name,
     value: field.state.value,
+    placeholder,
     // Hebrew reads right to left, English left to right: each box follows what's typed in it.
     dir: "auto",
     onBlur: field.handleBlur,
     "aria-invalid": invalid,
     "aria-describedby": describedBy.length > 0 ? describedBy.join(" ") : undefined,
   };
-  const box =
-    "w-full rounded-control border border-border-field bg-surface-raised px-3 py-2 aria-invalid:border-danger";
 
   return (
     <div className={className}>
-      <label htmlFor={id} className="mb-1 block text-sm font-semibold">
+      <label htmlFor={id} className={hideLabel ? "sr-only" : "mb-1 block text-sm font-semibold"}>
         {label}
       </label>
       {multiline ? (
-        // Grows with its text (field-sizing), so a long step is read whole; up to a limit, so a long
-        // pasted caption doesn't push the button below it far off the screen.
-        <textarea
-          ref={inputRef}
+        // Up to a limit, so a long pasted caption doesn't push the button below it far off the
+        // screen.
+        <Textarea
           {...shared}
-          className={`field-sizing-content max-h-80 min-h-24 ${box}`}
+          className="max-h-80"
           onChange={(event) => {
             field.handleChange(event.target.value);
           }}
         />
       ) : (
-        <input
-          type="text"
+        <Input
           inputMode={inputMode}
           {...shared}
-          className={`min-h-11 ${box}`}
           onChange={(event) => {
             field.handleChange(event.target.value);
           }}

@@ -1,5 +1,5 @@
 import type { Recipe } from "@pinch/shared";
-import { act, screen, within } from "@testing-library/react";
+import { act, fireEvent, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, test, vi } from "vitest";
 import { renderApp, stubFetch } from "../../test-utils.tsx";
@@ -45,7 +45,6 @@ test("Cook on a recipe opens cook mode at its first step", async () => {
 
   expect(await screen.findByText("Step 1 of 2")).toBeInTheDocument();
   expect(screen.getByText("Beat the eggs.")).toBeInTheDocument();
-  expect(screen.queryByRole("link", { name: "New recipe" })).not.toBeInTheDocument();
 });
 
 test("Next and Back go through the steps; Done on the last goes back to the recipe", async () => {
@@ -57,15 +56,92 @@ test("Next and Back go through the steps; Done on the last goes back to the reci
     "true",
   );
   await userEvent.click(screen.getByRole("button", { name: "Next" }));
-  expect(screen.getByText("Step 2 of 2")).toBeInTheDocument();
-  expect(screen.getByText("Cook them in butter.")).toBeInTheDocument();
+  expect(screen.getByRole("status")).toHaveTextContent("Step 2 of 2: Cook them in butter.");
 
   await userEvent.click(screen.getByRole("button", { name: "Back" }));
-  expect(screen.getByText("Beat the eggs.")).toBeInTheDocument();
+  expect(screen.getByRole("status")).toHaveTextContent("Step 1 of 2: Beat the eggs.");
 
   await userEvent.click(screen.getByRole("button", { name: "Next" }));
   await userEvent.click(screen.getByRole("button", { name: "Done" }));
   expect(await screen.findByRole("heading", { level: 1, name: "Omelette" })).toBeInTheDocument();
+});
+
+test("shows every step as a card, and a dot per step that jumps to it", async () => {
+  stubApi();
+  renderApp(`/recipes/${omelette.id}/cook`);
+
+  const steps = await screen.findByRole("list", { name: "Steps" });
+  expect(within(steps).getByRole("listitem", { name: "Step 2 of 2" })).toHaveTextContent(
+    "Cook them in butter.",
+  );
+  await userEvent.click(screen.getByRole("button", { name: "Step 2" }));
+
+  expect(screen.getByText("Step 2 of 2")).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Step 2" })).toHaveAttribute("aria-current", "step");
+  expect(screen.getByRole("button", { name: "Done" })).toBeInTheDocument();
+});
+
+test("a tap on the next card, peeking at the side, brings it in", async () => {
+  stubApi();
+  renderApp(`/recipes/${omelette.id}/cook`);
+
+  await userEvent.click(await screen.findByRole("listitem", { name: "Step 2 of 2" }));
+
+  expect(screen.getByText("Step 2 of 2")).toBeInTheDocument();
+});
+
+test("no dots past 7 steps: the counter and the bar say where you are", async () => {
+  stubApi({ ...omelette, steps: ["1", "2", "3", "4", "5", "6", "7", "8"] });
+  renderApp(`/recipes/${omelette.id}/cook`);
+
+  await screen.findByText("Step 1 of 8");
+  expect(screen.queryByRole("button", { name: "Step 1" })).not.toBeInTheDocument();
+});
+
+test("the arrow keys go through the steps, but not from a checkbox", async () => {
+  stubApi();
+  renderApp(`/recipes/${omelette.id}/cook`);
+  await screen.findByText("Step 1 of 2");
+
+  await userEvent.keyboard("{ArrowRight}");
+  expect(screen.getByText("Step 2 of 2")).toBeInTheDocument();
+  await userEvent.keyboard("{ArrowLeft}");
+  expect(screen.getByText("Step 1 of 2")).toBeInTheDocument();
+
+  screen.getAllByRole("checkbox", { name: "2 eggs" })[0]?.focus();
+  await userEvent.keyboard("{ArrowRight}");
+  expect(screen.getByText("Step 1 of 2")).toBeInTheDocument();
+});
+
+test("once a swipe comes to rest on a card, that's the step", async () => {
+  vi.useFakeTimers({ shouldAdvanceTime: true });
+  const user = userEvent.setup({ advanceTimers: (ms) => vi.advanceTimersByTime(ms) });
+  stubApi();
+  renderApp(`/recipes/${omelette.id}/cook`);
+  await user.click(await screen.findByRole("button", { name: "Next" }));
+
+  // jsdom lays nothing out: every card starts at 0, where the row is, so it rests on the first
+  // (nearestStep.test.ts has the measuring).
+  fireEvent.scroll(screen.getByRole("list", { name: "Steps" }));
+  expect(screen.getByText("Step 2 of 2")).toBeInTheDocument();
+  act(() => {
+    vi.advanceTimersByTime(100);
+  });
+
+  expect(screen.getByText("Step 1 of 2")).toBeInTheDocument();
+});
+
+test("the breadcrumbs lead back to the recipe; there's no Exit", async () => {
+  stubApi();
+  renderApp(`/recipes/${omelette.id}/cook`);
+
+  const breadcrumb = await screen.findByRole("navigation", { name: "Breadcrumb" });
+  expect(within(breadcrumb).getByRole("link", { name: "Omelette" })).toHaveAttribute(
+    "href",
+    `/recipes/${omelette.id}`,
+  );
+  expect(screen.queryByRole("link", { name: "Exit" })).not.toBeInTheDocument();
+  expect(screen.getByText("Written by you", { exact: false })).toBeInTheDocument();
 });
 
 test("keeps the screen on and says so; lets go when the cook leaves", async () => {
@@ -73,10 +149,10 @@ test("keeps the screen on and says so; lets go when the cook leaves", async () =
   const { request, lock } = stubWakeLock();
   renderApp(`/recipes/${omelette.id}/cook`);
 
-  expect(await screen.findByText("The screen stays on.")).toBeInTheDocument();
+  expect(await screen.findByText("The screen stays on.", { exact: false })).toBeInTheDocument();
   expect(request).toHaveBeenCalledWith("screen");
 
-  await userEvent.click(screen.getByRole("link", { name: "Exit" }));
+  await userEvent.click(screen.getByRole("link", { name: "Omelette" }));
   expect(await screen.findByRole("heading", { level: 1, name: "Omelette" })).toBeInTheDocument();
   expect(lock.release).toHaveBeenCalled();
 });
@@ -85,25 +161,30 @@ test("says so when the browser lets go of the lock", async () => {
   stubApi();
   const { lock } = stubWakeLock();
   renderApp(`/recipes/${omelette.id}/cook`);
-  await screen.findByText("The screen stays on.");
+  await screen.findByText("The screen stays on.", { exact: false });
 
   lock.dispatchEvent(new Event("release"));
 
-  expect(await screen.findByText("This browser may let the screen lock.")).toBeInTheDocument();
+  expect(
+    await screen.findByText("This browser may let the screen lock.", { exact: false }),
+  ).toBeInTheDocument();
 });
 
 test("says the screen may lock where the browser can't keep it on", async () => {
   stubApi();
   renderApp(`/recipes/${omelette.id}/cook`);
 
-  expect(await screen.findByText("This browser may let the screen lock.")).toBeInTheDocument();
+  expect(
+    await screen.findByText("This browser may let the screen lock.", { exact: false }),
+  ).toBeInTheDocument();
 });
 
 test("shows the step's ingredients, ticked off in both lists at once", async () => {
   stubApi();
   renderApp(`/recipes/${omelette.id}/cook`);
 
-  const forStep = await screen.findByRole("list", { name: "For this step" });
+  const first = await screen.findByRole("listitem", { name: "Step 1 of 2" });
+  const forStep = within(first).getByRole("list", { name: "For this step" });
   expect(
     within(forStep)
       .getAllByRole("listitem")
@@ -117,9 +198,9 @@ test("shows the step's ingredients, ticked off in both lists at once", async () 
   await userEvent.click(within(all).getByRole("checkbox", { name: "2 eggs" }));
   expect(within(forStep).getByRole("checkbox", { name: "2 eggs" })).not.toBeChecked();
 
-  await userEvent.click(screen.getByRole("button", { name: "Next" }));
+  const second = screen.getByRole("listitem", { name: "Step 2 of 2" });
   expect(
-    within(screen.getByRole("list", { name: "For this step" })).getByRole("checkbox", {
+    within(within(second).getByRole("list", { name: "For this step" })).getByRole("checkbox", {
       name: "1 tbsp butter",
     }),
   ).toBeInTheDocument();
@@ -134,17 +215,17 @@ test("a time in the step starts a timer, which counts down and says when it's do
 
   await user.click(await screen.findByRole("button", { name: "Timer: 2 min" }));
   const timers = screen.getByRole("list", { name: "Timers" });
-  expect(timers).toHaveTextContent("2 min: 2:00 left");
+  expect(timers).toHaveTextContent("2:00 left · 2 min timer");
 
   act(() => {
     vi.advanceTimersByTime(60_000);
   });
-  expect(timers).toHaveTextContent("2 min: 1:00 left");
+  expect(timers).toHaveTextContent("1:00 left · 2 min timer");
 
   act(() => {
     vi.advanceTimersByTime(60_000);
   });
-  expect(within(timers).getByRole("alert")).toHaveTextContent("2 min: done");
+  expect(within(timers).getByRole("alert")).toHaveTextContent("2 min timer: done");
 
   await user.click(screen.getByRole("button", { name: "Dismiss the 2 min timer" }));
   expect(screen.queryByRole("list", { name: "Timers" })).not.toBeInTheDocument();
@@ -188,4 +269,31 @@ test("a timer pressed again while it runs isn't started twice, and shows it's ru
     "aria-disabled",
     "true",
   );
+});
+
+test("from 1024 px the whole checklist is a panel beside the steps, not folded", async () => {
+  stubApi();
+  renderApp(`/recipes/${omelette.id}/cook`);
+  // A wide screen from here on: cook mode reads it once the recipe has come.
+  vi.stubGlobal("matchMedia", () => ({
+    matches: true,
+    addEventListener: vi.fn(),
+    removeEventListener: vi.fn(),
+  }));
+
+  expect(
+    await screen.findByRole("heading", { level: 2, name: "All ingredients (2)" }),
+  ).toBeInTheDocument();
+  expect(screen.getByRole("list", { name: "All ingredients (2)" })).toBeVisible();
+});
+
+test("below 1024 px the timers share one footer with Back and Next, pinned to the bottom", async () => {
+  stubApi({ ...omelette, steps: ["Cook the eggs for 2 min."] });
+  renderApp(`/recipes/${omelette.id}/cook`);
+
+  await userEvent.click(await screen.findByRole("button", { name: "Timer: 2 min" }));
+
+  // One footer, so a short phone can't hide the buttons under the timers (design §14).
+  const footer = screen.getByRole("button", { name: "Done" }).closest("[data-cook-footer]");
+  expect(footer).toContainElement(screen.getByRole("list", { name: "Timers" }));
 });

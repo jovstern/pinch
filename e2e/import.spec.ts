@@ -13,14 +13,14 @@ test("paste a link, review the draft, save it as a recipe", async ({ page }) => 
   await expect(link).toContainText(/Waiting to start…|Working on it…/);
   await expect(link.getByText("Ready to review")).toBeVisible({ timeout: 15_000 });
   await page.waitForTimeout(1000);
-  await link.getByRole("link", { name: "Review the recipe" }).click();
+  await link.getByRole("link", { name: "Review" }).click();
 
-  await expect(page.getByRole("heading", { level: 1, name: "Review the recipe" })).toBeVisible();
+  await expect(page.getByText("Pinch read this from YouTube")).toBeVisible();
   await expect(page.getByLabel("Title")).toHaveValue("Tomato pasta (from youtube)");
   await page.waitForTimeout(1000);
   await page.getByLabel("Title").fill("Weeknight tomato pasta");
   await page.waitForTimeout(500);
-  await page.getByRole("button", { name: "Save recipe" }).click();
+  await page.getByRole("button", { name: "Save to My recipes" }).click();
 
   await expect(
     page.getByRole("heading", { level: 1, name: "Weeknight tomato pasta" }),
@@ -28,14 +28,19 @@ test("paste a link, review the draft, save it as a recipe", async ({ page }) => 
   // The draft's nutrition estimate came with it, though the form doesn't show it (D14).
   await expect(page.getByText(/≈ 520 kcal/)).toBeVisible();
   await page.waitForTimeout(1000);
-  await page.getByRole("link", { name: "Pinch" }).click();
-  await expect(page.getByRole("link", { name: /Weeknight tomato pasta/ })).toBeVisible();
-  // Approved: the import is deleted, so the link has left Your imports.
+  // Approved: the import is deleted, so the link has left the queue.
+  await page.getByRole("link", { name: /^New recipe/ }).click();
+  // On / first: the recipe's page has no queue either, so the next line would pass there too.
+  // The heading, not the address: the address changes before the new page shows.
+  await expect(page.getByRole("heading", { level: 1, name: "New recipe" })).toBeAttached();
   await expect(link).toHaveCount(0);
+  await page.getByRole("link", { name: "My recipes" }).click();
+  await expect(page.getByRole("link", { name: /Weeknight tomato pasta/ })).toBeVisible();
   await page.waitForTimeout(1000);
 
   await page.getByRole("link", { name: /Weeknight tomato pasta/ }).click();
-  await page.getByRole("button", { name: "Delete" }).click();
+  await page.getByRole("button", { name: "More actions" }).click();
+  await page.getByRole("menuitem", { name: "Delete…" }).click();
   await page.getByRole("alertdialog").getByRole("button", { name: "Delete" }).click();
-  await expect(page.getByRole("heading", { level: 1, name: "Your recipes" })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: "My recipes" })).toBeVisible();
 });

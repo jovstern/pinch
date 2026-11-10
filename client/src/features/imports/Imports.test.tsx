@@ -5,7 +5,7 @@ import {
   textMessage,
   type Import,
 } from "@pinch/shared";
-import { screen, waitFor } from "@testing-library/react";
+import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, test, vi } from "vitest";
 import { renderApp } from "../../test-utils.tsx";
@@ -13,9 +13,19 @@ import { pollInterval } from "./importQueries.ts";
 
 afterEach(() => {
   vi.unstubAllGlobals();
+  vi.useRealTimers();
+  // Paste's clipboard, if a test gave it one.
+  Reflect.deleteProperty(navigator, "clipboard");
 });
 
 const reel = "https://www.instagram.com/p/DOxAbc123/";
+// What the worker made of it, once ready.
+const draft = {
+  title: "Tomato pasta",
+  ingredients: [{ name: "pasta" }],
+  steps: ["Boil it."],
+  tags: [],
+};
 
 function importOf(fields: Partial<Import>): Import {
   return {
@@ -86,21 +96,70 @@ test("a pasted text, anything with a space or a new line in it, is sent as text"
   });
 });
 
-test("Enter after a link makes a new line, and the link is still sent as a link", async () => {
+test("Enter sends what's in the box", async () => {
   const fetch = stubApi([[]]);
   renderApp("/");
 
-  const box = screen.getByRole("textbox", { name: "Pinch a recipe from a reel" });
-  await userEvent.type(box, `${reel}{Enter}`);
-  expect(box).toHaveValue(`${reel}\n`);
-  expect(fetch).not.toHaveBeenCalledWith("/api/imports", expect.anything());
+  await userEvent.type(
+    screen.getByRole("textbox", { name: "Pinch a recipe from a reel" }),
+    `${reel}{Enter}`,
+  );
 
-  await userEvent.click(screen.getByRole("button", { name: "Pinch it" }));
   expect(fetch).toHaveBeenCalledWith("/api/imports", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ type: "link", url: reel }),
   });
+});
+
+test("Shift+Enter makes a new line, and the text is sent with it", async () => {
+  const fetch = stubApi([[]]);
+  renderApp("/");
+
+  const box = screen.getByRole("textbox", { name: "Pinch a recipe from a reel" });
+  await userEvent.type(box, "Shakshuka{Shift>}{Enter}{/Shift}4 eggs, 1 can of tomatoes.");
+  expect(box).toHaveValue("Shakshuka\n4 eggs, 1 can of tomatoes.");
+  expect(fetch).not.toHaveBeenCalledWith("/api/imports", expect.anything());
+
+  await userEvent.type(box, "{Enter}");
+  expect(fetch).toHaveBeenCalledWith("/api/imports", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ type: "text", text: "Shakshuka\n4 eggs, 1 can of tomatoes." }),
+  });
+});
+
+// A clipboard that holds this text, for Paste (jsdom has none).
+function stubClipboard(text: string) {
+  Object.defineProperty(navigator, "clipboard", {
+    value: { readText: () => Promise.resolve(text) },
+    configurable: true,
+  });
+}
+
+test("Paste fills the box from the clipboard, and doesn't send it", async () => {
+  const fetch = stubApi([[]]);
+  stubClipboard(reel);
+  renderApp("/");
+
+  await userEvent.click(screen.getByRole("button", { name: "Paste" }));
+
+  const box = screen.getByRole("textbox", { name: "Pinch a recipe from a reel" });
+  expect(box).toHaveValue(reel);
+  expect(box).toHaveFocus();
+  expect(fetch).not.toHaveBeenCalledWith("/api/imports", expect.anything());
+});
+
+test("Paste with an empty clipboard keeps what's in the box", async () => {
+  stubApi([[]]);
+  stubClipboard("");
+  renderApp("/");
+
+  const box = screen.getByRole("textbox", { name: "Pinch a recipe from a reel" });
+  await userEvent.type(box, reel);
+  await userEvent.click(screen.getByRole("button", { name: "Paste" }));
+
+  expect(box).toHaveValue(reel);
 });
 
 test("the API's message for a text shows under the box", async () => {
@@ -156,7 +215,7 @@ test("a link from another site is refused before it's sent, until it's fixed", a
   expect(await screen.findByRole("alert")).toHaveTextContent(linkMessage);
   // The hint, then the error.
   expect(box).toHaveAccessibleDescription(
-    `A link to an Instagram, Facebook or YouTube post, or the recipe's text. ${linkMessage}`,
+    `Paste a YouTube short, a Facebook or Instagram reel, or a recipe as text ${linkMessage}`,
   );
   expect(fetch).not.toHaveBeenCalledWith("/api/imports", expect.anything());
 
@@ -195,16 +254,19 @@ test("when the link can't be sent, it says so and keeps the link", async () => {
 });
 
 test("while a link is worked on, its status is asked again until it's ready to review", async () => {
-  stubApi([[importOf({ status: "processing", attempts: 1 })], [importOf({ status: "ready" })]]);
+  stubApi([
+    [importOf({ status: "processing", attempts: 1 })],
+    [importOf({ status: "ready", draft })],
+  ]);
   renderApp("/");
 
   expect(await screen.findByText("Working on it…")).toBeInTheDocument();
   // The 2 s poll, with time to spare.
   expect(await screen.findByText("Ready to review", {}, { timeout: 3000 })).toBeInTheDocument();
-  const review = screen.getByRole("link", { name: "Review the recipe" });
-  // Only the change is announced, not the whole list.
-  expect(screen.getByText("Instagram link: Ready to review")).toHaveAttribute("role", "status");
+  const review = screen.getByRole("link", { name: "Review" });
   expect(review).toHaveAttribute("href", "/imports/6650a1b2c3d4e5f600000001");
+  // Nothing left cooking.
+  expect(screen.getByRole("heading", { name: "1 ready" })).toBeInTheDocument();
 });
 
 test("a pasted text shows as such, with its text", async () => {
@@ -214,6 +276,50 @@ test("a pasted text shows as such, with its text", async () => {
 
   expect(await screen.findByText("Pasted text")).toBeInTheDocument();
   expect(screen.getByText(text)).toBeInTheDocument();
+});
+
+test("an empty queue says what Pinch does", async () => {
+  stubApi([[]]);
+  renderApp("/");
+
+  expect(await screen.findByRole("heading", { name: "Nothing cooking yet" })).toBeInTheDocument();
+  expect(screen.queryByText(/^Cooking…/)).not.toBeInTheDocument();
+});
+
+test("one still cooking shows a disabled Cooking… where Review will be", async () => {
+  stubApi([[importOf({ status: "processing", attempts: 1, step: "fetching" })]]);
+  renderApp("/");
+
+  expect(await screen.findByText("Fetching the video…")).toBeInTheDocument();
+  expect(screen.getByRole("heading", { name: "Cooking…" })).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Cooking…" })).toBeDisabled();
+  expect(screen.queryByRole("link", { name: "Review" })).not.toBeInTheDocument();
+});
+
+test("a ready one is named by its draft's title, and counted in the heading", async () => {
+  stubApi([[importOf({ status: "ready", draft }), importOf({ id: "6650a1b2c3d4e5f600000002" })]]);
+  renderApp("/");
+
+  expect(await screen.findByRole("heading", { name: "Cooking… · 1 ready" })).toBeInTheDocument();
+  expect(screen.getByRole("link", { name: "Review" })).toHaveAccessibleDescription("Tomato pasta");
+});
+
+test("when the queue can't load, Try again asks again", async () => {
+  let gets = 0;
+  const fetch = vi.fn((path: string) => {
+    if (path === "/api/imports") {
+      gets += 1;
+      if (gets === 1) return Promise.resolve(new Response(null, { status: 502 }));
+      return Promise.resolve(Response.json({ items: [importOf({})] }));
+    }
+    return Promise.resolve(Response.json({ items: [], nextCursor: null }));
+  });
+  vi.stubGlobal("fetch", fetch);
+  renderApp("/");
+
+  await userEvent.click(await screen.findByRole("button", { name: "Try again" }));
+
+  expect(await screen.findByText("Waiting to start…")).toBeInTheDocument();
 });
 
 test("a failed link says why", async () => {
@@ -286,20 +392,84 @@ test("when Retry fails, it says so and keeps the link", async () => {
   expect(screen.getByText("No.")).toBeInTheDocument();
 });
 
-test("when Dismiss fails, it says so and keeps the link", async () => {
-  stubApi(
-    [[importOf({ status: "failed", attempts: 3, error: "No." })]],
-    undefined,
-    () => new Response(null, { status: 502 }),
-  );
+test("when Dismiss fails, a toast says so and keeps the link, and Try again sends it again", async () => {
+  let deletes = 0;
+  stubApi([[importOf({ status: "failed", attempts: 3, error: "No." })]], undefined, () => {
+    deletes += 1;
+    return new Response(null, { status: deletes === 1 ? 502 : 204 });
+  });
   renderApp("/");
 
   await userEvent.click(await screen.findByRole("button", { name: "Dismiss" }));
 
-  expect(await screen.findByRole("alert")).toHaveTextContent(
-    "It couldn't be dismissed. Try again.",
-  );
+  expect(await screen.findByText("Couldn't save")).toBeInTheDocument();
   expect(screen.getByText("No.")).toBeInTheDocument();
+  // fireEvent: userEvent's pointer down makes Sonner capture the pointer, which jsdom can't.
+  fireEvent.click(screen.getByRole("button", { name: "Try again" }));
+  expect(await screen.findByText("Dismissed")).toBeInTheDocument();
+});
+
+// The toast a text is in (Sonner's list item), to find its buttons.
+function toastOf(text: string) {
+  const toast = screen.getByText(text).closest("li");
+  if (toast === null) throw new Error(`"${text}" isn't in a toast`);
+  return toast;
+}
+
+test("an import that becomes ready or fails says so once in a toast, with its next step", async () => {
+  // The 2 s polls, without waiting for them; real time still runs, for Testing Library's waits.
+  vi.useFakeTimers({ shouldAdvanceTime: true });
+  const other = "6650a1b2c3d4e5f600000002";
+  const failed = importOf({ status: "failed", error: "It may be private." });
+  stubApi([
+    [importOf({ status: "processing" }), importOf({ id: other, status: "processing" })],
+    [failed, importOf({ id: other })],
+    [failed, importOf({ id: other, status: "ready", draft })],
+  ]);
+  renderApp("/");
+
+  expect(await screen.findAllByText("Working on it…")).toHaveLength(2);
+  await vi.advanceTimersByTimeAsync(2000);
+  await vi.advanceTimersByTimeAsync(2000);
+
+  // The third list: the failure was seen twice, and said once.
+  expect(await screen.findByText("Tomato pasta is ready to review")).toBeInTheDocument();
+  expect(
+    within(toastOf("Tomato pasta is ready to review")).getByRole("button", { name: "Review" }),
+  ).toBeVisible();
+  expect(screen.getAllByText("Couldn't read that video")).toHaveLength(1);
+  const failure = toastOf("Couldn't read that video");
+  expect(within(failure).getByText("It may be private.")).toBeInTheDocument();
+  expect(within(failure).getByRole("button", { name: "Retry" })).toBeInTheDocument();
+});
+
+test("a failure's toast closes once the import is retried elsewhere", async () => {
+  vi.useFakeTimers({ shouldAdvanceTime: true });
+  // Another one still cooking, so the list is asked again after the failure.
+  const cooking = importOf({ id: "6650a1b2c3d4e5f600000002", status: "processing" });
+  stubApi([
+    [importOf({ status: "processing" }), cooking],
+    [importOf({ status: "failed", error: "It may be private." }), cooking],
+    [importOf({ status: "pending", attempts: 3 }), cooking],
+  ]);
+  renderApp("/");
+
+  expect(await screen.findAllByText("Working on it…")).toHaveLength(2);
+  await vi.advanceTimersByTimeAsync(2000);
+  expect(await screen.findByText("Couldn't read that video")).toBeInTheDocument();
+  await vi.advanceTimersByTimeAsync(2000);
+
+  await waitFor(() => {
+    expect(screen.queryByText("Couldn't read that video")).not.toBeInTheDocument();
+  });
+});
+
+test("what the first list shows isn't a toast", async () => {
+  stubApi([[importOf({ status: "ready", draft })]]);
+  renderApp("/");
+
+  expect(await screen.findByText("Ready to review")).toBeInTheDocument();
+  expect(screen.queryByText("Tomato pasta is ready to review")).not.toBeInTheDocument();
 });
 
 test("a stalled link says nothing is working on it, and offers Dismiss, not Retry", async () => {
