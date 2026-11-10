@@ -1,5 +1,5 @@
 import type { Recipe } from "@pinch/shared";
-import { screen, waitFor } from "@testing-library/react";
+import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, test, vi } from "vitest";
 import { renderApp, stubFetch } from "../../test-utils.tsx";
@@ -36,7 +36,7 @@ function stubApi() {
   return fetch;
 }
 
-test("shows the recipe in the form, and saves the whole of it", async () => {
+test("shows the recipe in the form, saves the whole of it, and focuses its title", async () => {
   const fetch = stubApi();
   renderApp(`/recipes/${omelette.id}/edit`);
 
@@ -47,16 +47,14 @@ test("shows the recipe in the form, and saves the whole of it", async () => {
   await userEvent.type(title, "Cheese omelette");
   // A field emptied in the form is left out, so PUT clears it (design D20).
   await userEvent.clear(screen.getByLabelText("Serves"));
-  // Its tag is ticked; untick it and tick another.
-  const breakfast = screen.getByRole("checkbox", { name: "breakfast" });
-  expect(breakfast).toBeChecked();
-  await userEvent.click(breakfast);
-  await userEvent.click(screen.getByRole("checkbox", { name: "spicy" }));
+  // Its tag shows as a chip; remove it and add another.
+  await userEvent.click(screen.getByRole("button", { name: "Remove breakfast" }));
+  await userEvent.click(screen.getByRole("button", { name: "Add tag" }));
+  await userEvent.click(await screen.findByRole("checkbox", { name: "spicy" }));
+  await userEvent.click(screen.getByRole("button", { name: "Done" }));
   await userEvent.click(screen.getByRole("button", { name: "Save changes" }));
 
-  expect(
-    await screen.findByRole("heading", { level: 1, name: "Cheese omelette" }),
-  ).toBeInTheDocument();
+  expect(await screen.findByRole("heading", { level: 1, name: "Cheese omelette" })).toHaveFocus();
   // Keys in the schema's order.
   expect(fetch).toHaveBeenCalledWith(`/api/recipes/${omelette.id}`, {
     method: "PUT",
@@ -70,6 +68,21 @@ test("shows the recipe in the form, and saves the whole of it", async () => {
   });
 });
 
+test("the editor sits under the recipe, with Save changes and Cancel", async () => {
+  stubApi();
+  renderApp(`/recipes/${omelette.id}/edit`);
+
+  const breadcrumb = await screen.findByRole("navigation", { name: "Breadcrumb" });
+  expect(within(breadcrumb).getByRole("link", { name: "Omelette" })).toHaveAttribute(
+    "href",
+    `/recipes/${omelette.id}`,
+  );
+  expect(within(breadcrumb).getByText("Edit")).toHaveAttribute("aria-current", "page");
+  expect(await screen.findByText("Source: Written by you")).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Save changes" })).toBeInTheDocument();
+  expect(screen.getByRole("link", { name: "Cancel" })).toBeInTheDocument();
+});
+
 test("editing a recipe that doesn't exist shows the not-found page", async () => {
   vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(null, { status: 404 })));
   renderApp("/recipes/6650a1b2c3d4e5f600000099/edit");
@@ -77,12 +90,35 @@ test("editing a recipe that doesn't exist shows the not-found page", async () =>
   expect(await screen.findByRole("heading", { name: "Page not found" })).toBeInTheDocument();
 });
 
-test("Cancel goes back to the recipe, unchanged", async () => {
+test("Cancel with no changes goes straight back to the recipe", async () => {
+  stubApi();
+  renderApp(`/recipes/${omelette.id}/edit`);
+
+  await screen.findByLabelText("Title");
+  await userEvent.click(screen.getByRole("link", { name: "Cancel" }));
+
+  expect(await screen.findByRole("heading", { level: 1, name: "Omelette" })).toBeInTheDocument();
+});
+
+test("Cancel with changes asks first; Keep editing keeps them", async () => {
+  stubApi();
+  renderApp(`/recipes/${omelette.id}/edit`);
+
+  await userEvent.type(await screen.findByLabelText("Title"), " with herbs");
+  await userEvent.click(screen.getByRole("button", { name: "Cancel" }));
+  const dialog = await screen.findByRole("alertdialog", { name: "Discard your changes?" });
+  await userEvent.click(within(dialog).getByRole("button", { name: "Keep editing" }));
+
+  expect(screen.getByLabelText("Title")).toHaveValue("Omelette with herbs");
+});
+
+test("Discard changes goes back to the recipe, unchanged", async () => {
   const fetch = stubApi();
   renderApp(`/recipes/${omelette.id}/edit`);
 
   await userEvent.type(await screen.findByLabelText("Title"), " with herbs");
-  await userEvent.click(screen.getByRole("link", { name: "Cancel" }));
+  await userEvent.click(screen.getByRole("button", { name: "Cancel" }));
+  await userEvent.click(screen.getByRole("button", { name: "Discard changes" }));
 
   expect(await screen.findByRole("heading", { level: 1, name: "Omelette" })).toBeInTheDocument();
   expect(fetch.mock.calls.some(([, init]) => init?.method === "PUT")).toBe(false);

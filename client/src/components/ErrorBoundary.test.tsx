@@ -18,3 +18,19 @@ test("a screen that throws shows a way forward, not a blank page", () => {
   expect(screen.getByRole("heading", { name: "This page didn't load" })).toBeInTheDocument();
   vi.restoreAllMocks();
 });
+
+test("a part of a page that throws shows its fallback, and the rest stays", () => {
+  vi.spyOn(console, "error").mockImplementation(() => undefined);
+  render(
+    <>
+      <p>What was typed</p>
+      <ErrorBoundary fallback={null}>
+        <Broken />
+      </ErrorBoundary>
+    </>,
+  );
+
+  expect(screen.getByText("What was typed")).toBeInTheDocument();
+  expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  vi.restoreAllMocks();
+});

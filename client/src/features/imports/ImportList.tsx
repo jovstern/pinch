@@ -24,16 +24,17 @@ export function ImportList({ focusPasteBox }: { focusPasteBox: () => void }) {
     <div className="mt-6">
       {/* The queue is the page's main content, so a failed load can be asked again (as the
           recipes). */}
+      {/* Centred, as the empty queue. */}
       {isLoadingError && (
-        <div role="alert">
-          <p>We couldn't load your imports.</p>
+        <div role="alert" className="mt-12 text-center">
+          <h2 className="text-xl font-semibold">We couldn't load your imports</h2>
           {/* The status stays "error" while it retries, so the button shows the wait. */}
           <Button
             type="button"
             variant="secondary"
             onClick={() => void refetch()}
             disabled={isFetching}
-            className="mt-3"
+            className="mt-4"
           >
             {isFetching ? "Trying…" : "Try again"}
           </Button>
