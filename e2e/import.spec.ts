@@ -11,13 +11,22 @@ test("paste a link, review the draft, save it as a recipe", async ({ page }) => 
 
   const link = page.getByRole("listitem").filter({ hasText: "youtu.be/e2e-pasta" });
   await expect(link).toContainText(/Waiting to start…|Working on it…/);
-  await expect(link.getByText("Ready to review")).toBeVisible({ timeout: 15_000 });
+  await expect(link.getByText(/Ready to review/)).toBeVisible({ timeout: 15_000 });
+  // The fake extractor marks two fields it was unsure of (design §9).
+  await expect(link).toContainText("Ready to review · ◆ 2 things to look at");
   await page.waitForTimeout(1000);
   await link.getByRole("link", { name: "Review" }).click();
 
   await expect(page.getByText("Pinch read this from YouTube")).toBeVisible();
   await expect(page.getByLabel("Title")).toHaveValue("Tomato pasta (from youtube)");
+  // A marked field is read with its reason; changing it clears the mark.
+  await expect(page.getByText("2 things to look at, marked below")).toBeVisible();
+  const tomatoes = page.getByLabel("Amount").nth(1);
+  await expect(tomatoes).toHaveAccessibleDescription("To look at: The video says “a can”.");
   await page.waitForTimeout(1000);
+  await tomatoes.fill("1 can");
+  await expect(tomatoes).not.toHaveAccessibleDescription(/To look at/);
+  await expect(page.getByText("1 thing to look at, marked below")).toBeVisible();
   await page.getByLabel("Title").fill("Weeknight tomato pasta");
   await page.waitForTimeout(500);
   await page.getByRole("button", { name: "Save to My recipes" }).click();

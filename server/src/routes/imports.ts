@@ -20,6 +20,7 @@ import {
   type ImportDocument,
 } from "../db/imports.ts";
 import { insertRecipeOnce, recipesCollection, toRecipe } from "../db/recipes.ts";
+import { NOT_DELETED } from "../db/softDelete.ts";
 import { WITHOUT_MEDIA } from "../db/thumbnail.ts";
 import { countImport, usageCollection } from "../db/usage.ts";
 import { HttpError, parseInput } from "../errors.ts";
@@ -27,7 +28,8 @@ import { readScreenshot } from "../screenshots.ts";
 import { sendThumbnail } from "./thumbnail.ts";
 
 // Imports turn a link, or a post's text, into a draft recipe (design §4). The API only records
-// the job; the worker does it. As with recipes, every query filters by ownerId.
+// the job; the worker does it. As with recipes, every query filters by ownerId, and every read
+// leaves out the deleted ones, kept a while for Undo (D27).
 export function importsRouter(db: Db) {
   const imports = importsCollection(db);
   const recipes = recipesCollection(db);
@@ -70,7 +72,7 @@ export function importsRouter(db: Db) {
   // cap is a guard, never reached in use (node-api.md: never an unbounded list).
   router.get("/", async (req, res) => {
     const found = await imports
-      .find({ ownerId: req.userId }, { projection: WITHOUT_MEDIA })
+      .find({ ownerId: req.userId, ...NOT_DELETED }, { projection: WITHOUT_MEDIA })
       .sort({ createdAt: -1, _id: -1 })
       .limit(IMPORT_LIST_LIMIT)
       .toArray();
@@ -79,7 +81,7 @@ export function importsRouter(db: Db) {
 
   router.get("/:id", async (req, res) => {
     const job = await imports.findOne(
-      { _id: parseId(req.params.id), ownerId: req.userId },
+      { _id: parseId(req.params.id), ownerId: req.userId, ...NOT_DELETED },
       { projection: WITHOUT_MEDIA },
     );
     if (!job) throw importNotFound();
@@ -89,7 +91,7 @@ export function importsRouter(db: Db) {
   // The draft's picture (§5), apart from the import, so the list stays small.
   router.get("/:id/thumbnail", async (req, res) => {
     const job = await imports.findOne(
-      { _id: parseId(req.params.id), ownerId: req.userId },
+      { _id: parseId(req.params.id), ownerId: req.userId, ...NOT_DELETED },
       { projection: { thumbnail: 1 } },
     );
     // No picture: as good as no import, for an <img>.
@@ -104,7 +106,11 @@ export function importsRouter(db: Db) {
   // gone, so approving again is a 404: the client keeps the button disabled while it saves.
   router.post("/:id/approve", async (req, res) => {
     const input = parseInput(RecipeInputSchema, req.body);
-    const job = await imports.findOne({ _id: parseId(req.params.id), ownerId: req.userId });
+    const job = await imports.findOne({
+      _id: parseId(req.params.id),
+      ownerId: req.userId,
+      ...NOT_DELETED,
+    });
     if (!job) throw importNotFound();
     if (job.status !== "ready") {
       throw new HttpError(409, "import_not_ready", "This import has no draft to save yet.");
@@ -117,6 +123,8 @@ export function importsRouter(db: Db) {
       // The model's estimate, not in the form (D14, D20): from the draft (there, as it's ready),
       // never from the body.
       nutritionPerServing: job.draft?.nutritionPerServing,
+      // The model's too, as the nutrition (D25).
+      emoji: job.draft?.emoji,
       // The worker's, as the nutrition: never from the body (§5).
       thumbnail: job.thumbnail,
       source: sourceOf(job.input),
@@ -132,7 +140,7 @@ export function importsRouter(db: Db) {
   // the worker will take it again. Attempt numbers, the worker's fence (§4.3), start over too:
   // safe, because each earlier attempt ended at its deadline before the import could fail.
   router.post("/:id/retry", async (req, res) => {
-    const filter = { _id: parseId(req.params.id), ownerId: req.userId };
+    const filter = { _id: parseId(req.params.id), ownerId: req.userId, ...NOT_DELETED };
     // Checked before it's counted: a retry that can't happen doesn't use one of the day's.
     const found = await imports.findOne(filter);
     if (!found) throw importNotFound();
@@ -156,15 +164,30 @@ export function importsRouter(db: Db) {
     res.status(202).json(toImport(job));
   });
 
-  // Discard a draft or dismiss a failure (§4.2). One still being worked on can go too: the
-  // worker's save must then find nothing to update, and do nothing (§4.3).
+  // Discard a draft, dismiss a failure, or undo Pinch it (§4.2): kept a while, to undo (D27).
+  // One still being worked on can go too: the worker's save then finds nothing to update, and
+  // does nothing (§4.3), so it never turns ready. Deleting it again is a 404.
   router.delete("/:id", async (req, res) => {
-    const { deletedCount } = await imports.deleteOne({
-      _id: parseId(req.params.id),
-      ownerId: req.userId,
-    });
-    if (deletedCount === 0) throw importNotFound();
+    const { matchedCount } = await imports.updateOne(
+      { _id: parseId(req.params.id), ownerId: req.userId, ...NOT_DELETED },
+      { $set: { deletedAt: new Date() } },
+    );
+    if (matchedCount === 0) throw importNotFound();
     res.status(204).end();
+  });
+
+  // Undo of a discard or a dismiss: the import is back as it was, a draft to review or a failure
+  // to retry. Safe to repeat, as a recipe's. One deleted while the worker had it comes back
+  // processing: its attempt saves if it's still running, and if not, the claim takes it again once
+  // its lease runs out (§4.3). (The client never restores those: Pinch it's Undo has no Undo.)
+  router.post("/:id/restore", async (req, res) => {
+    const job = await imports.findOneAndUpdate(
+      { _id: parseId(req.params.id), ownerId: req.userId },
+      { $unset: { deletedAt: "" } },
+      { returnDocument: "after", projection: WITHOUT_MEDIA },
+    );
+    if (!job) throw importNotFound();
+    res.json(toImport(job));
   });
 
   return router;

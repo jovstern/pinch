@@ -1,13 +1,29 @@
-import { fieldErrors, RecipeInputSchema, type Recipe, type RecipeInput } from "@pinch/shared";
+import {
+  fieldErrors,
+  RecipeInputSchema,
+  type Recipe,
+  type RecipeInput,
+  type UncertainField,
+} from "@pinch/shared";
 import { revalidateLogic, useForm, useSelector } from "@tanstack/react-form";
 import { Plus, X } from "lucide-react";
-import { lazy, Suspense, useEffect, useRef, useState, type ReactNode, type Ref } from "react";
+import {
+  lazy,
+  Suspense,
+  useEffect,
+  useId,
+  useRef,
+  useState,
+  type ReactNode,
+  type Ref,
+} from "react";
 import { Link, useNavigate } from "react-router";
 import { Button } from "../../components/ui/Button.tsx";
 import { ErrorBoundary } from "../../components/ErrorBoundary.tsx";
 import { FieldError } from "../../components/FieldError.tsx";
 import { TextField } from "../../components/TextField.tsx";
 import { ApiError } from "../../lib/api.ts";
+import { thingsToLookAt } from "../../lib/thingsToLookAt.ts";
 import { emptyIngredient, toInput, type RecipeFormValues } from "./recipeFormValues.ts";
 import { RecipeSource } from "./RecipeSource.tsx";
 import { RecipeTags } from "./RecipeTags.tsx";
@@ -31,6 +47,8 @@ type RecipeFormProps = {
   picture?: ReactNode;
   // At the top of the left column: a draft's banner (Review).
   intro?: ReactNode;
+  // A draft's things to look at (design §14): only Review has them.
+  uncertain?: UncertainField[];
   submitLabel: string;
   leave: Leave;
   // Sends the recipe; the page that owns the form decides where to go once it's saved.
@@ -44,10 +62,39 @@ export function RecipeForm({
   source,
   picture,
   intro,
+  uncertain = [],
   submitLabel,
   leave,
   save,
 }: RecipeFormProps) {
+  // The marks still to look at, by field name, each with its reason. Changing a field clears
+  // its mark (the form's listener below); removing a row moves the marks of the rows under it.
+  const [marks, setMarks] = useState(() =>
+    toFieldNames(Object.fromEntries(uncertain.map((mark) => [mark.path, mark.reason]))),
+  );
+  const marksId = useId();
+  // The id of a marked field's note, which its box points to (aria-describedby).
+  const markId = (name: string) => (marks[name] === undefined ? undefined : `${marksId}-${name}`);
+  // The notes of a row's marked fields, under the row: a note under a narrow box (an amount,
+  // Serves) would wrap a word to a line. ◆ and the words, not colour alone.
+  const markNotes = (names: string[], className = "") =>
+    names.map((name) => {
+      const reason = marks[name];
+      if (reason === undefined) return null;
+      return (
+        <p
+          key={name}
+          id={markId(name)}
+          className={`flex gap-1.5 text-sm text-muted-foreground ${className}`}
+        >
+          <span aria-hidden="true" className="text-check-mark">
+            ◆
+          </span>
+          <span className="sr-only">To look at:</span> <span dir="auto">{reason}</span>
+        </p>
+      );
+    });
+  const lookAtCount = Object.keys(marks).length;
   const formRef = useRef<HTMLFormElement>(null);
   // Where focus goes when the last row's ✕ takes itself away (any other row's ✕ stays, as the
   // row after it moves up under it).
@@ -58,6 +105,13 @@ export function RecipeForm({
     // Checked on the first Save, then on every change after it (TanStack's revalidateLogic):
     // the errors always describe the form as it is now, and clear as each one is fixed.
     validationLogic: revalidateLogic(),
+    // A changed field has been looked at: its mark goes. (A list's own change, a row added or
+    // removed, names the list, which has no mark.)
+    listeners: {
+      onChange: ({ fieldApi }: { fieldApi: { name: string } }) => {
+        setMarks((current) => withoutMark(current, fieldApi.name));
+      },
+    },
     validators: {
       // With the API's own schema, so the messages are the ones the API would send (§8.1).
       onDynamic: ({ value }) => {
@@ -123,10 +177,44 @@ export function RecipeForm({
         {/* The picture first on a phone, as on the recipe's page; beside, in the right column,
             from 1024 px. */}
         {picture && <div className="lg:hidden">{picture}</div>}
-        {intro}
-        <form.Field name="title">
-          {(field) => <TextField field={field} label="Title" placeholder="e.g. Red lentil soup" />}
-        </form.Field>
+        {intro && (
+          <div className="grid gap-2">
+            {intro}
+            {lookAtCount > 0 && (
+              <p className="flex flex-wrap items-center gap-x-2 text-sm">
+                <span>
+                  <span aria-hidden="true" className="text-check-mark">
+                    ◆
+                  </span>{" "}
+                  {thingsToLookAt(lookAtCount)}, marked below
+                </span>
+                {/* As a link looks: it moves focus, as a skip link does. */}
+                <button
+                  type="button"
+                  className="min-h-11 font-semibold text-accent-strong underline underline-offset-4"
+                  onClick={() => {
+                    formRef.current?.querySelector<HTMLElement>("[data-marked]")?.focus();
+                  }}
+                >
+                  Go to the first
+                </button>
+              </p>
+            )}
+          </div>
+        )}
+        <div className="grid gap-1">
+          <form.Field name="title">
+            {(field) => (
+              <TextField
+                field={field}
+                label="Title"
+                placeholder="e.g. Red lentil soup"
+                markId={markId("title")}
+              />
+            )}
+          </form.Field>
+          {markNotes(["title"])}
+        </div>
         <form.Field name="description">
           {(field) => <TextField field={field} label="Description" multiline />}
         </form.Field>
@@ -166,6 +254,7 @@ export function RecipeForm({
                           label="Amount"
                           hideLabel
                           placeholder={example ? "200" : undefined}
+                          markId={markId(field.name)}
                         />
                       )}
                     </form.Field>
@@ -176,6 +265,7 @@ export function RecipeForm({
                           label="Unit"
                           hideLabel
                           placeholder={example ? "g" : undefined}
+                          markId={markId(field.name)}
                         />
                       )}
                     </form.Field>
@@ -186,6 +276,7 @@ export function RecipeForm({
                           label="Ingredient"
                           hideLabel
                           placeholder={example ? "e.g. flour" : undefined}
+                          markId={markId(field.name)}
                         />
                       )}
                     </form.Field>
@@ -207,10 +298,12 @@ export function RecipeForm({
                       onClick={() => {
                         const last = index === list.state.value.length - 1;
                         list.removeValue(index);
+                        setMarks((current) => withoutRow(current, "ingredients", index));
                         if (last) addIngredientRef.current?.focus();
                       }}
                       className="col-start-4 row-start-1 sm:col-start-auto sm:row-start-auto"
                     />
+                    {markNotes([`${row}.quantity`, `${row}.unit`, `${row}.name`], "col-span-full")}
                   </fieldset>
                 );
               })}
@@ -252,6 +345,7 @@ export function RecipeForm({
                           label={`Step ${position}`}
                           hideLabel
                           multiline
+                          markId={markId(field.name)}
                           placeholder={
                             index === 0 ? "e.g. Rinse the lentils and soften the onion." : ""
                           }
@@ -265,9 +359,11 @@ export function RecipeForm({
                       onClick={() => {
                         const last = index === list.state.value.length - 1;
                         list.removeValue(index);
+                        setMarks((current) => withoutRow(current, "steps", index));
                         if (last) addStepRef.current?.focus();
                       }}
                     />
+                    {markNotes([step], "col-start-2 col-span-2")}
                   </div>
                 );
               })}
@@ -293,14 +389,36 @@ export function RecipeForm({
         </p>
         <div className="grid grid-cols-3 gap-3">
           <form.Field name="servings">
-            {(field) => <TextField field={field} label="Serves" inputMode="numeric" />}
+            {(field) => (
+              <TextField
+                field={field}
+                label="Serves"
+                inputMode="numeric"
+                markId={markId("servings")}
+              />
+            )}
           </form.Field>
           <form.Field name="prepMinutes">
-            {(field) => <TextField field={field} label="Prep (min)" inputMode="numeric" />}
+            {(field) => (
+              <TextField
+                field={field}
+                label="Prep (min)"
+                inputMode="numeric"
+                markId={markId("prepMinutes")}
+              />
+            )}
           </form.Field>
           <form.Field name="cookMinutes">
-            {(field) => <TextField field={field} label="Cook (min)" inputMode="numeric" />}
+            {(field) => (
+              <TextField
+                field={field}
+                label="Cook (min)"
+                inputMode="numeric"
+                markId={markId("cookMinutes")}
+              />
+            )}
           </form.Field>
+          {markNotes(["servings", "prepMinutes", "cookMinutes"], "col-span-3")}
         </div>
         <form.Field name="tags">
           {(field) => (
@@ -521,4 +639,27 @@ function toFieldNames(fields: Record<string, string>) {
 
 function hasKeys(fields: Record<string, string>) {
   return Object.keys(fields).length > 0;
+}
+
+// The marks, by field name, still to look at.
+type Marks = Record<string, string>;
+
+// The same marks, unless the field had one. The same object when it hadn't, so a keystroke in
+// an unmarked field doesn't draw the form again.
+function withoutMark(marks: Marks, name: string) {
+  if (marks[name] === undefined) return marks;
+  return Object.fromEntries(Object.entries(marks).filter(([marked]) => marked !== name));
+}
+
+// A row removed: its marks go, and each row under it moves up one, with its marks.
+function withoutRow(marks: Marks, list: "ingredients" | "steps", removed: number) {
+  const row = new RegExp(`^${list}\\[(\\d+)\\]`);
+  return Object.fromEntries(
+    Object.entries(marks).flatMap(([name, reason]) => {
+      const index = Number(row.exec(name)?.[1] ?? -1);
+      if (index === removed) return [];
+      if (index < removed) return [[name, reason]];
+      return [[name.replace(row, `${list}[${String(index - 1)}]`), reason]];
+    }),
+  );
 }

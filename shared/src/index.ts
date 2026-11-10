@@ -23,8 +23,10 @@ export {
   type Platform,
 } from "./import.ts";
 export {
+  EmojiSchema,
   IngredientSchema,
   ListSourceSchema,
+  MAX_UNCERTAIN,
   NutritionSchema,
   RecipeDraftSchema,
   RecipeInputSchema,
@@ -44,5 +46,6 @@ export {
   type RecipeSort,
   type Thumbnail,
   type TimeLimit,
+  type UncertainField,
 } from "./recipe.ts";
 export { isTag, tagFacets, TagSchema, type TagFacet } from "./tags.ts";

@@ -1,5 +1,6 @@
 import { ImportSchema, type Import } from "@pinch/shared";
 import type { Binary, Collection, Db, ObjectId } from "mongodb";
+import { NOT_DELETED } from "./softDelete.ts";
 import type { StoredThumbnail } from "./thumbnail.ts";
 
 // An import as it is stored (design §6): the job the worker runs. nextAttemptAt says when it may
@@ -24,6 +25,9 @@ export type ImportDocument = Omit<
   createdAt: Date;
   updatedAt: Date;
   expiresAt: Date;
+  // Set by DELETE (a discard, a dismiss, or Pinch it's Undo), unset by restore: kept a while for
+  // Undo, and never claimed or saved by the worker meanwhile (D27).
+  deletedAt?: Date;
 };
 
 export function importsCollection(db: Db) {
@@ -55,10 +59,11 @@ export const LEASE_MS = 3 * 60 * 1000;
 // together, so two workers can never take the same one (design §4.3). Ready means waiting with
 // its time come, or held by a worker whose lease ran out: that worker crashed. Each claim
 // counts an attempt, and that count also tells this attempt from a later one (runImport). The
-// step starts empty: a crashed attempt's is left on the job.
+// step starts empty: a crashed attempt's is left on the job. A deleted job is never taken (D27).
 export function claimNextImport(imports: Collection<ImportDocument>, now: Date) {
   return imports.findOneAndUpdate(
     {
+      ...NOT_DELETED,
       $or: [
         { status: "pending", nextAttemptAt: { $lte: now } },
         { status: "processing", leaseUntil: { $lt: now } },
