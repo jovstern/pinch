@@ -30,8 +30,10 @@ export function Layout() {
   const onEditor = /^\/(recipes\/new|recipes\/[^/]+\/edit|imports\/[^/]+)$/.test(pathname);
   return (
     <>
-      {/* At least the screen's height, so main can take what the header leaves (flex-1). */}
-      <div className="flex min-h-dvh flex-col">
+      {/* At least the screen's height, so main can take what the header leaves (flex-1). svh, the
+          height with the browser's bars showing: dvh would follow the URL bar as it hides and
+          shift a centred block (ImportPage). */}
+      <div className="flex min-h-svh flex-col">
         <Header onTabPage={onTabPage} />
         {/* wrap-anywhere: a long URL or word in a recipe wraps instead of widening the page. Room
           at the bottom on a phone, so the floating button never covers the last item. w-full:

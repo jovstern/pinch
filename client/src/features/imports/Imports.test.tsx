@@ -71,7 +71,7 @@ test("a pasted link is sent trimmed, the box empties, and the link shows as wait
   const fetch = stubApi([[], [importOf({})]]);
   renderApp("/");
 
-  const box = screen.getByRole("textbox", { name: "Pinch a recipe from a reel" });
+  const box = await screen.findByRole("textbox", { name: "Pinch a recipe from a reel" });
   await userEvent.type(box, ` ${reel}`);
   await userEvent.click(screen.getByRole("button", { name: "Pinch it" }));
 
@@ -89,7 +89,7 @@ test("a pasted text, anything with a space or a new line in it, is sent as text"
   const fetch = stubApi([[]]);
   renderApp("/");
 
-  const box = screen.getByRole("textbox", { name: "Pinch a recipe from a reel" });
+  const box = await screen.findByRole("textbox", { name: "Pinch a recipe from a reel" });
   await userEvent.type(box, "Shakshuka: 4 eggs, 1 can of tomatoes.");
   await userEvent.click(screen.getByRole("button", { name: "Pinch it" }));
 
@@ -105,7 +105,7 @@ test("Enter sends what's in the box", async () => {
   renderApp("/");
 
   await userEvent.type(
-    screen.getByRole("textbox", { name: "Pinch a recipe from a reel" }),
+    await screen.findByRole("textbox", { name: "Pinch a recipe from a reel" }),
     `${reel}{Enter}`,
   );
 
@@ -120,7 +120,7 @@ test("Shift+Enter makes a new line, and the text is sent with it", async () => {
   const fetch = stubApi([[]]);
   renderApp("/");
 
-  const box = screen.getByRole("textbox", { name: "Pinch a recipe from a reel" });
+  const box = await screen.findByRole("textbox", { name: "Pinch a recipe from a reel" });
   await userEvent.type(box, "Shakshuka{Shift>}{Enter}{/Shift}4 eggs, 1 can of tomatoes.");
   expect(box).toHaveValue("Shakshuka\n4 eggs, 1 can of tomatoes.");
   expect(fetch).not.toHaveBeenCalledWith("/api/imports", expect.anything());
@@ -148,7 +148,7 @@ test("Paste fills the box from the clipboard, and doesn't send it", async () => 
 
   await userEvent.click(screen.getByRole("button", { name: "Paste" }));
 
-  const box = screen.getByRole("textbox", { name: "Pinch a recipe from a reel" });
+  const box = await screen.findByRole("textbox", { name: "Pinch a recipe from a reel" });
   expect(box).toHaveValue(reel);
   expect(box).toHaveFocus();
   expect(fetch).not.toHaveBeenCalledWith("/api/imports", expect.anything());
@@ -159,7 +159,7 @@ test("Paste with an empty clipboard keeps what's in the box", async () => {
   stubClipboard("");
   renderApp("/");
 
-  const box = screen.getByRole("textbox", { name: "Pinch a recipe from a reel" });
+  const box = await screen.findByRole("textbox", { name: "Pinch a recipe from a reel" });
   await userEvent.type(box, reel);
   await userEvent.click(screen.getByRole("button", { name: "Paste" }));
 
@@ -176,7 +176,7 @@ test("the API's message for a text shows under the box", async () => {
   renderApp("/");
 
   await userEvent.type(
-    screen.getByRole("textbox", { name: "Pinch a recipe from a reel" }),
+    await screen.findByRole("textbox", { name: "Pinch a recipe from a reel" }),
     "Shakshuka: 4 eggs, 1 can of tomatoes.",
   );
   await userEvent.click(screen.getByRole("button", { name: "Pinch it" }));
@@ -189,7 +189,7 @@ test("a text too short to be a recipe is refused before it's sent", async () => 
   renderApp("/");
 
   await userEvent.type(
-    screen.getByRole("textbox", { name: "Pinch a recipe from a reel" }),
+    await screen.findByRole("textbox", { name: "Pinch a recipe from a reel" }),
     "2 eggs",
   );
   await userEvent.click(screen.getByRole("button", { name: "Pinch it" }));
@@ -205,14 +205,14 @@ test("an empty box asks for either, and focus goes back to it", async () => {
   await userEvent.click(screen.getByRole("button", { name: "Pinch it" }));
 
   expect(await screen.findByRole("alert")).toHaveTextContent("Paste a link or the recipe's text.");
-  expect(screen.getByRole("textbox", { name: "Pinch a recipe from a reel" })).toHaveFocus();
+  expect(await screen.findByRole("textbox", { name: "Pinch a recipe from a reel" })).toHaveFocus();
 });
 
 test("a link from another site is refused before it's sent, until it's fixed", async () => {
   const fetch = stubApi([[]]);
   renderApp("/");
 
-  const box = screen.getByRole("textbox", { name: "Pinch a recipe from a reel" });
+  const box = await screen.findByRole("textbox", { name: "Pinch a recipe from a reel" });
   await userEvent.type(box, "https://www.tiktok.com/@chef/video/1");
   await userEvent.click(screen.getByRole("button", { name: "Pinch it" }));
 
@@ -237,7 +237,7 @@ test("the API's message for a link shows under the box", async () => {
   );
   renderApp("/");
 
-  const box = screen.getByRole("textbox", { name: "Pinch a recipe from a reel" });
+  const box = await screen.findByRole("textbox", { name: "Pinch a recipe from a reel" });
   await userEvent.type(box, reel);
   await userEvent.click(screen.getByRole("button", { name: "Pinch it" }));
 
@@ -249,7 +249,7 @@ test("when the link can't be sent, it says so and keeps the link", async () => {
   stubApi([[]], () => new Response(null, { status: 502 }));
   renderApp("/");
 
-  const box = screen.getByRole("textbox", { name: "Pinch a recipe from a reel" });
+  const box = await screen.findByRole("textbox", { name: "Pinch a recipe from a reel" });
   await userEvent.type(box, reel);
   await userEvent.click(screen.getByRole("button", { name: "Pinch it" }));
 
@@ -326,11 +326,11 @@ test("the heading counts what's ready, in progress and failed, a stalled one as 
   ).toBeInTheDocument();
 });
 
-test("Or write it yourself leads to the empty editor", () => {
+test("Or write it yourself leads to the empty editor", async () => {
   stubApi([[]]);
   renderApp("/");
 
-  expect(screen.getByRole("link", { name: "Or write it yourself" })).toHaveAttribute(
+  expect(await screen.findByRole("link", { name: "Or write it yourself" })).toHaveAttribute(
     "href",
     "/recipes/new",
   );
@@ -402,7 +402,7 @@ test("Retry puts a failed link back in the queue", async () => {
 
   expect(await screen.findByText("Waiting to start…")).toBeInTheDocument();
   // The button is gone; focus is on the paste box, not lost to the page.
-  expect(screen.getByRole("textbox", { name: "Pinch a recipe from a reel" })).toHaveFocus();
+  expect(await screen.findByRole("textbox", { name: "Pinch a recipe from a reel" })).toHaveFocus();
   expect(fetch).toHaveBeenCalledWith("/api/imports/6650a1b2c3d4e5f600000001/retry", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -419,7 +419,7 @@ test("Dismiss deletes a failed link", async () => {
   await waitFor(() => {
     expect(screen.queryByText("No.")).not.toBeInTheDocument();
   });
-  expect(screen.getByRole("textbox", { name: "Pinch a recipe from a reel" })).toHaveFocus();
+  expect(await screen.findByRole("textbox", { name: "Pinch a recipe from a reel" })).toHaveFocus();
   expect(fetch).toHaveBeenCalledWith("/api/imports/6650a1b2c3d4e5f600000001", {
     method: "DELETE",
   });
@@ -458,7 +458,10 @@ test("Undo on Pinch it's toast cancels the import, and the queue drops it", asyn
   const fetch = stubApi([[], [importOf({})], []]);
   renderApp("/");
 
-  await userEvent.type(screen.getByRole("textbox", { name: "Pinch a recipe from a reel" }), reel);
+  await userEvent.type(
+    await screen.findByRole("textbox", { name: "Pinch a recipe from a reel" }),
+    reel,
+  );
   await userEvent.click(screen.getByRole("button", { name: "Pinch it" }));
   expect(await screen.findByText("Waiting to start…")).toBeInTheDocument();
   fireEvent.click(within(toastOf("Pinching it")).getByRole("button", { name: "Undo" }));
@@ -524,7 +527,10 @@ test("Undo of Pinch it, when the import is already gone, is as good as cancelled
   stubApi([[], [importOf({})], []], undefined, () => new Response(null, { status: 404 }));
   renderApp("/");
 
-  await userEvent.type(screen.getByRole("textbox", { name: "Pinch a recipe from a reel" }), reel);
+  await userEvent.type(
+    await screen.findByRole("textbox", { name: "Pinch a recipe from a reel" }),
+    reel,
+  );
   await userEvent.click(screen.getByRole("button", { name: "Pinch it" }));
   fireEvent.click(within(await findToast("Pinching it")).getByRole("button", { name: "Undo" }));
 
@@ -627,7 +633,7 @@ test("past the daily cap, the box says so and keeps the link", async () => {
   );
   renderApp("/");
 
-  const box = screen.getByRole("textbox", { name: "Pinch a recipe from a reel" });
+  const box = await screen.findByRole("textbox", { name: "Pinch a recipe from a reel" });
   await userEvent.type(box, reel);
   await userEvent.click(screen.getByRole("button", { name: "Pinch it" }));
 

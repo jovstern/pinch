@@ -7,7 +7,7 @@ import { Button } from "../../components/ui/Button.tsx";
 import { Skeleton } from "../../components/ui/Skeleton.tsx";
 import { cn } from "../../lib/cn.ts";
 import { useHeadingFocus } from "../../lib/useHeadingFocus.ts";
-import { FiltersPanel } from "./FiltersPanel.tsx";
+import { LazyFiltersPanel } from "./LazyFiltersPanel.tsx";
 import { ListFilters } from "./ListFilters.tsx";
 import { RecipeCard } from "./RecipeCard.tsx";
 import { appliedFilters } from "./filterLabels.ts";
@@ -125,7 +125,7 @@ export function RecipeListPage() {
       {/* Two columns from 1024 px: the Filters panel and the grid. */}
       <div className="lg:flex lg:gap-8">
         {!noRecipesYet && (
-          <FiltersPanel
+          <LazyFiltersPanel
             filters={filters}
             onChange={changeFilters}
             filtered={applied.length > 0}

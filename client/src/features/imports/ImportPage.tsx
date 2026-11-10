@@ -1,10 +1,13 @@
+import { useQuery } from "@tanstack/react-query";
 import { PenLine } from "lucide-react";
 import { useRef } from "react";
 import { Link } from "react-router";
 import { Button } from "../../components/ui/Button.tsx";
+import { cn } from "../../lib/cn.ts";
 import { useHeadingFocus } from "../../lib/useHeadingFocus.ts";
-import { ImportForm } from "./ImportForm.tsx";
 import { ImportList } from "./ImportList.tsx";
+import { importListQuery } from "./importQueries.ts";
+import { LazyImportForm } from "./LazyImportForm.tsx";
 
 // The Add recipe tab, at / (design §14, D24): paste a link or a post's text, and the queue of
 // what's being turned into recipes.
@@ -12,6 +15,9 @@ export function ImportPage() {
   // The paste box, where focus goes after an import is retried or dismissed.
   const pasteBoxRef = useRef<HTMLTextAreaElement>(null);
   const headingRef = useHeadingFocus();
+  // The queue's height decides where the centred block sits, so the block shows once the queue
+  // is known (or failed to load): drawn before, it would jump as the cards arrive (CLS).
+  const { isPending } = useQuery(importListQuery);
   return (
     <>
       <title>Add recipe · Pinch</title>
@@ -23,8 +29,8 @@ export function ImportPage() {
           queue grows the block grows, and once it no longer fits my-auto is 0: the field is at
           the top and the page scrolls. Not justify-center, which would push the top out of
           reach. */}
-      <div className="my-auto">
-        <ImportForm inputRef={pasteBoxRef} />
+      <div className={cn("my-auto", isPending && "invisible")}>
+        <LazyImportForm inputRef={pasteBoxRef} />
         {/* Screenshots: hidden for now (user, 2026-11-10). <ScreenshotsUpload /> */}
         {/* The other way in, quiet: the paste is the main one (design §14). Write a recipe's
             pen, as in the header. */}
