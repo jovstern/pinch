@@ -1,11 +1,14 @@
 import type { Import } from "@pinch/shared";
 import { useQuery } from "@tanstack/react-query";
-import { CookingPot, LoaderCircle, TriangleAlert } from "lucide-react";
+import { LoaderCircle, TriangleAlert } from "lucide-react";
+import type { ReactNode } from "react";
 import { Link } from "react-router";
+import { EmojiTile } from "../../components/EmojiTile.tsx";
 import { Thumbnail } from "../../components/Thumbnail.tsx";
 import { Button } from "../../components/ui/Button.tsx";
 import { Skeleton } from "../../components/ui/Skeleton.tsx";
 import { platformNames } from "../../lib/platformNames.ts";
+import { countToLookAt, thingsToLookAt } from "../../lib/thingsToLookAt.ts";
 import { ImportActions } from "./ImportActions.tsx";
 import { importListQuery } from "./importQueries.ts";
 
@@ -108,11 +111,9 @@ function Picture({ job }: { job: Import }) {
     );
   }
   if (job.status === "ready") {
-    // A text or screenshots draft: no picture from a post.
+    // A text draft, or a post without a picture: the dish's emoji (D25).
     return (
-      <div className="flex h-20 w-16 shrink-0 items-center justify-center rounded-control bg-muted text-muted-foreground">
-        <CookingPot aria-hidden="true" className="size-6" />
-      </div>
+      <EmojiTile emoji={job.draft?.emoji} className="h-20 w-16 shrink-0 rounded-control text-3xl" />
     );
   }
   return <Skeleton className="h-20 w-16 shrink-0" />;
@@ -172,7 +173,7 @@ function inputText(input: Import["input"]) {
 }
 
 // waiting → fetching → analyzing → ready to review, or why it failed (design §1).
-function statusText(job: Import) {
+function statusText(job: Import): ReactNode {
   // Not "working on it" forever when nothing is (§4.3).
   if (job.stalled) {
     return "Stuck: nothing has worked on this for a while. Dismiss it and paste it again later.";
@@ -186,8 +187,25 @@ function statusText(job: Import) {
       if (job.step === "analyzing") return "Reading the recipe…";
       return "Working on it…";
     case "ready":
-      return "Ready to review";
+      return <ReadyText count={countToLookAt(job)} />;
     case "failed":
       return job.error ?? "That didn't work.";
   }
+}
+
+// "Ready to review · ◆ 3 things to look at" (design §14): the ◆ is the editor's mark, in its
+// colour; the words say it without either.
+function ReadyText({ count }: { count: number }) {
+  if (count === 0) return "Ready to review";
+  return (
+    <>
+      Ready to review ·{" "}
+      <span className="font-normal text-muted-foreground">
+        <span aria-hidden="true" className="text-check-mark">
+          ◆
+        </span>{" "}
+        {thingsToLookAt(count)}
+      </span>
+    </>
+  );
 }

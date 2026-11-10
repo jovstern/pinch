@@ -96,6 +96,19 @@ test("the model is asked for the fields it's unsure of, with their paths, in the
   expect(config?.systemInstruction).toContain("at most 10");
 });
 
+test("the model is asked for the dish's emoji, as a plain string Gemini accepts", async () => {
+  const generate = vi
+    .spyOn(ai.models, "generateContent")
+    .mockResolvedValue(answer(JSON.stringify(recipe)));
+
+  await extract(youtube, noDeadline, quiet);
+
+  const config = generate.mock.calls[0]?.[0].config;
+  // Its check (one emoji) is Zod's, after the answer: nothing in the schema for Gemini to refuse.
+  expect(JSON.stringify(config?.responseJsonSchema)).toContain('"emoji":{"type":"string"}');
+  expect(config?.systemInstruction).toContain("one food emoji");
+});
+
 test("a link is fetched, then analyzed; a text is only analyzed", async () => {
   vi.spyOn(ai.models, "generateContent").mockResolvedValue(answer(JSON.stringify(recipe)));
   const steps: string[] = [];

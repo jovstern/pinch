@@ -6,10 +6,18 @@ import {
   RecipeSortSchema,
   TimeLimitSchema,
   type ListSource,
+  type Recipe,
+  type RecipeList,
   type RecipeSort,
   type TimeLimit,
 } from "@pinch/shared";
-import { infiniteQueryOptions, keepPreviousData, queryOptions } from "@tanstack/react-query";
+import {
+  infiniteQueryOptions,
+  keepPreviousData,
+  queryOptions,
+  type InfiniteData,
+  type QueryClient,
+} from "@tanstack/react-query";
 import { getJson } from "../../lib/api.ts";
 
 // Keys nest under "recipes": a list is ["recipes", "list", filters], one recipe
@@ -61,6 +69,17 @@ export function recipeQuery(id: string) {
     queryKey: ["recipes", "detail", id],
     queryFn: () => getJson(`/api/recipes/${id}`, RecipeSchema),
   });
+}
+
+// The recipe as a list already loaded has it: the list's items are whole recipes, as the page's
+// (design §8). RecipePage shows it while its own answer loads, so a card opens its page at once,
+// without the skeleton's shift.
+export function listedRecipe(queryClient: QueryClient, id: string): Recipe | undefined {
+  const lists = queryClient.getQueriesData<InfiniteData<RecipeList>>({ queryKey: recipeListsKey });
+  return lists
+    .flatMap(([, list]) => list?.pages ?? [])
+    .flatMap((page) => page.items)
+    .find((recipe) => recipe.id === id);
 }
 
 // The filters as a query string, the same in the page's address and the API's:

@@ -3,6 +3,7 @@ import type { Collection, UpdateFilter } from "mongodb";
 import { setTimeout } from "node:timers/promises";
 import type { Logger } from "pino";
 import { claimNextImport, LEASE_MS, type ImportDocument } from "../db/imports.ts";
+import { NOT_DELETED } from "../db/softDelete.ts";
 import type { StoredThumbnail } from "../db/thumbnail.ts";
 
 // What an extractor may do as it goes: say each step as it starts it, save the post's picture
@@ -90,10 +91,17 @@ export async function runImport({ imports, extract, logger, job, deadline }: Run
   // How long the attempt took, on its last line: imports take 5–60 s (§12, M6).
   const started = Date.now();
 
-  // Every write is only while the job is still this attempt's. The user may have deleted it,
-  // or, had this attempt outlived its lease, another worker claimed it and attempts went up.
-  // Either way the write updates nothing, and the job is left as it is.
-  const ours = { _id: job._id, status: "processing" as const, attempts: job.attempts };
+  // Every write is only while the job is still this attempt's. The user may have deleted it
+  // (Pinch it's Undo, say: D27), or, had this attempt outlived its lease, another worker claimed
+  // it and attempts went up. Either way the write updates nothing, and the job is left as it is:
+  // a deleted job never turns ready. Each write is one document's, checked and made in one step,
+  // so a delete lands wholly before it or after it (no transactions: D9).
+  const ours = {
+    _id: job._id,
+    status: "processing" as const,
+    attempts: job.attempts,
+    ...NOT_DELETED,
+  };
   async function save(update: UpdateFilter<ImportDocument>, done: string) {
     const { matchedCount } = await imports.updateOne(ours, update);
     const ms = Date.now() - started;

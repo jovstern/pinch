@@ -46,8 +46,9 @@ minutes, and tags from the allowed list. Use the post's text, and its video (the
 text on screen) or its screenshots when there are some; the text often has the quantities.
 Write the recipe in the language of the post; tags are codes, so keep them as they are. Leave
 out anything you can't tell rather than guessing. The exception: estimate the calories and the
-grams of protein, carbs and fat in one serving, from the ingredients and the servings. In
-uncertain, list the fields you were unsure of or couldn't find in the post, for the user to look
+grams of protein, carbs and fat in one serving, from the ingredients and the servings. In emoji,
+put one food emoji that fits the dish (e.g. 🍲 for a soup). In uncertain, list the fields you
+were unsure of or couldn't find in the post, for the user to look
 at: at most ${String(MAX_UNCERTAIN)}, each with a short reason in the recipe's language (e.g. "the
 video doesn't say how much"). A field's path is "title", "servings", "prepMinutes",
 "cookMinutes", "steps.N", or "ingredients.N.quantity", "ingredients.N.unit" or
