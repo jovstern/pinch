@@ -123,4 +123,4 @@ Then the features the design asks the API for, one PR each:
 - [x] F2 Things to look at: the model marks fields it is unsure of; marks in the editor, the
       count on the queue card
 - [x] F3 A face for every recipe: an emoji from the model (D25)
-- [ ] F4 Undo in the toasts (Pinch it, Delete, Discard)
+- [x] F4 Undo in the toasts (Pinch it, Delete, Discard, Dismiss): a soft delete (D27)

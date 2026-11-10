@@ -422,6 +422,64 @@ test("when Dismiss fails, a toast says so and keeps the link, and Try again send
   expect(await screen.findByText("Dismissed")).toBeInTheDocument();
 });
 
+test("Undo on Pinch it's toast cancels the import, and the queue drops it", async () => {
+  const fetch = stubApi([[], [importOf({})], []]);
+  renderApp("/");
+
+  await userEvent.type(screen.getByRole("textbox", { name: "Pinch a recipe from a reel" }), reel);
+  await userEvent.click(screen.getByRole("button", { name: "Pinch it" }));
+  expect(await screen.findByText("Waiting to start…")).toBeInTheDocument();
+  fireEvent.click(within(toastOf("Pinching it")).getByRole("button", { name: "Undo" }));
+
+  expect(await screen.findByText("Cancelled")).toBeInTheDocument();
+  expect(fetch).toHaveBeenCalledWith("/api/imports/6650a1b2c3d4e5f600000001", {
+    method: "DELETE",
+  });
+  expect(screen.queryByText("Waiting to start…")).not.toBeInTheDocument();
+});
+
+test("Undo on Dismiss's toast brings the failed link back", async () => {
+  const failed = importOf({ status: "failed", attempts: 3, error: "No." });
+  const fetch = stubApi([[failed], [], [failed]], () => Response.json(failed));
+  renderApp("/");
+
+  await userEvent.click(await screen.findByRole("button", { name: "Dismiss" }));
+  await waitFor(() => {
+    expect(screen.queryByText("No.")).not.toBeInTheDocument();
+  });
+  fireEvent.click(within(toastOf("Dismissed")).getByRole("button", { name: "Undo" }));
+
+  expect(await screen.findByText("No.")).toBeInTheDocument();
+  expect(fetch).toHaveBeenCalledWith("/api/imports/6650a1b2c3d4e5f600000001/restore", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: undefined,
+  });
+});
+
+test("when Undo fails, a toast says so, and Try again undoes it", async () => {
+  const failed = importOf({ status: "failed", attempts: 3, error: "No." });
+  let restores = 0;
+  stubApi([[failed], [], [failed]], () => {
+    restores += 1;
+    return restores === 1 ? new Response(null, { status: 502 }) : Response.json(failed);
+  });
+  renderApp("/");
+
+  await userEvent.click(await screen.findByRole("button", { name: "Dismiss" }));
+  fireEvent.click(within(await findToast("Dismissed")).getByRole("button", { name: "Undo" }));
+
+  fireEvent.click(
+    within(await findToast("Couldn't undo")).getByRole("button", { name: "Try again" }),
+  );
+  expect(await screen.findByText("No.")).toBeInTheDocument();
+});
+
+async function findToast(text: string) {
+  await screen.findByText(text);
+  return toastOf(text);
+}
+
 // The toast a text is in (Sonner's list item), to find its buttons.
 function toastOf(text: string) {
   const toast = screen.getByText(text).closest("li");

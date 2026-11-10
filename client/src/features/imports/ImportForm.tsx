@@ -9,7 +9,7 @@ import { Textarea } from "../../components/ui/Textarea.tsx";
 import { ApiError, sendJson } from "../../lib/api.ts";
 import { cn } from "../../lib/cn.ts";
 import { toastPinching } from "../../lib/toasts.tsx";
-import { importListQuery } from "./importQueries.ts";
+import { cancelImport, importListQuery } from "./importQueries.ts";
 
 // Paste reads the clipboard, where the browser lets a page ask for it (a secure page, and not
 // every browser). Asked on each render, not once, so a test can give it a clipboard.
@@ -26,6 +26,9 @@ const hint = "Paste a YouTube short, a Facebook or Instagram reel, or a recipe a
 export function ImportForm({ inputRef }: { inputRef: RefObject<HTMLTextAreaElement | null> }) {
   const queryClient = useQueryClient();
   const formRef = useRef<HTMLFormElement>(null);
+  // The import just sent: the send is checked as the form's last validator, which can only say
+  // whether it worked, so its id waits here for onSubmit's toast, whose Undo cancels it.
+  const sentId = useRef("");
   const id = useId();
   const errorId = `${id}-error`;
   const hintId = `${id}-hint`;
@@ -42,7 +45,7 @@ export function ImportForm({ inputRef }: { inputRef: RefObject<HTMLTextAreaEleme
       onSubmitAsync: async ({ value }) => {
         try {
           const input = ImportInputSchema.parse(importInput(value.pasted));
-          await sendJson("POST", "/api/imports", input, ImportSchema);
+          sentId.current = (await sendJson("POST", "/api/imports", input, ImportSchema)).id;
           return null;
         } catch (error) {
           if (error instanceof ApiError) {
@@ -61,7 +64,8 @@ export function ImportForm({ inputRef }: { inputRef: RefObject<HTMLTextAreaEleme
       form.reset();
       setGrown(false);
       void queryClient.invalidateQueries({ queryKey: importListQuery.queryKey });
-      toastPinching();
+      const id = sentId.current;
+      toastPinching(() => cancelImport(queryClient, id));
     },
   });
 
@@ -82,8 +86,8 @@ export function ImportForm({ inputRef }: { inputRef: RefObject<HTMLTextAreaEleme
     setGrown(isText && (grown || wraps));
   }
 
-  // Into the field, not sent: there's no Undo for a send yet (M8 F4), so the user sends it. It
-  // replaces what's there: the field holds one thing to pinch. An empty clipboard changes nothing.
+  // Into the field, not sent: the user sees what was pasted before sending it. It replaces what's
+  // there: the field holds one thing to pinch. An empty clipboard changes nothing.
   async function paste(setValue: (value: string) => void) {
     const box = inputRef.current;
     if (!box) return;

@@ -3,7 +3,7 @@ import { useSyncExternalStore } from "react";
 import type { ExternalToast } from "sonner";
 
 // Every toast in the app, by name, with how long it stays (design §14; the table in the
-// wireframe home.html). No Undo until the API has one (M8 F4).
+// wireframe home.html).
 const seconds = (n: number) => n * 1000;
 const short = seconds(3);
 const normal = seconds(5);
@@ -54,14 +54,31 @@ export function dismissToast(id: string) {
   );
 }
 
-// Sent: the queue takes it from here.
-export function toastPinching() {
+// Undo, on the toasts of a send or a delete (design D27). What it does is the caller's: a request,
+// then the queries to refresh. Sonner closes the toast as it's pressed; a failure says so, with
+// Try again.
+function undoAction(undo: () => Promise<void>) {
+  const run = () => {
+    undo().catch(() => {
+      toastCouldntSave(run, "Couldn't undo");
+    });
+  };
+  return { label: "Undo", onClick: run };
+}
+
+// Sent: the queue takes it from here. Undo cancels it.
+export function toastPinching(undo: () => Promise<void>) {
   showToast("message", "Pinching it", {
     description: "Usually under a minute",
     icon: <LoaderCircle className="size-4 motion-safe:animate-spin" />,
-    // Short: the queue right under the field already shows it cooking.
-    duration: short,
+    duration: normal,
+    action: undoAction(undo),
   });
+}
+
+// Pinch it undone: the queue drops it too.
+export function toastCancelled() {
+  showToast("success", "Cancelled", { duration: short });
 }
 
 // The import's id is the toast's: a ready one takes the place of its failure, and the failure
@@ -107,22 +124,37 @@ export function toastChangesSaved() {
   showToast("success", "Changes saved", { duration: short });
 }
 
-export function toastDeleted(title: string) {
-  showToast("success", `Deleted ${title}`, { duration: long });
+export function toastDeleted(title: string, undo: () => Promise<void>) {
+  showToast("success", `Deleted ${title}`, { duration: long, action: undoAction(undo) });
 }
 
-export function toastDiscarded(title: string | undefined) {
-  showToast("success", "Discarded", { description: title, duration: long });
+// A deleted recipe undone. The user has left its page (Delete goes to My recipes), so View.
+export function toastRestored(title: string, view: () => void) {
+  showToast("success", "Back in My recipes", {
+    description: title,
+    duration: normal,
+    action: { label: "View", onClick: view },
+  });
 }
 
-export function toastDismissed() {
-  showToast("success", "Dismissed", { duration: long });
+// An undone discard or dismiss needs no toast of its own: the import is back in the queue, and
+// the queue's toast says it is ready to review, or failed (useImportToasts).
+export function toastDiscarded(title: string | undefined, undo: () => Promise<void>) {
+  showToast("success", "Discarded", {
+    description: title,
+    duration: long,
+    action: undoAction(undo),
+  });
+}
+
+export function toastDismissed(undo: () => Promise<void>) {
+  showToast("success", "Dismissed", { duration: long, action: undoAction(undo) });
 }
 
 // A change that couldn't reach the server, with Try again. Only for one-click actions, which can
 // simply be sent again; a form keeps its error by its fields.
-export function toastCouldntSave(tryAgain: () => void) {
-  showToast("error", "Couldn't save", {
+export function toastCouldntSave(tryAgain: () => void, title = "Couldn't save") {
+  showToast("error", title, {
     description: "Check your connection",
     duration: untilClosed,
     closeButton: true,
