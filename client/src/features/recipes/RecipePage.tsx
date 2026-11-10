@@ -5,6 +5,7 @@ import { Badge } from "../../components/ui/Badge.tsx";
 import { Breadcrumb } from "../../components/ui/Breadcrumb.tsx";
 import { Button } from "../../components/ui/Button.tsx";
 import { Thumbnail } from "../../components/Thumbnail.tsx";
+import { useHeadingFocus } from "../../lib/useHeadingFocus.ts";
 import { ingredientLine } from "./ingredientLine.ts";
 import { keepRangesTogether } from "./ranges.ts";
 import { LazyRecipeMenu } from "./LazyRecipeMenu.tsx";
@@ -13,7 +14,6 @@ import { RecipeSkeleton } from "./RecipeSkeleton.tsx";
 import { RecipeSource } from "./RecipeSource.tsx";
 import { filterParams, recipeQuery } from "./recipeQueries.ts";
 import { tagLabel } from "./tagLabels.ts";
-import { useHeadingFocus } from "../../lib/useHeadingFocus.ts";
 
 export function RecipePage() {
   // The route is "recipes/:id", so the id is always there.

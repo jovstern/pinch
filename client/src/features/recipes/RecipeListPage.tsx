@@ -7,12 +7,12 @@ import { Badge } from "../../components/ui/Badge.tsx";
 import { Button } from "../../components/ui/Button.tsx";
 import { Skeleton } from "../../components/ui/Skeleton.tsx";
 import { cn } from "../../lib/cn.ts";
+import { useHeadingFocus } from "../../lib/useHeadingFocus.ts";
 import { FiltersPanel } from "./FiltersPanel.tsx";
 import { ListFilters } from "./ListFilters.tsx";
 import { RecipeCard } from "./RecipeCard.tsx";
 import { filterParams, recipeListQuery, type RecipeFilters } from "./recipeQueries.ts";
 import { tagLabel } from "./tagLabels.ts";
-import { useHeadingFocus } from "../../lib/useHeadingFocus.ts";
 
 // The My recipes tab, at /recipes (design §14, D24).
 export function RecipeListPage() {
@@ -103,13 +103,13 @@ export function RecipeListPage() {
       </h1>
 
       {/* From 1024 px the panel's ~35 checkboxes come first, on screen and to the keyboard
-          (ui-craft: the keyboard goes in visual order): a skip link, shown when focused, goes
-          past them to the search. Below 1024 px the Filters are one button. */}
+          (ui-craft: the keyboard goes in visual order): a skip button, shown (pushing the page
+          down) while focused, goes past them to the search. Below 1024 px the Filters are one button. */}
       {!noRecipesYet && (
         <Button
           type="button"
           variant="secondary"
-          className="sr-only focus-visible:not-sr-only focus-visible:absolute focus-visible:z-10 focus-visible:px-4 focus-visible:shadow-sheet max-lg:hidden"
+          className="sr-only focus-visible:not-sr-only focus-visible:mb-3 focus-visible:px-4 max-lg:hidden"
           onClick={() => {
             searchRef.current?.focus();
           }}

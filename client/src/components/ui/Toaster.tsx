@@ -49,7 +49,7 @@ export function Toaster({ alwaysTop }: { alwaysTop: boolean }) {
         classNames: {
           toast: `shadow-sheet! text-sm! has-[[data-close-button]]:pr-8! ${focusRing}`,
           title: "font-semibold!",
-          description: "text-muted-foreground! max-md:line-clamp-1",
+          description: "text-muted-foreground! max-md:line-clamp-1!",
           actionButton: `h-11! bg-transparent! px-3! text-sm! font-semibold! text-primary! underline! underline-offset-4 ${focusRing}`,
           closeButton: `top-1.5! right-1.5! left-auto! transform-none! after:absolute after:-inset-3.5 after:content-[''] ${focusRing}`,
         },

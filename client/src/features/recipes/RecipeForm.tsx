@@ -139,7 +139,7 @@ export function RecipeForm({
               </div>
               {list.state.value.map((ingredient, index) => {
                 const position = String(index + 1);
-                // An example in a row that came empty (Add ingredient, a new recipe), as the
+                // An example while the row has no name yet (Add ingredient, a new recipe), as the
                 // title's; not in a recipe's own rows, where "g" in an empty unit would mislead.
                 const example = ingredient.name === "";
                 // TanStack Form types the name as `ingredients[${number}]`: the index must stay a

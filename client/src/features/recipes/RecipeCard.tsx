@@ -18,7 +18,7 @@ export function RecipeCard({ recipe }: { recipe: Recipe }) {
       to={`/recipes/${recipe.id}`}
       className="group flex flex-col rounded-card focus-visible:outline-offset-4!"
     >
-      {/* dir="auto" on both: the meta line follows its title's side (a Hebrew title, right),
+      {/* dir="auto" on the block: the meta line follows its title's side (a Hebrew title, right),
           its words kept in their own order (bdi), so "120 min" doesn't turn into "min … 120". */}
       <div dir="auto">
         <h2 className="mt-2 line-clamp-2 text-base font-semibold group-hover:underline">
