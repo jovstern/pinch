@@ -55,7 +55,8 @@ export function toRecipe(recipe: RecipeDocument): Recipe {
 }
 
 // Saves a recipe approved from an import, or answers the one an earlier approve of the same
-// import already made: the unique sourceImportId index lets only one in (design §4.4).
+// import already made: the unique sourceImportId index lets only one in (design §4.4). That one,
+// if the user has deleted it since, comes back: approving is asking for it (D27).
 export async function insertRecipeOnce(
   recipes: Collection<RecipeDocument>,
   recipe: RecipeDocument,
@@ -66,10 +67,11 @@ export async function insertRecipeOnce(
   } catch (error) {
     // 11000 is Mongo's duplicate key.
     if (!(error instanceof MongoServerError && error.code === 11000)) throw error;
-    const made = await recipes.findOne({
-      sourceImportId: recipe.sourceImportId,
-      ownerId: recipe.ownerId,
-    });
+    const made = await recipes.findOneAndUpdate(
+      { sourceImportId: recipe.sourceImportId, ownerId: recipe.ownerId },
+      { $unset: { deletedAt: "" } },
+      { returnDocument: "after" },
+    );
     // Deleted since the insert failed: rare, and a 500 then, as any database error.
     if (!made) throw error;
     return made;

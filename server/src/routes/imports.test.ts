@@ -402,6 +402,21 @@ test("approving again after a crash between the two writes still makes one recip
   expect((await request(app).get(`/api/imports/${id}`)).status).toBe(404);
 });
 
+test("approving again brings back the recipe the first approve made, if it was deleted since", async () => {
+  const id = await insertDone({ draft });
+  const first = await request(app).post(`/api/imports/${id}/approve`).send(draft);
+  const { id: recipeId } = RecipeSchema.parse(first.body);
+  await request(app).delete(`/api/recipes/${recipeId}`);
+  // As if the first approve had stopped after the recipe, before deleting the import.
+  await insertDone({ _id: new ObjectId(id), draft });
+
+  const second = await request(app).post(`/api/imports/${id}/approve`).send(draft);
+
+  expect(second.status).toBe(201);
+  expect(second.body).toEqual(first.body);
+  expect((await request(app).get(`/api/recipes/${recipeId}`)).status).toBe(200);
+});
+
 test("approve refuses an import with no draft yet, an invalid recipe and a missing import", async () => {
   const pending = ImportSchema.parse(
     (await request(app).post("/api/imports").send({ type: "link", url: reel })).body,
