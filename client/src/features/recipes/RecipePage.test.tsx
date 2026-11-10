@@ -86,7 +86,7 @@ test("when loading fails, it offers to try again", async () => {
   expect(await screen.findByRole("button", { name: "Try again" })).toBeInTheDocument();
 });
 
-test("Delete asks first, then deletes the recipe and goes back to the list", async () => {
+test("Delete asks first, then deletes the recipe and goes back to the list, focused on it", async () => {
   const fetch = stubApi();
   renderApp(`/recipes/${omelette.id}`);
 
@@ -94,7 +94,10 @@ test("Delete asks first, then deletes the recipe and goes back to the list", asy
   const dialog = await screen.findByRole("alertdialog", { name: "Delete this recipe?" });
   await userEvent.click(within(dialog).getByRole("button", { name: "Delete" }));
 
-  expect(await screen.findByRole("heading", { level: 1, name: "My recipes" })).toBeInTheDocument();
+  const heading = await screen.findByRole("heading", { level: 1, name: "My recipes" });
+  // Still there once the dialog's own focus handling (a tick later) is done.
+  await new Promise((resolve) => setTimeout(resolve, 10));
+  expect(heading).toHaveFocus();
   expect(fetch).toHaveBeenCalledWith(`/api/recipes/${omelette.id}`, { method: "DELETE" });
 });
 
