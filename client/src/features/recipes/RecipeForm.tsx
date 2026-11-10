@@ -85,7 +85,7 @@ export function RecipeForm({
         <p
           key={name}
           id={markId(name)}
-          className={`flex gap-1.5 text-sm text-text-muted ${className}`}
+          className={`flex gap-1.5 text-sm text-muted-foreground ${className}`}
         >
           <span aria-hidden="true" className="text-check-mark">
             ◆

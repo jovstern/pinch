@@ -60,7 +60,7 @@ export function TextField({
     onBlur: field.handleBlur,
     "aria-invalid": invalid,
     "aria-describedby": describedBy.length > 0 ? describedBy.join(" ") : undefined,
-    // The form's "Show the first" finds marked boxes by it.
+    // The form's "Go to the first" finds marked boxes by it.
     "data-marked": markId ? true : undefined,
   };
   // A dashed edge, not colour alone; red still wins when the field is invalid.

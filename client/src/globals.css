@@ -38,7 +38,7 @@
      Check is a fill or a mark, never a text colour: it is too light to read. */
   --color-check: #e8b931;
   /* The ◆ of a "thing to look at" and its field's dashed edge: check, dark enough for a glyph
-     (4.5:1 on check-soft, docs/ux/pass-02.md §6). */
+     and an edge (UI, 3:1): 4.78:1 on the page, 5.07:1 on a card; in dark, 10.6:1 or more. */
   --color-check-mark: #8a6a00;
   --color-cooked: #5e7a3a;
   /* Only for what can't be undone (delete). Its label is on-accent too. */

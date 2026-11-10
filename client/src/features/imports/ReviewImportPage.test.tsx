@@ -236,3 +236,40 @@ test("a draft's things to look at are marked on their fields, and editing a fiel
     "To look at: Too fast to follow.",
   );
 });
+
+test("removing a row above a marked one moves its mark up; removing the marked row takes it away", async () => {
+  stubApi({
+    ...ready,
+    draft: {
+      ...draft,
+      ingredients: [{ name: "spaghetti" }, { name: "tomatoes" }, { name: "garlic" }],
+      uncertain: [{ path: "ingredients.2.name", reason: "Hard to hear." }],
+    },
+  });
+  renderApp(`/imports/${ready.id}`);
+
+  await screen.findAllByLabelText("Ingredient");
+  await userEvent.click(screen.getByRole("button", { name: "Remove ingredient 1" }));
+  const names = screen.getAllByLabelText("Ingredient");
+  expect(names[1]).toHaveValue("garlic");
+  expect(names[1]).toHaveAccessibleDescription("To look at: Hard to hear.");
+  expect(names[0]).not.toHaveAccessibleDescription();
+
+  await userEvent.click(screen.getByRole("button", { name: "Remove ingredient 2" }));
+  expect(screen.queryByText("Hard to hear.")).not.toBeInTheDocument();
+  expect(screen.queryByText(/to look at/)).not.toBeInTheDocument();
+});
+
+test("changing a marked number clears its mark", async () => {
+  stubApi({
+    ...ready,
+    draft: { ...draft, servings: 2, uncertain: [{ path: "servings", reason: "Not said." }] },
+  });
+  renderApp(`/imports/${ready.id}`);
+
+  const serves = await screen.findByLabelText("Serves");
+  expect(serves).toHaveAccessibleDescription("To look at: Not said.");
+  await userEvent.type(serves, "4");
+  expect(serves).not.toHaveAccessibleDescription();
+  expect(screen.queryByText("Not said.")).not.toBeInTheDocument();
+});
