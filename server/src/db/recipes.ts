@@ -88,8 +88,9 @@ export const TITLE_COLLATION = { locale: "en", strength: 2 };
 
 // The time a recipe takes: prep and cook together, or the one it has. One with neither is
 // unknown, and counts as longer than any real time: Quickest puts it last, and every time
-// filter leaves it out. (The largest a recipe can have is 2 × 1440.)
-export const UNKNOWN_MINUTES = 1_000_000;
+// filter leaves it out. (The largest a recipe can have is 2 × 1440.) Worked out here only, in
+// the query: Quickest's cursor reads it from the recipes it answers.
+const UNKNOWN_MINUTES = 1_000_000;
 const TOTAL_MINUTES = {
   // $add of a missing field is null; $ifNull answers the first of its values that isn't.
   $ifNull: [
@@ -99,12 +100,6 @@ const TOTAL_MINUTES = {
     UNKNOWN_MINUTES,
   ],
 };
-
-// The same, for a recipe in hand: the cursor's value for Quickest (routes/recipes.ts).
-export function totalMinutes(recipe: RecipeDocument) {
-  if (recipe.prepMinutes === undefined && recipe.cookMinutes === undefined) return UNKNOWN_MINUTES;
-  return (recipe.prepMinutes ?? 0) + (recipe.cookMinutes ?? 0);
-}
 
 // Where the next page starts: the last recipe of the page before, by the order's value (a
 // date, a number of minutes or a title) and its id (design §7, D11).
@@ -119,16 +114,20 @@ export type RecipeListOptions = {
   sources?: ListSource[];
   // At most this many minutes in all (TOTAL_MINUTES).
   maxMinutes?: number;
+  // Left out: newest first, or with a search, the best match first.
   sort?: RecipeSort;
   after?: RecipeCursor;
 };
+
+// A recipe the list read: with Quickest, its time too, for the cursor.
+export type ListedRecipe = RecipeDocument & { totalMinutes?: number };
 
 // My recipes, narrowed and in the order asked, after the cursor (design §7). It reads one more
 // than a page, so the route knows whether another page follows without the client asking for
 // an empty one.
 //
-// A search keeps its 50 best matches (by Mongo's text score, one page, no cursor) and shows them
-// in the order asked. Matching is by word, with English stemming ("eggs" finds "egg"); Hebrew
+// A search keeps its 50 best matches (by Mongo's text score, one page, no cursor): best first,
+// or in the order asked when one is. Matching is by word, with English stemming ("eggs" finds "egg"); Hebrew
 // matches whole words. q is Mongo's $search syntax: "a phrase" in quotes, and -word leaves a word
 // out.
 //
@@ -138,7 +137,7 @@ export type RecipeListOptions = {
 export function findRecipes(
   recipes: Collection<RecipeDocument>,
   ownerId: ObjectId,
-  { q, tags = [], sources = [], maxMinutes, sort = "newest", after }: RecipeListOptions = {},
+  { q, tags = [], sources = [], maxMinutes, sort, after }: RecipeListOptions = {},
 ) {
   const filter: Filter<RecipeDocument> = { ownerId };
   if (q) filter.$text = { $search: q };
@@ -146,20 +145,22 @@ export function findRecipes(
   if (sources.length > 0) filter["source.type"] = { $in: sources };
   if (maxMinutes !== undefined) filter.$expr = { $lte: [TOTAL_MINUTES, maxMinutes] };
 
-  const { field, direction } = sortOrders[sort];
   const pipeline: Document[] = [{ $match: filter }];
-  if (q) pipeline.push({ $sort: { score: { $meta: "textScore" } } }, { $limit: PAGE_SIZE });
-  if (sort === "quickest") pipeline.push({ $addFields: { totalMinutes: TOTAL_MINUTES } });
-  if (after) pipeline.push({ $match: afterCursor(field, direction, after) });
-  pipeline.push(
-    { $sort: { [field]: direction, _id: direction } },
-    { $limit: PAGE_SIZE + 1 },
-    // totalMinutes was only for the sort.
-    { $project: { ...WITHOUT_MEDIA, totalMinutes: 0 } },
-  );
-  return recipes.aggregate<RecipeDocument>(
+  // _id breaks ties between equal scores, so the cut at 50 is the same every time.
+  if (q)
+    pipeline.push({ $sort: { score: { $meta: "textScore" }, _id: -1 } }, { $limit: PAGE_SIZE });
+  // A search without an order stays best match first, as the cut left it.
+  const order = sort ?? (q ? undefined : "newest");
+  if (order) {
+    const { field, direction } = sortOrders[order];
+    if (order === "quickest") pipeline.push({ $addFields: { totalMinutes: TOTAL_MINUTES } });
+    if (after) pipeline.push({ $match: afterCursor(field, direction, after) });
+    pipeline.push({ $sort: { [field]: direction, _id: direction } });
+  }
+  pipeline.push({ $limit: PAGE_SIZE + 1 }, { $project: WITHOUT_MEDIA });
+  return recipes.aggregate<ListedRecipe>(
     pipeline,
-    sort === "az" ? { collation: TITLE_COLLATION } : {},
+    order === "az" ? { collation: TITLE_COLLATION } : {},
   );
 }
 

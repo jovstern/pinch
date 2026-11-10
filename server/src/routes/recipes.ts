@@ -15,7 +15,7 @@ import {
   PAGE_SIZE,
   recipesCollection,
   toRecipe,
-  totalMinutes,
+  type ListedRecipe,
   type RecipeCursor,
   type RecipeDocument,
 } from "../db/recipes.ts";
@@ -44,7 +44,9 @@ export function recipesRouter(db: Db) {
     const last = items.at(-1);
     // Only when there is one more recipe after this page: the last page says null. (`last` is
     // always there when there is more; the check is for TypeScript.)
-    const nextCursor = found.length > PAGE_SIZE && last ? toCursorText(last, sort) : null;
+    // A search has no next page, so a cursor's order is always the list's: newest if none.
+    const nextCursor =
+      found.length > PAGE_SIZE && last ? toCursorText(last, sort ?? "newest") : null;
     res.json({ items: items.map(toRecipe), nextCursor } satisfies RecipeList);
   });
 
@@ -122,9 +124,9 @@ export function recipesRouter(db: Db) {
 
 // The list's query string (design §8). q is a search; blank means none. Tags and sources are
 // comma-separated: "cuisine:italian,meal:dinner", "instagram,manual". time is the most minutes a
-// recipe takes; sort the order, newest first when left out.
-// The cursor is the last recipe's value in that order and its id, "<value>_<id>": the client
-// sends back the nextCursor it was given and never reads it (§7).
+// recipe takes; sort the order: when left out, newest first, or with q, the best match first.
+// The cursor is the order, the last recipe's value in it and its id, "<order>:<value>_<id>": the
+// client sends back the nextCursor it was given and never reads it (§7).
 const ListQuerySchema = z
   .object({
     q: z
@@ -143,13 +145,14 @@ const ListQuerySchema = z
       .pipe(z.array(ListSourceSchema))
       .optional(),
     time: TimeLimitSchema.transform(Number).optional(),
-    sort: RecipeSortSchema.default("newest"),
+    sort: RecipeSortSchema.optional(),
     cursor: z.string("This cursor isn't valid.").optional(),
   })
-  // The cursor's value is read by the order it belongs to, so it's checked once sort is known.
+  // The cursor must belong to the order asked (it's read by it), so it's checked once sort is
+  // known.
   .transform(({ cursor, ...query }, context) => {
     if (cursor === undefined) return { ...query, cursor: undefined };
-    const after = parseCursor(cursor, query.sort);
+    const after = parseCursor(cursor, query.sort ?? "newest");
     if (!after) {
       context.issues.push({
         code: "custom",
@@ -162,25 +165,27 @@ const ListQuerySchema = z
     return { ...query, cursor: after };
   });
 
-// "<value>_<id>": the id is the last 24 characters, the value what comes before the "_". Newest's
-// value is the time in milliseconds and Quickest's the minutes, both whole numbers; A–Z's is the
-// title, which may hold a "_" of its own.
+// "<order>:<value>_<id>": the id is the last 24 characters, the value what comes between the
+// order's ":" and the "_" before it. Newest's value is the time in milliseconds and Quickest's the
+// minutes, both whole numbers; A–Z's is the title, which may hold a "_" or ":" of its own.
 function parseCursor(text: string, sort: RecipeSort): RecipeCursor | undefined {
-  if (!/^.{1,200}_[0-9a-f]{24}$/s.test(text)) return undefined;
-  const value = text.slice(0, -25);
-  const _id = new ObjectId(text.slice(-24));
+  if (!text.startsWith(`${sort}:`)) return undefined;
+  const rest = text.slice(sort.length + 1);
+  if (!/^.{1,200}_[0-9a-f]{24}$/s.test(rest)) return undefined;
+  const value = rest.slice(0, -25);
+  const _id = new ObjectId(rest.slice(-24));
   if (sort === "az") return { value, _id };
   if (!/^\d{1,15}$/.test(value)) return undefined;
   return { value: sort === "newest" ? new Date(Number(value)) : Number(value), _id };
 }
 
-function toCursorText(recipe: RecipeDocument, sort: RecipeSort) {
-  return `${cursorValue(recipe, sort)}_${recipe._id.toHexString()}`;
+function toCursorText(recipe: ListedRecipe, sort: RecipeSort) {
+  return `${sort}:${cursorValue(recipe, sort)}_${recipe._id.toHexString()}`;
 }
 
-function cursorValue(recipe: RecipeDocument, sort: RecipeSort) {
+function cursorValue(recipe: ListedRecipe, sort: RecipeSort) {
   if (sort === "newest") return String(recipe.createdAt.getTime());
-  if (sort === "quickest") return String(totalMinutes(recipe));
+  if (sort === "quickest") return String(recipe.totalMinutes);
   return recipe.title;
 }
 

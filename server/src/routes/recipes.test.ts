@@ -325,16 +325,15 @@ async function insertSearchableRecipes() {
   return { ownerId, userApp };
 }
 
-test("GET /api/recipes?q= finds my recipes by title and ingredient, newest first", async () => {
+test("GET /api/recipes?q= finds my recipes by title and ingredient, the best match first", async () => {
   const { userApp } = await insertSearchableRecipes();
 
   const response = await request(userApp).get("/api/recipes").query({ q: "eggs" });
 
-  // "eggs" finds "egg" too (stemming). The best matches are kept, then shown in the order asked:
-  // newest first when none is. The other tests' omelettes (eggs too) belong to the default user,
-  // not this one.
+  // "eggs" finds "egg" too (stemming). Egg salad matches in the title and an ingredient, so it
+  // comes first. The other tests' omelettes (eggs too) belong to the default user, not this one.
   const list = RecipeListSchema.parse(response.body);
-  expect(list.items.map((recipe) => recipe.title)).toEqual(["Shakshuka", "Egg salad"]);
+  expect(list.items.map((recipe) => recipe.title)).toEqual(["Egg salad", "Shakshuka"]);
   expect(list.nextCursor).toBeNull();
 });
 
@@ -372,14 +371,19 @@ test("GET /api/recipes answers 400 for a search over 200 characters", async () =
 test("a search reads the text index, not the whole collection (§6)", async () => {
   const { ownerId } = await insertSearchableRecipes();
 
-  // The pipeline goes on after the query (the best by score, then the order asked), so explain
-  // puts the query's own plan in its first stage.
-  const { stages } = z
-    .object({ stages: z.tuple([z.object({ $cursor: ExplainSchema })], z.unknown()) })
-    .parse(
-      await findRecipes(recipesCollection(db), ownerId, { q: "tomato" }).explain("executionStats"),
-    );
-  const explain = stages[0].$cursor;
+  // When Mongo can't run the whole pipeline as one query, explain puts the query's own plan in
+  // its first stage; either shape will do.
+  const result = await findRecipes(recipesCollection(db), ownerId, { q: "tomato" }).explain(
+    "executionStats",
+  );
+  const explain = z
+    .union([
+      ExplainSchema,
+      z
+        .object({ stages: z.tuple([z.object({ $cursor: ExplainSchema })], z.unknown()) })
+        .transform(({ stages }) => stages[0].$cursor),
+    ])
+    .parse(result);
 
   // Only the two matches are read.
   const plan = JSON.stringify(explain.queryPlanner.winningPlan);
@@ -470,29 +474,41 @@ test("GET /api/recipes?sort=az lists by title, whatever the case", async () => {
   ]);
 });
 
-test("the cursor leads through every page of Quickest and of A–Z, each recipe once", async () => {
-  // 120 recipes; many share a time or a title, so pages split recipes with the same value.
+test("the cursor leads through every page of each order, each recipe once", async () => {
+  // 240 recipes; many share a time or a title (some only by case, which A–Z ignores), so pages
+  // split recipes with the same value. Every other one is from Instagram.
   const { userApp } = await insertRecipesOfNewUser(
-    Array.from({ length: 120 }, (_, i) => ({
-      title: `Recipe ${String(i % 7)}`,
+    Array.from({ length: 240 }, (_, i) => ({
+      title: `${i % 2 ? "apple" : "Apple"} ${String(i % 5)}`,
       cookMinutes: i % 4 === 0 ? undefined : i % 9,
+      source: { type: i % 2 ? ("instagram" as const) : ("manual" as const) },
     })),
   );
 
-  for (const sort of ["quickest", "az"]) {
+  // Each list and how many recipes it has. Newest also with a time and a source: the 120 from
+  // Instagram all have a time, under 10 minutes; the 60 without one are written by hand.
+  const lists = [
+    { query: { sort: "quickest" }, count: 240 },
+    { query: { sort: "az" }, count: 240 },
+    { query: { time: "30", source: "instagram" }, count: 120 },
+  ];
+  for (const { query, count } of lists) {
     const ids = [];
     let cursor: string | undefined;
     do {
-      const response = await request(userApp).get("/api/recipes").query({ sort, cursor });
+      const response = await request(userApp)
+        .get("/api/recipes")
+        .query({ ...query, cursor });
       const page = RecipeListSchema.parse(response.body);
       ids.push(...page.items.map((recipe) => recipe.id));
       cursor = page.nextCursor ?? undefined;
     } while (cursor);
-    expect(new Set(ids).size).toBe(120);
+    expect(new Set(ids).size).toBe(count);
+    expect(ids).toHaveLength(count);
   }
 });
 
-test("GET /api/recipes?q=&sort= shows the matches in the order asked", async () => {
+test("GET /api/recipes?q=&sort= shows the best matches in the order asked", async () => {
   const { userApp } = await insertSearchableRecipes();
 
   expect(await listTitles(userApp, { q: "eggs", sort: "az" })).toEqual(["Egg salad", "Shakshuka"]);
@@ -518,7 +534,7 @@ test("GET /api/recipes answers 400 for a sort, time or source not in the lists",
 test("GET /api/recipes answers 400 for a cursor from another order", async () => {
   const response = await request(app)
     .get("/api/recipes")
-    .query({ sort: "quickest", cursor: `Omelette_${new ObjectId().toHexString()}` });
+    .query({ sort: "quickest", cursor: `az:Omelette_${new ObjectId().toHexString()}` });
 
   expect(response.status).toBe(400);
   expect(response.body).toMatchObject({

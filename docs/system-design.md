@@ -322,9 +322,10 @@ Queries:
   reads 51 documents for a page of 51 (`explain`, in a test), `meal:dinner,cuisine:italian`
   reads 101. Either is fast at this scale, and never more than my recipes with that one tag; if
   it matters later, the route can put the narrower facet first.
-- **Sort, Time and Source** (M8 F1): `sort` is `newest` (the default), `quickest` or `az`; each
-  sorts by one value, then `_id` the same way, and the cursor is that value and the `_id`
-  (`<ms>_<id>`, `<minutes>_<id>`, `<title>_<id>`). A–Z ignores case (a collation, `en` strength
+- **Sort, Time and Source** (M8 F1): `sort` is `newest`, `quickest` or `az`; left out, newest
+  first, or with a search, the best match first. Each order sorts by one value, then `_id` the
+  same way, and the cursor is the order, that value and the `_id` (`newest:<ms>_<id>`,
+  `quickest:<minutes>_<id>`, `az:<title>_<id>`), so a cursor sent with another order is a 400. A–Z ignores case (a collation, `en` strength
   2, and an index with the same one). A recipe's time is prep and cook together, or the one it
   has; one with neither counts as longer than any (Quickest puts it last, a time filter leaves it
   out). No recipe stores that sum, so `time=15|30|60` is an `$expr` and Quickest an `$addFields`
@@ -333,7 +334,7 @@ Queries:
   is any of the sources (`manual` is "Written by me"; pasted text and screenshots have no
   filter). The query is one aggregation, so every filter and order goes together.
 - **Text search:** `{ ownerId, $text: { $search: q } }` plus the same filters; its 50 best
-  matches by text score, then shown in the order asked (newest first by default). At POC scale
+  matches by text score (`_id` breaks ties), best first, or in the order asked when `sort` is set. At POC scale
   that is enough; no deep pagination for search. A recipe matches if any word of `q` is in its
   title or an ingredient's name. The text index
   stems English ("eggs" finds "egg"); Mongo has no Hebrew stemmer, so Hebrew matches whole
@@ -351,7 +352,7 @@ the request's user (§8.3), never from the body or the URL.
 GET    /api/health                     the process is up
 GET    /api/ready                      the database is reachable
 
-GET    /api/recipes?q=…&tags=cuisine:italian,flavor:spicy&source=instagram,manual&time=30&sort=quickest&cursor=…   → { items, nextCursor }
+GET    /api/recipes?q=…&tags=cuisine:italian,flavor:spicy&source=instagram,manual&time=30&sort=quickest&cursor=…   → { items, nextCursor } (no sort: newest first, or with q the best match first)
 POST   /api/recipes                    create by hand
 GET    /api/recipes/:id
 PUT    /api/recipes/:id                replace what the user can edit (the form sends it all)
