@@ -13,7 +13,7 @@ import { Button } from "../../components/ui/Button.tsx";
 import { deleteResource, sendJson } from "../../lib/api.ts";
 import { toastDeleted, toastRestored } from "../../lib/toasts.tsx";
 import { focusHeading } from "../../lib/useHeadingFocus.ts";
-import { recipeCountQuery, recipeListsKey, recipeQuery } from "./recipeQueries.ts";
+import { recipeQuery, refetchRecipeLists } from "./recipeQueries.ts";
 
 type DeleteRecipeDialogProps = {
   recipe: Recipe;
@@ -36,11 +36,7 @@ export function DeleteRecipeDialog({ recipe, onClose, focusOnClose }: DeleteReci
       // recipe, which would now answer 404. refetchType "all": the lists aren't on screen, and
       // an inactive query isn't refetched otherwise. The deleted recipe stays in the cache;
       // Back shows it briefly, then its refetch finds it gone.
-      await queryClient.invalidateQueries({
-        queryKey: recipeListsKey,
-        refetchType: "all",
-      });
-      void queryClient.invalidateQueries({ queryKey: recipeCountQuery.queryKey });
+      await refetchRecipeLists(queryClient);
       void navigate("/recipes", { state: focusHeading });
       // A failure stays in the dialog, by its buttons:
       // the dialog shuts out a toast's.
@@ -60,8 +56,7 @@ export function DeleteRecipeDialog({ recipe, onClose, focusOnClose }: DeleteReci
       RecipeSchema,
     );
     queryClient.setQueryData(recipeQuery(recipe.id).queryKey, restored);
-    await queryClient.invalidateQueries({ queryKey: recipeListsKey, refetchType: "all" });
-    void queryClient.invalidateQueries({ queryKey: recipeCountQuery.queryKey });
+    await refetchRecipeLists(queryClient);
     toastRestored(restored.title, () => {
       void navigate(`/recipes/${recipe.id}`);
     });

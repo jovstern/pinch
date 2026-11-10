@@ -7,7 +7,7 @@ import { toastSaved } from "../../lib/toasts.tsx";
 import { focusHeading } from "../../lib/useHeadingFocus.ts";
 import { LazyRecipeForm } from "./LazyRecipeForm.tsx";
 import { emptyRecipe } from "./recipeFormValues.ts";
-import { recipeCountQuery, recipeListsKey, recipeQuery } from "./recipeQueries.ts";
+import { recipeQuery, refetchRecipeLists } from "./recipeQueries.ts";
 
 export function NewRecipePage() {
   const queryClient = useQueryClient();
@@ -20,11 +20,7 @@ export function NewRecipePage() {
       // The lists aren't on screen, so they're refetched now ("all"; every filter and every page
       // loaded so far), ready for when they are. Not awaited, unlike delete: this goes to the
       // new recipe, not to the list.
-      void queryClient.invalidateQueries({
-        queryKey: recipeListsKey,
-        refetchType: "all",
-      });
-      void queryClient.invalidateQueries({ queryKey: recipeCountQuery.queryKey });
+      void refetchRecipeLists(queryClient);
       // replace: Back from the new recipe goes where the user was, not to a blank form.
       void navigate(`/recipes/${recipe.id}`, { replace: true, state: focusHeading });
       toastSaved(recipe.title);

@@ -1,15 +1,21 @@
 import type { Import } from "@pinch/shared";
 import { useQuery } from "@tanstack/react-query";
 import { LoaderCircle, TriangleAlert } from "lucide-react";
-import type { ReactNode } from "react";
+import { lazy, Suspense, type ReactNode } from "react";
 import { Link } from "react-router";
 import { RecipeFace } from "../../components/RecipeFace.tsx";
 import { Thumbnail } from "../../components/Thumbnail.tsx";
 import { Button } from "../../components/ui/Button.tsx";
 import { platformNames } from "../../lib/platformNames.ts";
 import { countToLookAt, thingsToLookAt } from "../../lib/thingsToLookAt.ts";
-import { ImportActions } from "./ImportActions.tsx";
 import { importListQuery } from "./importQueries.ts";
+
+// A failed card's Retry and Dismiss load on their own, after the queue: in the entry they put the
+// editor's first load over budget (docs/metrics/m08.md, Method note). Their row's height is kept
+// meanwhile, so the cards under it don't move.
+const ImportActions = lazy(async () => ({
+  default: (await import("./ImportActions.tsx")).ImportActions,
+}));
 
 // The queue under the input (design §1, §4.2, §14): each link, text or screenshots being turned
 // into a recipe, as a card with how far it has got and what can be done with it.
@@ -121,7 +127,11 @@ function Picture({ job }: { job: Import }) {
 // Review will be, so the place is learned before it can be used.
 function Action({ job, focusPasteBox }: { job: Import; focusPasteBox: () => void }) {
   if (job.status === "failed" || job.stalled) {
-    return <ImportActions job={job} focusPasteBox={focusPasteBox} />;
+    return (
+      <Suspense fallback={<div className="mt-2 h-11 md:mt-0" />}>
+        <ImportActions job={job} focusPasteBox={focusPasteBox} />
+      </Suspense>
+    );
   }
   return (
     <div className="mt-2 flex justify-end md:mt-0">

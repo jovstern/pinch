@@ -122,7 +122,7 @@ test("My recipes shows how many recipes there are, on every page", async () => {
     ),
   );
   renderApp("/nope");
-  expect(await screen.findByRole("link", { name: "My recipes 12" })).toHaveAttribute(
+  expect(await screen.findByRole("link", { name: "My recipes 12 recipes" })).toHaveAttribute(
     "href",
     "/recipes",
   );

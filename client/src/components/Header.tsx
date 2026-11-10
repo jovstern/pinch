@@ -17,9 +17,11 @@ function tabOf(pathname: string) {
   return null;
 }
 
-// shadcn's TabsTrigger look; the selected one is lifted out of the row.
+// shadcn's TabsTrigger look; the selected one is lifted out of the row. Tighter on a phone, and
+// smaller under 360 px, so both tabs with their counts ("Add recipe 13", "My recipes 120") fit
+// beside the avatar on a 320 px screen.
 const tabClass =
-  "inline-flex min-h-11 flex-1 items-center justify-center gap-1.5 rounded-control px-3 font-medium whitespace-nowrap text-muted-foreground aria-[current=page]:bg-background aria-[current=page]:text-foreground aria-[current=page]:shadow-sm";
+  "inline-flex min-h-11 flex-1 items-center justify-center gap-1 rounded-control px-2 font-medium whitespace-nowrap max-[22.5rem]:text-sm sm:gap-1.5 sm:px-3 text-muted-foreground aria-[current=page]:bg-background aria-[current=page]:text-foreground aria-[current=page]:shadow-sm";
 
 // The app's frame, on every page (design §14, D24): the two tabs, Write a recipe and the avatar,
 // and the imports read for the tab's count. No logo for now. Phone: the tabs fill the row beside the avatar, and Write a recipe floats
@@ -62,11 +64,12 @@ export function Header({ onTabPage }: { onTabPage: boolean }) {
         >
           My recipes
           {/* How many there are, quiet: it informs, it doesn't ask for anything (the ready count
-              does). Read as "My recipes 12"; no aria-label, for the reason above. */}
+              does). Said as the ready count is, with hidden words: "My recipes 12 recipes". */}
           {recipeCount !== undefined && recipeCount > 0 && (
             <>
               {" "}
-              <span className="text-sm text-muted-foreground tabular-nums">{recipeCount}</span>
+              <span className="text-sm text-muted-foreground tabular-nums">{recipeCount}</span>{" "}
+              <span className="sr-only">{recipeCount === 1 ? "recipe" : "recipes"}</span>
             </>
           )}
         </Link>
