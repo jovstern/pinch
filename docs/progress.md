@@ -119,7 +119,7 @@ The UI first, on the API as it is (where they disagree, the API wins for now):
 
 Then the features the design asks the API for, one PR each:
 
-- [ ] F1 Filters by source and time, and Sort
+- [x] F1 Filters by source and time, and Sort
 - [ ] F2 Things to look at: the model marks fields it is unsure of; marks in the editor, the
       count on the queue card
 - [ ] F3 A face for every recipe: an emoji from the model (D25)

@@ -3,6 +3,8 @@ import { lazy, Suspense, useRef, useState } from "react";
 import { ErrorBoundary } from "../../components/ErrorBoundary.tsx";
 import { Badge } from "../../components/ui/Badge.tsx";
 import { Button } from "../../components/ui/Button.tsx";
+import { appliedFilters } from "./filterLabels.ts";
+import type { RecipeFilters } from "./recipeQueries.ts";
 
 // The sheet (Radix's Dialog: its focus trap, scroll lock and the rest, ~12 kB) is its own chunk,
 // fetched on the first press, as DeleteRecipeDialog is: in My recipes' first load it put every
@@ -15,16 +17,17 @@ const FiltersSheet = lazy(async () => ({
 }));
 
 type FiltersButtonProps = {
-  selected: string[];
-  onChange: (tags: string[]) => void;
+  filters: RecipeFilters;
+  onChange: (filters: RecipeFilters) => void;
 };
 
 // The Filters button, on a phone (design §14), and the sheet it opens.
-export function FiltersButton({ selected, onChange }: FiltersButtonProps) {
+export function FiltersButton({ filters, onChange }: FiltersButtonProps) {
   // Open while it's on the page: closing takes it away.
   const [open, setOpen] = useState(false);
   const buttonRef = useRef<HTMLButtonElement>(null);
-  const count = selected.length;
+  // The filters on, not the order: Sort is in the sheet but narrows nothing.
+  const count = appliedFilters(filters).length;
   return (
     <>
       <Button
@@ -55,7 +58,7 @@ export function FiltersButton({ selected, onChange }: FiltersButtonProps) {
         <ErrorBoundary fallback={null}>
           <Suspense>
             <FiltersSheet
-              selected={selected}
+              filters={filters}
               onChange={onChange}
               onClose={() => {
                 setOpen(false);

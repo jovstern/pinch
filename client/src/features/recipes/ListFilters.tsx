@@ -1,6 +1,8 @@
+import { RecipeSortSchema } from "@pinch/shared";
 import { Search } from "lucide-react";
 import { useId, useState, type RefObject } from "react";
 import { Input } from "../../components/ui/Input.tsx";
+import { choicesOf, sortNames } from "./filterLabels.ts";
 import { FiltersButton } from "./FiltersButton.tsx";
 import type { RecipeFilters } from "./recipeQueries.ts";
 import { TagChips } from "./TagChips.tsx";
@@ -13,8 +15,8 @@ type ListFiltersProps = {
   searchRef: RefObject<HTMLInputElement | null>;
 };
 
-// The search and, on a phone, the Filters button and the common tags, above the grid (design §7,
-// §14). A search runs on Enter (the keyboard's Search key), not as you type: one request per
+// The search and, on a phone, the Filters button and the common tags, from 1024 px Sort, above
+// the grid (design §7, §14). A search runs on Enter (the keyboard's Search key), not as you type: one request per
 // search rather than one per pause, and no timer. A tag applies as it's ticked.
 export function ListFilters({ filters, onChange, onChangeTags, searchRef }: ListFiltersProps) {
   const searchId = useId();
@@ -63,10 +65,27 @@ export function ListFilters({ filters, onChange, onChangeTags, searchRef }: List
           />
         </form>
         {/* From 1024 px the Filters are a panel beside the grid (FiltersPanel), and the
-            common tags are among them. */}
+            common tags are among them; Sort is here, as the wireframe has it. On a phone Sort is
+            in the Filters sheet. A native select: the platform's own list, on every device. */}
         <div className="lg:hidden">
-          <FiltersButton selected={filters.tags} onChange={onChangeTags} />
+          <FiltersButton filters={filters} onChange={onChange} />
         </div>
+        <label className="flex items-center gap-2 text-sm max-lg:hidden">
+          <span className="text-muted-foreground">Sort</span>
+          <select
+            value={filters.sort}
+            onChange={(event) => {
+              onChange({ ...filters, sort: RecipeSortSchema.parse(event.target.value) });
+            }}
+            className="h-11 rounded-control border border-input bg-card px-3 text-base"
+          >
+            {choicesOf(sortNames).map(({ value, label }) => (
+              <option key={value} value={value}>
+                {label}
+              </option>
+            ))}
+          </select>
+        </label>
       </div>
       <div className="lg:hidden">
         <TagChips selected={filters.tags} onChange={onChangeTags} />

@@ -174,20 +174,69 @@ test("a common tag's chip turns its tag on and off in the address", async () => 
   });
 });
 
-test("the Filters sheet applies a tag as it's ticked and counts it on its button", async () => {
+test("the Filters sheet applies a tag, a time and an order as they're picked, and says how many are left", async () => {
   const fetch = stubList();
   renderApp("/recipes");
 
   await userEvent.click(await screen.findByRole("button", { name: "Filters" }));
   const sheet = await screen.findByRole("dialog", { name: "Filters" });
   await userEvent.click(within(sheet).getByRole("checkbox", { name: "breakfast" }));
+  await userEvent.click(within(sheet).getByRole("radio", { name: "30 min or less" }));
+  await userEvent.click(within(sheet).getByRole("radio", { name: "Quickest" }));
   await waitFor(() => {
-    expect(fetch).toHaveBeenLastCalledWith("/api/recipes?tags=meal%3Abreakfast");
+    expect(fetch).toHaveBeenLastCalledWith(
+      "/api/recipes?tags=meal%3Abreakfast&time=30&sort=quickest",
+    );
   });
 
-  await userEvent.click(within(sheet).getByRole("button", { name: "Show recipes" }));
+  await userEvent.click(await within(sheet).findByRole("button", { name: "Show 1 recipe" }));
   expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
-  expect(screen.getByRole("button", { name: "Filters 1 applied" })).toHaveFocus();
+  // The tag and the time; the order narrows nothing.
+  expect(screen.getByRole("button", { name: "Filters 2 applied" })).toHaveFocus();
+});
+
+test("the Filters sheet's Clear takes the filters off and keeps the order", async () => {
+  const fetch = stubList();
+  renderApp("/recipes?tags=meal:breakfast&source=youtube&sort=az");
+
+  await userEvent.click(await screen.findByRole("button", { name: "Filters 2 applied" }));
+  const sheet = await screen.findByRole("dialog", { name: "Filters" });
+  await userEvent.click(within(sheet).getByRole("button", { name: "Clear" }));
+
+  await waitFor(() => {
+    expect(fetch).toHaveBeenLastCalledWith("/api/recipes?sort=az");
+  });
+  expect(within(sheet).getByRole("radio", { name: "A–Z" })).toBeChecked();
+  expect(within(sheet).getByRole("radio", { name: "Any" })).toBeChecked();
+});
+
+test("Sort beside the search puts the order in the address", async () => {
+  const fetch = stubList();
+  renderApp("/recipes");
+
+  await userEvent.selectOptions(await screen.findByRole("combobox", { name: "Sort" }), "A–Z");
+
+  await waitFor(() => {
+    expect(fetch).toHaveBeenLastCalledWith("/api/recipes?sort=az");
+  });
+});
+
+test("a source and a time in the address tick the panel, and each one's ✕ takes it off", async () => {
+  const fetch = stubList();
+  renderApp("/recipes?source=instagram,manual&time=30");
+
+  expect(await screen.findByRole("checkbox", { name: "Instagram" })).toBeChecked();
+  expect(screen.getByRole("radio", { name: "30 min or less" })).toBeChecked();
+  expect(fetch).toHaveBeenCalledWith("/api/recipes?source=instagram%2Cmanual&time=30");
+
+  await userEvent.click(screen.getByRole("button", { name: "Remove Written by me" }));
+  await waitFor(() => {
+    expect(fetch).toHaveBeenLastCalledWith("/api/recipes?source=instagram&time=30");
+  });
+  await userEvent.click(screen.getByRole("button", { name: "Remove 30 min or less" }));
+  await waitFor(() => {
+    expect(fetch).toHaveBeenLastCalledWith("/api/recipes?source=instagram");
+  });
 });
 
 test("Clear all clears the search and the tags", async () => {
@@ -294,9 +343,9 @@ test("with a search and tags matching nothing, it offers the search without the 
   expect(screen.getByRole("searchbox")).toHaveFocus();
 });
 
-test("a tag in the address that isn't in the lists is left out", async () => {
+test("a tag, source, time or order in the address that isn't in the lists is left out", async () => {
   const fetch = stubList();
-  renderApp("/recipes?tags=meal:martian,meal:breakfast");
+  renderApp("/recipes?tags=meal:martian,meal:breakfast&source=tiktok&time=45&sort=oldest");
 
   expect(await screen.findByText("1 recipe matches.")).toHaveAttribute("role", "status");
   expect(fetch).toHaveBeenCalledWith("/api/recipes?tags=meal%3Abreakfast");

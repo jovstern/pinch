@@ -1,12 +1,37 @@
-import { RecipeListSchema, RecipeSchema } from "@pinch/shared";
+import {
+  isTag,
+  ListSourceSchema,
+  RecipeListSchema,
+  RecipeSchema,
+  RecipeSortSchema,
+  TimeLimitSchema,
+  type ListSource,
+  type RecipeSort,
+  type TimeLimit,
+} from "@pinch/shared";
 import { infiniteQueryOptions, keepPreviousData, queryOptions } from "@tanstack/react-query";
 import { getJson } from "../../lib/api.ts";
 
 // Keys nest under "recipes": a list is ["recipes", "list", filters], one recipe
 // ["recipes", "detail", id], so the lists' prefix never matches a recipe.
 
-// What the list is narrowed to: a search, and tags it must all have (design §7). Blank is none.
-export type RecipeFilters = { q: string; tags: string[] };
+// What the list is narrowed to, and its order (design §7): a search, tags it must all have,
+// sources it may come from, the most minutes it takes. Blank is none.
+export type RecipeFilters = {
+  q: string;
+  tags: string[];
+  sources: ListSource[];
+  time: TimeLimit | "";
+  sort: RecipeSort;
+};
+
+// My recipes as they are, all of them, newest first.
+export const noFilters: RecipeFilters = { q: "", tags: [], sources: [], time: "", sort: "newest" };
+
+// The Filters taken off, the search and the order kept (the Filters' Clear).
+export function withoutFilters({ q, sort }: RecipeFilters): RecipeFilters {
+  return { ...noFilters, q, sort };
+}
 
 // Every list, whatever its filters: the prefix New, Edit and Delete refetch.
 export const recipeListsKey = ["recipes", "list"];
@@ -34,13 +59,30 @@ export function recipeQuery(id: string) {
   });
 }
 
-// The filters as a query string, the same in the page's address and the API's: q=egg&tags=a,b.
-// What isn't set is left out (the API answers 400 to an empty tags=).
-export function filterParams({ q, tags }: RecipeFilters) {
+// The filters as a query string, the same in the page's address and the API's:
+// q=egg&tags=a,b&source=instagram&time=30&sort=quickest. What isn't set is left out (the API
+// answers 400 to an empty tags=), and so is the default order.
+export function filterParams({ q, tags, sources, time, sort }: RecipeFilters) {
   const params = new URLSearchParams();
   if (q !== "") params.set("q", q);
   if (tags.length > 0) params.set("tags", tags.join(","));
+  if (sources.length > 0) params.set("source", sources.join(","));
+  if (time !== "") params.set("time", time);
+  if (sort !== "newest") params.set("sort", sort);
   return params;
+}
+
+// The filters in the page's address. A value not in the lists (a hand-edited link) is left out
+// rather than sent: it's a 400.
+export function readFilters(params: URLSearchParams): RecipeFilters {
+  const list = (name: string) => params.get(name)?.split(",") ?? [];
+  return {
+    q: params.get("q")?.trim() ?? "",
+    tags: list("tags").filter(isTag),
+    sources: list("source").flatMap((value) => ListSourceSchema.safeParse(value).data ?? []),
+    time: TimeLimitSchema.safeParse(params.get("time")).data ?? "",
+    sort: RecipeSortSchema.safeParse(params.get("sort")).data ?? "newest",
+  };
 }
 
 function listPath(filters: RecipeFilters, cursor: string | null) {

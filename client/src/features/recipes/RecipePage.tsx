@@ -12,7 +12,7 @@ import { LazyRecipeMenu } from "./LazyRecipeMenu.tsx";
 import { RecipeLoadError } from "./RecipeLoadError.tsx";
 import { RecipeSkeleton } from "./RecipeSkeleton.tsx";
 import { RecipeSource } from "./RecipeSource.tsx";
-import { filterParams, recipeQuery } from "./recipeQueries.ts";
+import { filterParams, noFilters, recipeQuery } from "./recipeQueries.ts";
 import { tagLabel } from "./tagLabels.ts";
 
 export function RecipePage() {
@@ -90,7 +90,7 @@ export function RecipePage() {
                     variant="secondary"
                     className="relative h-8 min-w-11 after:absolute after:inset-x-0 after:-inset-y-1.5 hover:bg-border active:bg-border/70"
                   >
-                    <Link to={`/recipes?${filterParams({ q: "", tags: [tag] }).toString()}`}>
+                    <Link to={`/recipes?${filterParams({ ...noFilters, tags: [tag] }).toString()}`}>
                       {tagLabel(tag)}
                     </Link>
                   </Badge>
