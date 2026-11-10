@@ -34,6 +34,8 @@ test("POST /api/recipes creates a recipe and answers 201 with its location", asy
   expect(response.body).toEqual({
     ...omelette,
     id,
+    // Its face, from its title (D25).
+    emoji: "🍳",
     source: { type: "manual" },
     createdAt,
     updatedAt,
@@ -46,6 +48,24 @@ test("GET /api/recipes/:id answers the recipe that was created", async () => {
   const response = await request(app).get(created.headers.location ?? "");
   expect(response.status).toBe(200);
   expect(response.body).toEqual(created.body);
+});
+
+test("a recipe written by hand gets the emoji its title names, or none, and editing keeps it", async () => {
+  const soup = await request(app)
+    .post("/api/recipes")
+    .send({ ...omelette, title: "Red lentil soup", emoji: "🍕" });
+  const unknown = await request(app)
+    .post("/api/recipes")
+    .send({ ...omelette, title: "Mujadara" });
+
+  // One sent in the body is dropped: the form doesn't send it (D20).
+  const { id } = RecipeSchema.parse(soup.body);
+  expect(soup.body).toMatchObject({ emoji: "🍲" });
+  expect(unknown.body).not.toHaveProperty("emoji");
+  const edited = await request(app)
+    .put(`/api/recipes/${id}`)
+    .send({ ...omelette, title: "Lentil stew" });
+  expect(edited.body).toMatchObject({ emoji: "🍲" });
 });
 
 test("POST /api/recipes answers 400 naming each field that is not valid", async () => {
@@ -204,7 +224,11 @@ test("GET /api/recipes answers 400 for a cursor it didn't give", async () => {
 // The parts of explain("executionStats") the test reads; the driver types it as any document.
 const ExplainSchema = z.object({
   queryPlanner: z.object({ winningPlan: z.unknown() }),
-  executionStats: z.object({ nReturned: z.number(), totalDocsExamined: z.number() }),
+  executionStats: z.object({
+    nReturned: z.number(),
+    totalKeysExamined: z.number(),
+    totalDocsExamined: z.number(),
+  }),
 });
 
 test("the list's second page reads its index from the cursor on, not the page before (§6)", async () => {
@@ -385,11 +409,16 @@ test("a search reads the text index, not the whole collection (§6)", async () =
     ])
     .parse(result);
 
-  // Only the two matches are read.
+  // Only the two matches are read: two index keys. Each is fetched twice, by the text match and
+  // again by the check that it isn't deleted (D27), so 4 documents examined for 2.
   const plan = JSON.stringify(explain.queryPlanner.winningPlan);
   expect(plan).toContain('"indexName":"ownerId_1_title_text_ingredients.name_text"');
   expect(plan).not.toContain("COLLSCAN");
-  expect(explain.executionStats).toMatchObject({ nReturned: 2, totalDocsExamined: 2 });
+  expect(explain.executionStats).toMatchObject({
+    nReturned: 2,
+    totalKeysExamined: 2,
+    totalDocsExamined: 4,
+  });
 });
 
 // A user of their own with these recipes, written straight to the database, the first the
@@ -571,6 +600,8 @@ test("PUT /api/recipes/:id replaces what the user can edit and clears what they 
     // Left out, so cleared (PUT replaces).
     tags: [],
     id: before.id,
+    // The server's, so kept (D20).
+    emoji: before.emoji,
     source: before.source,
     createdAt: before.createdAt,
     updatedAt: after.updatedAt,
@@ -601,13 +632,54 @@ test("PUT on another user's recipe is not found and changes nothing", async () =
   expect(stored?.title).toBe("Omelette");
 });
 
-test("DELETE /api/recipes/:id answers 204 and the recipe is gone", async () => {
-  const created = await request(app).post("/api/recipes").send(omelette);
+test("DELETE /api/recipes/:id answers 204, and every read leaves the recipe out", async () => {
+  const created = await request(app)
+    .post("/api/recipes")
+    .send({ ...omelette, title: "Deleted dumplings" });
   const { id } = RecipeSchema.parse(created.body);
 
   const response = await request(app).delete(`/api/recipes/${id}`);
   expect(response.status).toBe(204);
   expect((await request(app).get(`/api/recipes/${id}`)).status).toBe(404);
+  expect((await request(app).put(`/api/recipes/${id}`).send(omelette)).status).toBe(404);
+  expect((await request(app).delete(`/api/recipes/${id}`)).status).toBe(404);
+  const ids = async (query: string) =>
+    RecipeListSchema.parse((await request(app).get(`/api/recipes${query}`)).body).items.map(
+      (recipe) => recipe.id,
+    );
+  expect(await ids("")).not.toContain(id);
+  expect(await ids("?q=dumplings")).not.toContain(id);
+  expect(await ids("?sort=az")).not.toContain(id);
+  // Kept, to undo (D27), until the TTL index deletes it.
+  const stored = await recipesCollection(db).findOne({ _id: new ObjectId(id) });
+  expect(stored?.deletedAt).toBeInstanceOf(Date);
+});
+
+test("POST /api/recipes/:id/restore brings a deleted recipe back as it was", async () => {
+  const created = await request(app).post("/api/recipes").send(omelette);
+  const { id } = RecipeSchema.parse(created.body);
+  await request(app).delete(`/api/recipes/${id}`);
+
+  const restored = await request(app).post(`/api/recipes/${id}/restore`);
+  expect(restored.status).toBe(200);
+  expect(restored.body).toEqual(created.body);
+  expect((await request(app).get(`/api/recipes/${id}`)).body).toEqual(created.body);
+  // Again: nothing to undo, the same answer.
+  expect((await request(app).post(`/api/recipes/${id}/restore`)).body).toEqual(created.body);
+});
+
+test("restore of a recipe that isn't there, or another user's, is not found", async () => {
+  const other = await insertOtherUsersRecipe();
+  await recipesCollection(db).updateOne(
+    { _id: new ObjectId(other) },
+    { $set: { deletedAt: new Date() } },
+  );
+
+  expect((await request(app).post(`/api/recipes/${other}/restore`)).status).toBe(404);
+  const missing = new ObjectId().toHexString();
+  expect((await request(app).post(`/api/recipes/${missing}/restore`)).status).toBe(404);
+  const stored = await recipesCollection(db).findOne({ _id: new ObjectId(other) });
+  expect(stored?.deletedAt).toBeInstanceOf(Date);
 });
 
 test("DELETE on another user's recipe is not found and keeps it", async () => {

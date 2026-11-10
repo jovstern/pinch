@@ -189,6 +189,30 @@ test("a list of marks that isn't well formed is dropped, and the draft saved", a
   }
 });
 
+test("a draft keeps its emoji, and drops one that isn't a single emoji", async () => {
+  // One emoji, a ZWJ sequence (one grapheme), then what the model might send instead.
+  const cases = [
+    ["🍲", "🍲"],
+    ["🧑‍🍳", "🧑‍🍳"],
+    ["🍲🥗", undefined],
+    ["soup", undefined],
+    ["", undefined],
+    [null, undefined],
+    [7, undefined],
+  ];
+  for (const [emoji, kept] of cases) {
+    await imports.deleteMany({});
+    await insertImport();
+    const job = await claim();
+
+    await run(job, () => Promise.resolve({ ...draft, emoji }));
+
+    const saved = await imports.findOne({ _id: job._id });
+    expect(saved?.status).toBe("ready");
+    expect(saved?.draft?.emoji).toBe(kept);
+  }
+});
+
 test("a draft keeps no more than 10 things to look at", async () => {
   await insertImport();
   const job = await claim();
@@ -244,14 +268,27 @@ test("a run whose job another worker claimed again saves nothing", async () => {
   });
 });
 
-test("a run whose job the user deleted saves nothing", async () => {
+test("a run whose job the user deleted saves nothing: it never turns ready", async () => {
   await insertImport();
   const job = await claim();
-  await imports.deleteOne({ _id: job._id });
+  // As DELETE /api/imports/:id does (Pinch it's Undo, say): kept, marked deleted (D27).
+  await imports.updateOne({ _id: job._id }, { $set: { deletedAt: new Date() } });
 
   await run(job);
 
-  expect(await imports.countDocuments()).toBe(0);
+  expect(await imports.findOne({ _id: job._id })).toMatchObject({
+    status: "processing",
+    deletedAt: expect.any(Date) as Date,
+  });
+  expect(await imports.findOne({ _id: job._id })).not.toHaveProperty("draft");
+});
+
+test("a deleted job is never claimed, waiting or held by a worker that died", async () => {
+  const longAgo = new Date(Date.now() - LEASE_MS - 1000);
+  await insertImport({ deletedAt: new Date() });
+  await insertImport({ status: "processing", leaseUntil: longAgo, deletedAt: new Date() });
+
+  expect(await claimNextImport(imports, new Date())).toBeNull();
 });
 
 test("a failed attempt is tried again after 10 s, then 60 s, then the import is failed", async () => {
