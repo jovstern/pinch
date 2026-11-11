@@ -1,4 +1,4 @@
-import { RecipeListSchema, RecipeSchema } from "@pinch/shared";
+import { RecipeCountSchema, RecipeListSchema, RecipeSchema } from "@pinch/shared";
 import { ObjectId } from "mongodb";
 import { pino } from "pino";
 import request from "supertest";
@@ -7,7 +7,7 @@ import { z } from "zod";
 import { createApp } from "../app.ts";
 import { loadConfig } from "../config.ts";
 import { createIndexes } from "../db/indexes.ts";
-import { findNewestRecipes, recipesCollection, searchRecipes } from "../db/recipes.ts";
+import { findRecipes, recipesCollection, type RecipeDocument } from "../db/recipes.ts";
 import { createTestDb } from "../testDb.ts";
 
 const config = loadConfig(process.env);
@@ -34,6 +34,8 @@ test("POST /api/recipes creates a recipe and answers 201 with its location", asy
   expect(response.body).toEqual({
     ...omelette,
     id,
+    // Its face, from its title (D25).
+    emoji: "🍳",
     source: { type: "manual" },
     createdAt,
     updatedAt,
@@ -46,6 +48,24 @@ test("GET /api/recipes/:id answers the recipe that was created", async () => {
   const response = await request(app).get(created.headers.location ?? "");
   expect(response.status).toBe(200);
   expect(response.body).toEqual(created.body);
+});
+
+test("a recipe written by hand gets the emoji its title names, or none, and editing keeps it", async () => {
+  const soup = await request(app)
+    .post("/api/recipes")
+    .send({ ...omelette, title: "Red lentil soup", emoji: "🍕" });
+  const unknown = await request(app)
+    .post("/api/recipes")
+    .send({ ...omelette, title: "Mujadara" });
+
+  // One sent in the body is dropped: the form doesn't send it (D20).
+  const { id } = RecipeSchema.parse(soup.body);
+  expect(soup.body).toMatchObject({ emoji: "🍲" });
+  expect(unknown.body).not.toHaveProperty("emoji");
+  const edited = await request(app)
+    .put(`/api/recipes/${id}`)
+    .send({ ...omelette, title: "Lentil stew" });
+  expect(edited.body).toMatchObject({ emoji: "🍲" });
 });
 
 test("POST /api/recipes answers 400 naming each field that is not valid", async () => {
@@ -204,7 +224,11 @@ test("GET /api/recipes answers 400 for a cursor it didn't give", async () => {
 // The parts of explain("executionStats") the test reads; the driver types it as any document.
 const ExplainSchema = z.object({
   queryPlanner: z.object({ winningPlan: z.unknown() }),
-  executionStats: z.object({ nReturned: z.number(), totalDocsExamined: z.number() }),
+  executionStats: z.object({
+    nReturned: z.number(),
+    totalKeysExamined: z.number(),
+    totalDocsExamined: z.number(),
+  }),
 });
 
 test("the list's second page reads its index from the cursor on, not the page before (§6)", async () => {
@@ -213,9 +237,9 @@ test("the list's second page reads its index from the cursor on, not the page be
   if (!cursor) throw new Error("expected 120 recipes");
 
   const explain = ExplainSchema.parse(
-    await findNewestRecipes(recipesCollection(db), ownerId, { after: cursor }).explain(
-      "executionStats",
-    ),
+    await findRecipes(recipesCollection(db), ownerId, {
+      after: { value: cursor.createdAt, _id: cursor._id },
+    }).explain("executionStats"),
   );
 
   // An index scan in the index's own order (no SORT stage)...
@@ -277,7 +301,7 @@ test("the list filtered by tags reads the tags index, only the recipes it answer
   const { ownerId } = await insertManyRecipes();
 
   const explain = ExplainSchema.parse(
-    await findNewestRecipes(recipesCollection(db), ownerId, {
+    await findRecipes(recipesCollection(db), ownerId, {
       tags: ["cuisine:italian", "meal:dinner"],
     }).explain("executionStats"),
   );
@@ -371,16 +395,193 @@ test("GET /api/recipes answers 400 for a search over 200 characters", async () =
 test("a search reads the text index, not the whole collection (§6)", async () => {
   const { ownerId } = await insertSearchableRecipes();
 
-  const explain = ExplainSchema.parse(
-    await searchRecipes(recipesCollection(db), ownerId, "tomato").explain("executionStats"),
+  // When Mongo can't run the whole pipeline as one query, explain puts the query's own plan in
+  // its first stage; either shape will do.
+  const result = await findRecipes(recipesCollection(db), ownerId, { q: "tomato" }).explain(
+    "executionStats",
   );
+  const explain = z
+    .union([
+      ExplainSchema,
+      z
+        .object({ stages: z.tuple([z.object({ $cursor: ExplainSchema })], z.unknown()) })
+        .transform(({ stages }) => stages[0].$cursor),
+    ])
+    .parse(result);
 
-  // Only the two matches are read; sorting by score needs them all, so a SORT stage is expected.
+  // Only the two matches are read: two index keys. Each is fetched twice, by the text match and
+  // again by the check that it isn't deleted (D27), so 4 documents examined for 2.
   const plan = JSON.stringify(explain.queryPlanner.winningPlan);
   expect(plan).toContain('"indexName":"ownerId_1_title_text_ingredients.name_text"');
-  expect(plan).toContain('"stage":"SORT"');
   expect(plan).not.toContain("COLLSCAN");
-  expect(explain.executionStats).toMatchObject({ nReturned: 2, totalDocsExamined: 2 });
+  expect(explain.executionStats).toMatchObject({
+    nReturned: 2,
+    totalKeysExamined: 2,
+    totalDocsExamined: 4,
+  });
+});
+
+// A user of their own with these recipes, written straight to the database, the first the
+// oldest. Returns the app that acts as them and their id.
+async function insertRecipesOfNewUser(recipes: Partial<RecipeDocument>[]) {
+  const ownerId = new ObjectId();
+  const start = Date.now();
+  await recipesCollection(db).insertMany(
+    recipes.map((recipe, i) => ({
+      ...omelette,
+      _id: new ObjectId(),
+      ownerId,
+      source: { type: "manual" as const },
+      createdAt: new Date(start + i),
+      updatedAt: new Date(start + i),
+      ...recipe,
+    })),
+  );
+  const userApp = createApp({
+    logger: pino({ level: "silent" }),
+    db,
+    devUserId: ownerId.toHexString(),
+  });
+  return { ownerId, userApp };
+}
+
+async function listTitles(userApp: typeof app, query: Record<string, string>) {
+  const response = await request(userApp).get("/api/recipes").query(query);
+  return RecipeListSchema.parse(response.body).items.map((recipe) => recipe.title);
+}
+
+test("GET /api/recipes?source= lists the recipes from any of the sources", async () => {
+  const { userApp } = await insertRecipesOfNewUser([
+    { title: "Reel", source: { type: "instagram", url: "https://www.instagram.com/reel/a" } },
+    { title: "Video", source: { type: "youtube", url: "https://youtu.be/a" } },
+    { title: "By hand" },
+    { title: "Pasted", source: { type: "text" } },
+  ]);
+
+  expect(await listTitles(userApp, { source: "instagram,manual" })).toEqual(["By hand", "Reel"]);
+});
+
+test("GET /api/recipes?time= lists the recipes that take at most that long, prep and cook together", async () => {
+  const { userApp } = await insertRecipesOfNewUser([
+    { title: "Both, 30", prepMinutes: 10, cookMinutes: 20 },
+    { title: "Both, 31", prepMinutes: 11, cookMinutes: 20 },
+    { title: "Cook only, 25", cookMinutes: 25 },
+    { title: "Prep only, 5", prepMinutes: 5 },
+    { title: "No time" },
+  ]);
+
+  // A recipe with no time isn't known to be quick, so a time filter leaves it out.
+  expect(await listTitles(userApp, { time: "30" })).toEqual([
+    "Prep only, 5",
+    "Cook only, 25",
+    "Both, 30",
+  ]);
+});
+
+test("GET /api/recipes?sort=quickest lists the least total time first, and no time last", async () => {
+  const { userApp } = await insertRecipesOfNewUser([
+    { title: "No time" },
+    { title: "40", prepMinutes: 10, cookMinutes: 30 },
+    { title: "5", prepMinutes: 5 },
+    { title: "20", cookMinutes: 20 },
+  ]);
+
+  expect(await listTitles(userApp, { sort: "quickest" })).toEqual(["5", "20", "40", "No time"]);
+});
+
+test("GET /api/recipes?sort=az lists by title, whatever the case", async () => {
+  const { userApp } = await insertRecipesOfNewUser([
+    { title: "banana bread" },
+    { title: "Apple pie" },
+    { title: "Carrot cake" },
+  ]);
+
+  expect(await listTitles(userApp, { sort: "az" })).toEqual([
+    "Apple pie",
+    "banana bread",
+    "Carrot cake",
+  ]);
+});
+
+test("the cursor leads through every page of each order, each recipe once", async () => {
+  // 240 recipes; many share a time or a title (some only by case, which A–Z ignores), so pages
+  // split recipes with the same value. Every other one is from Instagram.
+  const { userApp } = await insertRecipesOfNewUser(
+    Array.from({ length: 240 }, (_, i) => ({
+      title: `${i % 2 ? "apple" : "Apple"} ${String(i % 5)}`,
+      cookMinutes: i % 4 === 0 ? undefined : i % 9,
+      source: { type: i % 2 ? ("instagram" as const) : ("manual" as const) },
+    })),
+  );
+
+  // Each list and how many recipes it has. Newest also with a time and a source: the 120 from
+  // Instagram all have a time, under 10 minutes; the 60 without one are written by hand.
+  const lists = [
+    { query: { sort: "quickest" }, count: 240 },
+    { query: { sort: "az" }, count: 240 },
+    { query: { time: "30", source: "instagram" }, count: 120 },
+  ];
+  for (const { query, count } of lists) {
+    const ids = [];
+    let cursor: string | undefined;
+    do {
+      const response = await request(userApp)
+        .get("/api/recipes")
+        .query({ ...query, cursor });
+      const page = RecipeListSchema.parse(response.body);
+      ids.push(...page.items.map((recipe) => recipe.id));
+      cursor = page.nextCursor ?? undefined;
+    } while (cursor);
+    expect(new Set(ids).size).toBe(count);
+    expect(ids).toHaveLength(count);
+  }
+});
+
+test("GET /api/recipes?q=&sort= shows the best matches in the order asked", async () => {
+  const { userApp } = await insertSearchableRecipes();
+
+  expect(await listTitles(userApp, { q: "eggs", sort: "az" })).toEqual(["Egg salad", "Shakshuka"]);
+});
+
+test("GET /api/recipes answers 400 for a sort, time or source not in the lists", async () => {
+  const response = await request(app)
+    .get("/api/recipes")
+    .query({ sort: "oldest", time: "45", source: "tiktok" });
+
+  expect(response.status).toBe(400);
+  expect(response.body).toMatchObject({
+    error: {
+      fields: {
+        sort: "Sort by newest, quickest or az.",
+        time: "Pick a time of 15, 30 or 60.",
+        "source.0": "Pick a source from the list.",
+      },
+    },
+  });
+});
+
+test("GET /api/recipes answers 400 for a cursor from another order", async () => {
+  const response = await request(app)
+    .get("/api/recipes")
+    .query({ sort: "quickest", cursor: `az:Omelette_${new ObjectId().toHexString()}` });
+
+  expect(response.status).toBe(400);
+  expect(response.body).toMatchObject({
+    error: { fields: { cursor: "This cursor isn't valid." } },
+  });
+});
+
+test("A–Z reads the title index in order, only the recipes it answers (§6)", async () => {
+  const { ownerId } = await insertManyRecipes();
+
+  const explain = ExplainSchema.parse(
+    await findRecipes(recipesCollection(db), ownerId, { sort: "az" }).explain("executionStats"),
+  );
+
+  const plan = JSON.stringify(explain.queryPlanner.winningPlan);
+  expect(plan).toContain('"indexName":"ownerId_1_title_1__id_1"');
+  expect(plan).not.toMatch(/COLLSCAN|"SORT"/);
+  expect(explain.executionStats).toMatchObject({ nReturned: 51, totalDocsExamined: 51 });
 });
 
 test("PUT /api/recipes/:id replaces what the user can edit and clears what they left out", async () => {
@@ -399,6 +600,8 @@ test("PUT /api/recipes/:id replaces what the user can edit and clears what they 
     // Left out, so cleared (PUT replaces).
     tags: [],
     id: before.id,
+    // The server's, so kept (D20).
+    emoji: before.emoji,
     source: before.source,
     createdAt: before.createdAt,
     updatedAt: after.updatedAt,
@@ -429,13 +632,54 @@ test("PUT on another user's recipe is not found and changes nothing", async () =
   expect(stored?.title).toBe("Omelette");
 });
 
-test("DELETE /api/recipes/:id answers 204 and the recipe is gone", async () => {
-  const created = await request(app).post("/api/recipes").send(omelette);
+test("DELETE /api/recipes/:id answers 204, and every read leaves the recipe out", async () => {
+  const created = await request(app)
+    .post("/api/recipes")
+    .send({ ...omelette, title: "Deleted dumplings" });
   const { id } = RecipeSchema.parse(created.body);
 
   const response = await request(app).delete(`/api/recipes/${id}`);
   expect(response.status).toBe(204);
   expect((await request(app).get(`/api/recipes/${id}`)).status).toBe(404);
+  expect((await request(app).put(`/api/recipes/${id}`).send(omelette)).status).toBe(404);
+  expect((await request(app).delete(`/api/recipes/${id}`)).status).toBe(404);
+  const ids = async (query: string) =>
+    RecipeListSchema.parse((await request(app).get(`/api/recipes${query}`)).body).items.map(
+      (recipe) => recipe.id,
+    );
+  expect(await ids("")).not.toContain(id);
+  expect(await ids("?q=dumplings")).not.toContain(id);
+  expect(await ids("?sort=az")).not.toContain(id);
+  // Kept, to undo (D27), until the TTL index deletes it.
+  const stored = await recipesCollection(db).findOne({ _id: new ObjectId(id) });
+  expect(stored?.deletedAt).toBeInstanceOf(Date);
+});
+
+test("POST /api/recipes/:id/restore brings a deleted recipe back as it was", async () => {
+  const created = await request(app).post("/api/recipes").send(omelette);
+  const { id } = RecipeSchema.parse(created.body);
+  await request(app).delete(`/api/recipes/${id}`);
+
+  const restored = await request(app).post(`/api/recipes/${id}/restore`);
+  expect(restored.status).toBe(200);
+  expect(restored.body).toEqual(created.body);
+  expect((await request(app).get(`/api/recipes/${id}`)).body).toEqual(created.body);
+  // Again: nothing to undo, the same answer.
+  expect((await request(app).post(`/api/recipes/${id}/restore`)).body).toEqual(created.body);
+});
+
+test("restore of a recipe that isn't there, or another user's, is not found", async () => {
+  const other = await insertOtherUsersRecipe();
+  await recipesCollection(db).updateOne(
+    { _id: new ObjectId(other) },
+    { $set: { deletedAt: new Date() } },
+  );
+
+  expect((await request(app).post(`/api/recipes/${other}/restore`)).status).toBe(404);
+  const missing = new ObjectId().toHexString();
+  expect((await request(app).post(`/api/recipes/${missing}/restore`)).status).toBe(404);
+  const stored = await recipesCollection(db).findOne({ _id: new ObjectId(other) });
+  expect(stored?.deletedAt).toBeInstanceOf(Date);
 });
 
 test("DELETE on another user's recipe is not found and keeps it", async () => {
@@ -444,4 +688,16 @@ test("DELETE on another user's recipe is not found and keeps it", async () => {
   const response = await request(app).delete(`/api/recipes/${id}`);
   expect(response.status).toBe(404);
   expect(await recipesCollection(db).countDocuments({ _id: new ObjectId(id) })).toBe(1);
+});
+
+test("GET /api/recipes/count counts my recipes, not another user's nor a deleted one", async () => {
+  const { userApp } = await insertManyRecipes();
+  const first = await request(userApp).get("/api/recipes");
+  const deletedId = RecipeListSchema.parse(first.body).items[0]?.id ?? "";
+  await request(userApp).delete(`/api/recipes/${deletedId}`);
+  await insertOtherUsersRecipe();
+
+  const response = await request(userApp).get("/api/recipes/count");
+  expect(response.status).toBe(200);
+  expect(RecipeCountSchema.parse(response.body)).toEqual({ count: 119 });
 });

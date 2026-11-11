@@ -1,6 +1,8 @@
 import { Search } from "lucide-react";
 import { useId, useState, type RefObject } from "react";
 import { Input } from "../../components/ui/Input.tsx";
+import { NativeSelect } from "../../components/ui/NativeSelect.tsx";
+import { sortChoices } from "./filterLabels.ts";
 import { FiltersButton } from "./FiltersButton.tsx";
 import type { RecipeFilters } from "./recipeQueries.ts";
 import { TagChips } from "./TagChips.tsx";
@@ -13,11 +15,13 @@ type ListFiltersProps = {
   searchRef: RefObject<HTMLInputElement | null>;
 };
 
-// The search and, on a phone, the Filters button and the common tags, above the grid (design §7,
-// §14). A search runs on Enter (the keyboard's Search key), not as you type: one request per
-// search rather than one per pause, and no timer. A tag applies as it's ticked.
+// The search and, on a phone, the Filters button and the common tags, from 1024 px Sort, above
+// the grid (design §7, §14). A search runs on Enter (the keyboard's Search key), not as you
+// type: one request per search rather than one per pause, and no timer. A tag applies as it's
+// ticked.
 export function ListFilters({ filters, onChange, onChangeTags, searchRef }: ListFiltersProps) {
   const searchId = useId();
+  const sorts = sortChoices(filters.q !== "");
   // What's typed. When the address's search changes from elsewhere (Clear all, the Pinch link),
   // the box takes it: React docs, "Storing information from previous renders".
   const [text, setText] = useState(filters.q);
@@ -63,9 +67,28 @@ export function ListFilters({ filters, onChange, onChangeTags, searchRef }: List
           />
         </form>
         {/* From 1024 px the Filters are a panel beside the grid (FiltersPanel), and the
-            common tags are among them. */}
+            common tags are among them; Sort is here, as the wireframe has it. On a phone Sort is
+            in the Filters sheet. */}
         <div className="lg:hidden">
-          <FiltersButton selected={filters.tags} onChange={onChangeTags} />
+          <FiltersButton filters={filters} onChange={onChange} />
+        </div>
+        {/* No visible label (the user's ask, 2026-11-10): the choices name themselves (Newest,
+            Quickest, A–Z); the name is for screen readers. */}
+        <div className="max-lg:hidden">
+          <NativeSelect
+            aria-label="Sort"
+            value={filters.sort}
+            onChange={(event) => {
+              const picked = sorts.find(({ value }) => value === event.target.value);
+              onChange({ ...filters, sort: picked?.value ?? "" });
+            }}
+          >
+            {sorts.map(({ value, label }) => (
+              <option key={value} value={value}>
+                {label}
+              </option>
+            ))}
+          </NativeSelect>
         </div>
       </div>
       <div className="lg:hidden">

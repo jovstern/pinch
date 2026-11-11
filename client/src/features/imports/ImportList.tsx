@@ -1,13 +1,21 @@
 import type { Import } from "@pinch/shared";
 import { useQuery } from "@tanstack/react-query";
-import { CookingPot, LoaderCircle, TriangleAlert } from "lucide-react";
+import { LoaderCircle, TriangleAlert } from "lucide-react";
+import { lazy, Suspense, type ReactNode } from "react";
 import { Link } from "react-router";
+import { RecipeFace } from "../../components/RecipeFace.tsx";
 import { Thumbnail } from "../../components/Thumbnail.tsx";
 import { Button } from "../../components/ui/Button.tsx";
-import { Skeleton } from "../../components/ui/Skeleton.tsx";
 import { platformNames } from "../../lib/platformNames.ts";
-import { ImportActions } from "./ImportActions.tsx";
+import { countToLookAt, thingsToLookAt } from "../../lib/thingsToLookAt.ts";
 import { importListQuery } from "./importQueries.ts";
+
+// A failed card's Retry and Dismiss load on their own, after the queue: in the entry they put the
+// editor's first load over budget (docs/metrics/m08.md, Method note). Their row's height is kept
+// meanwhile, so the cards under it don't move.
+const ImportActions = lazy(async () => ({
+  default: (await import("./ImportActions.tsx")).ImportActions,
+}));
 
 // The queue under the input (design §1, §4.2, §14): each link, text or screenshots being turned
 // into a recipe, as a card with how far it has got and what can be done with it.
@@ -15,10 +23,6 @@ import { importListQuery } from "./importQueries.ts";
 export function ImportList({ focusPasteBox }: { focusPasteBox: () => void }) {
   const { data, isLoadingError, refetch, isFetching } = useQuery(importListQuery);
   const imports = data?.items ?? [];
-  const ready = imports.filter((job) => job.status === "ready").length;
-  const cooking = imports.some(
-    (job) => (job.status === "pending" || job.status === "processing") && !job.stalled,
-  );
 
   return (
     <div className="mt-6">
@@ -40,29 +44,33 @@ export function ImportList({ focusPasteBox }: { focusPasteBox: () => void }) {
           </Button>
         </div>
       )}
-      {data && imports.length === 0 && (
-        <div className="mt-12 text-center">
-          <h2 className="text-xl font-semibold">Nothing cooking yet</h2>
-          <p className="mt-2 text-muted-foreground">
-            Paste a link to an Instagram, Facebook or YouTube video, and Pinch writes the recipe
-            down for you.
-          </p>
-        </div>
-      )}
+      {/*{data && imports.length === 0 && (*/}
+      {/*  <div className="mt-12 text-center">*/}
+      {/*    <h2 className="text-xl font-semibold">Nothing cooking yet</h2>*/}
+      {/*    <p className="mt-2 text-muted-foreground">*/}
+      {/*      Paste a link to an Instagram, Facebook or YouTube video, and Pinch writes the recipe*/}
+      {/*      down for you.*/}
+      {/*    </p>*/}
+      {/*  </div>*/}
+      {/*)}*/}
       {imports.length > 0 && (
         <>
-          {/* A label over the cards, not a title: the sans face, small. */}
+          {/* A label over the cards, not a title: the sans face, small. It is the list's
+              heading too. */}
           <h2 className="mb-2 font-sans text-sm font-semibold text-muted-foreground">
-            {queueHeading(cooking, ready)}
+            {queueSummary(imports)}
           </h2>
           <ul className="grid gap-3">
-            {imports.map((job) => (
+            {imports.map((job, index) => (
               // min-w-0: a grid item is as wide as its content, and a link is one long line.
               <li
                 key={job.id}
                 className="flex min-w-0 gap-3 rounded-card border border-border bg-card p-3 md:items-center md:gap-4 md:p-4"
               >
-                <Picture job={job} />
+                {/* The first cards' pictures are the page's largest thing on a phone, so they
+                    don't wait to be found near the screen, as My recipes' first row
+                    (docs/metrics/m08.md). */}
+                <Picture job={job} eager={index < 2} />
                 {/* Phone: the action under the words. From 768 px: on the right. */}
                 <div className="min-w-0 flex-1 md:flex md:items-center md:gap-4">
                   <div className="min-w-0 flex-1">
@@ -95,9 +103,16 @@ export function ImportList({ focusPasteBox }: { focusPasteBox: () => void }) {
 }
 
 // The card's picture: the draft's when it has one; else what state it's in.
-function Picture({ job }: { job: Import }) {
+function Picture({ job, eager }: { job: Import; eager: boolean }) {
   if (job.thumbnail) {
-    return <Thumbnail src={`/api/imports/${job.id}/thumbnail`} size={job.thumbnail} shape="tile" />;
+    return (
+      <Thumbnail
+        src={`/api/imports/${job.id}/thumbnail`}
+        size={job.thumbnail}
+        shape="tile"
+        eager={eager}
+      />
+    );
   }
   if (job.status === "failed" || job.stalled) {
     // The alert, not colour alone.
@@ -107,22 +122,26 @@ function Picture({ job }: { job: Import }) {
       </div>
     );
   }
-  if (job.status === "ready") {
-    // A text or screenshots draft: no picture from a post.
-    return (
-      <div className="flex h-20 w-16 shrink-0 items-center justify-center rounded-control bg-muted text-muted-foreground">
-        <CookingPot aria-hidden="true" className="size-6" />
-      </div>
-    );
-  }
-  return <Skeleton className="h-20 w-16 shrink-0" />;
+  // A text draft, a post without a picture, or one still cooking: the dish's emoji once the
+  // draft has one, else the pot, with sparkles for a video (D25).
+  return (
+    <RecipeFace
+      emoji={job.draft?.emoji}
+      fromVideo={job.input.type === "link"}
+      className="h-20 w-16 shrink-0 rounded-control text-3xl"
+    />
+  );
 }
 
 // One action in one place (pass-02 §13): while it cooks, a disabled "Cooking…" stands where
 // Review will be, so the place is learned before it can be used.
 function Action({ job, focusPasteBox }: { job: Import; focusPasteBox: () => void }) {
   if (job.status === "failed" || job.stalled) {
-    return <ImportActions job={job} focusPasteBox={focusPasteBox} />;
+    return (
+      <Suspense fallback={<div className="mt-2 h-11 md:mt-0" />}>
+        <ImportActions job={job} focusPasteBox={focusPasteBox} />
+      </Suspense>
+    );
   }
   return (
     <div className="mt-2 flex justify-end md:mt-0">
@@ -143,10 +162,19 @@ function Action({ job, focusPasteBox }: { job: Import; focusPasteBox: () => void
   );
 }
 
-// "Cooking…" while any is, with how many are ready; "N ready" once none is.
-function queueHeading(cooking: boolean, ready: number) {
-  if (!cooking && ready > 0) return `${String(ready)} ready`;
-  return ready > 0 ? `Cooking… · ${String(ready)} ready` : "Cooking…";
+// "2 ready · 1 in progress · 1 failed" (design §14), leaving out what's none. In progress is
+// waiting or being worked on; a stalled one is counted as failed, as its card says it is stuck.
+function queueSummary(imports: Import[]) {
+  const failed = imports.filter((job) => job.status === "failed" || job.stalled).length;
+  const ready = imports.filter((job) => job.status === "ready").length;
+  const inProgress = imports.length - failed - ready;
+  return [
+    ready > 0 && `${String(ready)} ready`,
+    inProgress > 0 && `${String(inProgress)} in progress`,
+    failed > 0 && `${String(failed)} failed`,
+  ]
+    .filter(Boolean)
+    .join(" · ");
 }
 
 // Ready stands out: it's the one waiting for the user. Stuck is a problem, as failed.
@@ -172,7 +200,7 @@ function inputText(input: Import["input"]) {
 }
 
 // waiting → fetching → analyzing → ready to review, or why it failed (design §1).
-function statusText(job: Import) {
+function statusText(job: Import): ReactNode {
   // Not "working on it" forever when nothing is (§4.3).
   if (job.stalled) {
     return "Stuck: nothing has worked on this for a while. Dismiss it and paste it again later.";
@@ -186,8 +214,25 @@ function statusText(job: Import) {
       if (job.step === "analyzing") return "Reading the recipe…";
       return "Working on it…";
     case "ready":
-      return "Ready to review";
+      return <ReadyText count={countToLookAt(job)} />;
     case "failed":
       return job.error ?? "That didn't work.";
   }
+}
+
+// "Ready to review · ◆ 3 things to look at" (design §14): the ◆ is the editor's mark, in its
+// colour; the words say it without either.
+function ReadyText({ count }: { count: number }) {
+  if (count === 0) return "Ready to review";
+  return (
+    <>
+      Ready to review ·{" "}
+      <span className="font-normal text-muted-foreground">
+        <span aria-hidden="true" className="text-check-mark">
+          ◆
+        </span>{" "}
+        {thingsToLookAt(count)}
+      </span>
+    </>
+  );
 }

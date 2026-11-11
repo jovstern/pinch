@@ -1,9 +1,10 @@
-import type { Nutrition, Recipe } from "@pinch/shared";
-import { useQuery } from "@tanstack/react-query";
+import { PlatformSchema, type Nutrition, type Recipe } from "@pinch/shared";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useParams } from "react-router";
 import { Badge } from "../../components/ui/Badge.tsx";
 import { Breadcrumb } from "../../components/ui/Breadcrumb.tsx";
 import { Button } from "../../components/ui/Button.tsx";
+import { RecipeFace } from "../../components/RecipeFace.tsx";
 import { Thumbnail } from "../../components/Thumbnail.tsx";
 import { useHeadingFocus } from "../../lib/useHeadingFocus.ts";
 import { ingredientLine } from "./ingredientLine.ts";
@@ -12,12 +13,13 @@ import { LazyRecipeMenu } from "./LazyRecipeMenu.tsx";
 import { RecipeLoadError } from "./RecipeLoadError.tsx";
 import { RecipeSkeleton } from "./RecipeSkeleton.tsx";
 import { RecipeSource } from "./RecipeSource.tsx";
-import { filterParams, recipeQuery } from "./recipeQueries.ts";
+import { filterParams, listedRecipe, noFilters, recipeQuery } from "./recipeQueries.ts";
 import { tagLabel } from "./tagLabels.ts";
 
 export function RecipePage() {
   // The route is "recipes/:id", so the id is always there.
   const { id = "" } = useParams();
+  const queryClient = useQueryClient();
   const {
     status,
     isLoadingError,
@@ -25,7 +27,11 @@ export function RecipePage() {
     error,
     refetch,
     isFetching,
-  } = useQuery(recipeQuery(id));
+  } = useQuery({
+    ...recipeQuery(id),
+    // From My recipes' list while the recipe itself loads: placeholder, not cached as its own.
+    placeholderData: () => listedRecipe(queryClient, id),
+  });
   const headingRef = useHeadingFocus();
 
   if (status === "pending") return <RecipeSkeleton />;
@@ -43,11 +49,19 @@ export function RecipePage() {
       <Breadcrumb links={[{ label: "My recipes", to: "/recipes" }]} page={recipe.title} />
       {/* The picture above the title on a phone, beside it from 1024 px (design §14). */}
       <div className="mt-2 lg:flex lg:items-start lg:gap-12">
-        {recipe.thumbnail && (
+        {recipe.thumbnail ? (
           <Thumbnail
             src={`/api/recipes/${recipe.id}/thumbnail`}
             size={recipe.thumbnail}
             shape="banner"
+          />
+        ) : (
+          // Its face instead (D25): a lower band than a picture's, as there's less to see; edge
+          // to edge on a phone, as the banner (the same margins), beside the title from 1024 px.
+          <RecipeFace
+            emoji={recipe.emoji}
+            fromVideo={PlatformSchema.safeParse(recipe.source.type).success}
+            className="-mx-4 aspect-5/2 text-7xl sm:mx-0 sm:rounded-card lg:aspect-4/3 lg:w-80 lg:shrink-0"
           />
         )}
         <div className="mt-4 min-w-0 lg:mt-0">
@@ -90,7 +104,7 @@ export function RecipePage() {
                     variant="secondary"
                     className="relative h-8 min-w-11 after:absolute after:inset-x-0 after:-inset-y-1.5 hover:bg-border active:bg-border/70"
                   >
-                    <Link to={`/recipes?${filterParams({ q: "", tags: [tag] }).toString()}`}>
+                    <Link to={`/recipes?${filterParams({ ...noFilters, tags: [tag] }).toString()}`}>
                       {tagLabel(tag)}
                     </Link>
                   </Badge>

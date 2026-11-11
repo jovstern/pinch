@@ -1,4 +1,4 @@
-import type { Recipe } from "@pinch/shared";
+import { RecipeSchema, type Recipe } from "@pinch/shared";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router";
 import {
@@ -10,10 +10,10 @@ import {
   AlertDialogTitle,
 } from "../../components/ui/AlertDialog.tsx";
 import { Button } from "../../components/ui/Button.tsx";
-import { deleteResource } from "../../lib/api.ts";
-import { toastDeleted } from "../../lib/toasts.tsx";
+import { deleteResource, sendJson } from "../../lib/api.ts";
+import { toastDeleted, toastRestored } from "../../lib/toasts.tsx";
 import { focusHeading } from "../../lib/useHeadingFocus.ts";
-import { recipeListsKey } from "./recipeQueries.ts";
+import { recipeQuery, refetchRecipeLists } from "./recipeQueries.ts";
 
 type DeleteRecipeDialogProps = {
   recipe: Recipe;
@@ -24,7 +24,7 @@ type DeleteRecipeDialogProps = {
   focusOnClose: () => void;
 };
 
-// Deleting can't be undone, so it asks first.
+// It asks first (design §14), and the toast that follows has Undo (D27).
 export function DeleteRecipeDialog({ recipe, onClose, focusOnClose }: DeleteRecipeDialogProps) {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
@@ -36,16 +36,31 @@ export function DeleteRecipeDialog({ recipe, onClose, focusOnClose }: DeleteReci
       // recipe, which would now answer 404. refetchType "all": the lists aren't on screen, and
       // an inactive query isn't refetched otherwise. The deleted recipe stays in the cache;
       // Back shows it briefly, then its refetch finds it gone.
-      await queryClient.invalidateQueries({
-        queryKey: recipeListsKey,
-        refetchType: "all",
-      });
+      await refetchRecipeLists(queryClient);
       void navigate("/recipes", { state: focusHeading });
       // A failure stays in the dialog, by its buttons:
       // the dialog shuts out a toast's.
-      toastDeleted(recipe.title);
+      toastDeleted(recipe.title, restore);
     },
   });
+
+  // Undo (D27): the recipe is back in My recipes, where the user now is, and its page's cache is
+  // the API's answer (Back may have found it gone, a 404, since). The user stays put; the toast
+  // offers View. The dialog is gone by then: its navigate still works (react-router's keeps the
+  // router it had).
+  async function restore() {
+    const restored = await sendJson(
+      "POST",
+      `/api/recipes/${recipe.id}/restore`,
+      undefined,
+      RecipeSchema,
+    );
+    queryClient.setQueryData(recipeQuery(recipe.id).queryKey, restored);
+    await refetchRecipeLists(queryClient);
+    toastRestored(restored.title, () => {
+      void navigate(`/recipes/${recipe.id}`);
+    });
+  }
 
   return (
     // Open while it's on the page; closing (Keep it, Escape) asks to be taken away.
@@ -63,7 +78,7 @@ export function DeleteRecipeDialog({ recipe, onClose, focusOnClose }: DeleteReci
       >
         <AlertDialogTitle className="text-lg font-semibold">Delete this recipe?</AlertDialogTitle>
         <AlertDialogDescription className="mt-2 text-pretty text-text-muted">
-          “{recipe.title}” will be gone for good.
+          “{recipe.title}” will be deleted from My recipes.
         </AlertDialogDescription>
         {deletion.isError && (
           <p role="alert" className="mt-3 text-danger">

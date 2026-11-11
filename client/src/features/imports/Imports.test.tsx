@@ -5,17 +5,19 @@ import {
   textMessage,
   type Import,
 } from "@pinch/shared";
-import { fireEvent, screen, waitFor, within } from "@testing-library/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, test, vi } from "vitest";
+import { MemoryRouter } from "react-router";
 import { renderApp } from "../../test-utils.tsx";
+import { ImportList } from "./ImportList.tsx";
 import { pollInterval } from "./importQueries.ts";
+import { ScreenshotsUpload } from "./ScreenshotsUpload.tsx";
 
 afterEach(() => {
   vi.unstubAllGlobals();
   vi.useRealTimers();
-  // Paste's clipboard, if a test gave it one.
-  Reflect.deleteProperty(navigator, "clipboard");
 });
 
 const reel = "https://www.instagram.com/p/DOxAbc123/";
@@ -67,7 +69,7 @@ test("a pasted link is sent trimmed, the box empties, and the link shows as wait
   const fetch = stubApi([[], [importOf({})]]);
   renderApp("/");
 
-  const box = screen.getByRole("textbox", { name: "Pinch a recipe from a reel" });
+  const box = await screen.findByRole("textbox", { name: "Pinch a recipe from a reel" });
   await userEvent.type(box, ` ${reel}`);
   await userEvent.click(screen.getByRole("button", { name: "Pinch it" }));
 
@@ -85,7 +87,7 @@ test("a pasted text, anything with a space or a new line in it, is sent as text"
   const fetch = stubApi([[]]);
   renderApp("/");
 
-  const box = screen.getByRole("textbox", { name: "Pinch a recipe from a reel" });
+  const box = await screen.findByRole("textbox", { name: "Pinch a recipe from a reel" });
   await userEvent.type(box, "Shakshuka: 4 eggs, 1 can of tomatoes.");
   await userEvent.click(screen.getByRole("button", { name: "Pinch it" }));
 
@@ -101,7 +103,7 @@ test("Enter sends what's in the box", async () => {
   renderApp("/");
 
   await userEvent.type(
-    screen.getByRole("textbox", { name: "Pinch a recipe from a reel" }),
+    await screen.findByRole("textbox", { name: "Pinch a recipe from a reel" }),
     `${reel}{Enter}`,
   );
 
@@ -112,54 +114,21 @@ test("Enter sends what's in the box", async () => {
   });
 });
 
-test("Shift+Enter makes a new line, and the text is sent with it", async () => {
+test("a pasted recipe's lines become one line, at the caret, and are sent so", async () => {
   const fetch = stubApi([[]]);
   renderApp("/");
 
-  const box = screen.getByRole("textbox", { name: "Pinch a recipe from a reel" });
-  await userEvent.type(box, "Shakshuka{Shift>}{Enter}{/Shift}4 eggs, 1 can of tomatoes.");
-  expect(box).toHaveValue("Shakshuka\n4 eggs, 1 can of tomatoes.");
-  expect(fetch).not.toHaveBeenCalledWith("/api/imports", expect.anything());
+  const box = await screen.findByRole("textbox", { name: "Pinch a recipe from a reel" });
+  await userEvent.type(box, "Shakshuka: ");
+  await userEvent.paste("\n4 eggs\r\n1 can of tomatoes, crushed\n\n");
+  expect(box).toHaveValue("Shakshuka: 4 eggs · 1 can of tomatoes, crushed");
 
   await userEvent.type(box, "{Enter}");
   expect(fetch).toHaveBeenCalledWith("/api/imports", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ type: "text", text: "Shakshuka\n4 eggs, 1 can of tomatoes." }),
+    body: JSON.stringify({ type: "text", text: "Shakshuka: 4 eggs · 1 can of tomatoes, crushed" }),
   });
-});
-
-// A clipboard that holds this text, for Paste (jsdom has none).
-function stubClipboard(text: string) {
-  Object.defineProperty(navigator, "clipboard", {
-    value: { readText: () => Promise.resolve(text) },
-    configurable: true,
-  });
-}
-
-test("Paste fills the box from the clipboard, and doesn't send it", async () => {
-  const fetch = stubApi([[]]);
-  stubClipboard(reel);
-  renderApp("/");
-
-  await userEvent.click(screen.getByRole("button", { name: "Paste" }));
-
-  const box = screen.getByRole("textbox", { name: "Pinch a recipe from a reel" });
-  expect(box).toHaveValue(reel);
-  expect(box).toHaveFocus();
-  expect(fetch).not.toHaveBeenCalledWith("/api/imports", expect.anything());
-});
-
-test("Paste with an empty clipboard keeps what's in the box", async () => {
-  stubApi([[]]);
-  stubClipboard("");
-  renderApp("/");
-
-  const box = screen.getByRole("textbox", { name: "Pinch a recipe from a reel" });
-  await userEvent.type(box, reel);
-  await userEvent.click(screen.getByRole("button", { name: "Paste" }));
-
-  expect(box).toHaveValue(reel);
 });
 
 test("the API's message for a text shows under the box", async () => {
@@ -172,7 +141,7 @@ test("the API's message for a text shows under the box", async () => {
   renderApp("/");
 
   await userEvent.type(
-    screen.getByRole("textbox", { name: "Pinch a recipe from a reel" }),
+    await screen.findByRole("textbox", { name: "Pinch a recipe from a reel" }),
     "Shakshuka: 4 eggs, 1 can of tomatoes.",
   );
   await userEvent.click(screen.getByRole("button", { name: "Pinch it" }));
@@ -185,7 +154,7 @@ test("a text too short to be a recipe is refused before it's sent", async () => 
   renderApp("/");
 
   await userEvent.type(
-    screen.getByRole("textbox", { name: "Pinch a recipe from a reel" }),
+    await screen.findByRole("textbox", { name: "Pinch a recipe from a reel" }),
     "2 eggs",
   );
   await userEvent.click(screen.getByRole("button", { name: "Pinch it" }));
@@ -201,14 +170,14 @@ test("an empty box asks for either, and focus goes back to it", async () => {
   await userEvent.click(screen.getByRole("button", { name: "Pinch it" }));
 
   expect(await screen.findByRole("alert")).toHaveTextContent("Paste a link or the recipe's text.");
-  expect(screen.getByRole("textbox", { name: "Pinch a recipe from a reel" })).toHaveFocus();
+  expect(await screen.findByRole("textbox", { name: "Pinch a recipe from a reel" })).toHaveFocus();
 });
 
 test("a link from another site is refused before it's sent, until it's fixed", async () => {
   const fetch = stubApi([[]]);
   renderApp("/");
 
-  const box = screen.getByRole("textbox", { name: "Pinch a recipe from a reel" });
+  const box = await screen.findByRole("textbox", { name: "Pinch a recipe from a reel" });
   await userEvent.type(box, "https://www.tiktok.com/@chef/video/1");
   await userEvent.click(screen.getByRole("button", { name: "Pinch it" }));
 
@@ -233,7 +202,7 @@ test("the API's message for a link shows under the box", async () => {
   );
   renderApp("/");
 
-  const box = screen.getByRole("textbox", { name: "Pinch a recipe from a reel" });
+  const box = await screen.findByRole("textbox", { name: "Pinch a recipe from a reel" });
   await userEvent.type(box, reel);
   await userEvent.click(screen.getByRole("button", { name: "Pinch it" }));
 
@@ -245,7 +214,7 @@ test("when the link can't be sent, it says so and keeps the link", async () => {
   stubApi([[]], () => new Response(null, { status: 502 }));
   renderApp("/");
 
-  const box = screen.getByRole("textbox", { name: "Pinch a recipe from a reel" });
+  const box = await screen.findByRole("textbox", { name: "Pinch a recipe from a reel" });
   await userEvent.type(box, reel);
   await userEvent.click(screen.getByRole("button", { name: "Pinch it" }));
 
@@ -278,11 +247,14 @@ test("a pasted text shows as such, with its text", async () => {
   expect(screen.getByText(text)).toBeInTheDocument();
 });
 
-test("an empty queue says what Pinch does", async () => {
+// The empty state's words are hidden for now (the user's call, 2026-11-11): an empty queue shows
+// the field alone, with no heading and no cards under it.
+test("an empty queue shows the field alone", async () => {
   stubApi([[]]);
   renderApp("/");
 
-  expect(await screen.findByRole("heading", { name: "Nothing cooking yet" })).toBeInTheDocument();
+  expect(await screen.findByLabelText("Pinch a recipe from a reel")).toBeInTheDocument();
+  expect(screen.queryByRole("heading", { name: "Nothing cooking yet" })).not.toBeInTheDocument();
   expect(screen.queryByText(/^Cooking…/)).not.toBeInTheDocument();
 });
 
@@ -291,7 +263,7 @@ test("one still cooking shows a disabled Cooking… where Review will be", async
   renderApp("/");
 
   expect(await screen.findByText("Fetching the video…")).toBeInTheDocument();
-  expect(screen.getByRole("heading", { name: "Cooking…" })).toBeInTheDocument();
+  expect(screen.getByRole("heading", { name: "1 in progress" })).toBeInTheDocument();
   expect(screen.getByRole("button", { name: "Cooking…" })).toBeDisabled();
   expect(screen.queryByRole("link", { name: "Review" })).not.toBeInTheDocument();
 });
@@ -300,8 +272,77 @@ test("a ready one is named by its draft's title, and counted in the heading", as
   stubApi([[importOf({ status: "ready", draft }), importOf({ id: "6650a1b2c3d4e5f600000002" })]]);
   renderApp("/");
 
-  expect(await screen.findByRole("heading", { name: "Cooking… · 1 ready" })).toBeInTheDocument();
+  expect(
+    await screen.findByRole("heading", { name: "1 ready · 1 in progress" }),
+  ).toBeInTheDocument();
   expect(screen.getByRole("link", { name: "Review" })).toHaveAccessibleDescription("Tomato pasta");
+});
+
+test("the first two cards' pictures load at once, first; the rest when near the screen", async () => {
+  const size = { width: 400, height: 225 };
+  stubApi([
+    ["1", "2", "3"].map((n) =>
+      importOf({ id: `6650a1b2c3d4e5f60000000${n}`, status: "ready", draft, thumbnail: size }),
+    ),
+  ]);
+  renderApp("/");
+
+  await screen.findByRole("heading", { name: "3 ready" });
+  const pictures = document.querySelectorAll('img[src^="/api/imports/"]');
+  // The server's small tile, not the whole picture (design §5).
+  expect(pictures[0]).toHaveAttribute(
+    "src",
+    "/api/imports/6650a1b2c3d4e5f600000001/thumbnail?size=small",
+  );
+  expect([...pictures].map((img) => img.getAttribute("loading"))).toEqual([
+    "eager",
+    "eager",
+    "lazy",
+  ]);
+  expect([...pictures].map((img) => img.getAttribute("fetchpriority"))).toEqual([
+    "high",
+    "high",
+    "auto",
+  ]);
+});
+
+test("the heading counts what's ready, in progress and failed, a stalled one as failed", async () => {
+  stubApi([
+    [
+      importOf({ status: "ready", draft }),
+      importOf({ id: "6650a1b2c3d4e5f600000002" }),
+      importOf({ id: "6650a1b2c3d4e5f600000003", status: "failed" }),
+      importOf({ id: "6650a1b2c3d4e5f600000004", stalled: true }),
+    ],
+  ]);
+  renderApp("/");
+
+  expect(
+    await screen.findByRole("heading", { name: "1 ready · 1 in progress · 2 failed" }),
+  ).toBeInTheDocument();
+});
+
+test("Or write it yourself leads to the empty editor", async () => {
+  stubApi([[]]);
+  renderApp("/");
+
+  expect(await screen.findByRole("link", { name: "Or write it yourself" })).toHaveAttribute(
+    "href",
+    "/recipes/new",
+  );
+});
+
+test("a ready one counts its things to look at", async () => {
+  const uncertain = [
+    { path: "title", reason: "Not said." },
+    { path: "servings", reason: "Not said." },
+  ];
+  stubApi([[importOf({ status: "ready", draft: { ...draft, uncertain } })]]);
+  renderApp("/");
+
+  expect(await screen.findByText(/Ready to review/)).toHaveTextContent(
+    "Ready to review · ◆ 2 things to look at",
+  );
 });
 
 test("when the queue can't load, Try again asks again", async () => {
@@ -357,7 +398,7 @@ test("Retry puts a failed link back in the queue", async () => {
 
   expect(await screen.findByText("Waiting to start…")).toBeInTheDocument();
   // The button is gone; focus is on the paste box, not lost to the page.
-  expect(screen.getByRole("textbox", { name: "Pinch a recipe from a reel" })).toHaveFocus();
+  expect(await screen.findByRole("textbox", { name: "Pinch a recipe from a reel" })).toHaveFocus();
   expect(fetch).toHaveBeenCalledWith("/api/imports/6650a1b2c3d4e5f600000001/retry", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -374,7 +415,7 @@ test("Dismiss deletes a failed link", async () => {
   await waitFor(() => {
     expect(screen.queryByText("No.")).not.toBeInTheDocument();
   });
-  expect(screen.getByRole("textbox", { name: "Pinch a recipe from a reel" })).toHaveFocus();
+  expect(await screen.findByRole("textbox", { name: "Pinch a recipe from a reel" })).toHaveFocus();
   expect(fetch).toHaveBeenCalledWith("/api/imports/6650a1b2c3d4e5f600000001", {
     method: "DELETE",
   });
@@ -409,6 +450,95 @@ test("when Dismiss fails, a toast says so and keeps the link, and Try again send
   expect(await screen.findByText("Dismissed")).toBeInTheDocument();
 });
 
+test("Undo on Pinch it's toast cancels the import, and the queue drops it", async () => {
+  const fetch = stubApi([[], [importOf({})], []]);
+  renderApp("/");
+
+  await userEvent.type(
+    await screen.findByRole("textbox", { name: "Pinch a recipe from a reel" }),
+    reel,
+  );
+  await userEvent.click(screen.getByRole("button", { name: "Pinch it" }));
+  expect(await screen.findByText("Waiting to start…")).toBeInTheDocument();
+  fireEvent.click(within(toastOf("Pinching it")).getByRole("button", { name: "Undo" }));
+
+  expect(await screen.findByText("Cancelled")).toBeInTheDocument();
+  expect(fetch).toHaveBeenCalledWith("/api/imports/6650a1b2c3d4e5f600000001", {
+    method: "DELETE",
+  });
+  expect(screen.queryByText("Waiting to start…")).not.toBeInTheDocument();
+});
+
+test("Undo on Dismiss's toast brings the failed link back", async () => {
+  const failed = importOf({ status: "failed", attempts: 3, error: "No." });
+  const fetch = stubApi([[failed], [], [failed]], () => Response.json(failed));
+  renderApp("/");
+
+  await userEvent.click(await screen.findByRole("button", { name: "Dismiss" }));
+  await waitFor(() => {
+    expect(screen.queryByText("No.")).not.toBeInTheDocument();
+  });
+  fireEvent.click(within(toastOf("Dismissed")).getByRole("button", { name: "Undo" }));
+
+  expect(await screen.findByText("No.")).toBeInTheDocument();
+  expect(fetch).toHaveBeenCalledWith("/api/imports/6650a1b2c3d4e5f600000001/restore", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: undefined,
+  });
+});
+
+test("when Undo fails, a toast says so, and Try again undoes it", async () => {
+  const failed = importOf({ status: "failed", attempts: 3, error: "No." });
+  let restores = 0;
+  stubApi([[failed], [], [failed]], () => {
+    restores += 1;
+    return restores === 1 ? new Response(null, { status: 502 }) : Response.json(failed);
+  });
+  renderApp("/");
+
+  await userEvent.click(await screen.findByRole("button", { name: "Dismiss" }));
+  fireEvent.click(within(await findToast("Dismissed")).getByRole("button", { name: "Undo" }));
+
+  fireEvent.click(
+    within(await findToast("Couldn't undo")).getByRole("button", { name: "Try again" }),
+  );
+  expect(await screen.findByText("No.")).toBeInTheDocument();
+});
+
+test("Undo of something already gone says so, without Try again", async () => {
+  const failed = importOf({ status: "failed", attempts: 3, error: "No." });
+  stubApi([[failed], []], () => new Response(null, { status: 404 }));
+  renderApp("/");
+
+  await userEvent.click(await screen.findByRole("button", { name: "Dismiss" }));
+  fireEvent.click(within(await findToast("Dismissed")).getByRole("button", { name: "Undo" }));
+
+  const toast = await findToast("Can't undo");
+  expect(toast).toHaveTextContent("It's already gone");
+  expect(within(toast).queryByRole("button", { name: "Try again" })).not.toBeInTheDocument();
+});
+
+test("Undo of Pinch it, when the import is already gone, is as good as cancelled", async () => {
+  stubApi([[], [importOf({})], []], undefined, () => new Response(null, { status: 404 }));
+  renderApp("/");
+
+  await userEvent.type(
+    await screen.findByRole("textbox", { name: "Pinch a recipe from a reel" }),
+    reel,
+  );
+  await userEvent.click(screen.getByRole("button", { name: "Pinch it" }));
+  fireEvent.click(within(await findToast("Pinching it")).getByRole("button", { name: "Undo" }));
+
+  expect(await screen.findByText("Cancelled")).toBeInTheDocument();
+  expect(screen.queryByText("Can't undo")).not.toBeInTheDocument();
+});
+
+async function findToast(text: string) {
+  await screen.findByText(text);
+  return toastOf(text);
+}
+
 // The toast a text is in (Sonner's list item), to find its buttons.
 function toastOf(text: string) {
   const toast = screen.getByText(text).closest("li");
@@ -424,7 +554,14 @@ test("an import that becomes ready or fails says so once in a toast, with its ne
   stubApi([
     [importOf({ status: "processing" }), importOf({ id: other, status: "processing" })],
     [failed, importOf({ id: other })],
-    [failed, importOf({ id: other, status: "ready", draft })],
+    [
+      failed,
+      importOf({
+        id: other,
+        status: "ready",
+        draft: { ...draft, uncertain: [{ path: "title", reason: "Not said." }] },
+      }),
+    ],
   ]);
   renderApp("/");
 
@@ -437,6 +574,10 @@ test("an import that becomes ready or fails says so once in a toast, with its ne
   expect(
     within(toastOf("Tomato pasta is ready to review")).getByRole("button", { name: "Review" }),
   ).toBeVisible();
+  // With what the draft asks the user to check.
+  expect(
+    within(toastOf("Tomato pasta is ready to review")).getByText("1 thing to look at"),
+  ).toBeInTheDocument();
   expect(screen.getAllByText("Couldn't read that video")).toHaveLength(1);
   const failure = toastOf("Couldn't read that video");
   expect(within(failure).getByText("It may be private.")).toBeInTheDocument();
@@ -488,7 +629,7 @@ test("past the daily cap, the box says so and keeps the link", async () => {
   );
   renderApp("/");
 
-  const box = screen.getByRole("textbox", { name: "Pinch a recipe from a reel" });
+  const box = await screen.findByRole("textbox", { name: "Pinch a recipe from a reel" });
   await userEvent.type(box, reel);
   await userEvent.click(screen.getByRole("button", { name: "Pinch it" }));
 
@@ -519,10 +660,24 @@ test("polling runs only while the worker has a link in hand", () => {
 
 const screenshot = (name: string) => new File(["png"], name, { type: "image/png" });
 
+// Screenshots are hidden from / for now (ImportPage), so their picker is tested on its own, above
+// the queue as it was on the page.
+function renderScreenshots() {
+  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  render(
+    <QueryClientProvider client={queryClient}>
+      <MemoryRouter>
+        <ScreenshotsUpload />
+        <ImportList focusPasteBox={() => undefined} />
+      </MemoryRouter>
+    </QueryClientProvider>,
+  );
+}
+
 test("chosen screenshots are sent at once, as a form, and show in the list", async () => {
   const shots = importOf({ input: { type: "images", count: 2 } });
   const fetch = stubApi([[], [shots]], () => Response.json(shots, { status: 202 }));
-  renderApp("/");
+  renderScreenshots();
 
   await userEvent.upload(screen.getByLabelText("Or add screenshots"), [
     screenshot("one.png"),
@@ -538,7 +693,7 @@ test("chosen screenshots are sent at once, as a form, and show in the list", asy
 
 test("more than 4 screenshots, or one too big, are refused before anything is sent", async () => {
   const fetch = stubApi([[]]);
-  renderApp("/");
+  renderScreenshots();
   const picker = screen.getByLabelText("Or add screenshots");
 
   await userEvent.upload(
@@ -558,7 +713,7 @@ test("the API's reason for refusing the screenshots is shown, and tied to the pi
   stubApi([[]], () =>
     Response.json({ error: { fields: { images: "Not an image." } } }, { status: 400 }),
   );
-  renderApp("/");
+  renderScreenshots();
 
   const picker = screen.getByLabelText("Or add screenshots");
   await userEvent.upload(picker, [screenshot("one.png")]);
@@ -576,7 +731,7 @@ test("a pick while screenshots are sending sends nothing more", async () => {
     return Promise.resolve(Response.json({ items: [], nextCursor: null }));
   });
   vi.stubGlobal("fetch", fetch);
-  renderApp("/");
+  renderScreenshots();
 
   await userEvent.upload(screen.getByLabelText("Or add screenshots"), [screenshot("one.png")]);
   await userEvent.upload(await screen.findByLabelText("Sending…"), [screenshot("two.png")]);
@@ -587,7 +742,7 @@ test("a pick while screenshots are sending sends nothing more", async () => {
 
 test("screenshots past the day's cap say so", async () => {
   stubApi([[]], () => Response.json({ error: { code: "daily_limit" } }, { status: 429 }));
-  renderApp("/");
+  renderScreenshots();
 
   await userEvent.upload(screen.getByLabelText("Or add screenshots"), [screenshot("one.png")]);
 

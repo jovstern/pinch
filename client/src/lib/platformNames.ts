@@ -5,4 +5,5 @@ export const platformNames: Record<Platform, string> = {
   instagram: "Instagram",
   facebook: "Facebook",
   youtube: "YouTube",
+  text: "Plain Text",
 };

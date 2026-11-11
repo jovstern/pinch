@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { RecipeDraftSchema, ThumbnailSchema } from "./recipe.ts";
 
-export const PlatformSchema = z.enum(["instagram", "facebook", "youtube"]);
+export const PlatformSchema = z.enum(["instagram", "facebook", "youtube", "text"]);
 export type Platform = z.infer<typeof PlatformSchema>;
 
 // How far a processing import has got, to show progress (design §4.2).

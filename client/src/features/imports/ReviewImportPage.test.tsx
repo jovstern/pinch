@@ -74,12 +74,12 @@ test("the draft opens in the form; Save approves it as edited and shows the reci
   });
 });
 
-test("the draft sits under New recipe, says where Pinch read it and links to the post", async () => {
+test("the draft sits under Add recipe, says where Pinch read it and links to the post", async () => {
   stubApi();
   renderApp(`/imports/${ready.id}`);
 
   const breadcrumb = await screen.findByRole("navigation", { name: "Breadcrumb" });
-  expect(within(breadcrumb).getByRole("link", { name: "New recipe" })).toHaveAttribute("href", "/");
+  expect(within(breadcrumb).getByRole("link", { name: "Add recipe" })).toHaveAttribute("href", "/");
   expect(within(breadcrumb).getByText("Review: Tomato pasta")).toHaveAttribute(
     "aria-current",
     "page",
@@ -136,14 +136,14 @@ test("Discard doesn't open while the draft is being saved", async () => {
   expect(fetch.mock.calls.some(([, init]) => init?.method === "DELETE")).toBe(false);
 });
 
-test("Discard draft deletes the import and goes back to New recipe", async () => {
+test("Discard draft deletes the import and goes back to Add recipe", async () => {
   const fetch = stubApi();
   renderApp(`/imports/${ready.id}`);
 
   await userEvent.click(await screen.findByRole("button", { name: "Discard" }));
   await userEvent.click(screen.getByRole("button", { name: "Discard draft" }));
 
-  const heading = await screen.findByRole("heading", { level: 1, name: "New recipe" });
+  const heading = await screen.findByRole("heading", { level: 1, name: "Add recipe" });
   // Still there once the dialog's own focus handling (a tick later) is done.
   await new Promise((resolve) => setTimeout(resolve, 10));
   expect(heading).toHaveFocus();
@@ -189,12 +189,87 @@ test("an import with no draft yet says so", async () => {
   ).toBeInTheDocument();
 });
 
-test("an import that doesn't exist has no draft either, and leads back to New recipe", async () => {
+test("an import that doesn't exist has no draft either, and leads back to Add recipe", async () => {
   vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(null, { status: 404 })));
   renderApp(`/imports/${ready.id}`);
 
   expect(
     await screen.findByRole("heading", { level: 1, name: "No draft yet" }),
   ).toBeInTheDocument();
-  expect(screen.getByRole("link", { name: "Back to New recipe" })).toHaveAttribute("href", "/");
+  expect(screen.getByRole("link", { name: "Back to Add recipe" })).toHaveAttribute("href", "/");
+});
+
+test("a draft's things to look at are marked on their fields, and editing a field clears its mark", async () => {
+  const marked: Import = {
+    ...ready,
+    draft: {
+      ...draft,
+      ingredients: [{ name: "spaghetti" }, { name: "tomatoes" }],
+      steps: ["Boil it.", "Toss it."],
+      uncertain: [
+        { path: "ingredients.1.quantity", reason: "The video says “a can”." },
+        { path: "steps.1", reason: "Too fast to follow." },
+      ],
+    },
+  };
+  stubApi(marked);
+  renderApp(`/imports/${ready.id}`);
+
+  // Each marked box is read with its reason; the count sits under the banner.
+  const amounts = await screen.findAllByLabelText("Amount");
+  expect(amounts[1]).toHaveAccessibleDescription("To look at: The video says “a can”.");
+  expect(amounts[0]).not.toHaveAccessibleDescription();
+  expect(screen.getByText(/2 things to look at/)).toBeInTheDocument();
+
+  // Go to the first: focus on the first marked box.
+  await userEvent.click(screen.getByRole("button", { name: "Go to the first" }));
+  expect(amounts[1]).toHaveFocus();
+
+  // Typing in it clears its mark, and the count.
+  await userEvent.type(amounts[1] as HTMLElement, "400");
+  expect(amounts[1]).not.toHaveAccessibleDescription();
+  expect(screen.getByText(/1 thing to look at/)).toBeInTheDocument();
+
+  // Removing the first step moves the second's mark up with it.
+  await userEvent.click(screen.getByRole("button", { name: "Remove step 1" }));
+  expect(screen.getByLabelText("Step 1")).toHaveAccessibleDescription(
+    "To look at: Too fast to follow.",
+  );
+});
+
+test("removing a row above a marked one moves its mark up; removing the marked row takes it away", async () => {
+  stubApi({
+    ...ready,
+    draft: {
+      ...draft,
+      ingredients: [{ name: "spaghetti" }, { name: "tomatoes" }, { name: "garlic" }],
+      uncertain: [{ path: "ingredients.2.name", reason: "Hard to hear." }],
+    },
+  });
+  renderApp(`/imports/${ready.id}`);
+
+  await screen.findAllByLabelText("Ingredient");
+  await userEvent.click(screen.getByRole("button", { name: "Remove ingredient 1" }));
+  const names = screen.getAllByLabelText("Ingredient");
+  expect(names[1]).toHaveValue("garlic");
+  expect(names[1]).toHaveAccessibleDescription("To look at: Hard to hear.");
+  expect(names[0]).not.toHaveAccessibleDescription();
+
+  await userEvent.click(screen.getByRole("button", { name: "Remove ingredient 2" }));
+  expect(screen.queryByText("Hard to hear.")).not.toBeInTheDocument();
+  expect(screen.queryByText(/to look at/)).not.toBeInTheDocument();
+});
+
+test("changing a marked number clears its mark", async () => {
+  stubApi({
+    ...ready,
+    draft: { ...draft, servings: 2, uncertain: [{ path: "servings", reason: "Not said." }] },
+  });
+  renderApp(`/imports/${ready.id}`);
+
+  const serves = await screen.findByLabelText("Serves");
+  expect(serves).toHaveAccessibleDescription("To look at: Not said.");
+  await userEvent.type(serves, "4");
+  expect(serves).not.toHaveAccessibleDescription();
+  expect(screen.queryByText("Not said.")).not.toBeInTheDocument();
 });

@@ -9,7 +9,7 @@ import { NewRecipePage } from "./features/recipes/NewRecipePage.tsx";
 import { RecipeListPage } from "./features/recipes/RecipeListPage.tsx";
 import { RecipePage } from "./features/recipes/RecipePage.tsx";
 
-// The screens (design §14): / is New recipe, /recipes My recipes (D24).
+// The screens (design §14): / is Add recipe, /recipes My recipes (D24).
 export function App() {
   return (
     <Routes>

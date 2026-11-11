@@ -43,7 +43,8 @@ export function Thumbnail({ src, size, shape, eager = false, className = "" }: T
   const onTop = shape === "full" || shape === "banner" || eager;
   return (
     <img
-      src={src}
+      // A tile asks for the server's 160 × 200 crop (§5): a few KB, not the whole picture.
+      src={shape === "tile" ? `${src}?size=small` : src}
       alt=""
       width={size.width}
       height={size.height}

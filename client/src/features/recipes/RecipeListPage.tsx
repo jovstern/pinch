@@ -1,4 +1,3 @@
-import { isTag } from "@pinch/shared";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { useEffect, useRef } from "react";
 import { Link, useSearchParams } from "react-router";
@@ -8,22 +7,28 @@ import { Button } from "../../components/ui/Button.tsx";
 import { Skeleton } from "../../components/ui/Skeleton.tsx";
 import { cn } from "../../lib/cn.ts";
 import { useHeadingFocus } from "../../lib/useHeadingFocus.ts";
-import { FiltersPanel } from "./FiltersPanel.tsx";
+import { useMediaQuery } from "../../lib/useMediaQuery.ts";
+import { LazyFiltersPanel } from "./LazyFiltersPanel.tsx";
 import { ListFilters } from "./ListFilters.tsx";
 import { RecipeCard } from "./RecipeCard.tsx";
-import { filterParams, recipeListQuery, type RecipeFilters } from "./recipeQueries.ts";
-import { tagLabel } from "./tagLabels.ts";
+import { appliedFilters } from "./filterLabels.ts";
+import {
+  filterParams,
+  noFilters,
+  PAGE_SIZE,
+  readFilters,
+  recipeListQuery,
+  withoutFilters,
+  type RecipeFilters,
+} from "./recipeQueries.ts";
 
 // The My recipes tab, at /recipes (design §14, D24).
 export function RecipeListPage() {
   // The filters live in the address, so a reload, Back or a shared link keeps them (ui-craft).
-  // A tag not in the lists (a hand-edited link) is left out rather than sent: it's a 400.
   const [searchParams, setSearchParams] = useSearchParams();
-  const filters: RecipeFilters = {
-    q: searchParams.get("q")?.trim() ?? "",
-    tags: searchParams.get("tags")?.split(",").filter(isTag) ?? [],
-  };
-  const filtering = filters.q !== "" || filters.tags.length > 0;
+  const filters = readFilters(searchParams);
+  const applied = appliedFilters(filters);
+  const filtering = filters.q !== "" || applied.length > 0;
 
   const {
     status,
@@ -40,6 +45,9 @@ export function RecipeListPage() {
   const listRef = useRef<HTMLUListElement>(null);
   const searchRef = useRef<HTMLInputElement>(null);
   const headingRef = useHeadingFocus();
+  // From 1024 px (Tailwind's lg), where the Filters are a panel. Below, it isn't drawn at all, so
+  // a phone never fetches its chunk on the way to the grid (LCP, docs/metrics/m08.md).
+  const wide = useMediaQuery("(min-width: 64rem)");
   // The first recipe of the page Show more asked for, to focus once it's drawn.
   const firstNewRef = useRef<number | null>(null);
   const recipes = data?.pages.flatMap((page) => page.items);
@@ -67,7 +75,7 @@ export function RecipeListPage() {
   }
 
   // For a button that clears filters and goes away with them (Clear all, Clear filters, Search
-  // all…, a tag's ✕, the panel's Clear): focus moves to the search box, where the next search
+  // all…, a filter's ✕, the panel's Clear): focus moves to the search box, where the next search
   // starts, rather than falling to the page.
   function clearFilters(next: RecipeFilters) {
     changeFilters(next);
@@ -87,8 +95,8 @@ export function RecipeListPage() {
   // By the data, not the status: a failed next page or refetch turns the status to "error" and
   // keeps the list.
   const noMatch = filtering && !isPlaceholderData && recipes?.length === 0;
-  // What narrowed it, as typed and ticked: “soup”, italian.
-  const asked = filters.tags.map(tagLabel);
+  // What narrowed it, as typed and picked: “soup”, 30 min or less, italian.
+  const asked = applied.map(({ label }) => label);
   if (filters.q !== "") asked.unshift(`“${filters.q}”`);
   // Not before the first recipe: there's nothing to search yet. Known only once a list without
   // filters has loaded, so the search box stays while one loads (it keeps its focus).
@@ -120,12 +128,13 @@ export function RecipeListPage() {
 
       {/* Two columns from 1024 px: the Filters panel and the grid. */}
       <div className="lg:flex lg:gap-8">
-        {!noRecipesYet && (
-          <FiltersPanel
-            selected={filters.tags}
-            onChange={changeTags}
+        {!noRecipesYet && wide && (
+          <LazyFiltersPanel
+            filters={filters}
+            onChange={changeFilters}
+            filtered={applied.length > 0}
             onClear={() => {
-              clearFilters({ ...filters, tags: [] });
+              clearFilters(withoutFilters(filters));
             }}
           />
         )}
@@ -153,22 +162,19 @@ export function RecipeListPage() {
                     !isPlaceholderData &&
                     matches(recipes.length, hasNextPage, filters.q !== "")}
                 </p>
-                {/* From 1024 px the tags repeat here, each removable, so what narrows the grid
+                {/* From 1024 px the filters repeat here, each removable, so what narrows the grid
                     shows beside it (on a phone the chips and the Filters badge say it). The ✕
                     keeps the badge's size; its after: gives it a 44 px touch area. */}
-                {filters.tags.map((tag) => (
-                  <Badge key={tag} variant="secondary" className="hidden gap-0 py-0 pr-0 lg:flex">
-                    {tagLabel(tag)}
+                {applied.map(({ label, without }) => (
+                  <Badge key={label} variant="secondary" className="hidden gap-0 py-0 pr-0 lg:flex">
+                    {label}
                     <Button
                       type="button"
                       variant="ghost"
-                      aria-label={`Remove ${tagLabel(tag)}`}
+                      aria-label={`Remove ${label}`}
                       className="relative min-h-8 rounded-full px-2 after:absolute after:-inset-x-1.5 after:-inset-y-1.5 after:content-['']"
                       onClick={() => {
-                        clearFilters({
-                          ...filters,
-                          tags: filters.tags.filter((other) => other !== tag),
-                        });
+                        clearFilters(without);
                       }}
                     >
                       <X aria-hidden="true" className="size-3.5" />
@@ -181,7 +187,7 @@ export function RecipeListPage() {
                     variant="ghost"
                     className="px-2 text-sm underline underline-offset-4"
                     onClick={() => {
-                      clearFilters({ q: "", tags: [] });
+                      clearFilters({ ...noFilters, sort: filters.sort });
                     }}
                   >
                     Clear all
@@ -236,20 +242,20 @@ export function RecipeListPage() {
                 variant="outline"
                 className="mt-4"
                 onClick={() => {
-                  clearFilters({ q: "", tags: [] });
+                  clearFilters({ ...noFilters, sort: filters.sort });
                 }}
               >
-                {/* Named for what it clears: only a search is on, or tags too. */}
-                {filters.tags.length === 0 ? "Clear search" : "Clear filters"}
+                {/* Named for what it clears: only a search is on, or filters too. */}
+                {applied.length === 0 ? "Clear search" : "Clear filters"}
               </Button>
-              {/* The words may be there without the tags. */}
-              {filters.q !== "" && filters.tags.length > 0 && (
+              {/* The words may be there without the filters. */}
+              {filters.q !== "" && applied.length > 0 && (
                 <Button
                   type="button"
                   variant="ghost"
                   className="mx-auto mt-2 flex underline underline-offset-4"
                   onClick={() => {
-                    clearFilters({ ...filters, tags: [] });
+                    clearFilters(withoutFilters(filters));
                   }}
                 >
                   Search all recipes for “{filters.q}”
@@ -313,9 +319,6 @@ export function RecipeListPage() {
 // 2 columns on a phone, 3 at 768, 4 at 1024 (beside the Filters panel), 5 from 1280 (design §14).
 const gridClasses =
   "mt-4 grid grid-cols-2 gap-x-3 gap-y-5 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5";
-
-// The API's page, and how many a search answers (design §7).
-const PAGE_SIZE = 50;
 
 // "3 recipes match". A page with more after it says so rather than count them all; a search
 // answers only its best 50 (design §7), so a full one says that.

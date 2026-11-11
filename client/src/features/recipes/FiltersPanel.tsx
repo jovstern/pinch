@@ -1,25 +1,35 @@
 import { useId } from "react";
 import { Button } from "../../components/ui/Button.tsx";
-import { TagPicker } from "./TagPicker.tsx";
+import { FilterChoices } from "./FilterChoices.tsx";
+import type { RecipeFilters } from "./recipeQueries.ts";
 
 type FiltersPanelProps = {
-  selected: string[];
-  onChange: (tags: string[]) => void;
-  // Clear goes away once nothing is ticked: the page moves focus (RecipeListPage).
+  filters: RecipeFilters;
+  onChange: (filters: RecipeFilters) => void;
+  // Shown while a filter is on; it goes away with them, so the page moves focus (RecipeListPage).
+  filtered: boolean;
   onClear: () => void;
 };
 
-// The Filters from 1024 px: always open on the left, the same groups as the phone's sheet, as
-// checkboxes (design §14). The grid updates as they're ticked.
-export function FiltersPanel({ selected, onChange, onClear }: FiltersPanelProps) {
+// The Filters from 1024 px: always open on the left, the same groups as the phone's sheet but
+// Sort, which sits beside the search, as radios and checkboxes (design §14). The grid updates as
+// they're picked.
+export function FiltersPanel({ filters, onChange, filtered, onClear }: FiltersPanelProps) {
   const headingId = useId();
   return (
-    <aside aria-labelledby={headingId} className="hidden w-60 shrink-0 lg:block">
-      <div className="flex min-h-11 items-center justify-between">
+    // Its own column, held in view as the grid scrolls (sticky), and no taller than the screen
+    // under the header: a long list of tags scrolls inside it rather than lengthening the page.
+    // 8rem: the header (~5rem) and main's top padding (2rem) above it, and a gap below, so it fits
+    // before the page has scrolled too. The padding keeps its focus rings clear of its edges.
+    <aside
+      aria-labelledby={headingId}
+      className="sticky top-4 -mx-1.5 hidden max-h-[calc(100dvh-8rem)] w-63 shrink-0 self-start overflow-y-auto px-1.5 pb-1.5 lg:block"
+    >
+      <div className="mb-4 flex min-h-11 items-center justify-between">
         <h2 id={headingId} className="font-sans text-lg font-semibold">
           Filters
         </h2>
-        {selected.length > 0 && (
+        {filtered && (
           <Button
             type="button"
             variant="ghost"
@@ -30,7 +40,7 @@ export function FiltersPanel({ selected, onChange, onClear }: FiltersPanelProps)
           </Button>
         )}
       </div>
-      <TagPicker legend="Filter by tags" selected={selected} onChange={onChange} look="list" />
+      <FilterChoices filters={filters} onChange={onChange} withSort={false} look="list" />
     </aside>
   );
 }
