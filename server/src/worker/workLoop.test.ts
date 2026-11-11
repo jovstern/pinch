@@ -441,7 +441,6 @@ async function insertCached(fields: Partial<LinkDocument> = {}) {
     _id: new ObjectId(),
     key,
     version: cache.version,
-    url: "https://youtu.be/abc",
     platform: "youtube",
     draft: cachedDraft,
     thumbnail: picture,
@@ -485,7 +484,6 @@ test("a link not in the cache is read, and its answer kept there with its pictur
       _id: expect.any(ObjectId) as ObjectId,
       key,
       version: "v2",
-      url: "https://youtu.be/abc",
       platform: "youtube",
       draft,
       thumbnail: picture,
@@ -533,16 +531,15 @@ test("a failure, or a post that isn't a recipe, is never kept", async () => {
 
 test("pasted text is never looked up or kept", async () => {
   await insertCached();
-  const { _id } = await insertImport({ input: { type: "text", text: "Mix and bake." } });
-  const find = vi.spyOn(links, "findOne");
-  onTestFinished(() => {
-    find.mockRestore();
+  // Even with the cached post's key on it, text isn't a link: the extractor's draft, not the cache's.
+  const { _id } = await insertImport({
+    input: { type: "text", text: "Mix and bake." },
+    linkKey: key,
   });
 
   await run(await claim());
 
-  expect(find).not.toHaveBeenCalled();
-  expect(await imports.findOne({ _id })).toMatchObject({ status: "ready", draft });
+  expect((await imports.findOne({ _id }))?.draft).toEqual(draft);
   expect(await links.countDocuments()).toBe(1);
 });
 
@@ -568,4 +565,15 @@ test("a read answer for a job deleted meanwhile isn't kept", async () => {
   await run(job);
 
   expect(await links.countDocuments()).toBe(0);
+});
+
+test("a cached draft that no longer reads is a miss: the post is read again", async () => {
+  await insertCached({ draft: { ...cachedDraft, title: "" } });
+  const { _id } = await insertImport({ linkKey: key });
+  const extract = spyExtract();
+
+  await run(await claim(), extract);
+
+  expect(extract).toHaveBeenCalledOnce();
+  expect((await imports.findOne({ _id }))?.draft).toEqual(draft);
 });

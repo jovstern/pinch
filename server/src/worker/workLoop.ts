@@ -138,12 +138,14 @@ export async function runImport({ imports, cache, extract, logger, job, deadline
 
   // A post anyone pinched before: its answer and picture are copied into this import, with the
   // same fenced write as any end, so a deleted job still never turns ready. No yt-dlp, no Gemini
-  // (§4.6, D28). The key is logged, never the user.
+  // (§4.6, D28). Checked as any answer is; one that no longer reads goes the long way. The key is
+  // logged, never the user.
   const post = postOf(job);
   const cached = post && (await findCached(cache.links, post.key, cache.version));
-  if (cached) {
+  const cachedDraft = cached && RecipeDraftSchema.safeParse(cached.draft);
+  if (cached && cachedDraft?.success) {
     log.info({ key: cached.key }, "cache hit");
-    await save(readyUpdate(cached.draft, cached.thumbnail), "import ready");
+    await save(readyUpdate(cachedDraft.data, cached.thumbnail), "import ready");
     return;
   }
 
@@ -200,7 +202,7 @@ export async function runImport({ imports, cache, extract, logger, job, deadline
 // user's own), and only with its key (a job from before L1 has none, and goes the long way).
 function postOf(job: ImportDocument) {
   if (job.input.type !== "link" || !job.linkKey) return undefined;
-  return { key: job.linkKey, url: job.input.url, platform: job.input.platform };
+  return { key: job.linkKey, platform: job.input.platform };
 }
 
 // The update that makes an import ready to review, with its draft, and its picture when it comes

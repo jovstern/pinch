@@ -844,7 +844,6 @@ test("a link in the shared cache counts toward neither cap; one that isn't is re
     _id: new ObjectId(),
     key: linkKey(reel),
     version: EXTRACTION.gemini.version,
-    url: reel,
     platform: "instagram",
     draft,
     model: "gemini",

@@ -10,8 +10,8 @@ export type LinkDocument = {
   // The post (linkKey) and EXTRACTION_VERSION: unique together.
   key: string;
   version: string;
-  // The link it was first read from.
-  url: string;
+  // Not the link itself: its tracking parameters (igsh, si…) can name who shared it, and this
+  // collection has no owner and never expires. The key says which post it is.
   platform: Platform;
   draft: RecipeDraft;
   thumbnail?: StoredThumbnail;
@@ -34,7 +34,8 @@ export async function isCached(links: Collection<LinkDocument>, key: string, ver
 }
 
 // Keeps an answer; a fresher one replaces the one there, whole, so an old picture never stays
-// beside a new draft. Upsert: two workers saving the same post at once still leave one.
+// beside a new draft. Upsert: two workers saving the same post at once still leave one, as Mongo
+// retries a duplicate-key upsert itself when the filter is equality on the unique index's fields.
 export async function saveCached(links: Collection<LinkDocument>, link: Omit<LinkDocument, "_id">) {
   await links.replaceOne({ key: link.key, version: link.version }, link, { upsert: true });
 }

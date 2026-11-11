@@ -250,9 +250,10 @@ it to the recipe's `source.linkKey`. The key is stored, never sent: the client h
    before L1.
 2. **Anyone has it (L2).** The shared `links` collection keeps the model's answer for each post:
    one document per `{ key, version }`, with no owner. After the worker claims a link import it
-   looks there: on a hit it copies the draft and the pictures into the import with the same
-   fenced write as any attempt (§4.3) and makes it ready: no `yt-dlp`, no Gemini, and the user
-   reviews it as any draft. On a miss it runs as now and, when the answer is a recipe, upserts it
+   looks there: on a hit it checks the draft with `RecipeDraftSchema` (one that no longer reads
+   is a miss), copies it and the pictures into the import with the same fenced write as any
+   attempt (§4.3) and makes it ready: no `yt-dlp`, no Gemini, and the user reviews it as any
+   draft. On a miss it runs as now and, when the answer is a recipe, upserts it
    into `links` (a fresher answer replaces an older one, whole), once it has reached the import:
    an answer for a job deleted meanwhile isn't kept. A job with no `linkKey` (from before L1)
    isn't looked up. `links` is a cache, not a queue: nothing claims, leases or retries it, and the
@@ -271,7 +272,7 @@ it to the recipe's `source.linkKey`. The key is stored, never sent: the client h
 - **Free:** a hit costs no Gemini call, so it doesn't count against the daily cap (D22) or the
   global one (D30). `POST /api/imports` does the same `{ key, version }` lookup to decide, after
   L1's 409 and before either cap is counted; if the answer arrives between the two, the import is
-  at worst one free Gemini call. Retry is counted as before: a failed link is rare, and its
+  at worst one free Gemini call. Free hits are bounded only by the API's request rate. Retry is counted as before: a failed link is rare, and its
   retry is one route more to change for little.
 - **Private posts never reach it:** the worker fetches without logging in, so only public posts
   are ever read.
@@ -325,7 +326,7 @@ LoginAttempt {                     // M9: the login rate limit (§8.3)
 
 Link {                             // L2: the model's answer for a public post, shared (§4.6, D28)
   _id, key, version,               // unique together: "instagram:C9x…", EXTRACTION_VERSION
-  url, platform,
+  platform,                        // not the link: its tracking parameters can name who shared it
   draft: RecipeDraft,
   thumbnail?: { webp: Binary, small?: Binary, width, height },
   model, extractedAt

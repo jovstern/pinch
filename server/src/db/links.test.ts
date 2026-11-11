@@ -11,7 +11,6 @@ function anAnswer(key: string, version: string) {
     _id: new ObjectId(),
     key,
     version,
-    url: "https://www.instagram.com/reel/C9x/",
     platform: "instagram" as const,
     draft: { title: "Shakshuka", ingredients: [{ name: "eggs" }], steps: ["Cook it."], tags: [] },
     model: "gemini",
