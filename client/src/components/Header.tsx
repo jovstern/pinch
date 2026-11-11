@@ -24,9 +24,10 @@ function tabOf(pathname: string) {
 const tabClass =
   "inline-flex min-h-11 flex-1 items-center justify-center gap-1 rounded-control px-2 font-medium whitespace-nowrap max-[22.5rem]:text-sm sm:gap-1.5 sm:px-3 text-muted-foreground aria-[current=page]:bg-background aria-[current=page]:text-foreground aria-[current=page]:shadow-sm";
 
-// The app's frame, on every page (design §14, D24): the two tabs, Write a recipe and the avatar,
-// and the imports read for the tab's count. No logo for now. Phone: the tabs fill the row beside the avatar, and Write a recipe floats
-// bottom right on the two tabs' own pages. From 768 px: the tabs left, the rest right.
+// The app's frame, on every page (design §14, D24): the logo, the two tabs, Write a recipe and
+// the avatar, and the imports read for the tab's count. Phone: the P mark, then the tabs fill
+// the row beside the avatar, and Write a recipe floats bottom right on the two tabs' own pages.
+// From 768 px: the wordmark and the tabs left, the rest right.
 export function Header({ onTabPage }: { onTabPage: boolean }) {
   const { pathname } = useLocation();
   const tab = tabOf(pathname);
@@ -39,6 +40,40 @@ export function Header({ onTabPage }: { onTabPage: boolean }) {
 
   return (
     <header className="flex items-center gap-2 px-4 pt-3 md:gap-4 md:border-b md:border-border md:px-6 md:py-3">
+      {/* The logo (D24), as files in public/: inlined, its paths would cost the bundle, which
+          is at its budget (docs/metrics). The P mark on a phone, the wordmark from 768 px, each
+          in the dark accent in the dark theme. Its height is set and the files give its width,
+          so nothing moves as it loads; asked for at low priority, so it waits behind what the
+          page's content needs (LCP). On a phone the 44 px target reaches into the gutter
+          (-ml-4 pl-4, and -mr-2 for the gap), so the mark lines up with the page's edge and
+          takes 28 px from the tabs; under 360 px they need the whole row ("Add recipe 13",
+          "My recipes 120"), so there is no mark there. The focus ring is the mark's: the
+          target's would be cut off at the screen's edge (! over the global ring, which is
+          outside Tailwind's layers). */}
+      <Link
+        to="/"
+        aria-label="Pinch, Add recipe"
+        className="group -mr-2 -ml-4 hidden min-h-11 w-11 shrink-0 items-center pl-4 focus-visible:outline-none! min-[22.5rem]:flex md:mx-0 md:w-auto md:pl-0"
+      >
+        <picture>
+          <source
+            media="(min-width: 48rem) and (prefers-color-scheme: dark)"
+            srcSet="/logo-dark.svg"
+            width={79}
+            height={32}
+          />
+          <source media="(min-width: 48rem)" srcSet="/logo.svg" width={79} height={32} />
+          <source media="(prefers-color-scheme: dark)" srcSet="/logo-mark-dark.svg" />
+          <img
+            src="/logo-mark.svg"
+            alt="Pinch"
+            width={21}
+            height={28}
+            fetchPriority="low"
+            className="h-7 w-auto rounded-sm group-focus-visible:outline-2 group-focus-visible:outline-offset-2 group-focus-visible:outline-ring md:h-8"
+          />
+        </picture>
+      </Link>
       {/* Links in a nav, not Radix Tabs: each tab is its own page with its own address, and
           Radix Tabs is for panels that switch within one page. It only borrows their look. */}
       <nav
