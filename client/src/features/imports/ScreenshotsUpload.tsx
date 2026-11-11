@@ -1,5 +1,4 @@
 import {
-  dailyLimitMessage,
   ImportSchema,
   MAX_SCREENSHOT_BYTES,
   MAX_SCREENSHOTS,
@@ -12,7 +11,7 @@ import { useId, useState } from "react";
 import { Button } from "../../components/ui/Button.tsx";
 import { ApiError, sendForm } from "../../lib/api.ts";
 import { toastPinching } from "../../lib/toasts.tsx";
-import { cancelImport, importListQuery } from "./importQueries.ts";
+import { cancelImport, importListQuery, limitMessage } from "./importQueries.ts";
 
 // The second way in on / (design §1, §14): screenshots of a post whose link and text won't do.
 // Choosing them sends them at once: the picker's Open is the confirm. Checked here first, with
@@ -50,6 +49,8 @@ export function ScreenshotsUpload() {
   }
 
   const message = errorMessage(refused, upload.error);
+  // A day's limit is a quiet note, as under the paste box; the rest are errors.
+  const limit = refused ? undefined : limitMessage(upload.error);
   return (
     <div className="mt-2">
       {/* Quiet, under the field: the paste is the main way in (design §14). A label with
@@ -77,7 +78,12 @@ export function ScreenshotsUpload() {
       <p id={hintId} className="text-sm text-muted-foreground">
         Up to {MAX_SCREENSHOTS} screenshots of the recipe, when its link and text won't do.
       </p>
-      {message && (
+      {/* The limit's live region is always on the page (empty until then), so screen readers
+          hear it; an error is an alert. Either one is the input's description. */}
+      <p id={limit && errorId} role="status" className="text-sm text-text-muted not-empty:mt-1">
+        {limit}
+      </p>
+      {message && !limit && (
         <p id={errorId} role="alert" className="mt-1 text-sm text-destructive">
           {message}
         </p>
@@ -87,13 +93,10 @@ export function ScreenshotsUpload() {
 }
 
 // The pick refused here, or as the paste box says a failed send: the API's message for the
-// files, the day's cap, or a plain retry.
+// files, the day's cap (the user's or everyone's), or a plain retry.
 function errorMessage(refused: boolean, error: Error | null) {
   if (refused) return screenshotsMessage;
   if (!error) return undefined;
-  if (error instanceof ApiError) {
-    if (error.fields.images) return error.fields.images;
-    if (error.status === 429) return dailyLimitMessage;
-  }
-  return "We couldn't send these. Try again.";
+  if (error instanceof ApiError && error.fields.images) return error.fields.images;
+  return limitMessage(error) ?? "We couldn't send these. Try again.";
 }

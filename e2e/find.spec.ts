@@ -1,6 +1,6 @@
 import { expect, test } from "./fixtures.ts";
 
-// M3's flow, and its demo (pr-demo skill), on the sample recipes (playwright.config.ts): a
+// M3's flow, and its demo (pr-demo skill), on the sample recipes (e2e/fixtures.ts): a
 // word, then a tag, kept in the address through a reload. The pauses let a viewer follow it.
 test("find a recipe by a word and a tag, and keep the search on reload", async ({ page }) => {
   await page.goto("/recipes");
@@ -30,7 +30,7 @@ test("find a recipe by a word and a tag, and keep the search on reload", async (
 });
 
 // M8 F1: the Sort beside the search and a time in the Filters panel (Desktop Chrome), kept in
-// the address. The other files add recipes as they run, so it checks the samples only.
+// the address, on the sample recipes (e2e/fixtures.ts).
 test("sort by the quickest and filter by time, kept in the address", async ({ page }) => {
   await page.goto("/recipes");
   await page.getByRole("combobox", { name: "Sort" }).selectOption("Quickest");

@@ -55,6 +55,15 @@ export function dismissToast(id: string) {
   );
 }
 
+// Every toast closed: a session that ended mid-visit (SessionGate) leaves nothing of the user's.
+export function dismissAllToasts() {
+  if (!toastSent) return;
+  import("sonner").then(
+    ({ toast }) => toast.dismiss(),
+    () => undefined,
+  );
+}
+
 // Undo, on the toasts of a send or a delete (design D27). What it does is the caller's: a request,
 // then the queries to refresh. Sonner closes the toast as it's pressed; a failure says so, with
 // Try again. A 404 isn't the connection: what it would bring back is gone (deleted for good, or in
@@ -123,9 +132,29 @@ export function toastImportFailed(
   });
 }
 
-// Past the day's cap (design §1): trying again won't help, so no Try again.
-export function toastDailyLimit(message: string) {
-  showToast("error", message, { duration: untilClosed, closeButton: true });
+// A link the user pinched before (design §4.6): not an error, a pointer to what they have. A
+// draft of it that's ready has the queue's own toast (toastReady); these two are neutral, as
+// nothing has just finished.
+export function toastAlreadySaved(title: string, view: () => void) {
+  showToast("message", "Already in My recipes", {
+    description: title,
+    duration: normal,
+    action: { label: "View", onClick: view },
+  });
+}
+
+// A link the worker already has: it says where it is, as there's nothing to open yet.
+export function toastAlreadyPinching() {
+  showToast("message", "Already pinching it", {
+    description: "It's in your queue",
+    duration: normal,
+  });
+}
+
+// Past the day's cap, the user's or everyone's (design §1, D30): trying again won't help, so no
+// Try again. Neutral, not red: a limit isn't something that went wrong (as under the paste box).
+export function toastLimit(message: string) {
+  showToast("message", message, { duration: untilClosed, closeButton: true });
 }
 
 // A new recipe in My recipes, from Review or written by hand. Without the wireframe's View:

@@ -143,10 +143,11 @@ export const sampleRecipes: RecipeInput[] = [
   },
 ];
 
-// Adds the samples that aren't there, as the dev user's (design §8.3). Each has a fixed id, so
-// they belong to one owner, and $setOnInsert writes only when the upsert inserts: running it
-// again leaves an edited sample as it is and puts back a deleted one, whether still kept for Undo
-// (D27) or gone (mongodb.md: idempotent).
+// Adds the samples that aren't there, as this user's (design §8.3). Each has a fixed id, so
+// they belong to one account per database: seeding a second one fails on the duplicate _id
+// rather than doing nothing. $setOnInsert writes only when the upsert inserts: running it again
+// leaves an edited sample as it is and puts back a deleted one, whether still kept for Undo (D27)
+// or gone (mongodb.md: idempotent).
 export async function seedRecipes(db: Db, ownerId: ObjectId) {
   const now = Date.now();
   const writes: AnyBulkWriteOperation<RecipeDocument>[] = sampleRecipes.map((sample, index) => {
@@ -155,7 +156,7 @@ export async function seedRecipes(db: Db, ownerId: ObjectId) {
     return {
       updateOne: {
         // "5eed" and the sample's number, padded to an ObjectId's 24 hex digits.
-        filter: { _id: new ObjectId(`5eed${String(index).padStart(20, "0")}`) },
+        filter: { _id: new ObjectId(`5eed${String(index).padStart(20, "0")}`), ownerId },
         update: {
           $setOnInsert: {
             // Parsed like a POST body, so a sample with a typo in a tag fails here.

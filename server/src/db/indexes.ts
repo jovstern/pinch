@@ -1,8 +1,12 @@
 import type { Db } from "mongodb";
 import { importsCollection } from "./imports.ts";
+import { linksCollection } from "./links.ts";
+import { loginAttemptsCollection } from "./loginAttempts.ts";
 import { recipesCollection, TITLE_COLLATION } from "./recipes.ts";
+import { sessionsCollection } from "./sessions.ts";
 import { DELETED_KEPT_SECONDS } from "./softDelete.ts";
 import { usageCollection } from "./usage.ts";
+import { usersCollection } from "./users.ts";
 
 // Every query the app runs has its index here (design §6, mongodb.md); `npm run db:indexes`
 // creates them. One that already exists is left as it is, so it's safe to run again.
@@ -46,9 +50,29 @@ export async function createIndexes(db: Db) {
     deletedTtl,
   ]);
   await usageCollection(db).createIndexes([
-    // One count per user per day (countImport), unique so two firsts can't make two.
+    // One count per user per day (and one "all" count per day, D30) (countImport), unique so two
+    // firsts can't make two.
     { key: { ownerId: 1, day: 1 }, unique: true },
     // TTL: a day's count goes two days later.
+    { key: { expiresAt: 1 }, expireAfterSeconds: 0 },
+  ]);
+  // The shared answers (design §4.6): the worker's lookup and upsert, and the API's free-hit check.
+  // Unique, so two workers saving the same post at once leave one.
+  await linksCollection(db).createIndexes([{ key: { key: 1, version: 1 }, unique: true }]);
+  await usersCollection(db).createIndexes([
+    // Login finds the account by its email; unique, so one account per email (design §8.3).
+    { key: { email: 1 }, unique: true },
+    // A Google sign-in finds its account (A4). Sparse: password accounts have no googleId.
+    { key: { googleId: 1 }, unique: true, sparse: true },
+  ]);
+  await sessionsCollection(db).createIndexes([
+    // Every signed-in request finds its session by the cookie's hash (currentUser).
+    { key: { tokenHash: 1 }, unique: true },
+    // TTL: a session goes once it expires, 30 days after sign-in.
+    { key: { expiresAt: 1 }, expireAfterSeconds: 0 },
+  ]);
+  // The login rate limit's counts are found by _id; TTL: each goes once its minute is over.
+  await loginAttemptsCollection(db).createIndexes([
     { key: { expiresAt: 1 }, expireAfterSeconds: 0 },
   ]);
 }

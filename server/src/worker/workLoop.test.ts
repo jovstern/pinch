@@ -10,13 +10,23 @@ import {
   type ImportDocument,
 } from "../db/imports.ts";
 import { createIndexes } from "../db/indexes.ts";
+import { linksCollection, type LinkDocument } from "../db/links.ts";
 import { createTestDb } from "../testDb.ts";
-import { FAILED_MESSAGE, NoRetryError, runImport, workLoop, type Extract } from "./workLoop.ts";
+import {
+  FAILED_MESSAGE,
+  NoRetryError,
+  runImport,
+  workLoop,
+  type Extract,
+  type LinkCache,
+} from "./workLoop.ts";
 
 const db = createTestDb();
 await createIndexes(db);
 const imports = importsCollection(db);
 const logger = pino({ level: "silent" });
+const links = linksCollection(db);
+const cache: LinkCache = { links, model: "test-model", version: "v2" };
 
 const draft: RecipeInput = {
   title: "Tomato pasta",
@@ -37,7 +47,7 @@ function run(
   extract: Extract = extractNow,
   deadline = new AbortController().signal,
 ) {
-  return runImport({ imports, extract, logger, job, deadline });
+  return runImport({ imports, cache, extract, logger, job, deadline });
 }
 
 // Claims the one job waiting, as the loop does.
@@ -51,6 +61,7 @@ async function claim(now = new Date()) {
 // would be claimed too.
 beforeEach(async () => {
   await imports.deleteMany({});
+  await links.deleteMany({});
 });
 
 // A job as POST /api/imports makes it, with any field changed.
@@ -380,7 +391,7 @@ test("the loop runs waiting jobs, and finishes a job whose worker died", async (
   });
   const stop = new AbortController();
 
-  const loop = workLoop({ imports, extract: extractNow, logger, signal: stop.signal });
+  const loop = workLoop({ imports, cache, extract: extractNow, logger, signal: stop.signal });
   for (const { _id } of [waiting, crashed]) {
     await expect.poll(async () => (await imports.findOne({ _id }))?.status).toBe("ready");
   }
@@ -400,11 +411,169 @@ test("the loop goes on after a database error, and runs the job once it can", as
   });
   const stop = new AbortController();
 
-  const loop = workLoop({ imports, extract: extractNow, logger, signal: stop.signal });
+  const loop = workLoop({ imports, cache, extract: extractNow, logger, signal: stop.signal });
   // It waits a second after the error, as when idle.
   await expect
     .poll(async () => (await imports.findOne({ _id }))?.status, { timeout: 3000 })
     .toBe("ready");
   stop.abort();
   await loop;
+});
+
+// The shared answers (design §4.6, D28): a link anyone pinched before is copied, not read again.
+const key = "youtube:abc";
+const picture = {
+  webp: new Binary(Buffer.from("webp")),
+  small: new Binary(Buffer.from("small")),
+  width: 400,
+  height: 500,
+};
+const cachedDraft = {
+  ...draft,
+  title: "Shakshuka",
+  emoji: "🍳",
+  uncertain: [{ path: "servings", reason: "The video doesn't say." }],
+};
+
+// An answer in the cache for youtu.be/abc, at the worker's version unless another is given.
+async function insertCached(fields: Partial<LinkDocument> = {}) {
+  await links.insertOne({
+    _id: new ObjectId(),
+    key,
+    version: cache.version,
+    platform: "youtube",
+    draft: cachedDraft,
+    thumbnail: picture,
+    model: "test-model",
+    extractedAt: new Date(),
+    ...fields,
+  });
+}
+
+// An extractor that remembers it was called, and saves a picture as a real one does.
+function spyExtract() {
+  return vi.fn<Extract>(async (_input, _signal, { setThumbnail }) => {
+    await setThumbnail(picture);
+    return draft;
+  });
+}
+
+test("a link in the cache is copied, picture and all, and is ready without reading the post", async () => {
+  await insertCached();
+  const { _id } = await insertImport({ linkKey: key });
+  const extract = spyExtract();
+
+  await run(await claim(), extract);
+
+  expect(extract).not.toHaveBeenCalled();
+  const saved = await imports.findOne({ _id });
+  expect(saved).toMatchObject({ status: "ready", draft: cachedDraft, thumbnail: picture });
+  expect(saved).not.toHaveProperty("leaseUntil");
+});
+
+test("a link not in the cache is read, and its answer kept there with its picture", async () => {
+  const { _id } = await insertImport({ linkKey: key });
+  const extract = spyExtract();
+
+  await run(await claim(), extract);
+
+  expect(extract).toHaveBeenCalledOnce();
+  expect(await imports.findOne({ _id })).toMatchObject({ status: "ready", draft });
+  expect(await links.find({ key }).toArray()).toEqual([
+    {
+      _id: expect.any(ObjectId) as ObjectId,
+      key,
+      version: "v2",
+      platform: "youtube",
+      draft,
+      thumbnail: picture,
+      model: "test-model",
+      extractedAt: expect.any(Date) as Date,
+    },
+  ]);
+});
+
+test("an answer from another version is a miss, and the new one is kept beside it", async () => {
+  await insertCached({ version: "v1" });
+  await insertImport({ linkKey: key });
+  const extract = spyExtract();
+
+  await run(await claim(), extract);
+
+  expect(extract).toHaveBeenCalledOnce();
+  expect(await links.countDocuments({ key })).toBe(2);
+});
+
+test("a fresher answer replaces the one there", async () => {
+  await insertImport({ linkKey: key });
+  // Another worker saves an answer for the same post while this one reads it.
+  const extract: Extract = async () => {
+    await insertCached({ thumbnail: undefined });
+    return draft;
+  };
+
+  await run(await claim(), extract);
+
+  const kept = await links.find({ key }).toArray();
+  expect(kept).toHaveLength(1);
+  expect(kept[0]?.draft).toEqual(draft);
+});
+
+test("a failure, or a post that isn't a recipe, is never kept", async () => {
+  await insertImport({ linkKey: key });
+  await run(await claim(), extractFails);
+  await imports.deleteMany({});
+  await insertImport({ linkKey: key });
+  await run(await claim(), () => Promise.reject(new NoRetryError("Not a recipe.")));
+
+  expect(await links.countDocuments()).toBe(0);
+});
+
+test("pasted text is never looked up or kept", async () => {
+  await insertCached();
+  // Even with the cached post's key on it, text isn't a link: the extractor's draft, not the cache's.
+  const { _id } = await insertImport({
+    input: { type: "text", text: "Mix and bake." },
+    linkKey: key,
+  });
+
+  await run(await claim());
+
+  expect((await imports.findOne({ _id }))?.draft).toEqual(draft);
+  expect(await links.countDocuments()).toBe(1);
+});
+
+test("a cache hit on a job the user deleted saves nothing", async () => {
+  await insertCached();
+  const { _id } = await insertImport({ linkKey: key });
+  const job = await claim();
+  await imports.updateOne({ _id }, { $set: { deletedAt: new Date() } });
+
+  await run(job);
+
+  const left = await imports.findOne({ _id });
+  expect(left).toMatchObject({ status: "processing" });
+  expect(left).not.toHaveProperty("draft");
+  expect(left).not.toHaveProperty("thumbnail");
+});
+
+test("a read answer for a job deleted meanwhile isn't kept", async () => {
+  const { _id } = await insertImport({ linkKey: key });
+  const job = await claim();
+  await imports.updateOne({ _id }, { $set: { deletedAt: new Date() } });
+
+  await run(job);
+
+  expect(await links.countDocuments()).toBe(0);
+});
+
+test("a cached draft that no longer reads is a miss: the post is read again", async () => {
+  await insertCached({ draft: { ...cachedDraft, title: "" } });
+  const { _id } = await insertImport({ linkKey: key });
+  const extract = spyExtract();
+
+  await run(await claim(), extract);
+
+  expect(extract).toHaveBeenCalledOnce();
+  expect((await imports.findOne({ _id }))?.draft).toEqual(draft);
 });

@@ -221,7 +221,7 @@ Instagram, 3 Facebook). `yt-dlp` read all of them without cookies; Gemini turned
 recipes, correctly rejected one promo, and one call hung. Results and findings are in
 `docs/spike-results.md`.
 
-### 4.6 A link pinched before (D28; L1 built in M9, L2 planned)
+### 4.6 A link pinched before (D28; L1 and L2 built in M9)
 
 Every link import carries `linkKey`, the post it points to: `instagram:C9x…`, `youtube:abc`,
 `facebook:123…` (`shared/src/linkKey.ts`: Instagram's `/reel/`, `/reels/`, `/p/` and `/tv/`,
@@ -241,7 +241,7 @@ it to the recipe's `source.linkKey`. The key is stored, never sent: the client h
    (`DuplicateLinkSchema`): `existing` is `{ kind: "recipe", id, title }` or `{ kind: "import",
    id, status, title?, lookAt? }`, a ready draft's title and its count of things to look at. It's
    answered before the daily cap is counted, so nothing is queued or counted. The client shows it
-   as a toast, not an error: "Already in My recipes · Shakshuka" (View), "Already pinching it",
+   as a toast, not an error: "Already in My recipes · Shakshuka" (View), "Already pinching it" ("It's in your queue"),
    "Shakshuka is ready to review" (Review). A deleted recipe and a failed import don't count:
    pinching again is asking for it again, so the new import deletes (D27) the failed ones of that
    link, whose Retry would make a second recipe. Two tabs pasting the same link at the same
@@ -250,22 +250,30 @@ it to the recipe's `source.linkKey`. The key is stored, never sent: the client h
    before L1.
 2. **Anyone has it (L2).** The shared `links` collection keeps the model's answer for each post:
    one document per `{ key, version }`, with no owner. After the worker claims a link import it
-   looks there: on a hit it copies the draft and the pictures into the import with the same
-   fenced write as any attempt (§4.3) and makes it ready: no `yt-dlp`, no Gemini, and the user
-   reviews it as any draft. On a miss it runs as now and, when the answer is a recipe, upserts it
-   into `links` (a fresher answer replaces an older one). `links` is a cache, not a queue:
-   nothing claims, leases or retries it, and the queue stays `imports`.
+   looks there: on a hit it checks the draft with `RecipeDraftSchema` (one that no longer reads
+   is a miss), copies it and the pictures into the import with the same fenced write as any
+   attempt (§4.3) and makes it ready: no `yt-dlp`, no Gemini, and the user reviews it as any
+   draft. On a miss it runs as now and, when the answer is a recipe, upserts it
+   into `links` (a fresher answer replaces an older one, whole), once it has reached the import:
+   an answer for a job deleted meanwhile isn't kept. A job with no `linkKey` (from before L1)
+   isn't looked up. `links` is a cache, not a queue: nothing claims, leases or retries it, and the
+   queue stays `imports`. The worker logs `cache hit` with the key, never the user.
 
 - **The version** is a short hash of the model, the prompt and the response schema
-  (`EXTRACTION_VERSION`), so a change to any of them stops old answers matching, with no bump to
-  forget.
+  (`EXTRACTION_VERSION`: the first 12 hex characters of SHA-256 over the three, in
+  `geminiExtract.ts`), so a change to any of them stops old answers matching, with no bump to
+  forget. The fake extractor's is `fake-1`, so its answers never mix with Gemini's. The API and
+  the worker both read it from `EXTRACTION[EXTRACTOR]` (`server/src/extraction.ts`): each reads
+  `EXTRACTOR` from the same `.env`.
 - **Only recipes are kept:** a failure, "not a recipe" and "too long" never are. Text and
   screenshot imports are never looked up or kept: they're one user's own.
 - **Copies, not references:** a user's import and recipe get their own copy, so editing,
   tagging or deleting theirs never touches the shared answer or anyone else's.
 - **Free:** a hit costs no Gemini call, so it doesn't count against the daily cap (D22) or the
-  global one (D30). `POST /api/imports` does the same `{ key, version }` lookup to decide; if the
-  answer arrives between the two, the import is at worst one free Gemini call.
+  global one (D30). `POST /api/imports` does the same `{ key, version }` lookup to decide, after
+  L1's 409 and before either cap is counted; if the answer arrives between the two, the import is
+  at worst one free Gemini call. Free hits are bounded only by the API's request rate. Retry is counted as before: a failed link is rare, and its
+  retry is one route more to change for little.
 - **Private posts never reach it:** the worker fetches without logging in, so only public posts
   are ever read.
 - **A wrong answer** is served to everyone until the prompt or the model changes; for now
@@ -311,9 +319,14 @@ Session {                          // M9: a signed-in browser (§8.3)
   createdAt, expiresAt             // TTL
 }
 
+LoginAttempt {                     // M9: the login rate limit (§8.3)
+  _id: "email a@b.com 2026-11-11T10:05",   // what is counted ("ip …" or "email …") and its minute
+  tries, expiresAt                 // TTL: two minutes later
+}
+
 Link {                             // L2: the model's answer for a public post, shared (§4.6, D28)
   _id, key, version,               // unique together: "instagram:C9x…", EXTRACTION_VERSION
-  url, platform,
+  platform,                        // not the link: its tracking parameters can name who shared it
   draft: RecipeDraft,
   thumbnail?: { webp: Binary, small?: Binary, width, height },
   model, extractedAt
@@ -404,15 +417,17 @@ Every query that answers imports leaves them out.
 | links | `{ key: 1, version: 1 }` unique | The worker's lookup and upsert (L2) |
 | users | `{ email: 1 }` unique; `{ googleId: 1 }` unique, sparse | Sign-in (M9) |
 | sessions | `{ tokenHash: 1 }` unique; `{ expiresAt: 1 }` TTL | Every request's user; old sessions go (M9) |
+| loginAttempts | `{ expiresAt: 1 }` TTL (found by `_id`, so no other index) | Old minutes' counts go (M9) |
 
 Every index is checked with `.explain("executionStats")`: expect `IXSCAN`, and
 `totalDocsExamined` close to `nReturned` (a search fetches each match twice, by the text match
 and the not-deleted check, D27: still only the matches).
 
-**Sample data:** `npm run db:seed` adds ten sample recipes for the dev user (§8.3), so the
-list, search and filters have something to find; the e2e run seeds its own database the same
-way. Each sample has a fixed id and is written only when it's missing: running it again
-leaves an edited sample as it is, and puts back one that was deleted.
+**Sample data:** `npm run db:seed <email>` adds ten sample recipes for that account (sign up
+first, §8.3), so the list, search and filters have something to find; each e2e file's user gets
+the same ten through the API (`e2e/fixtures.ts`). Each sample has a fixed id and is written only
+when it's missing: running it again leaves an edited sample as it is, and puts back one that was
+deleted. The fixed ids make them one account's per database: seeding a second fails.
 
 ## 7. Find
 
@@ -485,7 +500,7 @@ DELETE /api/recipes/:id                kept an hour, to undo (D27) → 204
 POST   /api/recipes/:id/restore        Undo of a delete → 200 recipe (404 once it's gone for good)
 GET    /api/recipes/:id/thumbnail      image/webp (?size=small: the 160 × 200 tile, §5)
 
-POST   /api/imports                    { type: "link", url } | { type: "text", text }  → 202 import (429 past the daily cap; 409 { existing } when this user has the link, L1)
+POST   /api/imports                    { type: "link", url } | { type: "text", text }  → 202 import (429 `daily_limit` past the user's daily cap, `global_limit` past everyone's, D30; 409 { existing } when this user has the link, L1)
 POST   /api/imports/screenshots        a form: up to 4 images (10 MB each) as "images"  → 202 import { type: "images", count }
 GET    /api/imports                    my imports that are not done yet (a ready one's draft with its marks: the queue counts them)
 GET    /api/imports/:id                status, step, error, draft (with its uncertain marks, §6)
@@ -495,12 +510,13 @@ POST   /api/imports/:id/retry          failed → pending, attempts, error and n
 DELETE /api/imports/:id                discard / dismiss / Pinch it's Undo: kept an hour (D27) → 204
 POST   /api/imports/:id/restore        Undo of a discard or a dismiss → 200 import, as it was
 
-POST   /api/auth/signup                { email, password, name } → 201 me, signed in (M9)
-POST   /api/auth/login                 { email, password } → 200 me (401 the same for either wrong)
-POST   /api/auth/logout                → 204
+POST   /api/auth/signup                { email, password, name } → 201 me, signed in (M9; 409 when the email has an account; 429 past 10 a minute per IP)
+POST   /api/auth/login                 { email, password } → 200 me (401 the same for either wrong; 429 past the rate limit)
+POST   /api/auth/logout                → 204 (with Content-Type: application/json, else 415)
 GET    /api/auth/me                    → 200 { id, email, name } (401 signed out)
-GET    /api/auth/google                → 302 to Google
-GET    /api/auth/google/callback       → signed in, 302 to where they were
+GET    /api/auth/providers             → 200 { google: boolean } (Google is on only with its settings)
+GET    /api/auth/google?next=…         → 302 to Google (404 without Google's settings; counted as a login per IP)
+GET    /api/auth/google/callback       → signed in, 302 to next; a failure → 302 /login?error=google&reason=… (counted per IP too)
 ```
 
 One set of **Zod schemas** defines the Gemini output, the API input and the TypeScript types,
@@ -525,29 +541,126 @@ them. No try/catch in each route.
 
 ### 8.3 Accounts (M9, D29)
 
-Until M9 a small middleware sets `req.userId` from config `DEV_USER_ID` (not a secret, so it has
-a default and needs no `.env` entry; `db:seed` creates that user). Every query already filters
-by `ownerId: req.userId`, so M9 changes **only that middleware**: it reads the session instead,
-and a request without one gets 401 (the health routes and `/api/auth/*` stay open).
+Until M9 a small middleware set `req.userId` from config `DEV_USER_ID`. Every query already
+filtered by `ownerId: req.userId`, so M9 changed **only that middleware**: `requireUser`
+(`server/src/requireUser.ts`), in front of `/api/recipes` and `/api/imports`, reads the session
+(`currentSession`: one lookup by the token's hash, not the account) and sets `req.userId`; a
+request without a live session gets 401 `signed_out`. The health routes and `/api/auth/*` stay
+open; `GET /api/auth/me` answers 200 with the user, or with `null` when nobody is signed in:
+signed out is a state every signed-out page asks about first, not an error (a 401 is logged in
+the browser's console). Another user's recipe or import is a 404, as before. The worker is unchanged: it reads
+`ownerId` from each job.
 
 - **Sign-up is open:** email and password, or Google. Each account has the daily cap of 20
   (D22); a global daily cap on Gemini calls (D30) bounds what many accounts can spend.
-- **Passwords:** argon2id; emails stored lowercase; at least 8 characters, no other rules.
-- **Sessions:** a random 32-byte token in an `HttpOnly; Secure; SameSite=Lax` cookie; the
-  database keeps only its SHA-256 hash in `sessions`, with a TTL index (30 days). A new session
-  on every sign-in; logout deletes it.
-- **Login:** the same error for a wrong email or a wrong password, and a rate limit (per IP and
-  per email, counted in Mongo: a few tries a minute).
-- **Google:** the OpenID Connect code flow (`state` and PKCE), the ID token checked against
-  Google's keys. A Google sign-in whose email (verified by Google) already has an account signs
-  into that account and stores its `googleId`; otherwise it makes one. The client ID and secret
-  live in `.env` (`GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`), set by the user.
-- **CSRF:** SameSite=Lax, one origin (Vite proxies `/api` in dev), JSON-only mutations.
-- **The client:** Log in and Sign up pages (with "Continue with Google"); a signed-out visit, or
-  any 401 from the API, goes to `/login` and comes back where it was; the avatar becomes a menu
-  with the name and Log out.
-- **The dev user's data:** `npm run db:adopt-dev-data <email>`, run once, gives the dev user's
-  recipes, imports and usage to that account.
+- **Passwords:** argon2id (`@node-rs/argon2`, its default parameters: prebuilt, no compiler);
+  emails stored lowercase; at least 8 characters (and at most 200), no other rules. A second
+  sign-up with an email answers 409. Sign-ups are limited to 10 a minute per IP, counted before
+  the hash: each hash takes 19 MiB, so a burst could exhaust the server's memory.
+- **Sessions:** a random 32-byte token (base64url) in a `pinch_session` cookie,
+  `HttpOnly; SameSite=Lax; Path=/`, 30 days' `Max-Age`, and `Secure` in production
+  (`NODE_ENV`); development and tests run on `http://localhost`, so the API turns it off there,
+  while `createApp` defaults to Secure, so a caller who forgets gets the safe one; the database keeps only its
+  SHA-256 hash in `sessions`, with `expiresAt` 30 days out and a TTL index. A session past its
+  `expiresAt` counts as none before the TTL deletes it. Beside it, a **hint cookie**,
+  `pinch_signed_in=1` (`SameSite=Lax; Path=/`, the same `Max-Age` and `Secure`, but not
+  `HttpOnly`): set with every session (and by `me` for a session that lacks it), cleared by logout, and cleared by any answer to a request
+  without a live session (`requireUser`'s 401, `me`'s `null`). `index.html` reads it in a tiny
+  inline script and preloads `/api/imports` only when it's there, and `main.tsx` waits for the
+  queue before rendering `/` only then, so a signed-out page asks for nothing that would answer
+  401. It's only a hint: it holds nothing secret, and the API decides
+  from the session alone; a wrong hint costs at most one unused preload, or the queue asked a
+  moment later. Pinch sets no Content-Security-Policy; one would need the script's hash
+  (`script-src 'sha256-…'`). A new session on every sign-in, which
+  ends the browser's previous one if it sent its cookie; logout deletes it and clears the cookie. `currentUser` (`server/src/session.ts`) reads the cookie
+  with a few lines, not a package.
+- **Login:** the same 401 for a wrong email or a wrong password; an unknown email is still
+  checked against a fixed hash, so the time doesn't tell which emails have accounts. A rate
+  limit counted in Mongo (`loginAttempts`): 5 tries a minute per email and 20 per IP (a
+  household shares one), each an atomic `$inc` on a document per key and minute, a fixed
+  window, by a clock the app is given (tests pin it); past either, 429. Accepted for the POC:
+  anyone can lock an email out for a minute at a time by failing 5 logins with it. The IP is
+  Express's `req.ip`: `TRUST_PROXY` (config) is how many proxies stand in front of the API,
+  default 0 (the connection's address; in development that's Vite's proxy, so everyone shares
+  one); behind a real proxy it's set to that count, never `true`, which would let anyone pick
+  their IP from `X-Forwarded-For`. An IPv6 address is counted whole, not by its /64, so someone
+  with a /64 to rotate through gets many IPs' tries: the per-email limit still holds.
+- **Google:** the OpenID Connect code flow with `state`, a `nonce` and PKCE (S256), written by
+  hand in `server/src/google.ts` and `routes/google.ts`: two plain requests and `jose`'s
+  `jwtVerify`, which checks the ID token's signature against Google's published keys (fetched
+  once and kept; RS256 only), its issuer, its audience (our client ID) and its expiry; `openid-client` would
+  hide the steps a learner should see, for no fewer lines. `GET /api/auth/google?next=…` (counted
+  with the logins per IP) makes the state, nonce and code verifier, keeps them with `next` (made
+  safe as the client's `nextPage` does, `//` after its dots included) in a `pinch_google` cookie (base64url JSON, `HttpOnly;
+  SameSite=Lax; Path=/api/auth/google`, 10 minutes' `Max-Age`, `Secure` as the session's) and
+  sends the browser to Google with `scope=openid email profile` and the verifier's SHA-256. The
+  cookie needs no signature: it never leaves the browser but to these routes, no script reads
+  it, and changing it gains nothing, as Google's answer must match it; and no collection is
+  needed. A sibling subdomain could set ("toss") it, which a signature would stop; accepted, as
+  Pinch has one origin and no subdomains of its own. `/callback` clears it (one use), counts
+  with the logins per IP (`too_many_tries`), then checks in order: the cookie is there
+  (`expired`), the state matches (`state`), a code came (`denied`: a refused consent), the
+  exchange with the verifier (10 s at most) and the ID token (`token`; the log keeps jose's
+  error code and message, not the error, which carries the token's claims), the nonce (`nonce`), `email_verified`
+  (`unverified`); each failure goes to `/login?error=google&reason=<that word>`, never Google's
+  own words. Its query (the code and state) is left out of the request's log line. Then the
+  account: the one with this `googleId` (Google's `sub`); else the one with the email
+  (lowercase) and no `googleId`, linked by storing it, which also **drops its password and ends
+  its sessions**: Google proved the email is theirs, the unverified password hasn't (someone
+  could have signed up with it first and waited); else a new one with Google's name and no
+  password. An email whose account has another `googleId` can't sign in this way
+  (`linked_elsewhere`). A new session, then a 302 to `next`. The routes take
+  Google as a dependency of `createApp` (`google`, built by `googleFromConfig`), so the tests
+  pass a fake exchange and need no network; `jose`'s check has its own tests with a key of
+  their own. Without `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` (in `.env`, set by the user)
+  the routes are 404 and `GET /api/auth/providers` says `{ google: false }`. The redirect URI is
+  `<PUBLIC_URL>/api/auth/google/callback`: `PUBLIC_URL` (config) is where the browser opens the
+  app, by default Vite's `http://localhost:5173`, which proxies `/api`.
+
+  **To turn on Google sign-in:**
+  1. In Google Cloud Console, APIs & Services → Credentials, create an OAuth client ID of type
+     **Web application** (the consent screen first, if asked: External, with your email as a
+     test user).
+  2. Add the authorised redirect URI `http://localhost:5173/api/auth/google/callback` (in
+     production, `<PUBLIC_URL>/api/auth/google/callback`).
+  3. Put its ID and secret in `.env` as `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET`.
+  4. Restart the API (`npm run dev:api`).
+- **CSRF:** SameSite=Lax, one origin (Vite proxies `/api` in dev), JSON-only mutations. Logout
+  has no body, so it checks for `Content-Type: application/json` itself (415 without it): a form
+  on another site can't send that, so it can't sign the user out.
+- **The client:** Log in and Sign up pages (lazy chunks), each with "Continue with Google" under
+  its button once `providersQuery` says Google is on (it asks only there): an outline button with
+  Google's "G", a plain link to `/api/auth/google?next=<the page's next>`, as the sign-in is page
+  loads, not a fetch. A failed one comes back to `/login?error=google`, which says "Couldn't sign
+  in with Google. Try again." right above it, under a quiet "or" that sets it apart from the
+  form's own button.
+  `GET /api/auth/me` is a query (`meQuery`, preloaded by `index.html` with the queue, so it adds no
+  round trip), and `SessionGate`, a layout route around each group of routes (D21), shows nothing
+  until it answers (or, when it can't be asked, "We couldn't reach Pinch" with Try again, in Log in's frame, its
+  message the alert), then
+  sends a signed-out visitor to `/login?next=<the page>` and a signed-in one from `/login` or
+  `/signup` to `next`. `next` is read as the browser reads it (`new URL`) and must stay on the
+  site's origin, with a path that doesn't start `//` once its dots are resolved (`/.//x` is
+  another site to a browser), else `/`. **A change of user is a new page:** Log in and Sign up load `next` (and
+  Log out `/login`) with `location.replace`, so the new document asks again for what `index.html`
+  preloads, now with the new cookie, and keeps nothing of the last user's (cached queries, toasts,
+  module state). A session that ends mid-visit (any 401 from the API outside `/api/auth/*`,
+  noticed in one place, `lib/api.ts`) isn't a new page: the client clears the cache and the toasts
+  itself, and the gate goes to `/login?next=…`, so Log in comes back where it was. Log out is in
+  the avatar's menu, with the name and email; it lands on plain `/login`, without `next`: the
+  user chose to leave, and the next person on the device shouldn't land on their page.
+- **The dev user's data:** `npm run db:adopt-dev-data <email>`, run once after signing up,
+  gives the dev user's (`DEV_USER_ID`, which only this script still reads) recipes, imports and
+  usage to that account; a day both have a count adds them up. It fails if no account has the
+  email, and a second run finds nothing left to move.
+- **Tests:** a route test signs in as a user of its own (`createTestUser`,
+  `server/src/testUser.ts`: an account and a session written to the database, and the cookie).
+  Each e2e file signs up a user of its own through `POST /api/auth/signup` in its first test,
+  adds the samples, and reuses the cookie in its other tests (`e2e/fixtures.ts`), so files
+  running side by side never see each other's imports or toasts. The request goes to the
+  preview's origin, which proxies `/api`, so the cookie is the client's. The e2e API trusts that
+  one proxy (`TRUST_PROXY=1`) and each file signs up from an `X-Forwarded-For` of its own: there
+  are more files than the 10 sign-ups a minute one IP gets.
 - Out of M9: password reset, email verification for password accounts, other providers.
 
 ## 9. Gemini
@@ -576,6 +689,8 @@ and a request without one gets 401 (the health routes and `/api/auth/*` stay ope
   an upload's chunks, which the SDK tries up to 3 times: the worker's retries are the others.
 - The worker uses the fake extractor of M4 instead when `EXTRACTOR=fake`: e2e runs that way,
   so no test calls Gemini.
+- A link's answer is kept in the shared `links` cache by `EXTRACTION_VERSION`, a hash of the
+  model, the prompt and the response schema (§4.6), so changing any of them is a fresh start.
 - The output is validated with Zod anyway; invalid output counts as a failed attempt. The
   model often returns `""` for a field it doesn't know (e.g. `unit`); the schema treats an
   empty string as "not set".
@@ -596,7 +711,7 @@ and a request without one gets 401 (the health routes and `/api/auth/*` stay ope
 | D10 | Tags as one `facet:value` array from fixed lists; renaming or removing a value needs a migration of the stored recipes | One compound index; clean filters | Separate arrays per facet; free tags |
 | D11 | Cursor pagination | Constant speed at any depth | `skip` / `limit` |
 | D12 | Gemini | Reads video and YouTube URLs natively; has a Files API | Claude (needs frames + transcript for video) |
-| D13 | Auth later, behind a dev-user middleware | Learn the core first; ownership is in every query from day one | Building auth first |
+| D13 | Auth later, behind a dev-user middleware (replaced by the session's in M9 A2, §8.3) | Learn the core first; ownership is in every query from day one | Building auth first |
 | D14 | Nutrition estimated by Gemini, labelled as an estimate | Good enough for a POC | A nutrition database lookup (later) |
 | D15 | Send the post's caption to Gemini with the video | The spike: quantities are often only in the caption (missing quantities fell from 42/106 to 13/101), and it helps spot non-recipes | Video only |
 | D16 | The recipe is in the language of the post | Nothing lost in translation; the model's choice was unstable without a rule | Always Hebrew; always English |
@@ -607,13 +722,13 @@ and a request without one gets 401 (the health routes and `/api/auth/*` stay ope
 | D21 | React Router (declarative: `<Routes>` in `App.tsx`, `useParams`, `Link`) | A handful of screens; the most familiar API and the least setup, easy to read line by line | TanStack Router (type-safe routes and loaders, more concepts) |
 | D22 | The daily cap (20) counts links pasted and Retry clicks, in a per-user, per-UTC-day counter (`usage`) raised atomically by both routes; past it, 429 | Imports are deleted once done, so counting them would undercount; the unique `{ownerId, day}` index makes two first counts at once safe on a standalone Mongo (as D9); the routes are where a user asks for work; automatic retries (3 a link) aren't counted, so at most 60 Gemini calls a day | Counting each Gemini call in the worker (exact, but a link could be accepted and then fail with "limit reached") |
 | D23 | "Not a recipe" and "too long" fail the import at once (`NoRetryError`, its message shown to the user); every other error is retried | Trying again gives the same answer and costs a Gemini call each time; the user learns why straight away; nor is the user offered a Retry that can't help, and would use one of the day's 20 | Retry everything (3 Gemini calls for a cat video, and a vague message) |
-| D24 | Two tabs, **Add recipe** (`/`, the default; *New recipe* until 2026-11-10, renamed by the user) and **My recipes** (`/recipes`, with how many recipes there are: `GET /api/recipes/count`); the import queue sits under the box on Add recipe; every inner page has breadcrumbs (docs/ux/pass-02.md §12–13); the logo (the user's, 2026-11-11) leads the header and links to Add recipe: the Pinch wordmark from 768 px, the P mark on a phone, none under 360 px | Adding is the main event, so it opens first; the split keeps the form off the library; breadcrumbs say where a page belongs and replace Exit and "‹ Recipes"; the wordmark doesn't fit beside the tabs on a phone, and under 360 px the tabs and their counts need the whole row | One home with the box above the recipes; Recipes as the default tab; a bottom tab bar |
+| D24 | Two tabs, **Add recipe** (`/`, the default; *New recipe* until 2026-11-10, renamed by the user) and **My recipes** (`/recipes`, with how many recipes there are: `GET /api/recipes/count`); the import queue sits under the box on Add recipe; every inner page has breadcrumbs (docs/ux/pass-02.md §12–13); the logo (the user's, 2026-11-11) leads the header and links to Add recipe: the Pinch wordmark from 768 px, the P mark on a phone, none under 360 px; the avatar (the first letter of the user's name, M9) ends it and opens the account menu: name, email, Log out | Adding is the main event, so it opens first; the split keeps the form off the library; breadcrumbs say where a page belongs and replace Exit and "‹ Recipes"; the wordmark doesn't fit beside the tabs on a phone, and under 360 px the tabs and their counts need the whole row | One home with the box above the recipes; Recipes as the default tab; a bottom tab bar |
 | D25 | Every recipe has a face: the post's picture, else an emoji the model picks for the dish (an optional `emoji` on the recipe and the draft) on a soft tile, else a cooking pot (with sparkles for a video's); a recipe written by hand gets one from its title (§6) — built in M8 F3 | The picture is what the user remembers; a recipe with none still needs something to recognise; the title's list keeps it to the server, and the editor's JS at its budget | Grey placeholders; generated images; an emoji field in the editor; a map from the tags on the client |
 | D26 | The UI is built from **shadcn/ui** components, copied into `client/src/components/ui/`, their variables mapped onto Pinch's tokens; controls 44 px tall for touch | Accessible Radix parts (Tabs, Sheet, DropdownMenu, Dialog, toasts) whose code lives in the repo and can be read line by line; one pattern per control | Pinch's own components only; a packaged kit (MUI, Chakra) |
 | D27 | Undo in the toasts is a **soft delete**: DELETE sets `deletedAt` on the recipe or import, every read (lists, search, a recipe, its picture, edit, cook, the queue, its badge, approve, retry, the worker's claim and saves) leaves those out, `POST …/restore` unsets it, and a partial TTL index deletes them for good an hour later. Pinch it's Undo is the same DELETE: the worker's writes are conditional on the job not being deleted (§4.3), so a cancelled import never turns ready. Built in M8 F4 | Undo needs the thing to still exist; the server is the one place every tab and the worker agree on, and a closed tab can't lose a delete; one field and one filter for both collections, one atomic `updateOne` per write (no transactions, D9). Cancelling counts against the day's cap (D22): the request was already counted | Sending the DELETE only once the toast's 8 s are over (lost if the tab closes, other tabs show the deleted one meanwhile); a `cancelled` status for imports (a second mechanism next to the recipes' delete); moving deleted documents to a trash collection (two writes, no transaction) |
-| D28 | A link pinched before is found by its post (`linkKey`): this user's own copy is pointed to (409, a toast), and anyone's earlier answer is copied from a shared `links` cache keyed by post and `EXTRACTION_VERSION`, silently, skipping `yt-dlp` and Gemini (§4.6) | A public post's recipe is the same for everyone, so a second Gemini call buys nothing; copies keep each user's recipe theirs to edit; the version in the key retires old answers when the prompt or the model changes | Recipes shared by reference (an edit would change everyone's, or need copy-on-write); the link as the job, with imports waiting on it (dedupes two pastes at once, at the cost of a second lifecycle); recipes inside the user document (16 MB limit, no indexes for Find) |
+| D28 | A link pinched before is found by its post (`linkKey`): this user's own copy is pointed to (409, a toast), and anyone's earlier answer is copied from a shared `links` cache keyed by post and `EXTRACTION_VERSION`, silently, skipping `yt-dlp` and Gemini, and free against both caps (§4.6). Built in M9 (L1, L2) | A public post's recipe is the same for everyone, so a second Gemini call buys nothing; copies keep each user's recipe theirs to edit; the version in the key retires old answers when the prompt or the model changes | Recipes shared by reference (an edit would change everyone's, or need copy-on-write); the link as the job, with imports waiting on it (dedupes two pastes at once, at the cost of a second lifecycle); recipes inside the user document (16 MB limit, no indexes for Find) |
 | D29 | Accounts (M9): open sign-up with email and password or Google; sessions as a hashed token in a cookie; only the user middleware changes (§8.3) | `ownerId` is already in every query (D13), so accounts are one middleware and a few routes; a cookie session is the simplest secure choice for one origin; Google is the sign-in most people expect | JWTs (revoking them needs a list anyway); invite-only sign-up (the user chose open, with caps) |
-| D30 | A global daily cap on Gemini calls (config, default 500), counted beside the per-user one; past it, new imports are refused until the next UTC day, with a message | Open sign-up lets anyone make many accounts, each with 20 a day; this bounds the bill whatever happens | No global cap; a CAPTCHA at sign-up |
+| D30 | A global daily cap on Gemini calls (`GLOBAL_DAILY_IMPORTS`, default 500), counted beside the per-user one in `usage` (`ownerId: "all"`), by the same routes and the same atomic `$inc`, after the user's (one refused by the user's cap doesn't use up everyone's; nothing refused is un-counted); past it, new imports and Retry are refused until the next UTC day: 429 `global_limit`, "Pinch has read all it can for today. Try again tomorrow." | Open sign-up lets anyone make many accounts, each with 20 a day; this bounds the bill whatever happens | No global cap; a CAPTCHA at sign-up |
 
 ## 11. Risks
 
@@ -658,9 +773,10 @@ noise, and M5/M6 only swap the extractor.
 
 Phone first (§1); the wireframes in `docs/ux/wireframes/` (pass 02, revision 2) show each
 screen at 360 and 1440 px. Every page sits in one frame (D24): a header of two tabs, **New
-recipe** (its badge counts drafts ready to review) and **My recipes**, then an avatar (a "coming
-soon" placeholder until auth arrives, §8.3; a menu waits for something to put in it: the
-theme follows the system). **Write a recipe** is on both tabs: in the header from
+recipe** (its badge counts drafts ready to review) and **My recipes**, then the avatar: the first
+letter of the user's name in a 44 px circle, which opens a menu (not modal, loaded on its first
+press as ⋯ is), 288 px wide, with the name and email (a long one cut, whole in its title), then Log out (§8.3; the theme follows the system, so it
+has no switch). **Write a recipe** is on both tabs: in the header from
 768 px, a floating button at the bottom right on a phone. The logo comes first and links to
 Add recipe: the "Pinch" wordmark from 768 px, the "P" mark on a phone from 360 px (none
 narrower), each in the dark theme's accent in the dark theme (`client/public/logo*.svg`, as
@@ -686,13 +802,15 @@ green (`success` on `success-soft`); the rest stay neutral, and errors red.
 
 | Address | Screen | Its job | States |
 |---|---|---|---|
-| `/` | Add recipe | One input for a link or a post's text, in the middle of the height under the header (it moves up as the queue grows, until it reaches the top and the page scrolls; shown once the queue is known, so it never jumps; opened at `/`, the app renders after the queue, which `index.html` preloads) (a single-line input, the user's call on 2026-11-11: Pinch's sparkles inside it at the left, one short placeholder, "Paste a video or a recipe", on every screen; a pasted text's lines are joined with " · ", as an input has none; one word is a link, anything with a space is text; Enter sends; no Paste button), **Pinch it**; under it "Or write it yourself", a link to `/recipes/new` with Write a recipe's pen (screenshots are hidden for now, the user's call on 2026-11-10: the API and the picker stay). Under it the queue, headed by what's in it, "2 ready · 1 in progress · 1 failed" (leaving out what's none; a stalled one counts as failed): each import as a card with its picture (or its face, D25: the draft's emoji, else a cooking pot, with sparkles for a video, also while it cooks), its title or link, and where it has got to ("Ready to review · ◆ 3 things to look at" when the model marked fields, §6); a ready one offers Review, one still cooking a disabled "Cooking…" button in Review's place, a failed one Retry (unless D23) and Dismiss, a stalled one Dismiss | Empty queue (the field alone: the line on what Pinch does is hidden for now, the user's call on 2026-11-11); the queue can't load (Try again); a link from another site or too short a text refused under the input; 429 says the day's limit |
+| `/` | Add recipe | One input for a link or a post's text, in the middle of the height under the header (it moves up as the queue grows, until it reaches the top and the page scrolls; shown once the queue is known, so it never jumps; opened at `/`, the app renders after the queue, which `index.html` preloads) (a single-line input, the user's call on 2026-11-11: Pinch's sparkles inside it at the left, one short placeholder, "Paste a video or a recipe", on every screen; a pasted text's lines are joined with " · ", as an input has none; one word is a link, anything with a space is text; Enter sends; no Paste button), **Pinch it**; under it "Or write it yourself", a link to `/recipes/new` with Write a recipe's pen (screenshots are hidden for now, the user's call on 2026-11-10: the API and the picker stay). Under it the queue, headed by what's in it, "2 ready · 1 in progress · 1 failed" (leaving out what's none; a stalled one counts as failed): each import as a card with its picture (or its face, D25: the draft's emoji, else a cooking pot, with sparkles for a video, also while it cooks), its title or link, and where it has got to ("Ready to review · ◆ 3 things to look at" when the model marked fields, §6); a ready one offers Review, one still cooking a disabled "Cooking…" button in Review's place, a failed one Retry (unless D23) and Dismiss, a stalled one Dismiss | Empty queue (the field alone: the line on what Pinch does is hidden for now, the user's call on 2026-11-11); the queue can't load (Try again); a link from another site or too short a text refused under the input; 429 says the day's limit (the user's, or everyone's, D30) as a quiet note under the input (muted, a status, not an error: the field isn't marked and keeps what was pasted; Retry and the screenshots say it the same way, and the toast's Retry in a neutral toast) |
 | `/recipes` | My recipes | Search (titles and ingredients; it runs on Enter), tag chips (five common tags, fixed: counting the household's most-used needs an API of its own), and Filters (§7): Sort (Newest, Quickest, A–Z; while searching, Best match comes first and is the default, and the others are followed only once picked), Time (Any, 15 min or less, 30 min or less, 1 hour or less), Source (Instagram, YouTube, Facebook, Written by me), then the five tag facets. On a phone they are a bottom sheet of chips (a dialog in the middle from 768 px, as every sheet), each applied as it's picked; its Clear takes the filters off and keeps the order, and "Show N recipes" closes it, counting what the list has loaded ("Show 50+ recipes" when more pages follow, "Show the 50 best" for a full search); the Filters button counts the filters on, not the order. From 1024 px they are a panel of radios and checkboxes on the left, a column of its own that stays in view and scrolls inside itself when it's taller than the screen (no per-value counts: one more query per value), Sort is a select beside the search (shadcn's NativeSelect, with no visible label: its choices name it), the applied filters also repeat as removable chips by the count, and a "Skip the filters" button (shown while focused) takes the keyboard past the panel to the search. Clear all and Clear filters keep the order. Filters live in the address (`/recipes?q=egg&tags=meal:dinner&source=instagram&time=30&sort=quickest`; the default order is left out, and a value written twice is read once). A grid of cards (2 columns, 3 from 768 px, 4 from 1024, 5 from 1280): picture with its site's name on it (none for a hand-written recipe; where there's no picture, the recipe's emoji on a soft tile, D25, or when it has none a cooking pot, with sparkles for one from a video), title, then time and ingredient count ("10 min · 2 ingredients") | Loading (cards' shape), no recipes yet (a way to Add recipe), none match (names the search and tags; Clear filters, or Clear search when only a search is on, and Search all recipes for the words when tags were also on), error (centred, as the empty states; Try again); 50 at a time, then Show more |
 | `/recipes/:id` | A recipe | Breadcrumbs *My recipes › title*; the picture (without one, its emoji on a soft band, lower than a picture's: D25); the title and a subtitle naming the source (Instagram, YouTube, Facebook: a link to the post, named by its site until the API keeps the author; "From pasted text" or "From screenshots" for an import without a link; or "Written by you"), serves and times; tags (each opens My recipes filtered by it); **Cook**; ⋯ with Edit, Share ("coming soon") and Delete (asks first); nutrition ≈; ingredients beside the steps from 1024 px; Comments ("coming soon") | Loading (none when opened from My recipes: the list's copy shows while it loads), error (Try again), not found |
 | `/recipes/:id/cook` | Cook mode | Breadcrumbs *My recipes › title › Cook* (no Exit), the source in the subtitle; one step per card, swiped sideways (native scroll snap; the next card peeks 24 px, and a tap on it brings it in; the step is set once the row has stopped for 100 ms), ‹ › and dots kept for those who don't swipe (dots up to 7 steps), Back and Next instead from 768 px, and the ← → keys (not from a field, menu or dialog); "Step 2 of 6" and a bar; the step's ingredients on its card, all of them folded below (a panel on the left from 1024 px), ticked off in both at once; on the last step › or Next turns into Done; timers, Wake Lock and Done as before (§14 of M7: started once, kept at the bottom, ringing at zero, ended on leaving), and below 1024 px the timers and the ‹ › (Back, Next) row share one footer pinned to the bottom, so a short phone never hides one under the other; a timer reads "19:58 left · 20 min timer"; each card is as tall as its step, from 768 px a card fills the row (no peek) | Loading (the step's shape), error (Try again), not found |
 | `/recipes/new` | Write a recipe | The editor, empty (breadcrumbs *Add recipe › Write a recipe*), under a tip: got it as text? Paste it on Add recipe. Title (examples as placeholders), description, ingredients as amount · unit · name rows with a note (on its own line on a phone) and ✕, steps as numbered boxes with ✕, Add ingredient and Add step (Paste a list and reordering aren't built: nothing parses a pasted line yet, and the form never had an order to change); then the source ("Written by you"), serves and times, and tags as chips with ✕ and Add tag (a sheet of the facets, as Filters); Cancel and **Save recipe** pinned to the bottom. No picture by hand, and no Change picture or source link: the API has no upload and keeps the source (D20) | Each error under its field from the first Save (§8.1), focus on the first, "N things to fix before saving" above the Save bar; saving; failed (keeps what was typed) |
 | `/recipes/:id/edit` | Edit a recipe | The same editor, filled, with its picture (*My recipes › title › Edit*); Cancel and **Save changes** | Loading, error, not found; then as Write a recipe |
 | `/imports/:id` | Review a draft | The same editor, filled from the draft (*Add recipe › Review: title*), with its picture, under a banner that says where Pinch read it (the site, the text you pasted, your screenshots) and links to the post (Watch the video). The fields the model was unsure of (§6) are marked: a dashed box, and under its row ◆ and the reason, which the box points to (`aria-describedby`); changing the field clears its mark, and removing a row moves the marks of the rows under it. Under the banner, "◆ N things to look at, marked below" and Go to the first (focus on the first marked box). Marks don't block Save, and a saved recipe doesn't keep them. Discard (asks first, "Discard this draft?" with its title as it is now, then the toast; not while saving) and **Save to My recipes** (approves it and opens the recipe) | Loading, error; no draft yet, or no such import (says so, links to Add recipe); then as Write a recipe |
+| `/login` | Log in | Signed out only (§8.3): no header, the wordmark over a card in the middle of the screen (the tabs and counts are a signed-in user's). Email and Password (filled in by the browser: `email`, `current-password`), **Log in**, then "New to Pinch? Sign up" (keeping `?next=`); "or", then "Continue with Google" (an outline button with Google's "G"; hidden when the API has no Google settings, §8.3); the wordmark is drawn inline (an `<img>` was the page's LCP, docs/metrics/m09.md) | Each error under its field from the first Log in, focus on the first; logging in; "That email and password don't match." (401, either one wrong); "Too many tries. Wait a minute and try again." (429); "Something went wrong. Try again." (a 500); "We couldn't reach Pinch. Try again." (no answer); "Couldn't sign in with Google. Try again." (back from Google with `?error=google`, right above the Google button); a sent form's error goes while it's sent again; a pending button (Logging in…, and every button's pending state) keeps its colour, with `aria-busy`, and only an unavailable one is faded |
+| `/signup` | Sign up | As Log in: Name, Email, Password ("At least 8 characters", `new-password`; the hint gives way to an error), **Sign up**, then "Already have an account? Log in" | As Log in; an email with an account (409) says "An account already uses this email." with a Log in link, which brings the email along (router state) and puts focus on Password; the API's field errors (400) on their fields |
 | anything else | Page not found | Get back to My recipes | — |
 
 After Save, Save changes, Delete or a draft's Discard, the page that opens takes the focus on its

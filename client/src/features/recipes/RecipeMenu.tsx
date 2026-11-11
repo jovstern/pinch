@@ -49,7 +49,7 @@ export function RecipeMenu({ recipe }: { recipe: Recipe }) {
             // While the dialog is on its way (a slow link): the button says it's working. Once
             // the dialog is open it covers the button anyway.
             aria-busy={deleting}
-            className="px-3 aria-busy:cursor-progress aria-busy:opacity-60"
+            className="px-3"
           >
             <Ellipsis aria-hidden="true" className="size-5" />
           </Button>

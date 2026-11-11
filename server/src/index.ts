@@ -3,11 +3,22 @@ import { pino } from "pino";
 import { createApp } from "./app.ts";
 import { loadConfig } from "./config.ts";
 import { connectToMongo } from "./db/client.ts";
+import { EXTRACTION } from "./extraction.ts";
+import { googleFromConfig } from "./google.ts";
 
 const config = loadConfig(process.env);
 const logger = pino({ level: config.LOG_LEVEL });
 const client = await connectToMongo(config.MONGODB_URI);
-const app = createApp({ logger, db: client.db(config.DB_NAME), devUserId: config.DEV_USER_ID });
+const app = createApp({
+  logger,
+  db: client.db(config.DB_NAME),
+  secureCookies: config.NODE_ENV === "production",
+  trustProxy: config.TRUST_PROXY,
+  globalDailyImports: config.GLOBAL_DAILY_IMPORTS,
+  // The worker's version, from the same EXTRACTOR (both read .env).
+  extractionVersion: EXTRACTION[config.EXTRACTOR].version,
+  google: googleFromConfig(config),
+});
 
 const server = app.listen(config.PORT, (error) => {
   if (error) throw error;

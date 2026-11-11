@@ -1,5 +1,7 @@
 import {
+  DAILY_IMPORT_CAP,
   dailyLimitMessage,
+  globalLimitMessage,
   ImportInputSchema,
   linkKey,
   MAX_SCREENSHOT_BYTES,
@@ -22,6 +24,7 @@ import {
   toImport,
   type ImportDocument,
 } from "../db/imports.ts";
+import { isCached, linksCollection } from "../db/links.ts";
 import {
   findRecipeOfLink,
   insertRecipeOnce,
@@ -38,9 +41,15 @@ import { sendThumbnail } from "./thumbnail.ts";
 
 // Imports turn a link, or a post's text, into a draft recipe (design §4). The API only records
 // the job; the worker does it. As with recipes, every query filters by ownerId, and every read
-// leaves out the deleted ones, kept a while for Undo (D27).
-export function importsRouter(db: Db) {
+// leaves out the deleted ones, kept a while for Undo (D27). globalCap: everyone's imports a day
+// (GLOBAL_DAILY_IMPORTS, D30). extractionVersion: the worker's, for the shared cache (§4.6). now:
+// the clock the daily caps count days by, and only them (tests pin it); the dates an import or
+// recipe is stamped with are the real time.
+type ImportsDeps = { globalCap: number; extractionVersion: string; now: () => Date };
+
+export function importsRouter(db: Db, { globalCap, extractionVersion, now }: ImportsDeps) {
   const imports = importsCollection(db);
+  const links = linksCollection(db);
   const recipes = recipesCollection(db);
   const usage = usageCollection(db);
   const router = express.Router();
@@ -54,8 +63,11 @@ export function importsRouter(db: Db) {
       const existing = await pinchedBefore(req.userId, key);
       if (existing) throw linkPinchedBefore(existing);
     }
-    // After the input is checked: one refused as invalid doesn't count.
-    if (!(await countImport(usage, req.userId))) throw dailyLimit();
+    // After the input is checked: one refused as invalid doesn't count. A post anyone pinched
+    // before is copied by the worker, with no Gemini call, so it's free against both caps (§4.6,
+    // D28). Should its answer land just after this, the import costs one call uncounted.
+    const free = key !== undefined && (await isCached(links, key, extractionVersion));
+    if (!free) await countOrRefuse(req.userId);
     const job = newImport(
       req.userId,
       sent.type === "link" ? { type: "link", url: sent.url, platform: platformOf(sent.url) } : sent,
@@ -86,11 +98,23 @@ export function importsRouter(db: Db) {
     } catch {
       throw invalidScreenshots();
     }
-    if (!(await countImport(usage, req.userId))) throw dailyLimit();
+    await countOrRefuse(req.userId);
     const job = newImport(req.userId, { type: "images", count: images.length, images });
     await imports.insertOne(job);
     res.status(202).location(`/api/imports/${job._id.toHexString()}`).json(toImport(job));
   });
+
+  // Counts one more import, the user's (D22) and everyone's (D30), or refuses it with 429. The
+  // user's first: one past their own cap stops there, so it can't use up everyone's. One the global
+  // cap refuses still counts as one of the user's: nothing is un-counted (as D22), and both start
+  // again at midnight UTC anyway.
+  async function countOrRefuse(ownerId: ObjectId) {
+    const today = now();
+    if (!(await countImport(usage, ownerId, DAILY_IMPORT_CAP, today))) throw dailyLimit();
+    if (!(await countImport(usage, "all", globalCap, today))) {
+      throw new HttpError(429, "global_limit", globalLimitMessage);
+    }
+  }
 
   // What the user already has from this post (§4.6): a recipe first, as that's where it ends up;
   // else an import of it still in the queue, or ready to review. Not one they deleted, nor a failed
@@ -161,7 +185,7 @@ export function importsRouter(db: Db) {
     if (job.status !== "ready") {
       throw new HttpError(409, "import_not_ready", "This import has no draft to save yet.");
     }
-    const now = new Date();
+    const savedAt = new Date();
     const recipe = await insertRecipeOnce(recipes, {
       ...input,
       _id: new ObjectId(),
@@ -175,8 +199,8 @@ export function importsRouter(db: Db) {
       thumbnail: job.thumbnail,
       source: sourceOf(job),
       sourceImportId: job._id,
-      createdAt: now,
-      updatedAt: now,
+      createdAt: savedAt,
+      updatedAt: savedAt,
     });
     await imports.deleteOne({ _id: job._id, ownerId: req.userId });
     res.status(201).location(`/api/recipes/${recipe._id.toHexString()}`).json(toRecipe(recipe));
@@ -195,12 +219,12 @@ export function importsRouter(db: Db) {
     if (found.noRetry) {
       throw new HttpError(409, "import_no_retry", "This import would fail the same way again.");
     }
-    if (!(await countImport(usage, req.userId))) throw dailyLimit();
-    const now = new Date();
+    await countOrRefuse(req.userId);
+    const retriedAt = new Date();
     const job = await imports.findOneAndUpdate(
       { ...filter, status: "failed" },
       {
-        $set: { status: "pending", attempts: 0, nextAttemptAt: now, updatedAt: now },
+        $set: { status: "pending", attempts: 0, nextAttemptAt: retriedAt, updatedAt: retriedAt },
         $unset: { error: "", noRetry: "" },
       },
       { returnDocument: "after", projection: WITHOUT_MEDIA },

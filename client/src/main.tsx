@@ -12,12 +12,13 @@ const root = document.getElementById("root");
 if (!root) throw new Error("index.html has no #root element");
 
 // One retry, not TanStack's default three (about 7 s), so an error shows up quickly; and none
-// for a 404, which will not change on a second try.
+// for a 404 or a 401, which will not change on a second try.
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       retry: (failureCount, error) =>
-        failureCount < 1 && !(error instanceof ApiError && error.status === 404),
+        failureCount < 1 &&
+        !(error instanceof ApiError && (error.status === 404 || error.status === 401)),
     },
   },
 });
@@ -40,8 +41,10 @@ function render(root: HTMLElement) {
 // Opened there, the app renders once the queue is in, asked for by index.html's preload with the
 // page: the block paints with the header (LCP 0.75 s in Lighthouse, not 2.6). queueKnown gives up
 // after 1 s or on any failure, and the page then shows its error or its queue when it comes. Not
-// a top-level await, which splits the entry into many chunks.
-if (location.pathname === "/") {
+// a top-level await, which splits the entry into many chunks. Only signed in, as index.html's
+// preload (the pinch_signed_in hint, design §8.3): signed out, the queue is a 401 in the console,
+// and the page is Log in.
+if (location.pathname === "/" && /(^|; )pinch_signed_in=1/.test(document.cookie)) {
   void queueKnown(queryClient).then(() => {
     render(root);
   });

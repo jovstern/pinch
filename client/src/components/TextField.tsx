@@ -21,6 +21,9 @@ type TextFieldProps = {
   multiline?: boolean;
   // "numeric" for numbers: a text input with the number keyboard, so nothing typed is lost.
   inputMode?: "numeric";
+  // For Log in and Sign up: the keyboard, hidden typing, and what the browser may fill in.
+  type?: "email" | "password";
+  autoComplete?: string;
   // Always shown under the input, and read with it.
   hint?: string;
   // A draft's "thing to look at" (design §14): the id of its note, which the form shows under
@@ -38,6 +41,8 @@ export function TextField({
   placeholder,
   multiline,
   inputMode,
+  type,
+  autoComplete,
   hint,
   markId,
   className = "",
@@ -47,7 +52,7 @@ export function TextField({
   const hintId = `${id}-hint`;
   const invalid = field.state.meta.errors.some((message) => typeof message === "string");
   const describedBy = [];
-  if (hint) describedBy.push(hintId);
+  if (hint && !invalid) describedBy.push(hintId);
   if (markId) describedBy.push(markId);
   if (invalid) describedBy.push(errorId);
   const shared = {
@@ -84,6 +89,8 @@ export function TextField({
       ) : (
         <Input
           inputMode={inputMode}
+          type={type}
+          autoComplete={autoComplete}
           className={marked}
           {...shared}
           onChange={(event) => {
@@ -91,7 +98,8 @@ export function TextField({
           }}
         />
       )}
-      {hint && (
+      {/* Not beside an error: the error says it again ("Use at least 8 characters."). */}
+      {hint && !invalid && (
         <p id={hintId} className="mt-1 text-sm text-text-muted">
           {hint}
         </p>

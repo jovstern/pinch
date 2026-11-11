@@ -1,5 +1,6 @@
 import { FileState, GoogleGenAI, type File, type PartUnion } from "@google/genai";
 import { MAX_UNCERTAIN, RecipeDraftSchema } from "@pinch/shared";
+import { createHash } from "node:crypto";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -54,6 +55,14 @@ video doesn't say how much"). A field's path is "title", "servings", "prepMinute
 "cookMinutes", "steps.N", or "ingredients.N.quantity", "ingredients.N.unit" or
 "ingredients.N.name", where N counts from 0. Leave it empty when you're sure of everything. If
 the post is not a recipe, set isRecipe to false.`;
+
+// What makes an answer: the model, the prompt and the shape asked for. Answers are kept in the
+// shared links cache by it (design §4.6, D28), so a change to any of the three stops old ones
+// matching, with no number to remember to bump. 12 hex characters: plenty to tell versions apart.
+export const GEMINI_VERSION = createHash("sha256")
+  .update(JSON.stringify([GEMINI_MODEL, PROMPT, responseJsonSchema]))
+  .digest("hex")
+  .slice(0, 12);
 
 export const NOT_A_RECIPE = "This doesn't look like a recipe.";
 export const TOO_LONG = "This video is over 3 minutes. Pinch reads shorter ones.";

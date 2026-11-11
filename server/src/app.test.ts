@@ -5,15 +5,13 @@ import { pinoHttp } from "pino-http";
 import request from "supertest";
 import { expect, test } from "vitest";
 import { createApp } from "./app.ts";
-import { loadConfig } from "./config.ts";
 import { errorHandler } from "./errors.ts";
 import { createTestDb } from "./testDb.ts";
 
-const config = loadConfig(process.env);
 const logger = pino({ level: "silent" });
 
 const db = createTestDb();
-const app = createApp({ logger, db, devUserId: config.DEV_USER_ID });
+const app = createApp({ logger, db });
 
 test("GET /api/health answers 200 with status ok", async () => {
   const response = await request(app).get("/api/health");
@@ -33,7 +31,6 @@ test("GET /api/ready answers 503 when the database can't be reached", async () =
   const appWithoutDb = createApp({
     logger,
     db: unreachable.db("pinch-test-unreachable"),
-    devUserId: config.DEV_USER_ID,
   });
 
   const response = await request(appWithoutDb).get("/api/ready");
@@ -71,7 +68,7 @@ test("an unexpected error answers 500 without its details", async () => {
 test("a request's log line has its method, path and status, not its headers", async () => {
   const lines: string[] = [];
   const recorded = pino({ level: "info" }, { write: (line: string) => lines.push(line) });
-  const appWithLog = createApp({ logger: recorded, db, devUserId: config.DEV_USER_ID });
+  const appWithLog = createApp({ logger: recorded, db });
 
   await request(appWithLog).get("/api/health").set("Cookie", "session=secret");
 

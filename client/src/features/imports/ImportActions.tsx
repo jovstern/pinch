@@ -1,9 +1,9 @@
-import { dailyLimitMessage, type Import } from "@pinch/shared";
+import type { Import } from "@pinch/shared";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "../../components/ui/Button.tsx";
-import { ApiError, deleteResource } from "../../lib/api.ts";
+import { deleteResource } from "../../lib/api.ts";
 import { toastCouldntSave, toastDismissed } from "../../lib/toasts.tsx";
-import { importListQuery, restoreImport, retryImport } from "./importQueries.ts";
+import { importListQuery, limitMessage, restoreImport, retryImport } from "./importQueries.ts";
 
 // What a failed import offers (design §4.2): Retry puts it back in the queue for three more
 // tries; Dismiss deletes it, and its toast's Undo brings it back (D27). A stalled one (no worker
@@ -42,6 +42,7 @@ export function ImportActions({ job, focusPasteBox }: { job: Import; focusPasteB
   });
   // Not disabled while busy: a disabled button drops focus to the page (as Show more).
   const busy = retry.isPending || dismiss.isPending;
+  const limit = limitMessage(retry.error);
 
   return (
     // One box, so an error below the buttons stays under them in the card's row from 768 px.
@@ -56,6 +57,7 @@ export function ImportActions({ job, focusPasteBox }: { job: Import; focusPasteB
             if (!busy) dismiss.mutate();
           }}
           aria-disabled={busy}
+          aria-busy={dismiss.isPending}
           aria-describedby={`import-${job.id}`}
         >
           {dismiss.isPending ? "Dismissing…" : "Dismiss"}
@@ -68,17 +70,21 @@ export function ImportActions({ job, focusPasteBox }: { job: Import; focusPasteB
               if (!busy) retry.mutate(job.id);
             }}
             aria-disabled={busy}
+            aria-busy={retry.isPending}
             aria-describedby={`import-${job.id}`}
           >
             {retry.isPending ? "Retrying…" : "Retry"}
           </Button>
         )}
       </div>
-      {retry.isError && (
+      {/* A day's limit is a quiet note, as under the paste box, in a live region that is always
+          on the page (empty until then), so screen readers hear it; anything else an error. */}
+      <p role="status" className="text-right text-sm text-text-muted not-empty:mt-1">
+        {limit}
+      </p>
+      {retry.isError && !limit && (
         <p role="alert" className="mt-1 text-right text-sm text-destructive">
-          {retry.error instanceof ApiError && retry.error.status === 429
-            ? dailyLimitMessage
-            : "It couldn't be retried. Try again."}
+          It couldn&apos;t be retried. Try again.
         </p>
       )}
     </div>

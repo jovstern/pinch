@@ -1,19 +1,49 @@
-import type { Health } from "@pinch/shared";
+import type { Health, Providers } from "@pinch/shared";
 import express from "express";
 import helmet from "helmet";
 import type { Db } from "mongodb";
 import type { Logger } from "pino";
 import { pinoHttp } from "pino-http";
-import { devUser } from "./devUser.ts";
 import { errorHandler, HttpError, notFound } from "./errors.ts";
+import { EXTRACTION } from "./extraction.ts";
+import type { Google } from "./google.ts";
+import { authRouter } from "./routes/auth.ts";
+import { googleRouter } from "./routes/google.ts";
 import { importsRouter } from "./routes/imports.ts";
 import { recipesRouter } from "./routes/recipes.ts";
+import { requireUser } from "./requireUser.ts";
 
-type AppDeps = { logger: Logger; db: Db; devUserId: string };
+// secureCookies: the session cookie is Secure unless the caller says it runs on http (development
+// and tests); a caller who forgets gets the safe one. trustProxy: how many proxies stand in front
+// of the API, so req.ip is the browser's address (TRUST_PROXY in config). now: the clock of the
+// rate limit (design §8.3) and the daily caps (D22, D30). globalDailyImports: everyone's imports a
+// day (GLOBAL_DAILY_IMPORTS in config, D30). extractionVersion: the worker's, so a link in the
+// shared cache is known to be free (EXTRACTION, design §4.6). google: Google sign-in, when configured
+// (googleFromConfig; tests pass a fake exchange).
+type AppDeps = {
+  logger: Logger;
+  db: Db;
+  secureCookies?: boolean;
+  trustProxy?: number;
+  now?: () => Date;
+  globalDailyImports?: number;
+  extractionVersion?: string;
+  google?: Google;
+};
 
 // Builds the app without listening, so tests can call it with Supertest (node-api.md).
-export function createApp({ logger, db, devUserId }: AppDeps) {
+export function createApp({
+  logger,
+  db,
+  secureCookies = true,
+  trustProxy = 0,
+  now = () => new Date(),
+  globalDailyImports = 500,
+  extractionVersion = EXTRACTION.gemini.version,
+  google,
+}: AppDeps) {
   const app = express();
+  app.set("trust proxy", trustProxy);
   app.use(helmet());
   // One log line per request, with a request id, method, URL, status and duration. The URL
   // with its query: a search's words are kept, they're not secret. Not the headers (pino-http's
@@ -28,14 +58,14 @@ export function createApp({ logger, db, devUserId }: AppDeps) {
         req: (req: { id: unknown; method: string; url: string }) => ({
           id: req.id,
           method: req.method,
-          url: req.url,
+          // Not Google sign-in's query: its callback's code and state are secrets (§8.3).
+          url: req.url.startsWith("/api/auth/google/") ? req.url.split("?")[0] : req.url,
         }),
         res: (res: { statusCode: number | null }) => ({ statusCode: res.statusCode }),
       },
       customLogLevel: (_req, res, error) => (error || res.statusCode >= 500 ? "error" : "info"),
     }),
   );
-  app.use(devUser(devUserId));
   // JSON bodies only, up to express's default 100 kB: far more than any recipe needs.
   app.use(express.json());
 
@@ -55,8 +85,20 @@ export function createApp({ logger, db, devUserId }: AppDeps) {
     res.json({ status: "ok" } satisfies Health);
   });
 
-  app.use("/api/recipes", recipesRouter(db));
-  app.use("/api/imports", importsRouter(db));
+  // Which ways to sign in the Log in page offers (§8.3). Without Google's settings, its routes
+  // aren't mounted: 404.
+  app.get("/api/auth/providers", (_req, res) => {
+    res.json({ google: google !== undefined } satisfies Providers);
+  });
+  if (google) app.use("/api/auth/google", googleRouter(db, { google, secureCookies, now }));
+  app.use("/api/auth", authRouter(db, { secureCookies, now }));
+  // Health and auth above are open; a user's recipes and imports need a session (§8.3).
+  app.use("/api/recipes", requireUser(db, secureCookies), recipesRouter(db));
+  app.use(
+    "/api/imports",
+    requireUser(db, secureCookies),
+    importsRouter(db, { globalCap: globalDailyImports, extractionVersion, now }),
+  );
 
   app.use(notFound);
   app.use(errorHandler);

@@ -10,8 +10,23 @@
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <!-- The queue, asked for with the page, not after its JS has run: every page's header counts
          it, and Add recipe shows nothing until it's known (ImportPage), so it is that page's
-         LCP. fetch() picks this answer up (same address, mode and credentials). -->
-    <link rel="preload" href="/api/imports" as="fetch" crossorigin="anonymous" />
+         LCP. fetch() picks this answer up (same address, mode and credentials). Only when the
+         browser is signed in, which the pinch_signed_in hint cookie says (design §8.3): signed
+         out it would be a 401, an error in the console, and never used. A script, as a <link>
+         can't look at a cookie; inline, so it runs before anything else is asked for. -->
+    <script>
+      if (/(^|; )pinch_signed_in=1/.test(document.cookie)) {
+        const queue = document.createElement("link");
+        queue.rel = "preload";
+        queue.href = "/api/imports";
+        queue.as = "fetch";
+        queue.crossOrigin = "anonymous";
+        document.head.append(queue);
+      }
+    </script>
+    <!-- Who is signed in: every page waits for it (SessionGate), so it comes with the page too.
+         Signed out it answers null, not an error. -->
+    <link rel="preload" href="/api/auth/me" as="fetch" crossorigin="anonymous" />
     <title>Pinch</title>
   </head>
   <body>
