@@ -1,4 +1,10 @@
-import { MeSchema, type LoginInput, type Me, type SignupInput } from "@pinch/shared";
+import {
+  MeSchema,
+  ProvidersSchema,
+  type LoginInput,
+  type Me,
+  type SignupInput,
+} from "@pinch/shared";
 import { queryOptions, type QueryClient } from "@tanstack/react-query";
 import { ApiError, getJson, post, sendJson } from "../../lib/api.ts";
 import { dismissAllToasts } from "../../lib/toasts.tsx";
@@ -29,6 +35,14 @@ export function signedOutHere(queryClient: QueryClient) {
   queryClient.setQueryData(meQuery.queryKey, null);
   dismissAllToasts();
 }
+
+// Which ways to sign in the API offers besides a password (§8.3): Google only when it's configured,
+// which can't change while the API runs. Asked only by Log in and Sign up.
+export const providersQuery = queryOptions({
+  queryKey: ["providers"],
+  queryFn: () => getJson("/api/auth/providers", ProvidersSchema),
+  staleTime: Infinity,
+});
 
 export function logIn(input: LoginInput) {
   return sendJson("POST", "/api/auth/login", input, MeSchema);

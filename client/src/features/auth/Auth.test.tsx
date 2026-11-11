@@ -170,3 +170,40 @@ test("the avatar's menu names the user, and Log out loads plain Log in", async (
     body: "{}",
   });
 });
+
+// The API's answer to /api/auth/providers, with Google on; anything else is a 404.
+function googleOn(path: string) {
+  return path === "/api/auth/providers"
+    ? Promise.resolve(Response.json({ google: true }))
+    : notFound();
+}
+
+test("with Google on, Continue with Google goes to the API, carrying next", async () => {
+  stubFetch(googleOn);
+  renderApp("/login?next=%2Frecipes%3Fq%3Degg", { me: null });
+  expect(await screen.findByRole("link", { name: "Continue with Google" })).toHaveAttribute(
+    "href",
+    "/api/auth/google?next=%2Frecipes%3Fq%3Degg",
+  );
+});
+
+test("a failed Google sign-in says so on Log in", async () => {
+  stubFetch(googleOn);
+  renderApp("/login?error=google&reason=state", { me: null });
+  expect(await screen.findByRole("alert")).toHaveTextContent(
+    "Couldn't sign in with Google. Try again.",
+  );
+});
+
+test("with Google off, Sign up offers no Google button", async () => {
+  const fetch = vi.fn((path: string) =>
+    path === "/api/auth/providers" ? Promise.resolve(Response.json({ google: false })) : notFound(),
+  );
+  stubFetch(fetch);
+  renderApp("/signup", { me: null });
+  expect(await screen.findByRole("button", { name: "Sign up" })).toBeInTheDocument();
+  await vi.waitFor(() => {
+    expect(fetch).toHaveBeenCalledWith("/api/auth/providers");
+  });
+  expect(screen.queryByRole("link", { name: "Continue with Google" })).not.toBeInTheDocument();
+});

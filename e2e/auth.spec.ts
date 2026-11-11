@@ -130,3 +130,16 @@ test("after Log out, the next user sees nothing of the last one's", async ({ pag
   await expect(page.getByRole("heading", { name: "No recipes yet" })).toBeVisible();
   await expect(page.getByText("Red lentil soup")).toHaveCount(0);
 });
+
+// The e2e API has no Google settings (design §8.3), so Log in offers no Google button. A real
+// Google sign-in isn't tested: it needs Google.
+test("without Google's settings, Log in has no Google button", async ({ page }) => {
+  await page.context().clearCookies();
+  const providers = page.waitForResponse((response) =>
+    response.url().endsWith("/api/auth/providers"),
+  );
+  await page.goto("/login");
+  expect(await (await providers).json()).toEqual({ google: false });
+  await expect(page.getByRole("button", { name: "Log in" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Continue with Google" })).toHaveCount(0);
+});

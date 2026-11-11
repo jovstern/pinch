@@ -6,6 +6,7 @@ import { TextField } from "../../components/TextField.tsx";
 import { loadPage } from "../../lib/loadPage.ts";
 import { Button } from "../../components/ui/Button.tsx";
 import { AuthFrame } from "./AuthFrame.tsx";
+import { GoogleButton } from "./GoogleButton.tsx";
 import { signUp } from "./authQueries.ts";
 import { nextPage } from "./nextPage.ts";
 import { SubmitAlert } from "./SubmitAlert.tsx";
@@ -90,7 +91,7 @@ export function SignupPage() {
             </Button>
           )}
         </form.Subscribe>
-        {/* "Continue with Google" goes under here (A4, design §8.3). */}
+        <GoogleButton />
       </form>
     </AuthFrame>
   );
