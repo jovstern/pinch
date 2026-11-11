@@ -12,12 +12,13 @@ const root = document.getElementById("root");
 if (!root) throw new Error("index.html has no #root element");
 
 // One retry, not TanStack's default three (about 7 s), so an error shows up quickly; and none
-// for a 404, which will not change on a second try.
+// for a 404 or a 401, which will not change on a second try.
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       retry: (failureCount, error) =>
-        failureCount < 1 && !(error instanceof ApiError && error.status === 404),
+        failureCount < 1 &&
+        !(error instanceof ApiError && (error.status === 404 || error.status === 401)),
     },
   },
 });

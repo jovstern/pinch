@@ -1,16 +1,30 @@
+import type { Me } from "@pinch/shared";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render } from "@testing-library/react";
 import { MemoryRouter } from "react-router";
 import { toast } from "sonner";
 import { vi } from "vitest";
 import { App } from "./App.tsx";
+import { meQuery } from "./features/auth/authQueries.ts";
+
+// The user every test is signed in as, unless it passes { me: null } (signed out) or
+// { me: "ask" } (the app asks GET /api/auth/me, through the test's fetch).
+export const testUser: Me = {
+  id: "6650a1b2c3d4e5f600000099",
+  email: "cook@example.com",
+  name: "Dana",
+};
 
 // Renders the whole app at one address, with what main.tsx provides. No retries, so a failing
 // request shows its error straight away. jsdom has no matchMedia, which the Toaster and My
 // recipes' Filters panel read: here the screen is a phone's, or with wide a desktop's (1024 px
 // and up). Sonner keeps its toasts outside React and shows a new Toaster the ones still open, so
-// a test's toasts are closed before the next.
-export function renderApp(path: string, { wide = false } = {}) {
+// a test's toasts are closed before the next. Signed in already (who's signed in is in the cache,
+// as the app has it once GET /api/auth/me answers), so the page renders at once.
+export function renderApp(
+  path: string,
+  { wide = false, me = testUser }: { wide?: boolean; me?: Me | null | "ask" } = {},
+) {
   toast.dismiss();
   vi.stubGlobal("matchMedia", () => ({
     matches: wide,
@@ -18,6 +32,7 @@ export function renderApp(path: string, { wide = false } = {}) {
     removeEventListener: vi.fn(),
   }));
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  if (me !== "ask") queryClient.setQueryData(meQuery.queryKey, me);
   render(
     <QueryClientProvider client={queryClient}>
       <MemoryRouter initialEntries={[path]}>

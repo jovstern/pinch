@@ -7,7 +7,12 @@ import { connectToMongo } from "./db/client.ts";
 const config = loadConfig(process.env);
 const logger = pino({ level: config.LOG_LEVEL });
 const client = await connectToMongo(config.MONGODB_URI);
-const app = createApp({ logger, db: client.db(config.DB_NAME), devUserId: config.DEV_USER_ID });
+const app = createApp({
+  logger,
+  db: client.db(config.DB_NAME),
+  secureCookies: config.NODE_ENV === "production",
+  trustProxy: config.TRUST_PROXY,
+});
 
 const server = app.listen(config.PORT, (error) => {
   if (error) throw error;

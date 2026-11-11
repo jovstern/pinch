@@ -4,17 +4,34 @@ import helmet from "helmet";
 import type { Db } from "mongodb";
 import type { Logger } from "pino";
 import { pinoHttp } from "pino-http";
-import { devUser } from "./devUser.ts";
 import { errorHandler, HttpError, notFound } from "./errors.ts";
 import { authRouter } from "./routes/auth.ts";
 import { importsRouter } from "./routes/imports.ts";
 import { recipesRouter } from "./routes/recipes.ts";
+import { requireUser } from "./requireUser.ts";
 
-type AppDeps = { logger: Logger; db: Db; devUserId: string };
+// secureCookies: the session cookie is Secure unless the caller says it runs on http (development
+// and tests); a caller who forgets gets the safe one. trustProxy: how many proxies stand in front
+// of the API, so req.ip is the browser's address (TRUST_PROXY in config). now: the rate limit's
+// clock (design §8.3).
+type AppDeps = {
+  logger: Logger;
+  db: Db;
+  secureCookies?: boolean;
+  trustProxy?: number;
+  now?: () => Date;
+};
 
 // Builds the app without listening, so tests can call it with Supertest (node-api.md).
-export function createApp({ logger, db, devUserId }: AppDeps) {
+export function createApp({
+  logger,
+  db,
+  secureCookies = true,
+  trustProxy = 0,
+  now = () => new Date(),
+}: AppDeps) {
   const app = express();
+  app.set("trust proxy", trustProxy);
   app.use(helmet());
   // One log line per request, with a request id, method, URL, status and duration. The URL
   // with its query: a search's words are kept, they're not secret. Not the headers (pino-http's
@@ -36,7 +53,6 @@ export function createApp({ logger, db, devUserId }: AppDeps) {
       customLogLevel: (_req, res, error) => (error || res.statusCode >= 500 ? "error" : "info"),
     }),
   );
-  app.use(devUser(devUserId));
   // JSON bodies only, up to express's default 100 kB: far more than any recipe needs.
   app.use(express.json());
 
@@ -56,9 +72,10 @@ export function createApp({ logger, db, devUserId }: AppDeps) {
     res.json({ status: "ok" } satisfies Health);
   });
 
-  app.use("/api/auth", authRouter(db));
-  app.use("/api/recipes", recipesRouter(db));
-  app.use("/api/imports", importsRouter(db));
+  app.use("/api/auth", authRouter(db, { secureCookies, now }));
+  // Health and auth above are open; a user's recipes and imports need a session (§8.3).
+  app.use("/api/recipes", requireUser(db), recipesRouter(db));
+  app.use("/api/imports", requireUser(db), importsRouter(db));
 
   app.use(notFound);
   app.use(errorHandler);

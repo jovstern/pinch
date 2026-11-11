@@ -3,6 +3,8 @@ import { loadConfig } from "./config.ts";
 
 test("every setting has a default for local development", () => {
   expect(loadConfig({})).toEqual({
+    NODE_ENV: "development",
+    TRUST_PROXY: 0,
     PORT: 3000,
     LOG_LEVEL: "info",
     MONGODB_URI: "mongodb://localhost:27017",

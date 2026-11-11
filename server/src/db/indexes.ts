@@ -1,6 +1,8 @@
 import type { Db } from "mongodb";
 import { importsCollection } from "./imports.ts";
+import { loginAttemptsCollection } from "./loginAttempts.ts";
 import { recipesCollection, TITLE_COLLATION } from "./recipes.ts";
+import { sessionsCollection } from "./sessions.ts";
 import { DELETED_KEPT_SECONDS } from "./softDelete.ts";
 import { usageCollection } from "./usage.ts";
 import { usersCollection } from "./users.ts";
@@ -57,6 +59,16 @@ export async function createIndexes(db: Db) {
     { key: { email: 1 }, unique: true },
     // A Google sign-in finds its account (A4). Sparse: password accounts have no googleId.
     { key: { googleId: 1 }, unique: true, sparse: true },
+  ]);
+  await sessionsCollection(db).createIndexes([
+    // Every signed-in request finds its session by the cookie's hash (currentUser).
+    { key: { tokenHash: 1 }, unique: true },
+    // TTL: a session goes once it expires, 30 days after sign-in.
+    { key: { expiresAt: 1 }, expireAfterSeconds: 0 },
+  ]);
+  // The login rate limit's counts are found by _id; TTL: each goes once its minute is over.
+  await loginAttemptsCollection(db).createIndexes([
+    { key: { expiresAt: 1 }, expireAfterSeconds: 0 },
   ]);
 }
 
