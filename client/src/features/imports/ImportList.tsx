@@ -44,15 +44,15 @@ export function ImportList({ focusPasteBox }: { focusPasteBox: () => void }) {
           </Button>
         </div>
       )}
-      {data && imports.length === 0 && (
-        <div className="mt-12 text-center">
-          <h2 className="text-xl font-semibold">Nothing cooking yet</h2>
-          <p className="mt-2 text-muted-foreground">
-            Paste a link to an Instagram, Facebook or YouTube video, and Pinch writes the recipe
-            down for you.
-          </p>
-        </div>
-      )}
+      {/*{data && imports.length === 0 && (*/}
+      {/*  <div className="mt-12 text-center">*/}
+      {/*    <h2 className="text-xl font-semibold">Nothing cooking yet</h2>*/}
+      {/*    <p className="mt-2 text-muted-foreground">*/}
+      {/*      Paste a link to an Instagram, Facebook or YouTube video, and Pinch writes the recipe*/}
+      {/*      down for you.*/}
+      {/*    </p>*/}
+      {/*  </div>*/}
+      {/*)}*/}
       {imports.length > 0 && (
         <>
           {/* A label over the cards, not a title: the sans face, small. It is the list's

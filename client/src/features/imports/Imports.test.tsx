@@ -247,11 +247,14 @@ test("a pasted text shows as such, with its text", async () => {
   expect(screen.getByText(text)).toBeInTheDocument();
 });
 
-test("an empty queue says what Pinch does", async () => {
+// The empty state's words are hidden for now (the user's call, 2026-11-11): an empty queue shows
+// the field alone, with no heading and no cards under it.
+test("an empty queue shows the field alone", async () => {
   stubApi([[]]);
   renderApp("/");
 
-  expect(await screen.findByRole("heading", { name: "Nothing cooking yet" })).toBeInTheDocument();
+  expect(await screen.findByLabelText("Pinch a recipe from a reel")).toBeInTheDocument();
+  expect(screen.queryByRole("heading", { name: "Nothing cooking yet" })).not.toBeInTheDocument();
   expect(screen.queryByText(/^Cooking…/)).not.toBeInTheDocument();
 });
 
