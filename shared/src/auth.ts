@@ -24,11 +24,14 @@ export const SignupInputSchema = z.object({
 });
 export type SignupInput = z.infer<typeof SignupInputSchema>;
 
-// The body of POST /api/auth/login. No length rule on the password: a wrong one is a 401, not a
-// hint about what passwords look like.
+// The body of POST /api/auth/login. No minimum beyond one character, so an old short password
+// isn't refused before it's checked; the same cap as signup's, so a huge one isn't hashed.
 export const LoginInputSchema = z.object({
   email: EmailSchema,
-  password: z.string("Enter your password.").min(1, "Enter your password."),
+  password: z
+    .string("Enter your password.")
+    .min(1, "Enter your password.")
+    .max(200, "Keep the password under 200 characters."),
 });
 export type LoginInput = z.infer<typeof LoginInputSchema>;
 

@@ -93,3 +93,14 @@ test("a wrong email and a wrong password get the same 401", async () => {
   expect(wrongPassword.status).toBe(401);
   expect(wrongEmail.body).toEqual(wrongPassword.body);
 });
+
+test("login with a password over 200 characters answers 400 without checking it", async () => {
+  const response = await request(app)
+    .post("/api/auth/login")
+    .send({ email: "cook@example.com", password: "x".repeat(201) });
+
+  expect(response.status).toBe(400);
+  expect(response.body).toMatchObject({
+    error: { fields: { password: "Keep the password under 200 characters." } },
+  });
+});
