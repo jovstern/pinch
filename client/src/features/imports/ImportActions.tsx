@@ -1,9 +1,9 @@
-import { dailyLimitMessage, type Import } from "@pinch/shared";
+import type { Import } from "@pinch/shared";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "../../components/ui/Button.tsx";
-import { ApiError, deleteResource } from "../../lib/api.ts";
+import { deleteResource } from "../../lib/api.ts";
 import { toastCouldntSave, toastDismissed } from "../../lib/toasts.tsx";
-import { importListQuery, restoreImport, retryImport } from "./importQueries.ts";
+import { importListQuery, limitMessage, restoreImport, retryImport } from "./importQueries.ts";
 
 // What a failed import offers (design §4.2): Retry puts it back in the queue for three more
 // tries; Dismiss deletes it, and its toast's Undo brings it back (D27). A stalled one (no worker
@@ -76,9 +76,7 @@ export function ImportActions({ job, focusPasteBox }: { job: Import; focusPasteB
       </div>
       {retry.isError && (
         <p role="alert" className="mt-1 text-right text-sm text-destructive">
-          {retry.error instanceof ApiError && retry.error.status === 429
-            ? dailyLimitMessage
-            : "It couldn't be retried. Try again."}
+          {limitMessage(retry.error) ?? "It couldn't be retried. Try again."}
         </p>
       )}
     </div>

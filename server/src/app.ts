@@ -14,15 +14,17 @@ import { requireUser } from "./requireUser.ts";
 
 // secureCookies: the session cookie is Secure unless the caller says it runs on http (development
 // and tests); a caller who forgets gets the safe one. trustProxy: how many proxies stand in front
-// of the API, so req.ip is the browser's address (TRUST_PROXY in config). now: the rate limit's
-// clock (design §8.3). google: Google sign-in, when configured (googleFromConfig; tests pass a
-// fake exchange).
+// of the API, so req.ip is the browser's address (TRUST_PROXY in config). now: the clock of the
+// rate limit (design §8.3) and the daily caps (D22, D30). globalDailyImports: everyone's imports a
+// day (GLOBAL_DAILY_IMPORTS in config, D30). google: Google sign-in, when configured
+// (googleFromConfig; tests pass a fake exchange).
 type AppDeps = {
   logger: Logger;
   db: Db;
   secureCookies?: boolean;
   trustProxy?: number;
   now?: () => Date;
+  globalDailyImports?: number;
   google?: Google;
 };
 
@@ -33,6 +35,7 @@ export function createApp({
   secureCookies = true,
   trustProxy = 0,
   now = () => new Date(),
+  globalDailyImports = 500,
   google,
 }: AppDeps) {
   const app = express();
@@ -87,7 +90,11 @@ export function createApp({
   app.use("/api/auth", authRouter(db, { secureCookies, now }));
   // Health and auth above are open; a user's recipes and imports need a session (§8.3).
   app.use("/api/recipes", requireUser(db), recipesRouter(db));
-  app.use("/api/imports", requireUser(db), importsRouter(db));
+  app.use(
+    "/api/imports",
+    requireUser(db),
+    importsRouter(db, { globalCap: globalDailyImports, clock: now }),
+  );
 
   app.use(notFound);
   app.use(errorHandler);

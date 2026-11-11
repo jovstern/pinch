@@ -13,6 +13,7 @@ const app = createApp({
   db: client.db(config.DB_NAME),
   secureCookies: config.NODE_ENV === "production",
   trustProxy: config.TRUST_PROXY,
+  globalDailyImports: config.GLOBAL_DAILY_IMPORTS,
   google: googleFromConfig(config),
 });
 

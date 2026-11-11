@@ -1,5 +1,4 @@
 import {
-  dailyLimitMessage,
   ImportSchema,
   MAX_SCREENSHOT_BYTES,
   MAX_SCREENSHOTS,
@@ -12,7 +11,7 @@ import { useId, useState } from "react";
 import { Button } from "../../components/ui/Button.tsx";
 import { ApiError, sendForm } from "../../lib/api.ts";
 import { toastPinching } from "../../lib/toasts.tsx";
-import { cancelImport, importListQuery } from "./importQueries.ts";
+import { cancelImport, importListQuery, limitMessage } from "./importQueries.ts";
 
 // The second way in on / (design §1, §14): screenshots of a post whose link and text won't do.
 // Choosing them sends them at once: the picker's Open is the confirm. Checked here first, with
@@ -87,13 +86,10 @@ export function ScreenshotsUpload() {
 }
 
 // The pick refused here, or as the paste box says a failed send: the API's message for the
-// files, the day's cap, or a plain retry.
+// files, the day's cap (the user's or everyone's), or a plain retry.
 function errorMessage(refused: boolean, error: Error | null) {
   if (refused) return screenshotsMessage;
   if (!error) return undefined;
-  if (error instanceof ApiError) {
-    if (error.fields.images) return error.fields.images;
-    if (error.status === 429) return dailyLimitMessage;
-  }
-  return "We couldn't send these. Try again.";
+  if (error instanceof ApiError && error.fields.images) return error.fields.images;
+  return limitMessage(error) ?? "We couldn't send these. Try again.";
 }

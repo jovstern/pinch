@@ -14,6 +14,8 @@ export const linkMessage = "Paste a link to an Instagram, Facebook or YouTube po
 // The API answers 429 with this message past it, and the client shows it.
 export const DAILY_IMPORT_CAP = 20;
 export const dailyLimitMessage = `You've sent ${String(DAILY_IMPORT_CAP)} imports today. Try again tomorrow.`;
+// Past the global cap (design D30): everyone's imports, together, for the day.
+export const globalLimitMessage = "Pinch has read all it can for today. Try again tomorrow.";
 
 export const textMessage = "Paste more of the recipe: a line or two at least.";
 

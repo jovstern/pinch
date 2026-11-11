@@ -2,6 +2,7 @@ import {
   DAILY_IMPORT_CAP,
   dailyLimitMessage,
   DuplicateLinkSchema,
+  globalLimitMessage,
   ImportListSchema,
   ImportSchema,
   linkMessage,
@@ -548,6 +549,48 @@ test("each link and Retry counts once for today; one that can't happen doesn't c
 
   const counted = await usage.findOne({ ownerId: userId, day: utcDay(new Date()) });
   expect(counted?.imports).toBe(2);
+  // Everyone's count too (D30): the link and the Retry.
+  const everyone = await usage.findOne({ ownerId: "all", day: utcDay(new Date()) });
+  expect(everyone?.imports).toBe(2);
+});
+
+test("past the daily cap, a refused import doesn't count toward the global cap", async () => {
+  await setUsage(DAILY_IMPORT_CAP);
+
+  expect((await api.post("/api/imports").send({ type: "link", url: reel })).status).toBe(429);
+
+  expect(await usage.findOne({ ownerId: "all" })).toBeNull();
+});
+
+// The global cap (D30): everyone's imports a day, together. A small one here, and a clock the
+// test moves, so it can see a new UTC day. Starting now: a count's TTL is worked out from this
+// clock, and Mongo would delete one that's long past.
+test("past the global cap, any user's import is refused with 429 until the next UTC day", async () => {
+  let today = new Date();
+  const capped = createApp({
+    logger: pino({ level: "silent" }),
+    db,
+    globalDailyImports: 2,
+    now: () => today,
+  });
+  const other = await createTestUser(db);
+  const mine = request.agent(capped).set("Cookie", cookie);
+  const theirs = request.agent(capped).set("Cookie", other.cookie);
+  const text = { type: "text", text: "Mix the flour and the eggs, then bake for an hour." };
+  expect((await mine.post("/api/imports").send(text)).status).toBe(202);
+  expect((await theirs.post("/api/imports").send(text)).status).toBe(202);
+
+  const refused = await theirs.post("/api/imports").send(text);
+  expect(refused.status).toBe(429);
+  expect(refused.body).toMatchObject({
+    error: { code: "global_limit", message: globalLimitMessage },
+  });
+  const failed = await insertDone({ status: "failed", attempts: 3, error: "No." });
+  expect((await mine.post(`/api/imports/${failed}/retry`)).status).toBe(429);
+  expect(await importsCollection(db).countDocuments({ status: "pending" })).toBe(2);
+
+  today = new Date(today.getTime() + 24 * 60 * 60 * 1000);
+  expect((await theirs.post("/api/imports").send(text)).status).toBe(202);
 });
 
 test("yesterday's count doesn't count today", async () => {
@@ -772,6 +815,9 @@ test("a link pinched before is a 409 even past the cap, and isn't counted", asyn
   expect(response.status).toBe(409);
   const counted = await usage.findOne({ ownerId: userId, day: utcDay(new Date()) });
   expect(counted?.imports).toBe(DAILY_IMPORT_CAP);
+  // Nor toward everyone's (D30): only the first one.
+  const everyone = await usage.findOne({ ownerId: "all", day: utcDay(new Date()) });
+  expect(everyone?.imports).toBe(1);
 });
 
 // The parts of explain("executionStats") the tests read; the driver types it as any document.

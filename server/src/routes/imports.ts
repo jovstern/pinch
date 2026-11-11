@@ -1,5 +1,7 @@
 import {
+  DAILY_IMPORT_CAP,
   dailyLimitMessage,
+  globalLimitMessage,
   ImportInputSchema,
   linkKey,
   MAX_SCREENSHOT_BYTES,
@@ -38,8 +40,11 @@ import { sendThumbnail } from "./thumbnail.ts";
 
 // Imports turn a link, or a post's text, into a draft recipe (design §4). The API only records
 // the job; the worker does it. As with recipes, every query filters by ownerId, and every read
-// leaves out the deleted ones, kept a while for Undo (D27).
-export function importsRouter(db: Db) {
+// leaves out the deleted ones, kept a while for Undo (D27). globalCap: everyone's imports a day
+// (GLOBAL_DAILY_IMPORTS, D30). clock: what the caps count days by (tests pin it).
+type ImportsDeps = { globalCap: number; clock: () => Date };
+
+export function importsRouter(db: Db, { globalCap, clock }: ImportsDeps) {
   const imports = importsCollection(db);
   const recipes = recipesCollection(db);
   const usage = usageCollection(db);
@@ -55,7 +60,7 @@ export function importsRouter(db: Db) {
       if (existing) throw linkPinchedBefore(existing);
     }
     // After the input is checked: one refused as invalid doesn't count.
-    if (!(await countImport(usage, req.userId))) throw dailyLimit();
+    await countOrRefuse(req.userId);
     const job = newImport(
       req.userId,
       sent.type === "link" ? { type: "link", url: sent.url, platform: platformOf(sent.url) } : sent,
@@ -86,11 +91,23 @@ export function importsRouter(db: Db) {
     } catch {
       throw invalidScreenshots();
     }
-    if (!(await countImport(usage, req.userId))) throw dailyLimit();
+    await countOrRefuse(req.userId);
     const job = newImport(req.userId, { type: "images", count: images.length, images });
     await imports.insertOne(job);
     res.status(202).location(`/api/imports/${job._id.toHexString()}`).json(toImport(job));
   });
+
+  // Counts one more import, the user's (D22) and everyone's (D30), or refuses it with 429. The
+  // user's first: one past their own cap stops there, so it can't use up everyone's. One the global
+  // cap refuses still counts as one of the user's: nothing is un-counted (as D22), and both start
+  // again at midnight UTC anyway.
+  async function countOrRefuse(ownerId: ObjectId) {
+    const today = clock();
+    if (!(await countImport(usage, ownerId, DAILY_IMPORT_CAP, today))) throw dailyLimit();
+    if (!(await countImport(usage, "all", globalCap, today))) {
+      throw new HttpError(429, "global_limit", globalLimitMessage);
+    }
+  }
 
   // What the user already has from this post (§4.6): a recipe first, as that's where it ends up;
   // else an import of it still in the queue, or ready to review. Not one they deleted, nor a failed
@@ -195,7 +212,7 @@ export function importsRouter(db: Db) {
     if (found.noRetry) {
       throw new HttpError(409, "import_no_retry", "This import would fail the same way again.");
     }
-    if (!(await countImport(usage, req.userId))) throw dailyLimit();
+    await countOrRefuse(req.userId);
     const now = new Date();
     const job = await imports.findOneAndUpdate(
       { ...filter, status: "failed" },

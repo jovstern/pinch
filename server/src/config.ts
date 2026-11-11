@@ -15,6 +15,9 @@ const ConfigSchema = z.object({
   LOG_LEVEL: z.enum(["fatal", "error", "warn", "info", "debug", "trace", "silent"]).default("info"),
   MONGODB_URI: z.string().default("mongodb://localhost:27017"),
   DB_NAME: z.string().default("pinch"),
+  // Everyone's imports a day, together (design D30): each costs Gemini calls, and open sign-up
+  // lets anyone make many accounts, each with 20 a day. This bounds the bill.
+  GLOBAL_DAILY_IMPORTS: z.coerce.number().int().min(1).default(500),
   // The user every request acted as before accounts (design §8.3): only db:adopt-dev-data reads
   // it now, to give that user's data to an account. Not a secret, so it has a default.
   DEV_USER_ID: z

@@ -141,7 +141,7 @@ Planned, not built yet. In this order:
       avatar's menu (name, Log out)
 - [x] A4 Google sign-in: the OIDC code flow (state, PKCE), linking by verified email; the user
       sets `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` in `.env`
-- [ ] A5 The global daily cap on Gemini calls (D30)
+- [x] A5 The global daily cap on Gemini calls (D30)
 - [ ] L2 The shared `links` cache: `EXTRACTION_VERSION`, the worker's lookup (a hit copies and
       is ready) and upsert, recipes only; hits free against both caps; `links:forget <url>`
 - [ ] End of milestone: UI review, observer, e2e, demo

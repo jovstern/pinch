@@ -1,5 +1,6 @@
 import {
   dailyLimitMessage,
+  globalLimitMessage,
   linkMessage,
   type DuplicateLink,
   screenshotsMessage,
@@ -697,6 +698,20 @@ test("a link whose draft is ready says so as the queue does, with Review", async
   });
 });
 
+test("past the global cap, the box says Pinch has read all it can today", async () => {
+  stubApi([[]], () =>
+    Response.json(
+      { error: { code: "global_limit", message: globalLimitMessage } },
+      { status: 429 },
+    ),
+  );
+  renderApp("/");
+
+  await pinchReel();
+
+  expect(await screen.findByRole("alert")).toHaveTextContent(globalLimitMessage);
+});
+
 test("a link still in the queue says it's already being pinched", async () => {
   stubApi([[]], pinchedBefore({ kind: "import", id: importOf({}).id, status: "processing" }));
   renderApp("/");
@@ -717,6 +732,20 @@ test("past the daily cap, Retry says so", async () => {
   await userEvent.click(await screen.findByRole("button", { name: "Retry" }));
 
   expect(await screen.findByRole("alert")).toHaveTextContent(dailyLimitMessage);
+});
+
+test("past the global cap, Retry says so", async () => {
+  stubApi([[importOf({ status: "failed", attempts: 3, error: "No." })]], () =>
+    Response.json(
+      { error: { code: "global_limit", message: globalLimitMessage } },
+      { status: 429 },
+    ),
+  );
+  renderApp("/");
+
+  await userEvent.click(await screen.findByRole("button", { name: "Retry" }));
+
+  expect(await screen.findByRole("alert")).toHaveTextContent(globalLimitMessage);
 });
 
 test("polling runs only while the worker has a link in hand", () => {
@@ -818,4 +847,13 @@ test("screenshots past the day's cap say so", async () => {
   await userEvent.upload(screen.getByLabelText("Or add screenshots"), [screenshot("one.png")]);
 
   expect(await screen.findByRole("alert")).toHaveTextContent(dailyLimitMessage);
+});
+
+test("screenshots past the global cap say so", async () => {
+  stubApi([[]], () => Response.json({ error: { code: "global_limit" } }, { status: 429 }));
+  renderScreenshots();
+
+  await userEvent.upload(screen.getByLabelText("Or add screenshots"), [screenshot("one.png")]);
+
+  expect(await screen.findByRole("alert")).toHaveTextContent(globalLimitMessage);
 });
