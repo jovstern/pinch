@@ -2,9 +2,8 @@ import { expect, test } from "./fixtures.ts";
 
 // M8's demo (pr-demo skill), at a desktop's width and a phone's: a link pasted on Add recipe
 // cooks in the queue, its ready toast opens the review, the saved recipe is found in My recipes
-// by a tag, and cooked with a swipe. A Facebook link, so the toast is this test's own: the files
-// share one database and one user, and every import's toast shows on every page. The pauses let
-// a viewer follow the video. It deletes the recipe it made, as the other files do.
+// by a tag, and cooked with a swipe. The pauses let a viewer follow the video. Each test deletes
+// the recipe it made: the two share the file's user (e2e/fixtures.ts), and the same title.
 for (const phone of [false, true]) {
   test.describe(phone ? "phone" : "desktop", () => {
     // The viewport set for the test, not in it, so the video takes the phone's shape too.
@@ -26,10 +25,6 @@ for (const phone of [false, true]) {
         .getByRole("listitem")
         .filter({ hasText: "Tomato pasta (from facebook) is ready to review" });
       await expect(toast).toBeVisible({ timeout: 15_000 });
-      // Sonner's own key (Alt+T) spreads the stack first: other files' toasts may be on top. At
-      // once, with no pause for the video: Sonner shows only the newest 3, so other files'
-      // drafts turning ready meanwhile would hide this one.
-      await page.keyboard.press("Alt+KeyT");
       await toast.getByRole("button", { name: "Review" }).click();
 
       await expect(page.getByText("Pinch read this from Facebook")).toBeVisible();
@@ -51,8 +46,8 @@ for (const phone of [false, true]) {
         // The chip's label: its checkbox is hidden inside it (TagPicker).
         await page.getByRole("dialog").getByText("italian", { exact: true }).click();
         await page.waitForTimeout(1000);
-        // "Show 3 recipes": how many depends on the other files' recipes.
-        await page.getByRole("button", { name: /^Show \d+ recipes?$/ }).click();
+        // The two Italian samples and this one.
+        await page.getByRole("button", { name: "Show 3 recipes" }).click();
       } else {
         // Not check(): the tick shows once the address has the tag, a moment after the click.
         await page.getByRole("checkbox", { name: "italian" }).click();

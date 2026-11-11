@@ -3,8 +3,7 @@ import type { Page } from "@playwright/test";
 import { expect, test } from "./fixtures.ts";
 
 // Scans the page once nothing on it is moving: a toast fading in or out is drawn in half its
-// colours (a contrast failure that isn't one), and the files share one user, so another file's
-// import may toast at any time. Endless animations (a spinner) don't count. `include` scans one
+// colours (a contrast failure that isn't one). Endless animations (a spinner) don't count. `include` scans one
 // part of the page only.
 async function scan(page: Page, include?: string) {
   await page.waitForFunction(() =>
@@ -22,7 +21,7 @@ async function scan(page: Page, include?: string) {
 
 test("My recipes has no accessibility violations", async ({ page }) => {
   await page.goto("/recipes");
-  // Scan the settled page, with the sample recipes (playwright.config.ts), not the loading state.
+  // Scan the settled page, with the sample recipes (e2e/fixtures.ts), not the loading state.
   await expect(page.getByRole("link", { name: /Red lentil soup/ })).toBeVisible();
   const results = await scan(page);
   expect(results.violations).toEqual([]);
@@ -60,7 +59,7 @@ for (const colorScheme of ["light", "dark"] as const) {
   }) => {
     await page.emulateMedia({ colorScheme });
     await page.goto("/");
-    // Its own link, so the files sharing the database never pick up each other's imports.
+    // A link of its own: the light and dark tests share the file's user (e2e/fixtures.ts).
     const url = `https://www.instagram.com/reel/e2e-a11y-${colorScheme}/`;
     await page.getByLabel("Pinch a recipe from a reel").fill(url);
     await page.getByRole("button", { name: "Pinch it" }).click();
@@ -112,4 +111,38 @@ test("the Filters sheet, open, has no accessibility violations", async ({ page }
   expect(inSheet.passes.map((rule) => rule.id)).toEqual(
     expect.arrayContaining(["aria-dialog-name", "label", "button-name"]),
   );
+});
+
+// The avatar's menu, as ⋯'s: not modal, so the page around it stays readable.
+test("the avatar's menu, open, has no accessibility violations", async ({ page }) => {
+  await page.goto("/recipes");
+  await page.getByRole("button", { name: "Your account" }).click();
+  await expect(page.getByRole("menuitem", { name: "Log out" })).toBeVisible();
+  expect((await scan(page)).violations).toEqual([]);
+});
+
+// Log in and Sign up, signed out (the fixture's cookie cleared), each in both themes and with its
+// errors showing. Chrome logs each 401 a signed-out page gets (who's signed in, the queue's
+// preload) as an error: expected here, and only the 401s.
+test.describe("signed out", () => {
+  test.use({ expectedConsoleErrors: [/status of 401/] });
+  for (const colorScheme of ["light", "dark"] as const) {
+    test(`Log in and Sign up have no accessibility violations (${colorScheme})`, async ({
+      page,
+    }) => {
+      await page.context().clearCookies();
+      await page.emulateMedia({ colorScheme });
+      await page.goto("/login");
+      await expect(page.getByRole("heading", { level: 1, name: "Log in" })).toBeVisible();
+      expect((await scan(page)).violations).toEqual([]);
+      await page.getByRole("button", { name: "Log in" }).click();
+      await expect(page.getByText("Enter your password.")).toBeVisible();
+      expect((await scan(page)).violations).toEqual([]);
+
+      await page.getByRole("link", { name: "Sign up" }).click();
+      await page.getByRole("button", { name: "Sign up" }).click();
+      await expect(page.getByText("Enter your name.")).toBeVisible();
+      expect((await scan(page)).violations).toEqual([]);
+    });
+  }
 });

@@ -3,7 +3,6 @@ import { pino } from "pino";
 import request from "supertest";
 import { beforeEach, expect, test } from "vitest";
 import { createApp } from "../app.ts";
-import { loadConfig } from "../config.ts";
 import { createIndexes } from "../db/indexes.ts";
 import {
   LOGIN_TRIES_PER_EMAIL,
@@ -15,7 +14,6 @@ import { hashToken, sessionsCollection } from "../db/sessions.ts";
 import { usersCollection } from "../db/users.ts";
 import { createTestDb } from "../testDb.ts";
 
-const config = loadConfig(process.env);
 const db = createTestDb();
 // The unique email index answers a second sign-up.
 await createIndexes(db);
@@ -24,7 +22,6 @@ await createIndexes(db);
 const deps = {
   logger: pino({ level: "silent" }),
   db,
-  devUserId: config.DEV_USER_ID,
   now: () => new Date("2026-11-11T10:05:30Z"),
 };
 const app = createApp({ ...deps, secureCookies: false });

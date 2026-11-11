@@ -12,6 +12,8 @@
          it, and Add recipe shows nothing until it's known (ImportPage), so it is that page's
          LCP. fetch() picks this answer up (same address, mode and credentials). -->
     <link rel="preload" href="/api/imports" as="fetch" crossorigin="anonymous" />
+    <!-- Who is signed in: every page waits for it (SessionGate), so it comes with the page too. -->
+    <link rel="preload" href="/api/auth/me" as="fetch" crossorigin="anonymous" />
     <title>Pinch</title>
   </head>
   <body>

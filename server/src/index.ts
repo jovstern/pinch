@@ -10,7 +10,6 @@ const client = await connectToMongo(config.MONGODB_URI);
 const app = createApp({
   logger,
   db: client.db(config.DB_NAME),
-  devUserId: config.DEV_USER_ID,
   secureCookies: config.NODE_ENV === "production",
   trustProxy: config.TRUST_PROXY,
 });

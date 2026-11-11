@@ -44,15 +44,20 @@ async function deleteSession(db: Db, req: Request) {
   if (token) await sessionsCollection(db).deleteOne({ tokenHash: hashToken(token) });
 }
 
-// The request's user, from its cookie, or null when signed out. A session past its expiresAt
+// The request's session, from its cookie, or null when signed out. A session past its expiresAt
 // counts as none: the TTL index deletes it only within a minute or so.
-export async function currentUser(db: Db, req: Request) {
+export async function currentSession(db: Db, req: Request) {
   const token = readCookie(req, SESSION_COOKIE);
   if (!token) return null;
-  const session = await sessionsCollection(db).findOne({
+  return sessionsCollection(db).findOne({
     tokenHash: hashToken(token),
     expiresAt: { $gt: new Date() },
   });
+}
+
+// The request's user, or null when signed out: for GET /api/auth/me, which shows the account.
+export async function currentUser(db: Db, req: Request) {
+  const session = await currentSession(db, req);
   if (!session) return null;
   return usersCollection(db).findOne({ _id: session.userId });
 }

@@ -21,3 +21,11 @@ export function usersCollection(db: Db) {
 export function toMe(user: UserDocument): Me {
   return { id: user._id.toHexString(), email: user.email, name: user.name };
 }
+
+// The account with this email, for the db: scripts (seed, adopt). None stops the script with a
+// message that says what to do.
+export async function findAccount(db: Db, email: string) {
+  const user = await usersCollection(db).findOne({ email: email.trim().toLowerCase() });
+  if (!user) throw new Error(`No account has the email ${email}: sign up in the app first.`);
+  return user;
+}

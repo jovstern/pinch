@@ -135,9 +135,9 @@ Planned, not built yet. In this order:
       `db:backfill-link-keys`
 - [x] A1 Users and sessions: signup, login, logout, me; argon2id; the hashed cookie token; the
       login rate limit; the indexes
-- [ ] A2 The user middleware reads the session (401 without one); e2e signs in once and reuses
-      it; `db:adopt-dev-data <email>`
-- [ ] A3 The client: Log in and Sign up, redirect to `/login` and back, a 401 signs out, the
+- [x] A2 The user middleware reads the session (401 without one); e2e signs in once and reuses
+      it; `db:adopt-dev-data <email>`; `db:seed <email>`
+- [x] A3 The client: Log in and Sign up, redirect to `/login` and back, a 401 signs out, the
       avatar's menu (name, Log out)
 - [ ] A4 Google sign-in: the OIDC code flow (state, PKCE), linking by verified email; the user
       sets `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` in `.env`

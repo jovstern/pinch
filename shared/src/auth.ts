@@ -6,6 +6,7 @@ const EmailSchema = z
   .string("Enter your email.")
   .trim()
   .toLowerCase()
+  .min(1, "Enter your email.")
   .pipe(z.email("Enter a valid email.").max(254, "Keep the email under 254 characters."));
 
 // The body of POST /api/auth/signup. At least 8 characters and no other rules (§8.3); the cap

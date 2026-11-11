@@ -4,11 +4,11 @@ import helmet from "helmet";
 import type { Db } from "mongodb";
 import type { Logger } from "pino";
 import { pinoHttp } from "pino-http";
-import { devUser } from "./devUser.ts";
 import { errorHandler, HttpError, notFound } from "./errors.ts";
 import { authRouter } from "./routes/auth.ts";
 import { importsRouter } from "./routes/imports.ts";
 import { recipesRouter } from "./routes/recipes.ts";
+import { requireUser } from "./requireUser.ts";
 
 // secureCookies: the session cookie is Secure unless the caller says it runs on http (development
 // and tests); a caller who forgets gets the safe one. trustProxy: how many proxies stand in front
@@ -17,7 +17,6 @@ import { recipesRouter } from "./routes/recipes.ts";
 type AppDeps = {
   logger: Logger;
   db: Db;
-  devUserId: string;
   secureCookies?: boolean;
   trustProxy?: number;
   now?: () => Date;
@@ -27,7 +26,6 @@ type AppDeps = {
 export function createApp({
   logger,
   db,
-  devUserId,
   secureCookies = true,
   trustProxy = 0,
   now = () => new Date(),
@@ -55,7 +53,6 @@ export function createApp({
       customLogLevel: (_req, res, error) => (error || res.statusCode >= 500 ? "error" : "info"),
     }),
   );
-  app.use(devUser(devUserId));
   // JSON bodies only, up to express's default 100 kB: far more than any recipe needs.
   app.use(express.json());
 
@@ -76,8 +73,9 @@ export function createApp({
   });
 
   app.use("/api/auth", authRouter(db, { secureCookies, now }));
-  app.use("/api/recipes", recipesRouter(db));
-  app.use("/api/imports", importsRouter(db));
+  // Health and auth above are open; a user's recipes and imports need a session (§8.3).
+  app.use("/api/recipes", requireUser(db), recipesRouter(db));
+  app.use("/api/imports", requireUser(db), importsRouter(db));
 
   app.use(notFound);
   app.use(errorHandler);

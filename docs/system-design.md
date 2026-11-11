@@ -415,10 +415,11 @@ Every index is checked with `.explain("executionStats")`: expect `IXSCAN`, and
 `totalDocsExamined` close to `nReturned` (a search fetches each match twice, by the text match
 and the not-deleted check, D27: still only the matches).
 
-**Sample data:** `npm run db:seed` adds ten sample recipes for the dev user (§8.3), so the
-list, search and filters have something to find; the e2e run seeds its own database the same
-way. Each sample has a fixed id and is written only when it's missing: running it again
-leaves an edited sample as it is, and puts back one that was deleted.
+**Sample data:** `npm run db:seed <email>` adds ten sample recipes for that account (sign up
+first, §8.3), so the list, search and filters have something to find; each e2e file's user gets
+the same ten through the API (`e2e/fixtures.ts`). Each sample has a fixed id and is written only
+when it's missing: running it again leaves an edited sample as it is, and puts back one that was
+deleted. The fixed ids make them one account's per database: seeding a second fails.
 
 ## 7. Find
 
@@ -531,10 +532,13 @@ them. No try/catch in each route.
 
 ### 8.3 Accounts (M9, D29)
 
-Until M9 a small middleware sets `req.userId` from config `DEV_USER_ID` (not a secret, so it has
-a default and needs no `.env` entry; `db:seed` creates that user). Every query already filters
-by `ownerId: req.userId`, so M9 changes **only that middleware**: it reads the session instead,
-and a request without one gets 401 (the health routes and `/api/auth/*` stay open).
+Until M9 a small middleware set `req.userId` from config `DEV_USER_ID`. Every query already
+filtered by `ownerId: req.userId`, so M9 changed **only that middleware**: `requireUser`
+(`server/src/requireUser.ts`), in front of `/api/recipes` and `/api/imports`, reads the session
+(`currentSession`: one lookup by the token's hash, not the account) and sets `req.userId`; a
+request without a live session gets 401 `signed_out`. The health routes and `/api/auth/*` stay
+open. Another user's recipe or import is a 404, as before. The worker is unchanged: it reads
+`ownerId` from each job.
 
 - **Sign-up is open:** email and password, or Google. Each account has the daily cap of 20
   (D22); a global daily cap on Gemini calls (D30) bounds what many accounts can spend.
@@ -568,11 +572,32 @@ and a request without one gets 401 (the health routes and `/api/auth/*` stay ope
 - **CSRF:** SameSite=Lax, one origin (Vite proxies `/api` in dev), JSON-only mutations. Logout
   has no body, so it checks for `Content-Type: application/json` itself (415 without it): a form
   on another site can't send that, so it can't sign the user out.
-- **The client:** Log in and Sign up pages (with "Continue with Google"); a signed-out visit, or
-  any 401 from the API, goes to `/login` and comes back where it was; the avatar becomes a menu
-  with the name and Log out.
-- **The dev user's data:** `npm run db:adopt-dev-data <email>`, run once, gives the dev user's
-  recipes, imports and usage to that account.
+- **The client:** Log in and Sign up pages (lazy chunks; "Continue with Google" comes with A4).
+  `GET /api/auth/me` is a query (`meQuery`, preloaded by `index.html` with the queue, so it adds no
+  round trip), and `SessionGate`, a layout route around each group of routes (D21), shows nothing
+  until it answers (or, when it can't be asked, "We couldn't reach Pinch" with Try again), then
+  sends a signed-out visitor to `/login?next=<the page>` and a signed-in one from `/login` or
+  `/signup` to `next`. `next` is read as the browser reads it (`new URL`) and must stay on the
+  site's origin, else `/`. **A change of user is a new page:** Log in and Sign up load `next` (and
+  Log out `/login`) with `location.replace`, so the new document asks again for what `index.html`
+  preloads, now with the new cookie, and keeps nothing of the last user's (cached queries, toasts,
+  module state). A session that ends mid-visit (any 401 from the API outside `/api/auth/*`,
+  noticed in one place, `lib/api.ts`) isn't a new page: the client clears the cache and the toasts
+  itself, and the gate goes to `/login?next=…`, so Log in comes back where it was. Log out is in
+  the avatar's menu, with the name and email; it lands on plain `/login`, without `next`: the
+  user chose to leave, and the next person on the device shouldn't land on their page.
+- **The dev user's data:** `npm run db:adopt-dev-data <email>`, run once after signing up,
+  gives the dev user's (`DEV_USER_ID`, which only this script still reads) recipes, imports and
+  usage to that account; a day both have a count adds them up. It fails if no account has the
+  email, and a second run finds nothing left to move.
+- **Tests:** a route test signs in as a user of its own (`createTestUser`,
+  `server/src/testUser.ts`: an account and a session written to the database, and the cookie).
+  Each e2e file signs up a user of its own through `POST /api/auth/signup` in its first test,
+  adds the samples, and reuses the cookie in its other tests (`e2e/fixtures.ts`), so files
+  running side by side never see each other's imports or toasts. The request goes to the
+  preview's origin, which proxies `/api`, so the cookie is the client's. The e2e API trusts that
+  one proxy (`TRUST_PROXY=1`) and each file signs up from an `X-Forwarded-For` of its own: there
+  are more files than the 10 sign-ups a minute one IP gets.
 - Out of M9: password reset, email verification for password accounts, other providers.
 
 ## 9. Gemini
@@ -621,7 +646,7 @@ and a request without one gets 401 (the health routes and `/api/auth/*` stay ope
 | D10 | Tags as one `facet:value` array from fixed lists; renaming or removing a value needs a migration of the stored recipes | One compound index; clean filters | Separate arrays per facet; free tags |
 | D11 | Cursor pagination | Constant speed at any depth | `skip` / `limit` |
 | D12 | Gemini | Reads video and YouTube URLs natively; has a Files API | Claude (needs frames + transcript for video) |
-| D13 | Auth later, behind a dev-user middleware | Learn the core first; ownership is in every query from day one | Building auth first |
+| D13 | Auth later, behind a dev-user middleware (replaced by the session's in M9 A2, §8.3) | Learn the core first; ownership is in every query from day one | Building auth first |
 | D14 | Nutrition estimated by Gemini, labelled as an estimate | Good enough for a POC | A nutrition database lookup (later) |
 | D15 | Send the post's caption to Gemini with the video | The spike: quantities are often only in the caption (missing quantities fell from 42/106 to 13/101), and it helps spot non-recipes | Video only |
 | D16 | The recipe is in the language of the post | Nothing lost in translation; the model's choice was unstable without a rule | Always Hebrew; always English |
@@ -632,7 +657,7 @@ and a request without one gets 401 (the health routes and `/api/auth/*` stay ope
 | D21 | React Router (declarative: `<Routes>` in `App.tsx`, `useParams`, `Link`) | A handful of screens; the most familiar API and the least setup, easy to read line by line | TanStack Router (type-safe routes and loaders, more concepts) |
 | D22 | The daily cap (20) counts links pasted and Retry clicks, in a per-user, per-UTC-day counter (`usage`) raised atomically by both routes; past it, 429 | Imports are deleted once done, so counting them would undercount; the unique `{ownerId, day}` index makes two first counts at once safe on a standalone Mongo (as D9); the routes are where a user asks for work; automatic retries (3 a link) aren't counted, so at most 60 Gemini calls a day | Counting each Gemini call in the worker (exact, but a link could be accepted and then fail with "limit reached") |
 | D23 | "Not a recipe" and "too long" fail the import at once (`NoRetryError`, its message shown to the user); every other error is retried | Trying again gives the same answer and costs a Gemini call each time; the user learns why straight away; nor is the user offered a Retry that can't help, and would use one of the day's 20 | Retry everything (3 Gemini calls for a cat video, and a vague message) |
-| D24 | Two tabs, **Add recipe** (`/`, the default; *New recipe* until 2026-11-10, renamed by the user) and **My recipes** (`/recipes`, with how many recipes there are: `GET /api/recipes/count`); the import queue sits under the box on Add recipe; every inner page has breadcrumbs (docs/ux/pass-02.md §12–13); the logo (the user's, 2026-11-11) leads the header and links to Add recipe: the Pinch wordmark from 768 px, the P mark on a phone, none under 360 px | Adding is the main event, so it opens first; the split keeps the form off the library; breadcrumbs say where a page belongs and replace Exit and "‹ Recipes"; the wordmark doesn't fit beside the tabs on a phone, and under 360 px the tabs and their counts need the whole row | One home with the box above the recipes; Recipes as the default tab; a bottom tab bar |
+| D24 | Two tabs, **Add recipe** (`/`, the default; *New recipe* until 2026-11-10, renamed by the user) and **My recipes** (`/recipes`, with how many recipes there are: `GET /api/recipes/count`); the import queue sits under the box on Add recipe; every inner page has breadcrumbs (docs/ux/pass-02.md §12–13); the logo (the user's, 2026-11-11) leads the header and links to Add recipe: the Pinch wordmark from 768 px, the P mark on a phone, none under 360 px; the avatar (the first letter of the user's name, M9) ends it and opens the account menu: name, email, Log out | Adding is the main event, so it opens first; the split keeps the form off the library; breadcrumbs say where a page belongs and replace Exit and "‹ Recipes"; the wordmark doesn't fit beside the tabs on a phone, and under 360 px the tabs and their counts need the whole row | One home with the box above the recipes; Recipes as the default tab; a bottom tab bar |
 | D25 | Every recipe has a face: the post's picture, else an emoji the model picks for the dish (an optional `emoji` on the recipe and the draft) on a soft tile, else a cooking pot (with sparkles for a video's); a recipe written by hand gets one from its title (§6) — built in M8 F3 | The picture is what the user remembers; a recipe with none still needs something to recognise; the title's list keeps it to the server, and the editor's JS at its budget | Grey placeholders; generated images; an emoji field in the editor; a map from the tags on the client |
 | D26 | The UI is built from **shadcn/ui** components, copied into `client/src/components/ui/`, their variables mapped onto Pinch's tokens; controls 44 px tall for touch | Accessible Radix parts (Tabs, Sheet, DropdownMenu, Dialog, toasts) whose code lives in the repo and can be read line by line; one pattern per control | Pinch's own components only; a packaged kit (MUI, Chakra) |
 | D27 | Undo in the toasts is a **soft delete**: DELETE sets `deletedAt` on the recipe or import, every read (lists, search, a recipe, its picture, edit, cook, the queue, its badge, approve, retry, the worker's claim and saves) leaves those out, `POST …/restore` unsets it, and a partial TTL index deletes them for good an hour later. Pinch it's Undo is the same DELETE: the worker's writes are conditional on the job not being deleted (§4.3), so a cancelled import never turns ready. Built in M8 F4 | Undo needs the thing to still exist; the server is the one place every tab and the worker agree on, and a closed tab can't lose a delete; one field and one filter for both collections, one atomic `updateOne` per write (no transactions, D9). Cancelling counts against the day's cap (D22): the request was already counted | Sending the DELETE only once the toast's 8 s are over (lost if the tab closes, other tabs show the deleted one meanwhile); a `cancelled` status for imports (a second mechanism next to the recipes' delete); moving deleted documents to a trash collection (two writes, no transaction) |
@@ -683,9 +708,10 @@ noise, and M5/M6 only swap the extractor.
 
 Phone first (§1); the wireframes in `docs/ux/wireframes/` (pass 02, revision 2) show each
 screen at 360 and 1440 px. Every page sits in one frame (D24): a header of two tabs, **New
-recipe** (its badge counts drafts ready to review) and **My recipes**, then an avatar (a "coming
-soon" placeholder until auth arrives, §8.3; a menu waits for something to put in it: the
-theme follows the system). **Write a recipe** is on both tabs: in the header from
+recipe** (its badge counts drafts ready to review) and **My recipes**, then the avatar: the first
+letter of the user's name in a 44 px circle, which opens a menu (not modal, loaded on its first
+press as ⋯ is) with the name and email, then Log out (§8.3; the theme follows the system, so it
+has no switch). **Write a recipe** is on both tabs: in the header from
 768 px, a floating button at the bottom right on a phone. The logo comes first and links to
 Add recipe: the "Pinch" wordmark from 768 px, the "P" mark on a phone from 360 px (none
 narrower), each in the dark theme's accent in the dark theme (`client/public/logo*.svg`, as
@@ -718,6 +744,8 @@ green (`success` on `success-soft`); the rest stay neutral, and errors red.
 | `/recipes/new` | Write a recipe | The editor, empty (breadcrumbs *Add recipe › Write a recipe*), under a tip: got it as text? Paste it on Add recipe. Title (examples as placeholders), description, ingredients as amount · unit · name rows with a note (on its own line on a phone) and ✕, steps as numbered boxes with ✕, Add ingredient and Add step (Paste a list and reordering aren't built: nothing parses a pasted line yet, and the form never had an order to change); then the source ("Written by you"), serves and times, and tags as chips with ✕ and Add tag (a sheet of the facets, as Filters); Cancel and **Save recipe** pinned to the bottom. No picture by hand, and no Change picture or source link: the API has no upload and keeps the source (D20) | Each error under its field from the first Save (§8.1), focus on the first, "N things to fix before saving" above the Save bar; saving; failed (keeps what was typed) |
 | `/recipes/:id/edit` | Edit a recipe | The same editor, filled, with its picture (*My recipes › title › Edit*); Cancel and **Save changes** | Loading, error, not found; then as Write a recipe |
 | `/imports/:id` | Review a draft | The same editor, filled from the draft (*Add recipe › Review: title*), with its picture, under a banner that says where Pinch read it (the site, the text you pasted, your screenshots) and links to the post (Watch the video). The fields the model was unsure of (§6) are marked: a dashed box, and under its row ◆ and the reason, which the box points to (`aria-describedby`); changing the field clears its mark, and removing a row moves the marks of the rows under it. Under the banner, "◆ N things to look at, marked below" and Go to the first (focus on the first marked box). Marks don't block Save, and a saved recipe doesn't keep them. Discard (asks first, "Discard this draft?" with its title as it is now, then the toast; not while saving) and **Save to My recipes** (approves it and opens the recipe) | Loading, error; no draft yet, or no such import (says so, links to Add recipe); then as Write a recipe |
+| `/login` | Log in | Signed out only (§8.3): no header, the wordmark over a card in the middle of the screen (the tabs and counts are a signed-in user's). Email and Password (filled in by the browser: `email`, `current-password`), **Log in**, then "New to Pinch? Sign up" (keeping `?next=`); room under the button for "Continue with Google" (A4) | Each error under its field from the first Log in, focus on the first; logging in; "That email and password don't match." (401, either one wrong); "Too many tries. Wait a minute and try again." (429); "Something went wrong. Try again." (a 500); "We couldn't reach Pinch. Try again." (no answer) |
+| `/signup` | Sign up | As Log in: Name, Email, Password ("At least 8 characters", `new-password`; the hint gives way to an error), **Sign up**, then "Already have an account? Log in" | As Log in; an email with an account (409) says "An account already uses this email." with a Log in link; the API's field errors (400) on their fields |
 | anything else | Page not found | Get back to My recipes | — |
 
 After Save, Save changes, Delete or a draft's Discard, the page that opens takes the focus on its

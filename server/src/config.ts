@@ -15,8 +15,8 @@ const ConfigSchema = z.object({
   LOG_LEVEL: z.enum(["fatal", "error", "warn", "info", "debug", "trace", "silent"]).default("info"),
   MONGODB_URI: z.string().default("mongodb://localhost:27017"),
   DB_NAME: z.string().default("pinch"),
-  // v1 has no login: every request acts as this user (design §8.3). Not a secret, so it has a
-  // default and works without any .env entry.
+  // The user every request acted as before accounts (design §8.3): only db:adopt-dev-data reads
+  // it now, to give that user's data to an account. Not a secret, so it has a default.
   DEV_USER_ID: z
     .string()
     .refine((id) => ObjectId.isValid(id), "must be a 24-character hex ObjectId")
