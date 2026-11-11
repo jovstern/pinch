@@ -1,19 +1,19 @@
 import { fieldErrors, LoginInputSchema } from "@pinch/shared";
 import { revalidateLogic, useForm } from "@tanstack/react-form";
-import { useQueryClient } from "@tanstack/react-query";
 import { useRef } from "react";
 import { Link, useLocation } from "react-router";
 import { TextField } from "../../components/TextField.tsx";
+import { loadPage } from "../../lib/loadPage.ts";
 import { Button } from "../../components/ui/Button.tsx";
 import { AuthFrame } from "./AuthFrame.tsx";
-import { logIn, setMe } from "./authQueries.ts";
+import { logIn } from "./authQueries.ts";
+import { nextPage } from "./nextPage.ts";
 import { SubmitAlert } from "./SubmitAlert.tsx";
 import { submitError } from "./submitError.ts";
 
 // Log in (design §8.3, §14), at /login. Checked as every form is (RecipeForm): on the first
 // submit, then on every change, with the API's own schema; then the API's answer.
 export function LoginPage() {
-  const queryClient = useQueryClient();
   // ?next= (the page the user was going to) goes with them to Sign up.
   const { search } = useLocation();
   const formRef = useRef<HTMLFormElement>(null);
@@ -27,8 +27,9 @@ export function LoginPage() {
       },
       onSubmitAsync: async ({ value }) => {
         try {
-          // Signed in: the gate (SessionGate) takes the user on to the page they asked for.
-          setMe(queryClient, await logIn(LoginInputSchema.parse(value)));
+          await logIn(LoginInputSchema.parse(value));
+          // Signed in: a new page, the one they asked for (design §8.3).
+          loadPage(nextPage(search));
           return null;
         } catch (error) {
           return submitError(error);

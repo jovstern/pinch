@@ -52,7 +52,7 @@ export function TextField({
   const hintId = `${id}-hint`;
   const invalid = field.state.meta.errors.some((message) => typeof message === "string");
   const describedBy = [];
-  if (hint) describedBy.push(hintId);
+  if (hint && !invalid) describedBy.push(hintId);
   if (markId) describedBy.push(markId);
   if (invalid) describedBy.push(errorId);
   const shared = {
@@ -98,7 +98,8 @@ export function TextField({
           }}
         />
       )}
-      {hint && (
+      {/* Not beside an error: the error says it again ("Use at least 8 characters."). */}
+      {hint && !invalid && (
         <p id={hintId} className="mt-1 text-sm text-text-muted">
           {hint}
         </p>

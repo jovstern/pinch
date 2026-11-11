@@ -55,6 +55,15 @@ export function dismissToast(id: string) {
   );
 }
 
+// Every toast closed: a session that ended mid-visit (SessionGate) leaves nothing of the user's.
+export function dismissAllToasts() {
+  if (!toastSent) return;
+  import("sonner").then(
+    ({ toast }) => toast.dismiss(),
+    () => undefined,
+  );
+}
+
 // Undo, on the toasts of a send or a delete (design D27). What it does is the caller's: a request,
 // then the queries to refresh. Sonner closes the toast as it's pressed; a failure says so, with
 // Try again. A 404 isn't the connection: what it would bring back is gone (deleted for good, or in

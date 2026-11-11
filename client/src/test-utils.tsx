@@ -7,7 +7,8 @@ import { vi } from "vitest";
 import { App } from "./App.tsx";
 import { meQuery } from "./features/auth/authQueries.ts";
 
-// The user every test is signed in as, unless it passes { me: null }.
+// The user every test is signed in as, unless it passes { me: null } (signed out) or
+// { me: "ask" } (the app asks GET /api/auth/me, through the test's fetch).
 export const testUser: Me = {
   id: "6650a1b2c3d4e5f600000099",
   email: "cook@example.com",
@@ -22,7 +23,7 @@ export const testUser: Me = {
 // as the app has it once GET /api/auth/me answers), so the page renders at once.
 export function renderApp(
   path: string,
-  { wide = false, me = testUser }: { wide?: boolean; me?: Me | null } = {},
+  { wide = false, me = testUser }: { wide?: boolean; me?: Me | null | "ask" } = {},
 ) {
   toast.dismiss();
   vi.stubGlobal("matchMedia", () => ({
@@ -31,7 +32,7 @@ export function renderApp(
     removeEventListener: vi.fn(),
   }));
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  queryClient.setQueryData(meQuery.queryKey, me);
+  if (me !== "ask") queryClient.setQueryData(meQuery.queryKey, me);
   render(
     <QueryClientProvider client={queryClient}>
       <MemoryRouter initialEntries={[path]}>

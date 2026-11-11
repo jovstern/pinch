@@ -1,18 +1,18 @@
 import { fieldErrors, SignupInputSchema } from "@pinch/shared";
 import { revalidateLogic, useForm } from "@tanstack/react-form";
-import { useQueryClient } from "@tanstack/react-query";
 import { useRef } from "react";
 import { Link, useLocation } from "react-router";
 import { TextField } from "../../components/TextField.tsx";
+import { loadPage } from "../../lib/loadPage.ts";
 import { Button } from "../../components/ui/Button.tsx";
 import { AuthFrame } from "./AuthFrame.tsx";
-import { setMe, signUp } from "./authQueries.ts";
+import { signUp } from "./authQueries.ts";
+import { nextPage } from "./nextPage.ts";
 import { SubmitAlert } from "./SubmitAlert.tsx";
 import { submitError } from "./submitError.ts";
 
 // Sign up (design §8.3, §14), at /signup: as Log in, with a name and a new password.
 export function SignupPage() {
-  const queryClient = useQueryClient();
   const { search } = useLocation();
   const formRef = useRef<HTMLFormElement>(null);
   const form = useForm({
@@ -25,7 +25,9 @@ export function SignupPage() {
       },
       onSubmitAsync: async ({ value }) => {
         try {
-          setMe(queryClient, await signUp(SignupInputSchema.parse(value)));
+          await signUp(SignupInputSchema.parse(value));
+          // Signed in: a new page, the one they asked for (design §8.3).
+          loadPage(nextPage(search));
           return null;
         } catch (error) {
           return submitError(error);

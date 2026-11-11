@@ -575,13 +575,16 @@ open. Another user's recipe or import is a 404, as before. The worker is unchang
 - **The client:** Log in and Sign up pages (lazy chunks; "Continue with Google" comes with A4).
   `GET /api/auth/me` is a query (`meQuery`, preloaded by `index.html` with the queue, so it adds no
   round trip), and `SessionGate`, a layout route around each group of routes (D21), shows nothing
-  until it answers, then sends a signed-out visitor to `/login?next=<the page>` and a signed-in
-  one from `/login` or `/signup` to `next` (only an address in the app) or `/`. Any 401 from the
-  API outside `/api/auth/*` signs the client out in one place (`lib/api.ts`): the cache is
-  cleared, and the gate goes to `/login?next=…`, so Log in comes back where it was. The avatar
-  becomes a menu with the name and Log out (A3's second part). Signed out,
-  the queue's preload also got a 401, which the client reads and drops then, or the queue's first
-  request after Log in would pick up that old answer and sign the user out again.
+  until it answers (or, when it can't be asked, "We couldn't reach Pinch" with Try again), then
+  sends a signed-out visitor to `/login?next=<the page>` and a signed-in one from `/login` or
+  `/signup` to `next`. `next` is read as the browser reads it (`new URL`) and must stay on the
+  site's origin, else `/`. **A change of user is a new page:** Log in and Sign up load `next` (and
+  Log out `/login`) with `location.replace`, so the new document asks again for what `index.html`
+  preloads, now with the new cookie, and keeps nothing of the last user's (cached queries, toasts,
+  module state). A session that ends mid-visit (any 401 from the API outside `/api/auth/*`,
+  noticed in one place, `lib/api.ts`) isn't a new page: the client clears the cache and the toasts
+  itself, and the gate goes to `/login?next=…`, so Log in comes back where it was. The avatar
+  becomes a menu with the name and Log out (A3's second part).
 - **The dev user's data:** `npm run db:adopt-dev-data <email>`, run once after signing up,
   gives the dev user's (`DEV_USER_ID`, which only this script still reads) recipes, imports and
   usage to that account; a day both have a count adds them up. It fails if no account has the
@@ -739,8 +742,8 @@ green (`success` on `success-soft`); the rest stay neutral, and errors red.
 | `/recipes/new` | Write a recipe | The editor, empty (breadcrumbs *Add recipe › Write a recipe*), under a tip: got it as text? Paste it on Add recipe. Title (examples as placeholders), description, ingredients as amount · unit · name rows with a note (on its own line on a phone) and ✕, steps as numbered boxes with ✕, Add ingredient and Add step (Paste a list and reordering aren't built: nothing parses a pasted line yet, and the form never had an order to change); then the source ("Written by you"), serves and times, and tags as chips with ✕ and Add tag (a sheet of the facets, as Filters); Cancel and **Save recipe** pinned to the bottom. No picture by hand, and no Change picture or source link: the API has no upload and keeps the source (D20) | Each error under its field from the first Save (§8.1), focus on the first, "N things to fix before saving" above the Save bar; saving; failed (keeps what was typed) |
 | `/recipes/:id/edit` | Edit a recipe | The same editor, filled, with its picture (*My recipes › title › Edit*); Cancel and **Save changes** | Loading, error, not found; then as Write a recipe |
 | `/imports/:id` | Review a draft | The same editor, filled from the draft (*Add recipe › Review: title*), with its picture, under a banner that says where Pinch read it (the site, the text you pasted, your screenshots) and links to the post (Watch the video). The fields the model was unsure of (§6) are marked: a dashed box, and under its row ◆ and the reason, which the box points to (`aria-describedby`); changing the field clears its mark, and removing a row moves the marks of the rows under it. Under the banner, "◆ N things to look at, marked below" and Go to the first (focus on the first marked box). Marks don't block Save, and a saved recipe doesn't keep them. Discard (asks first, "Discard this draft?" with its title as it is now, then the toast; not while saving) and **Save to My recipes** (approves it and opens the recipe) | Loading, error; no draft yet, or no such import (says so, links to Add recipe); then as Write a recipe |
-| `/login` | Log in | Signed out only (§8.3): no header, the wordmark over a card in the middle of the screen (the tabs and counts are a signed-in user's). Email and Password (filled in by the browser: `email`, `current-password`), **Log in**, then "New to Pinch? Sign up" (keeping `?next=`); room under the button for "Continue with Google" (A4) | Each error under its field from the first Log in, focus on the first; logging in; "That email and password don't match." (401, either one wrong); "Too many tries. Wait a minute and try again." (429); can't reach Pinch |
-| `/signup` | Sign up | As Log in: Name, Email, Password ("At least 8 characters", `new-password`), **Sign up**, then "Already have an account? Log in" | As Log in; an email with an account (409) says the API's message with a Log in link; the API's field errors (400) on their fields |
+| `/login` | Log in | Signed out only (§8.3): no header, the wordmark over a card in the middle of the screen (the tabs and counts are a signed-in user's). Email and Password (filled in by the browser: `email`, `current-password`), **Log in**, then "New to Pinch? Sign up" (keeping `?next=`); room under the button for "Continue with Google" (A4) | Each error under its field from the first Log in, focus on the first; logging in; "That email and password don't match." (401, either one wrong); "Too many tries. Wait a minute and try again." (429); "Something went wrong. Try again." (a 500); "We couldn't reach Pinch. Try again." (no answer) |
+| `/signup` | Sign up | As Log in: Name, Email, Password ("At least 8 characters", `new-password`; the hint gives way to an error), **Sign up**, then "Already have an account? Log in" | As Log in; an email with an account (409) says "An account already uses this email." with a Log in link; the API's field errors (400) on their fields |
 | anything else | Page not found | Get back to My recipes | — |
 
 After Save, Save changes, Delete or a draft's Discard, the page that opens takes the focus on its

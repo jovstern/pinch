@@ -13,7 +13,8 @@ export function SubmitAlert({ error }: { error: unknown }) {
       {error.logIn && (
         <>
           {" "}
-          <Link to={`/login${search}`} className="font-semibold underline">
+          {/* Kept whole: "Log in" never breaks over two lines. */}
+          <Link to={`/login${search}`} className="font-semibold whitespace-nowrap underline">
             Log in
           </Link>
         </>
