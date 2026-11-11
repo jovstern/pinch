@@ -3,6 +3,7 @@ import { pino } from "pino";
 import { createApp } from "./app.ts";
 import { loadConfig } from "./config.ts";
 import { connectToMongo } from "./db/client.ts";
+import { EXTRACTION } from "./extraction.ts";
 import { googleFromConfig } from "./google.ts";
 
 const config = loadConfig(process.env);
@@ -14,6 +15,8 @@ const app = createApp({
   secureCookies: config.NODE_ENV === "production",
   trustProxy: config.TRUST_PROXY,
   globalDailyImports: config.GLOBAL_DAILY_IMPORTS,
+  // The worker's version, from the same EXTRACTOR (both read .env).
+  extractionVersion: EXTRACTION[config.EXTRACTOR].version,
   google: googleFromConfig(config),
 });
 

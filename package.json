@@ -16,6 +16,7 @@
     "db:indexes": "npm run db:indexes -w server",
     "db:seed": "npm run db:seed -w server",
     "db:backfill-link-keys": "npm run db:backfill-link-keys -w server",
+    "links:forget": "npm run links:forget -w server --",
     "db:adopt-dev-data": "npm run db:adopt-dev-data -w server",
     "format": "prettier --write .",
     "check": "prettier --check . && npm run check --workspaces",

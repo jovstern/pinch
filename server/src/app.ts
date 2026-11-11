@@ -5,6 +5,7 @@ import type { Db } from "mongodb";
 import type { Logger } from "pino";
 import { pinoHttp } from "pino-http";
 import { errorHandler, HttpError, notFound } from "./errors.ts";
+import { EXTRACTION } from "./extraction.ts";
 import type { Google } from "./google.ts";
 import { authRouter } from "./routes/auth.ts";
 import { googleRouter } from "./routes/google.ts";
@@ -16,7 +17,8 @@ import { requireUser } from "./requireUser.ts";
 // and tests); a caller who forgets gets the safe one. trustProxy: how many proxies stand in front
 // of the API, so req.ip is the browser's address (TRUST_PROXY in config). now: the clock of the
 // rate limit (design §8.3) and the daily caps (D22, D30). globalDailyImports: everyone's imports a
-// day (GLOBAL_DAILY_IMPORTS in config, D30). google: Google sign-in, when configured
+// day (GLOBAL_DAILY_IMPORTS in config, D30). extractionVersion: the worker's, so a link in the
+// shared cache is known to be free (EXTRACTION, design §4.6). google: Google sign-in, when configured
 // (googleFromConfig; tests pass a fake exchange).
 type AppDeps = {
   logger: Logger;
@@ -25,6 +27,7 @@ type AppDeps = {
   trustProxy?: number;
   now?: () => Date;
   globalDailyImports?: number;
+  extractionVersion?: string;
   google?: Google;
 };
 
@@ -36,6 +39,7 @@ export function createApp({
   trustProxy = 0,
   now = () => new Date(),
   globalDailyImports = 500,
+  extractionVersion = EXTRACTION.gemini.version,
   google,
 }: AppDeps) {
   const app = express();
@@ -93,7 +97,7 @@ export function createApp({
   app.use(
     "/api/imports",
     requireUser(db),
-    importsRouter(db, { globalCap: globalDailyImports, now }),
+    importsRouter(db, { globalCap: globalDailyImports, extractionVersion, now }),
   );
 
   app.use(notFound);

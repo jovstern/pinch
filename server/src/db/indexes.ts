@@ -1,5 +1,6 @@
 import type { Db } from "mongodb";
 import { importsCollection } from "./imports.ts";
+import { linksCollection } from "./links.ts";
 import { loginAttemptsCollection } from "./loginAttempts.ts";
 import { recipesCollection, TITLE_COLLATION } from "./recipes.ts";
 import { sessionsCollection } from "./sessions.ts";
@@ -55,6 +56,9 @@ export async function createIndexes(db: Db) {
     // TTL: a day's count goes two days later.
     { key: { expiresAt: 1 }, expireAfterSeconds: 0 },
   ]);
+  // The shared answers (design §4.6): the worker's lookup and upsert, and the API's free-hit check.
+  // Unique, so two workers saving the same post at once leave one.
+  await linksCollection(db).createIndexes([{ key: { key: 1, version: 1 }, unique: true }]);
   await usersCollection(db).createIndexes([
     // Login finds the account by its email; unique, so one account per email (design §8.3).
     { key: { email: 1 }, unique: true },

@@ -4,6 +4,7 @@ import {
   DuplicateLinkSchema,
   globalLimitMessage,
   ImportListSchema,
+  linkKey,
   ImportSchema,
   linkMessage,
   RecipeSchema,
@@ -18,6 +19,7 @@ import request from "supertest";
 import { beforeEach, expect, test } from "vitest";
 import { z } from "zod";
 import { createApp } from "../app.ts";
+import { EXTRACTION } from "../extraction.ts";
 import {
   findImportOfLink,
   IMPORT_LIFETIME_MS,
@@ -25,6 +27,7 @@ import {
   type ImportDocument,
 } from "../db/imports.ts";
 import { createIndexes } from "../db/indexes.ts";
+import { linksCollection } from "../db/links.ts";
 import { findRecipeOfLink, recipesCollection } from "../db/recipes.ts";
 import { usageCollection, utcDay } from "../db/usage.ts";
 import { createTestDb } from "../testDb.ts";
@@ -42,11 +45,12 @@ const usage = usageCollection(db);
 
 // Every test here pinches as this file's user: each starts with none counted today, so the daily
 // cap never refuses one by accident, and with no imports or recipes, so a link pinched in an
-// earlier test isn't "pinched before" (§4.6).
+// earlier test isn't "pinched before", nor in the shared cache (§4.6).
 beforeEach(async () => {
   await usage.deleteMany({});
   await importsCollection(db).deleteMany({});
   await recipesCollection(db).deleteMany({});
+  await linksCollection(db).deleteMany({});
 });
 
 // As if this file's user had sent this many imports on that day (today when not given, worked
@@ -821,6 +825,39 @@ test("a link pinched before is a 409 even past the cap, and isn't counted", asyn
   // Nor toward everyone's (D30): only the first one.
   const everyone = await usage.findOne({ ownerId: "all", day: utcDay(new Date()) });
   expect(everyone?.imports).toBe(1);
+});
+
+// The shared answers (design §4.6): a post anyone pinched before costs no Gemini call, so it's free.
+test("a link in the shared cache counts toward neither cap; one that isn't is refused", async () => {
+  const capped = createApp({ logger: pino({ level: "silent" }), db, globalDailyImports: 2 });
+  const mine = request.agent(capped).set("Cookie", cookie);
+  await setUsage(DAILY_IMPORT_CAP);
+  const tomorrow = new Date(Date.now() + 24 * 60 * 60 * 1000);
+  await usage.insertOne({
+    ownerId: "all",
+    day: utcDay(new Date()),
+    imports: 2,
+    expiresAt: tomorrow,
+  });
+  // Another user's answer for this post, at the worker's version (createApp's default).
+  await linksCollection(db).insertOne({
+    _id: new ObjectId(),
+    key: linkKey(reel),
+    version: EXTRACTION.gemini.version,
+    platform: "instagram",
+    draft,
+    model: "gemini",
+    extractedAt: new Date(),
+  });
+
+  expect((await mine.post("/api/imports").send({ type: "link", url: reelAgain })).status).toBe(202);
+  const other = "https://www.instagram.com/p/Other123/";
+  expect((await mine.post("/api/imports").send({ type: "link", url: other })).status).toBe(429);
+
+  // Past both caps, yet the cached one went through; only the refused one counted.
+  const counted = await usage.findOne({ ownerId: userId, day: utcDay(new Date()) });
+  expect(counted?.imports).toBe(DAILY_IMPORT_CAP + 1);
+  expect((await usage.findOne({ ownerId: "all" }))?.imports).toBe(2);
 });
 
 // The parts of explain("executionStats") the tests read; the driver types it as any document.
