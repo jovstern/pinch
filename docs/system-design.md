@@ -508,7 +508,7 @@ POST   /api/auth/logout                → 204 (with Content-Type: application/j
 GET    /api/auth/me                    → 200 { id, email, name } (401 signed out)
 GET    /api/auth/providers             → 200 { google: boolean } (Google is on only with its settings)
 GET    /api/auth/google?next=…         → 302 to Google (404 without Google's settings; counted as a login per IP)
-GET    /api/auth/google/callback       → signed in, 302 to next; a failure → 302 /login?error=google&reason=…
+GET    /api/auth/google/callback       → signed in, 302 to next; a failure → 302 /login?error=google&reason=… (counted per IP too)
 ```
 
 One set of **Zod schemas** defines the Gemini output, the API input and the TypeScript types,
@@ -569,21 +569,28 @@ open. Another user's recipe or import is a 404, as before. The worker is unchang
 - **Google:** the OpenID Connect code flow with `state`, a `nonce` and PKCE (S256), written by
   hand in `server/src/google.ts` and `routes/google.ts`: two plain requests and `jose`'s
   `jwtVerify`, which checks the ID token's signature against Google's published keys (fetched
-  once and kept), its issuer, its audience (our client ID) and its expiry; `openid-client` would
+  once and kept; RS256 only), its issuer, its audience (our client ID) and its expiry; `openid-client` would
   hide the steps a learner should see, for no fewer lines. `GET /api/auth/google?next=…` (counted
   with the logins per IP) makes the state, nonce and code verifier, keeps them with `next` (made
-  safe as the client's `nextPage` does) in a `pinch_google` cookie (base64url JSON, `HttpOnly;
+  safe as the client's `nextPage` does, `//` after its dots included) in a `pinch_google` cookie (base64url JSON, `HttpOnly;
   SameSite=Lax; Path=/api/auth/google`, 10 minutes' `Max-Age`, `Secure` as the session's) and
   sends the browser to Google with `scope=openid email profile` and the verifier's SHA-256. The
   cookie needs no signature: it never leaves the browser but to these routes, no script reads
   it, and changing it gains nothing, as Google's answer must match it; and no collection is
-  needed. `/callback` clears it (one use), then checks in order: the cookie is there
+  needed. A sibling subdomain could set ("toss") it, which a signature would stop; accepted, as
+  Pinch has one origin and no subdomains of its own. `/callback` clears it (one use), counts
+  with the logins per IP (`too_many_tries`), then checks in order: the cookie is there
   (`expired`), the state matches (`state`), a code came (`denied`: a refused consent), the
-  exchange with the verifier and the ID token (`token`), the nonce (`nonce`), `email_verified`
+  exchange with the verifier (10 s at most) and the ID token (`token`; the log keeps jose's
+  error code and message, not the error, which carries the token's claims), the nonce (`nonce`), `email_verified`
   (`unverified`); each failure goes to `/login?error=google&reason=<that word>`, never Google's
-  own words. Then the account: the one with this `googleId` (Google's `sub`); else the one with
-  the email (lowercase), which Google has verified, linked by storing its `googleId`; else a new
-  one with Google's name and no password. A new session, then a 302 to `next`. The routes take
+  own words. Its query (the code and state) is left out of the request's log line. Then the
+  account: the one with this `googleId` (Google's `sub`); else the one with the email
+  (lowercase) and no `googleId`, linked by storing it, which also **drops its password and ends
+  its sessions**: Google proved the email is theirs, the unverified password hasn't (someone
+  could have signed up with it first and waited); else a new one with Google's name and no
+  password. An email whose account has another `googleId` can't sign in this way
+  (`linked_elsewhere`). A new session, then a 302 to `next`. The routes take
   Google as a dependency of `createApp` (`google`, built by `googleFromConfig`), so the tests
   pass a fake exchange and need no network; `jose`'s check has its own tests with a key of
   their own. Without `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` (in `.env`, set by the user)

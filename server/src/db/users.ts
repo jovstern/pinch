@@ -1,5 +1,6 @@
 import type { Me } from "@pinch/shared";
-import { ObjectId, type Db } from "mongodb";
+import { MongoServerError, ObjectId, type Db } from "mongodb";
+import { sessionsCollection } from "./sessions.ts";
 
 // An account (design §6, §8.3). The email is lowercase (the schema makes it so) and unique.
 export type UserDocument = {
@@ -31,17 +32,35 @@ export async function findAccount(db: Db, email: string) {
 }
 
 // A Google sign-in's account (design §8.3): the one with this Google id; else the one with this
-// email, which Google has verified, now linked to it; else a new one, with no password.
+// email, which Google has verified, now linked to it; else a new one, with no password. An email
+// whose account is linked to another Google account can't sign in this way: "linked_elsewhere".
 export async function googleAccount(
   db: Db,
   { googleId, email, name }: { googleId: string; email: string; name: string },
 ) {
   const users = usersCollection(db);
-  const found =
-    (await users.findOne({ googleId })) ??
-    (await users.findOneAndUpdate({ email }, { $set: { googleId } }, { returnDocument: "after" }));
-  if (found) return found;
+  const returning = await users.findOne({ googleId });
+  if (returning) return returning;
+  // Google has proved the email is theirs; the account's password proved nothing (anyone can sign
+  // up with an email that isn't theirs and wait). So linking drops the password and ends every
+  // session it made: whoever set it up is out.
+  const linked = await users.findOneAndUpdate(
+    { email, googleId: { $exists: false } },
+    { $set: { googleId }, $unset: { passwordHash: "" } },
+    { returnDocument: "after" },
+  );
+  if (linked) {
+    await sessionsCollection(db).deleteMany({ userId: linked._id });
+    return linked;
+  }
   const user: UserDocument = { _id: new ObjectId(), email, name, googleId, createdAt: new Date() };
-  await users.insertOne(user);
-  return user;
+  try {
+    await users.insertOne(user);
+    return user;
+  } catch (error) {
+    // 11000, a duplicate key: the email has an account linked to another Google id, or this
+    // Google id's account was made a moment ago (a sign-in in a second tab).
+    if (!(error instanceof MongoServerError && error.code === 11000)) throw error;
+    return (await users.findOne({ googleId })) ?? "linked_elsewhere";
+  }
 }

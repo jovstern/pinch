@@ -79,6 +79,11 @@ export function googleRouter(db: Db, { google, secureCookies, now }: GoogleDeps)
     const flow = readFlow(req);
     // One use, whatever happens next.
     res.clearCookie(FLOW_COOKIE, flowCookie);
+    // Counted too: each answer costs a call to Google and a check of its token.
+    if (!(await countLoginTry(db, `ip ${req.ip ?? ""}`, LOGIN_TRIES_PER_IP, now()))) {
+      failed("too_many_tries");
+      return;
+    }
     if (!flow) {
       failed("expired");
       return;
@@ -95,6 +100,10 @@ export function googleRouter(db: Db, { google, secureCookies, now }: GoogleDeps)
       // As signup's limit; an account without a name on Google gets its email's first part.
       name: claims.name?.trim().slice(0, 100) || email.split("@")[0] || email,
     });
+    if (user === "linked_elsewhere") {
+      failed(user);
+      return;
+    }
     await startSession(db, req, res, user._id, secureCookies);
     res.redirect(flow.next);
   });
@@ -111,7 +120,10 @@ async function checkCallback(req: Request, flow: Flow, google: Google) {
   try {
     claims = ClaimsSchema.parse(await google.exchangeCode(req.query.code, flow.codeVerifier));
   } catch (error) {
-    req.log.warn({ err: error }, "Google's code exchange or ID token failed");
+    // What went wrong, not the error itself: jose's carry the token's claims (an email, a name).
+    const code = error instanceof Error && "code" in error ? error.code : undefined;
+    const message = error instanceof Error ? error.message : String(error);
+    req.log.warn({ code, message }, "Google's code exchange or ID token failed");
     return "token";
   }
   if (claims.nonce !== flow.nonce) return "nonce";
@@ -129,10 +141,14 @@ function readFlow(req: Request) {
   }
 }
 
-// Where to go once signed in: ?next=, only when it stays on the site, read as the browser reads it.
-// The client's nextPage (client/src/features/auth/nextPage.ts) has the same rule and its cases.
+// Where to go once signed in: ?next=, only when it stays on the site, read as the browser reads it,
+// and not a path that starts "//" once its dots are resolved ("/.//x"): in the Location header, a
+// browser reads that as the site x. The client's nextPage (client/src/features/auth/nextPage.ts)
+// has the same rule and its cases.
 function nextPath(next: unknown, origin: string) {
   if (typeof next !== "string") return "/";
   const url = URL.parse(next, origin);
-  return url?.origin === origin ? url.pathname + url.search + url.hash : "/";
+  return url?.origin === origin && !url.pathname.startsWith("//")
+    ? url.pathname + url.search + url.hash
+    : "/";
 }

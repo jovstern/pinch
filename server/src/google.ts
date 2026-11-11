@@ -68,6 +68,8 @@ async function exchangeCode(
   // A form body (fetch sends it as application/x-www-form-urlencoded), as OAuth asks.
   const response = await fetch(TOKEN_URL, {
     method: "POST",
+    // A sign-in waits on this: give up after 10 s rather than hold the request open.
+    signal: AbortSignal.timeout(10_000),
     body: new URLSearchParams({
       grant_type: "authorization_code",
       code,
@@ -86,6 +88,11 @@ async function exchangeCode(
 // client ID, and not expired (jwtVerify checks exp). Exported for its test, which signs tokens
 // with a key of its own.
 export async function verifyIdToken(idToken: string, keys: JWTVerifyGetKey, clientId: string) {
-  const { payload } = await jwtVerify(idToken, keys, { issuer: ISSUERS, audience: clientId });
+  const { payload } = await jwtVerify(idToken, keys, {
+    // Google signs with RS256 only: no other algorithm is accepted.
+    algorithms: ["RS256"],
+    issuer: ISSUERS,
+    audience: clientId,
+  });
   return payload;
 }

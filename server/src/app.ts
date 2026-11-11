@@ -51,7 +51,8 @@ export function createApp({
         req: (req: { id: unknown; method: string; url: string }) => ({
           id: req.id,
           method: req.method,
-          url: req.url,
+          // Not Google sign-in's query: its callback's code and state are secrets (§8.3).
+          url: req.url.startsWith("/api/auth/google/") ? req.url.split("?")[0] : req.url,
         }),
         res: (res: { statusCode: number | null }) => ({ statusCode: res.statusCode }),
       },

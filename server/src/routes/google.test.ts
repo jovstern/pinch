@@ -1,4 +1,6 @@
 import { createHash } from "node:crypto";
+import { MeSchema } from "@pinch/shared";
+import { createLocalJWKSet, exportJWK, generateKeyPair, SignJWT, type JWTPayload } from "jose";
 import { ObjectId } from "mongodb";
 import { pino } from "pino";
 import request from "supertest";
@@ -6,17 +8,18 @@ import { beforeEach, expect, test } from "vitest";
 import { createApp } from "../app.ts";
 import { createIndexes } from "../db/indexes.ts";
 import { LOGIN_TRIES_PER_IP, loginAttemptsCollection } from "../db/loginAttempts.ts";
+import { sessionsCollection } from "../db/sessions.ts";
 import { usersCollection } from "../db/users.ts";
-import type { Google } from "../google.ts";
+import { verifyIdToken, type Google } from "../google.ts";
 import { createTestDb } from "../testDb.ts";
 
 const db = createTestDb();
 await createIndexes(db);
 
 // Google, played by the test: the claims its ID token would carry (already verified: that's
-// google.test.ts), or the error its exchange fails with, and the code and verifier it was given.
+// google.test.ts), or an exchange of the test's own, and the code and verifier it was given.
 let claims: Record<string, unknown> = {};
-let exchangeError: Error | undefined;
+let exchange: (() => Promise<JWTPayload>) | undefined;
 let exchanged: { code: string; codeVerifier: string } | undefined;
 const google: Google = {
   clientId: "pinch.apps.googleusercontent.com",
@@ -24,11 +27,13 @@ const google: Google = {
   redirectUri: "http://localhost:5173/api/auth/google/callback",
   exchangeCode: (code, codeVerifier) => {
     exchanged = { code, codeVerifier };
-    return exchangeError ? Promise.reject(exchangeError) : Promise.resolve(claims);
+    return exchange ? exchange() : Promise.resolve(claims);
   },
 };
+// The API's log lines, to check what they leave out.
+const logLines: string[] = [];
 const deps = {
-  logger: pino({ level: "silent" }),
+  logger: pino({ level: "info" }, { write: (line: string) => void logLines.push(line) }),
   db,
   secureCookies: false,
   now: () => new Date("2026-11-11T10:05:30Z"),
@@ -38,7 +43,7 @@ const app = createApp({ ...deps, google });
 beforeEach(async () => {
   await loginAttemptsCollection(db).deleteMany({});
   exchanged = undefined;
-  exchangeError = undefined;
+  exchange = undefined;
 });
 
 let accounts = 0;
@@ -122,22 +127,51 @@ test("a new Google user gets an account, signed in, and goes where they were goi
 
 test("a Google sign-in with a password account's email signs into it and links it", async () => {
   const user = googleUser();
-  const _id = new ObjectId();
+  const account = { email: user.email.toLowerCase(), password: "a long password" };
+  const signup = await request(app)
+    .post("/api/auth/signup")
+    .send({ ...account, name: "Cook" });
+
+  const response = await callBack(await start(), user);
+  const me = await request(app).get("/api/auth/me").set("Cookie", sessionCookie(response));
+  expect(me.body).toMatchObject({ id: MeSchema.parse(signup.body).id, name: "Cook" });
+  expect(await usersCollection(db).findOne({ email: account.email })).toMatchObject({
+    googleId: user.sub,
+  });
+});
+
+// Someone signed up with the email before its owner did (§8.3): once the owner signs in with
+// Google, their password and session are no use.
+test("linking an account by email drops its password and ends its sessions", async () => {
+  const user = googleUser();
+  const account = { email: user.email.toLowerCase(), password: "a long password" };
+  const signup = await request(app)
+    .post("/api/auth/signup")
+    .send({ ...account, name: "Squatter" });
+
+  await callBack(await start(), user);
+  const oldSession = await request(app).get("/api/auth/me").set("Cookie", sessionCookie(signup));
+  expect(oldSession.status).toBe(401);
+  const login = await request(app).post("/api/auth/login").send(account);
+  expect(login.status).toBe(401);
+  const _id = new ObjectId(MeSchema.parse(signup.body).id);
+  expect(await usersCollection(db).findOne({ _id })).not.toHaveProperty("passwordHash");
+  expect(await sessionsCollection(db).countDocuments({ userId: _id })).toBe(1);
+});
+
+test("an email whose account is linked to another Google account can't sign in", async () => {
+  const user = googleUser();
   await usersCollection(db).insertOne({
-    _id,
+    _id: new ObjectId(),
     email: user.email.toLowerCase(),
     name: "Cook",
-    passwordHash: "argon2id hash",
+    googleId: "another-google-account",
     createdAt: new Date(),
   });
 
   const response = await callBack(await start(), user);
-  const me = await request(app).get("/api/auth/me").set("Cookie", sessionCookie(response));
-  expect(me.body).toMatchObject({ id: _id.toHexString(), name: "Cook" });
-  expect(await usersCollection(db).findOne({ _id })).toMatchObject({
-    googleId: user.sub,
-    passwordHash: "argon2id hash",
-  });
+  expect(response.headers.location).toBe("/login?error=google&reason=linked_elsewhere");
+  expect(sessionCookie(response)).toBe("");
 });
 
 test("a returning Google user signs into their account, even with a new email", async () => {
@@ -190,20 +224,66 @@ test("an email Google hasn't verified makes no account", async () => {
   expect(await usersCollection(db).findOne({ googleId: user.sub })).toBeNull();
 });
 
-test("a failed code exchange or ID token goes back to Log in", async () => {
-  exchangeError = new Error("invalid_grant");
+test("a failed code exchange goes back to Log in", async () => {
+  exchange = () => Promise.reject(new Error("invalid_grant"));
   const response = await callBack(await start(), googleUser());
   expect(response.headers.location).toBe("/login?error=google&reason=token");
 });
 
-test("next stays on the site", async () => {
-  const response = await callBack(await start("/\t/evil"), googleUser());
-  expect(response.headers.location).toBe("/");
+// The exchange gives an ID token checked as the real one is (verifyIdToken), with a key that
+// plays Google's.
+test.each<{ name: string; issuer?: string; audience?: string }>([
+  { name: "another client ID", audience: "other-app" },
+  { name: "another issuer", issuer: "https://evil.example" },
+])(
+  "an ID token for $name goes back to Log in",
+  async ({ issuer = "https://accounts.google.com", audience = google.clientId }) => {
+    const key = await generateKeyPair("RS256");
+    const keys = createLocalJWKSet({
+      keys: [{ ...(await exportJWK(key.publicKey)), kid: "k", alg: "RS256" }],
+    });
+    const token = await new SignJWT({ email: "cook@example.com", email_verified: true })
+      .setProtectedHeader({ alg: "RS256", kid: "k" })
+      .setSubject("google-wrong")
+      .setIssuer(issuer)
+      .setAudience(audience)
+      .setExpirationTime("1h")
+      .sign(key.privateKey);
+    exchange = () => verifyIdToken(token, keys, google.clientId);
+
+    const response = await callBack(await start(), googleUser());
+    expect(response.headers.location).toBe("/login?error=google&reason=token");
+  },
+);
+
+// A browser reads each as another site: a tab is dropped ("//evil"), and the dots resolve to
+// //evil.com.
+test.each(["/\t/evil", "/.//evil.com", "/x/..//evil.com", "/%2e//evil.com"])(
+  "next=%s stays on the site",
+  async (next) => {
+    const response = await callBack(await start(next), googleUser());
+    expect(response.headers.location).toBe("/");
+  },
+);
+
+test("the callback's code and state aren't written to the log", async () => {
+  logLines.length = 0;
+  await callBack(await start(), googleUser());
+  const callbackLines = logLines.filter((line) => line.includes("/api/auth/google/callback"));
+  expect(callbackLines).not.toHaveLength(0);
+  expect(logLines.join("")).not.toMatch(/code=|state=/);
 });
 
 test("sign-ins count with the logins from the IP", async () => {
   for (let i = 0; i < LOGIN_TRIES_PER_IP; i += 1) await start();
   const { response } = await start();
+  expect(response.headers.location).toBe("/login?error=google&reason=too_many_tries");
+});
+
+test("Google's answers count with the logins from the IP too", async () => {
+  const flow = await start();
+  for (let i = 1; i < LOGIN_TRIES_PER_IP; i += 1) await start();
+  const response = await callBack(flow, googleUser());
   expect(response.headers.location).toBe("/login?error=google&reason=too_many_tries");
 });
 
