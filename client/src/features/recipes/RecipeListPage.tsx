@@ -7,6 +7,7 @@ import { Button } from "../../components/ui/Button.tsx";
 import { Skeleton } from "../../components/ui/Skeleton.tsx";
 import { cn } from "../../lib/cn.ts";
 import { useHeadingFocus } from "../../lib/useHeadingFocus.ts";
+import { useMediaQuery } from "../../lib/useMediaQuery.ts";
 import { LazyFiltersPanel } from "./LazyFiltersPanel.tsx";
 import { ListFilters } from "./ListFilters.tsx";
 import { RecipeCard } from "./RecipeCard.tsx";
@@ -44,6 +45,9 @@ export function RecipeListPage() {
   const listRef = useRef<HTMLUListElement>(null);
   const searchRef = useRef<HTMLInputElement>(null);
   const headingRef = useHeadingFocus();
+  // From 1024 px (Tailwind's lg), where the Filters are a panel. Below, it isn't drawn at all, so
+  // a phone never fetches its chunk on the way to the grid (LCP, docs/metrics/m08.md).
+  const wide = useMediaQuery("(min-width: 64rem)");
   // The first recipe of the page Show more asked for, to focus once it's drawn.
   const firstNewRef = useRef<number | null>(null);
   const recipes = data?.pages.flatMap((page) => page.items);
@@ -124,7 +128,7 @@ export function RecipeListPage() {
 
       {/* Two columns from 1024 px: the Filters panel and the grid. */}
       <div className="lg:flex lg:gap-8">
-        {!noRecipesYet && (
+        {!noRecipesYet && wide && (
           <LazyFiltersPanel
             filters={filters}
             onChange={changeFilters}

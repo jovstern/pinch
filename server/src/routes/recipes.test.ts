@@ -1,4 +1,4 @@
-import { RecipeListSchema, RecipeSchema } from "@pinch/shared";
+import { RecipeCountSchema, RecipeListSchema, RecipeSchema } from "@pinch/shared";
 import { ObjectId } from "mongodb";
 import { pino } from "pino";
 import request from "supertest";
@@ -688,4 +688,16 @@ test("DELETE on another user's recipe is not found and keeps it", async () => {
   const response = await request(app).delete(`/api/recipes/${id}`);
   expect(response.status).toBe(404);
   expect(await recipesCollection(db).countDocuments({ _id: new ObjectId(id) })).toBe(1);
+});
+
+test("GET /api/recipes/count counts my recipes, not another user's nor a deleted one", async () => {
+  const { userApp } = await insertManyRecipes();
+  const first = await request(userApp).get("/api/recipes");
+  const deletedId = RecipeListSchema.parse(first.body).items[0]?.id ?? "";
+  await request(userApp).delete(`/api/recipes/${deletedId}`);
+  await insertOtherUsersRecipe();
+
+  const response = await request(userApp).get("/api/recipes/count");
+  expect(response.status).toBe(200);
+  expect(RecipeCountSchema.parse(response.body)).toEqual({ count: 119 });
 });

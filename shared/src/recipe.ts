@@ -191,6 +191,9 @@ export const RecipeListSchema = z.object({
   nextCursor: z.string().nullable(),
 });
 
+// GET /api/recipes/count: how many recipes the user has (the My recipes tab, design §14).
+export const RecipeCountSchema = z.object({ count: z.number().int().nonnegative() });
+
 export type Ingredient = z.infer<typeof IngredientSchema>;
 export type RecipeInput = z.infer<typeof RecipeInputSchema>;
 export type Nutrition = z.infer<typeof NutritionSchema>;
@@ -198,6 +201,7 @@ export type RecipeDraft = z.infer<typeof RecipeDraftSchema>;
 export type UncertainField = z.infer<typeof UncertainFieldSchema>;
 export type Thumbnail = z.infer<typeof ThumbnailSchema>;
 export type Recipe = z.infer<typeof RecipeSchema>;
+export type RecipeCount = z.infer<typeof RecipeCountSchema>;
 export type RecipeList = z.infer<typeof RecipeListSchema>;
 export type RecipeSort = z.infer<typeof RecipeSortSchema>;
 export type TimeLimit = z.infer<typeof TimeLimitSchema>;

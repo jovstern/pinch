@@ -1,6 +1,7 @@
 import {
   isTag,
   ListSourceSchema,
+  RecipeCountSchema,
   RecipeListSchema,
   RecipeSchema,
   RecipeSortSchema,
@@ -45,8 +46,8 @@ export function withoutFilters({ q, sort }: RecipeFilters): RecipeFilters {
 // The API's page, and how many a search answers (design §7).
 export const PAGE_SIZE = 50;
 
-// Every list, whatever its filters: the prefix New, Edit and Delete refetch.
-export const recipeListsKey = ["recipes", "list"];
+// Every list, whatever its filters: the prefix refetchRecipeLists refetches.
+const recipeListsKey = ["recipes", "list"];
 
 // The list, a page at a time: the first page has no cursor, and each next page asks with the
 // nextCursor of the page before. A null cursor means there is no next page (a search has one).
@@ -62,6 +63,22 @@ export function recipeListQuery(filters: RecipeFilters) {
     // blinking to placeholder cards on every tick.
     placeholderData: keepPreviousData,
   });
+}
+
+// How many recipes the user has, for the My recipes tab (design §14). Refetched with the lists
+// (refetchRecipeLists).
+export const recipeCountQuery = queryOptions({
+  queryKey: ["recipes", "count"],
+  queryFn: () => getJson("/api/recipes/count", RecipeCountSchema),
+});
+
+// After a recipe is added, changed, deleted or restored: every list, whatever its filters (each
+// search seen lately, refetched now even off screen: "all"), and the tab's count.
+export function refetchRecipeLists(queryClient: QueryClient) {
+  return Promise.all([
+    queryClient.invalidateQueries({ queryKey: recipeListsKey, refetchType: "all" }),
+    queryClient.invalidateQueries({ queryKey: recipeCountQuery.queryKey }),
+  ]);
 }
 
 export function recipeQuery(id: string) {

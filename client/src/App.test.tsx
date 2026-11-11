@@ -112,3 +112,18 @@ test("with no draft ready, Add recipe has no count", async () => {
   expect(await screen.findByText("No recipe in this post.")).toBeInTheDocument();
   expect(tab("Add recipe")).toHaveAccessibleName("Add recipe");
 });
+
+test("My recipes shows how many recipes there are, on every page", async () => {
+  vi.stubGlobal("fetch", (path: string) =>
+    Promise.resolve(
+      path === "/api/recipes/count"
+        ? Response.json({ count: 12 })
+        : new Response(null, { status: 404 }),
+    ),
+  );
+  renderApp("/nope");
+  // Asked for a second after the app starts (Header).
+  expect(
+    await screen.findByRole("link", { name: "My recipes 12 recipes" }, { timeout: 3000 }),
+  ).toHaveAttribute("href", "/recipes");
+});
