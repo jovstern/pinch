@@ -15,6 +15,7 @@
     "dev:worker": "npm run dev:worker -w server",
     "db:indexes": "npm run db:indexes -w server",
     "db:seed": "npm run db:seed -w server",
+    "db:backfill-link-keys": "npm run db:backfill-link-keys -w server",
     "format": "prettier --write .",
     "check": "prettier --check . && npm run check --workspaces",
     "e2e": "playwright test"

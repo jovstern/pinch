@@ -1,6 +1,7 @@
 import {
   DAILY_IMPORT_CAP,
   dailyLimitMessage,
+  DuplicateLinkSchema,
   ImportListSchema,
   ImportSchema,
   linkMessage,
@@ -14,11 +15,17 @@ import { pino } from "pino";
 import sharp from "sharp";
 import request from "supertest";
 import { beforeEach, expect, test } from "vitest";
+import { z } from "zod";
 import { createApp } from "../app.ts";
 import { loadConfig } from "../config.ts";
-import { IMPORT_LIFETIME_MS, importsCollection, type ImportDocument } from "../db/imports.ts";
+import {
+  findImportOfLink,
+  IMPORT_LIFETIME_MS,
+  importsCollection,
+  type ImportDocument,
+} from "../db/imports.ts";
 import { createIndexes } from "../db/indexes.ts";
-import { recipesCollection } from "../db/recipes.ts";
+import { findRecipeOfLink, recipesCollection } from "../db/recipes.ts";
 import { usageCollection, utcDay } from "../db/usage.ts";
 import { createTestDb } from "../testDb.ts";
 
@@ -32,9 +39,12 @@ const usage = usageCollection(db);
 const devUserId = new ObjectId(config.DEV_USER_ID);
 
 // Every test here pinches as the dev user: each starts with none counted today, so the daily
-// cap never refuses one by accident.
+// cap never refuses one by accident, and with no imports or recipes, so a link pinched in an
+// earlier test isn't "pinched before" (§4.6).
 beforeEach(async () => {
   await usage.deleteMany({});
+  await importsCollection(db).deleteMany({});
+  await recipesCollection(db).deleteMany({});
 });
 
 // As if the dev user had sent this many imports on that day (today when not given, worked
@@ -628,4 +638,173 @@ test("screenshots refused count nothing; past the cap they're refused with 429",
     .post("/api/imports/screenshots")
     .attach("images", screenshot, "one.png");
   expect(capped.status).toBe(429);
+});
+
+// A link pinched before (design §4.6): the same reel, shared again with other tracking.
+const reelAgain = "https://instagram.com/p/DOxAbc123?igsh=MWQ1ZGUx";
+
+// Pinches the reel and makes its import ready, as the worker would.
+async function pinchReady() {
+  const created = await request(app).post("/api/imports").send({ type: "link", url: reel });
+  const { id } = ImportSchema.parse(created.body);
+  await importsCollection(db).updateOne(
+    { _id: new ObjectId(id) },
+    { $set: { status: "ready", draft } },
+  );
+  return id;
+}
+
+test("a link the user has a recipe of answers 409 pointing to it, and nothing is stored", async () => {
+  const id = await pinchReady();
+  const approved = await request(app).post(`/api/imports/${id}/approve`).send(draft);
+  const recipe = RecipeSchema.parse(approved.body);
+  // Approve keeps the post with the recipe's link; the API doesn't send it.
+  const stored = await recipesCollection(db).findOne({ _id: new ObjectId(recipe.id) });
+  expect(stored?.source.linkKey).toBe("instagram:DOxAbc123");
+  expect(recipe.source).toEqual({ type: "instagram", url: reel });
+
+  const response = await request(app).post("/api/imports").send({ type: "link", url: reelAgain });
+
+  expect(response.status).toBe(409);
+  expect(DuplicateLinkSchema.parse(response.body)).toEqual({
+    error: { code: "link_pinched_before", message: "You've pinched this link before." },
+    existing: { kind: "recipe", id: recipe.id, title: "Tomato pasta" },
+  });
+  expect(await importsCollection(db).countDocuments()).toBe(0);
+});
+
+test("a link still in the queue answers 409 with the import, and its draft's title once ready", async () => {
+  const created = await request(app).post("/api/imports").send({ type: "link", url: reel });
+  const { id } = ImportSchema.parse(created.body);
+
+  const pending = await request(app).post("/api/imports").send({ type: "link", url: reelAgain });
+  expect(pending.status).toBe(409);
+  expect(DuplicateLinkSchema.parse(pending.body).existing).toEqual({ kind: "import", id });
+
+  await importsCollection(db).updateOne(
+    { _id: new ObjectId(id) },
+    { $set: { status: "ready", draft } },
+  );
+  const ready = await request(app).post("/api/imports").send({ type: "link", url: reelAgain });
+  expect(DuplicateLinkSchema.parse(ready.body).existing).toEqual({
+    kind: "import",
+    id,
+    title: "Tomato pasta",
+  });
+  expect(await importsCollection(db).countDocuments()).toBe(1);
+});
+
+test("a deleted recipe, a failed import or a discarded draft doesn't stop the link", async () => {
+  const id = await pinchReady();
+  const recipe = RecipeSchema.parse(
+    (await request(app).post(`/api/imports/${id}/approve`).send(draft)).body,
+  );
+  await request(app).delete(`/api/recipes/${recipe.id}`);
+  const again = await request(app).post("/api/imports").send({ type: "link", url: reelAgain });
+  expect(again.status).toBe(202);
+
+  const { id: againId } = ImportSchema.parse(again.body);
+  await importsCollection(db).updateOne(
+    { _id: new ObjectId(againId) },
+    { $set: { status: "failed", error: "No." } },
+  );
+  const afterFailed = await request(app).post("/api/imports").send({ type: "link", url: reel });
+  expect(afterFailed.status).toBe(202);
+
+  await request(app).delete(`/api/imports/${ImportSchema.parse(afterFailed.body).id}`);
+  const afterDiscard = await request(app).post("/api/imports").send({ type: "link", url: reel });
+  expect(afterDiscard.status).toBe(202);
+});
+
+test("another user's recipe or import of the same link doesn't stop it", async () => {
+  const theirs = new ObjectId();
+  const now = new Date();
+  await recipesCollection(db).insertOne({
+    ...draft,
+    _id: new ObjectId(),
+    ownerId: theirs,
+    source: { type: "instagram", url: reel, linkKey: "instagram:DOxAbc123" },
+    createdAt: now,
+    updatedAt: now,
+  });
+  await importsCollection(db).insertOne({
+    _id: new ObjectId(),
+    ownerId: theirs,
+    status: "pending",
+    input: { type: "link", url: reel, platform: "instagram" },
+    linkKey: "instagram:DOxAbc123",
+    attempts: 0,
+    nextAttemptAt: now,
+    createdAt: now,
+    updatedAt: now,
+    expiresAt: new Date(now.getTime() + IMPORT_LIFETIME_MS),
+  });
+
+  const response = await request(app).post("/api/imports").send({ type: "link", url: reel });
+
+  expect(response.status).toBe(202);
+});
+
+test("a link pinched before is a 409 even past the cap, and isn't counted", async () => {
+  await request(app).post("/api/imports").send({ type: "link", url: reel });
+  await usage.updateOne({ ownerId: devUserId }, { $set: { imports: DAILY_IMPORT_CAP } });
+
+  const response = await request(app).post("/api/imports").send({ type: "link", url: reelAgain });
+
+  expect(response.status).toBe(409);
+  const counted = await usage.findOne({ ownerId: devUserId, day: utcDay(new Date()) });
+  expect(counted?.imports).toBe(DAILY_IMPORT_CAP);
+});
+
+// The parts of explain("executionStats") the tests read; the driver types it as any document.
+const ExplainSchema = z.object({
+  queryPlanner: z.object({ winningPlan: z.unknown() }),
+  executionStats: z.object({ nReturned: z.number(), totalDocsExamined: z.number() }),
+});
+
+test("finding a link pinched before reads its index, and only the one it finds (§6)", async () => {
+  // Many of the user's recipes and imports, each from another post.
+  const now = new Date();
+  const posts = Array.from({ length: 50 }, (_, n) => `instagram:post${String(n)}`);
+  await recipesCollection(db).insertMany(
+    posts.map((key) => ({
+      ...draft,
+      _id: new ObjectId(),
+      ownerId: devUserId,
+      source: { type: "instagram" as const, url: reel, linkKey: key },
+      createdAt: now,
+      updatedAt: now,
+    })),
+  );
+  await importsCollection(db).insertMany(
+    posts.map((key) => ({
+      _id: new ObjectId(),
+      ownerId: devUserId,
+      status: "ready" as const,
+      input: { type: "link" as const, url: reel, platform: "instagram" as const },
+      linkKey: key,
+      attempts: 1,
+      nextAttemptAt: now,
+      createdAt: now,
+      updatedAt: now,
+      expiresAt: new Date(now.getTime() + IMPORT_LIFETIME_MS),
+    })),
+  );
+
+  const plans = [
+    await findRecipeOfLink(recipesCollection(db), devUserId, "instagram:post7").explain(
+      "executionStats",
+    ),
+    await findImportOfLink(importsCollection(db), devUserId, "instagram:post7").explain(
+      "executionStats",
+    ),
+  ].map((explain) => ExplainSchema.parse(explain));
+
+  for (const { queryPlanner, executionStats } of plans) {
+    const plan = JSON.stringify(queryPlanner.winningPlan);
+    expect(plan).toContain("IXSCAN");
+    expect(plan).toMatch(/linkKey/);
+    expect(executionStats.nReturned).toBe(1);
+    expect(executionStats.totalDocsExamined).toBe(1);
+  }
 });

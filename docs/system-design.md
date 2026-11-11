@@ -221,20 +221,23 @@ Instagram, 3 Facebook). `yt-dlp` read all of them without cookies; Gemini turned
 recipes, correctly rejected one promo, and one call hung. Results and findings are in
 `docs/spike-results.md`.
 
-### 4.6 A link pinched before (D28; planned: M9 L1, L2)
+### 4.6 A link pinched before (D28; L1 built in M9, L2 planned)
 
 Every link import carries `linkKey`, the post it points to: `instagram:C9x…`, `youtube:abc`,
-`facebook:123…` (`shared/src/linkKey.ts`: Instagram's `/reel/`, `/reels/`, `/p/` and `/tv/`;
-YouTube's `shorts/`, `watch?v=`, `youtu.be/`, `embed/` and `live/`; Facebook's `/reel/`,
-`watch?v=` and `/<page>/videos/`). A link whose path holds no id (`fb.watch/…`, Facebook's
+`facebook:123…` (`shared/src/linkKey.ts`: Instagram's `/reel/`, `/reels/`, `/p/` and `/tv/`,
+also under the author's name (`/chef/reel/…`); YouTube's `shorts/`, `watch?v=`, `youtu.be/`,
+`embed/` and `live/`; Facebook's `/reel/`, `watch?v=` and `/<page>/videos/`). A link whose path holds no id (`fb.watch/…`, Facebook's
 `share/r/…`) keys as `url:` plus its host (lower case, without `www.` or `m.`) and path, with no
-query or hash. Approve copies it to the recipe's `source.linkKey`.
+query or hash. Approve copies it to the recipe's `source.linkKey`. The key is stored, never sent:
+the client has no use for it. (It's read with a pattern, not `URL`: `shared/` is plain ES.)
 
 1. **This user has it (L1).** `POST /api/imports` looks first: a recipe of theirs with that key
    (not deleted), or an import of theirs with it that is pending, processing or ready, answers
-   **409** `{ existing: { kind: "recipe" | "import", id, title? } }`, and nothing is queued or
-   counted. The client shows it as a toast, not an error: "Already in My recipes · Shakshuka"
-   (View), "Already pinching it", "Shakshuka is ready to review" (Review). A deleted recipe and a
+   **409** `{ error: { code: "link_pinched_before", message }, existing: { kind: "recipe" |
+   "import", id, title? } }` (`DuplicateLinkSchema`; the title is the recipe's, or a ready
+   draft's), before the daily cap is counted, so nothing is queued or counted. The client
+   shows it as a toast, not an error: "Already in My recipes · Shakshuka" (View), "Already
+   pinching it", "Shakshuka is ready to review" (Review). A deleted recipe and a
    failed import don't count: pinching again is asking for it again. Two tabs pasting the same
    link at the same instant can still make two imports (a partial index can't say "only the
    active ones"): rare, and harmless. `npm run db:backfill-link-keys` gives the key to the links

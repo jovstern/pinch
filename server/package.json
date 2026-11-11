@@ -7,6 +7,7 @@
     "dev:worker": "node --watch --env-file-if-exists=../.env src/worker.ts | pino-pretty",
     "db:indexes": "node --env-file-if-exists=../.env src/dbIndexes.ts",
     "db:seed": "node --env-file-if-exists=../.env src/dbSeed.ts",
+    "db:backfill-link-keys": "node --env-file-if-exists=../.env src/dbBackfillLinkKeys.ts",
     "lint": "eslint .",
     "typecheck": "tsc",
     "test": "vitest run",

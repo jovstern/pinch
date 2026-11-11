@@ -1,25 +1,33 @@
 import {
   dailyLimitMessage,
   ImportInputSchema,
+  linkKey,
   MAX_SCREENSHOT_BYTES,
   MAX_SCREENSHOTS,
   RecipeInputSchema,
   screenshotsMessage,
+  type DuplicateLink,
   type ImportList,
   type Platform,
-  type Recipe,
 } from "@pinch/shared";
 import express, { type RequestHandler } from "express";
 import multer from "multer";
 import { ObjectId, type Binary, type Db } from "mongodb";
 import {
+  findImportOfLink,
   IMPORT_LIFETIME_MS,
   IMPORT_LIST_LIMIT,
   importsCollection,
   toImport,
   type ImportDocument,
 } from "../db/imports.ts";
-import { insertRecipeOnce, recipesCollection, toRecipe } from "../db/recipes.ts";
+import {
+  findRecipeOfLink,
+  insertRecipeOnce,
+  recipesCollection,
+  toRecipe,
+  type RecipeDocument,
+} from "../db/recipes.ts";
 import { NOT_DELETED } from "../db/softDelete.ts";
 import { WITHOUT_MEDIA } from "../db/thumbnail.ts";
 import { countImport, usageCollection } from "../db/usage.ts";
@@ -39,11 +47,18 @@ export function importsRouter(db: Db) {
   // 202, not 201: the import is accepted and will be worked on later (§4.1).
   router.post("/", async (req, res) => {
     const sent = parseInput(ImportInputSchema, req.body);
+    const key = sent.type === "link" ? linkKey(sent.url) : undefined;
+    // Before it's counted: a link the user already has is pointed to, and costs nothing (§4.6).
+    if (key) {
+      const existing = await pinchedBefore(req.userId, key);
+      if (existing) throw linkPinchedBefore(existing);
+    }
     // After the input is checked: one refused as invalid doesn't count.
     if (!(await countImport(usage, req.userId))) throw dailyLimit();
     const job = newImport(
       req.userId,
       sent.type === "link" ? { type: "link", url: sent.url, platform: platformOf(sent.url) } : sent,
+      key,
     );
     await imports.insertOne(job);
     res.status(202).location(`/api/imports/${job._id.toHexString()}`).json(toImport(job));
@@ -67,6 +82,19 @@ export function importsRouter(db: Db) {
     await imports.insertOne(job);
     res.status(202).location(`/api/imports/${job._id.toHexString()}`).json(toImport(job));
   });
+
+  // What the user already has from this post (§4.6): a recipe first, as that's where it ends up;
+  // else an import of it still in the queue, or ready to review. Not one they deleted, nor a failed
+  // import: pinching again is asking for it again.
+  async function pinchedBefore(ownerId: ObjectId, key: string) {
+    const [recipe] = await findRecipeOfLink(recipes, ownerId, key).toArray();
+    if (recipe) {
+      return { kind: "recipe", id: recipe._id.toHexString(), title: recipe.title } as const;
+    }
+    const [job] = await findImportOfLink(imports, ownerId, key).toArray();
+    if (job) return { kind: "import", id: job._id.toHexString(), title: job.draft?.title } as const;
+    return undefined;
+  }
 
   // Not paged: done imports are deleted and abandoned ones expire, so there are only a few. The
   // cap is a guard, never reached in use (node-api.md: never an unbounded list).
@@ -127,7 +155,7 @@ export function importsRouter(db: Db) {
       emoji: job.draft?.emoji,
       // The worker's, as the nutrition: never from the body (§5).
       thumbnail: job.thumbnail,
-      source: sourceOf(job.input),
+      source: sourceOf(job),
       sourceImportId: job._id,
       createdAt: now,
       updatedAt: now,
@@ -211,6 +239,14 @@ function importNotFailed() {
   return new HttpError(409, "import_not_failed", "Only a failed import can be tried again.");
 }
 
+// 409: the user has this link already (§4.6). Not an error to them: the client shows a toast
+// pointing to what they have.
+function linkPinchedBefore(existing: DuplicateLink["existing"]) {
+  return new HttpError(409, "link_pinched_before", "You've pinched this link before.", undefined, {
+    existing,
+  });
+}
+
 // 429: too many for today (design §1).
 function dailyLimit() {
   return new HttpError(429, "daily_limit", dailyLimitMessage);
@@ -220,14 +256,19 @@ function importNotFound() {
   return new HttpError(404, "import_not_found", "This import doesn't exist.");
 }
 
-// A new import of the user's, waiting for the worker (§4.2).
-function newImport(ownerId: ObjectId, input: ImportDocument["input"]): ImportDocument {
+// A new import of the user's, waiting for the worker (§4.2); a link's with its post (§4.6).
+function newImport(
+  ownerId: ObjectId,
+  input: ImportDocument["input"],
+  linkKey?: string,
+): ImportDocument {
   const now = new Date();
   return {
     _id: new ObjectId(),
     ownerId,
     status: "pending",
     input,
+    linkKey,
     attempts: 0,
     nextAttemptAt: now,
     createdAt: now,
@@ -236,10 +277,10 @@ function newImport(ownerId: ObjectId, input: ImportDocument["input"]): ImportDoc
   };
 }
 
-// Where a recipe came from (§6): its link, or the text or the screenshots ("image") it was
-// made from.
-function sourceOf(input: ImportDocument["input"]): Recipe["source"] {
-  if (input.type === "link") return { type: input.platform, url: input.url };
+// Where a recipe came from (§6): its link and the post it points to (§4.6), or the text or the
+// screenshots ("image") it was made from.
+function sourceOf({ input, linkKey }: ImportDocument): RecipeDocument["source"] {
+  if (input.type === "link") return { type: input.platform, url: input.url, linkKey };
   if (input.type === "text") return { type: "text" };
   return { type: "image" };
 }

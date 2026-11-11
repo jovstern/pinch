@@ -4,18 +4,27 @@ import type { z } from "zod";
 
 // Handlers throw an HttpError for a failure the user should see; one middleware turns it into
 // the API's error shape (design §8.2). No try/catch in each route. parseInput, below, is how
-// a handler reads its input and throws the 400.
+// a handler reads its input and throws the 400. extra goes beside the error, for the few that
+// carry more: a link pinched before says what the user already has (§4.6).
 export class HttpError extends Error {
   status: number;
   code: string;
   fields?: Record<string, string>;
+  extra?: Record<string, unknown>;
 
-  constructor(status: number, code: string, message: string, fields?: Record<string, string>) {
+  constructor(
+    status: number,
+    code: string,
+    message: string,
+    fields?: Record<string, string>,
+    extra?: Record<string, unknown>,
+  ) {
     super(message);
     this.name = "HttpError";
     this.status = status;
     this.code = code;
     this.fields = fields;
+    this.extra = extra;
   }
 }
 
@@ -47,8 +56,8 @@ export const errorHandler: ErrorRequestHandler = (error, req, res, next) => {
     return;
   }
   if (error instanceof HttpError) {
-    const { status, code, message, fields } = error;
-    res.status(status).json({ error: { code, message, fields } });
+    const { status, code, message, fields, extra } = error;
+    res.status(status).json({ error: { code, message, fields }, ...extra });
     return;
   }
   // express.json() rejects a body that isn't JSON (400) or is too big (413) with an error that

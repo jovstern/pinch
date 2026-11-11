@@ -30,7 +30,9 @@ export type RecipeDocument = RecipeInput & {
   emoji?: string;
   // From the import's draft (§5); a recipe written by hand has none.
   thumbnail?: StoredThumbnail;
-  source: Recipe["source"];
+  // linkKey: the post its link points to (§4.6), from the import; stored, not sent: the client
+  // has no use for it.
+  source: Recipe["source"] & { linkKey?: string };
   // The import it was approved from: unique, so approving twice can't make two (design §4.4).
   sourceImportId?: ObjectId;
   createdAt: Date;
@@ -76,6 +78,18 @@ export async function insertRecipeOnce(
     if (!made) throw error;
     return made;
   }
+}
+
+// The user's recipe from this post, if they have one (design §4.6): at most one, as a cursor so
+// its plan can be explained (the partial { ownerId, "source.linkKey" } index).
+export function findRecipeOfLink(
+  recipes: Collection<RecipeDocument>,
+  ownerId: ObjectId,
+  linkKey: string,
+) {
+  return recipes
+    .find({ ownerId, "source.linkKey": linkKey, ...NOT_DELETED }, { projection: { title: 1 } })
+    .limit(1);
 }
 
 // A page of the list: never an unbounded list (node-api.md).

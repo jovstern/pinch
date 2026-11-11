@@ -5,6 +5,7 @@ export { HealthSchema, type Health } from "./health.ts";
 export {
   DAILY_IMPORT_CAP,
   dailyLimitMessage,
+  DuplicateLinkSchema,
   ImportInputSchema,
   ImportListSchema,
   ImportSchema,
@@ -16,12 +17,14 @@ export {
   SCREENSHOT_TYPES,
   screenshotsMessage,
   textMessage,
+  type DuplicateLink,
   type Import,
   type ImportInput,
   type ImportList,
   type ImportStep,
   type Platform,
 } from "./import.ts";
+export { linkKey } from "./linkKey.ts";
 export {
   EmojiSchema,
   IngredientSchema,

@@ -20,6 +20,9 @@ export type ImportDocument = Omit<
   // a recipe, so one projection leaves the image out of both (WITHOUT_MEDIA).
   thumbnail?: StoredThumbnail;
   ownerId: ObjectId;
+  // A link's post (§4.6): finds the same link pasted again; approve copies it to the recipe.
+  // Stored, not sent.
+  linkKey?: string;
   nextAttemptAt: Date;
   leaseUntil?: Date;
   createdAt: Date;
@@ -43,6 +46,22 @@ export function toImport(job: ImportDocument): Import {
     createdAt: job.createdAt.toISOString(),
     updatedAt: job.updatedAt.toISOString(),
   });
+}
+
+// The user's import of this post still in the queue or waiting for review, if there is one
+// (design §4.6): a failed one doesn't count, as pinching again is asking for it again. As a
+// cursor, so its plan can be explained (the partial { ownerId, linkKey } index).
+export function findImportOfLink(
+  imports: Collection<ImportDocument>,
+  ownerId: ObjectId,
+  linkKey: string,
+) {
+  return imports
+    .find(
+      { ownerId, linkKey, status: { $in: ["pending", "processing", "ready"] }, ...NOT_DELETED },
+      { projection: { status: 1, "draft.title": 1 } },
+    )
+    .limit(1);
 }
 
 // An import is deleted 7 days after it was created, whatever its state: one left unreviewed or
