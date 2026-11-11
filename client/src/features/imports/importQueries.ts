@@ -1,7 +1,21 @@
-import { ImportListSchema, ImportSchema, type ImportList } from "@pinch/shared";
+import {
+  dailyLimitMessage,
+  globalLimitMessage,
+  GlobalLimitSchema,
+  ImportListSchema,
+  ImportSchema,
+  type ImportList,
+} from "@pinch/shared";
 import { queryOptions, type QueryClient } from "@tanstack/react-query";
 import { ApiError, deleteResource, getJson, sendJson } from "../../lib/api.ts";
 import { dismissToast, toastCancelled } from "../../lib/toasts.tsx";
+
+// What a 429 from sending or retrying an import says (none for any other error): the user's day's
+// cap (D22), or everyone's (D30), which the API names by its code.
+export function limitMessage(error: Error | null) {
+  if (!(error instanceof ApiError && error.status === 429)) return undefined;
+  return GlobalLimitSchema.safeParse(error.body).success ? globalLimitMessage : dailyLimitMessage;
+}
 
 // My imports, newest first: few, as done ones are deleted (design §4.1). One request for all of
 // them, asked again every 2 s while the worker has any of them in hand, so each one's status

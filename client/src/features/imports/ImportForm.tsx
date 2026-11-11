@@ -1,5 +1,4 @@
 import {
-  dailyLimitMessage,
   DuplicateLinkSchema,
   ImportInputSchema,
   ImportSchema,
@@ -21,7 +20,7 @@ import {
   toastPinching,
   toastReady,
 } from "../../lib/toasts.tsx";
-import { cancelImport, importListQuery } from "./importQueries.ts";
+import { cancelImport, importListQuery, limitMessage } from "./importQueries.ts";
 
 const hint = "Paste a YouTube short, a Facebook or Instagram reel, or a recipe as text";
 
@@ -66,8 +65,10 @@ export function ImportForm({ inputRef }: { inputRef: RefObject<HTMLInputElement 
             }
             const message = error.fields.url ?? error.fields.text;
             if (message) return { fields: { pasted: message } };
-            // Past the day's cap (design §1): what was pasted is fine, so not on the field.
-            if (error.status === 429) return dailyLimitMessage;
+            // Past the day's cap, the user's or everyone's (D22, D30): what was pasted is fine, so
+            // not on the field.
+            const limit = limitMessage(error);
+            if (limit) return limit;
           }
           return "We couldn't send this. Try again.";
         }

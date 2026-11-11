@@ -1,17 +1,16 @@
-import { dailyLimitMessage, type Import } from "@pinch/shared";
+import type { Import } from "@pinch/shared";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef } from "react";
 import { useNavigate } from "react-router";
-import { ApiError } from "../../lib/api.ts";
 import {
   dismissToast,
   toastCouldntSave,
-  toastDailyLimit,
+  toastLimit,
   toastImportFailed,
   toastReady,
 } from "../../lib/toasts.tsx";
 import { countToLookAt, thingsToLookAt } from "../../lib/thingsToLookAt.ts";
-import { importListQuery, retryImport } from "./importQueries.ts";
+import { importListQuery, limitMessage, retryImport } from "./importQueries.ts";
 
 // What a failed import couldn't read, by what it was made from.
 const what: Record<Import["input"]["type"], string> = {
@@ -32,8 +31,9 @@ export function useImportToasts() {
   const retry = useMutation({
     mutationFn: retryImport,
     onError: (error, id) => {
-      if (error instanceof ApiError && error.status === 429) {
-        toastDailyLimit(dailyLimitMessage);
+      const limit = limitMessage(error);
+      if (limit) {
+        toastLimit(limit);
       } else {
         toastCouldntSave(() => {
           retry.mutate(id);

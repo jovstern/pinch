@@ -49,7 +49,8 @@ export async function createIndexes(db: Db) {
     deletedTtl,
   ]);
   await usageCollection(db).createIndexes([
-    // One count per user per day (countImport), unique so two firsts can't make two.
+    // One count per user per day (and one "all" count per day, D30) (countImport), unique so two
+    // firsts can't make two.
     { key: { ownerId: 1, day: 1 }, unique: true },
     // TTL: a day's count goes two days later.
     { key: { expiresAt: 1 }, expireAfterSeconds: 0 },
