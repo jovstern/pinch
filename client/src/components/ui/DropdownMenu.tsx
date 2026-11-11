@@ -61,3 +61,11 @@ export function DropdownMenuSeparator({
     />
   );
 }
+
+// Words at the top of a menu that aren't a choice (who is signed in: the avatar's menu).
+export function DropdownMenuLabel({
+  className,
+  ...props
+}: ComponentProps<typeof DropdownMenuPrimitive.Label>) {
+  return <DropdownMenuPrimitive.Label className={cn("px-3 py-2", className)} {...props} />;
+}
