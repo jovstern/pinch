@@ -65,3 +65,11 @@ test("adopting into an email with no account fails and moves nothing", async () 
   );
   expect(await recipesCollection(db).countDocuments({ ownerId: owner })).toBe(1);
 });
+
+test("adopting into the dev user itself fails", async () => {
+  const { userId } = await createTestUser(db);
+
+  await expect(adoptDevData(db, userId, `${userId.toHexString()}@example.com`)).rejects.toThrow(
+    "is the dev user",
+  );
+});

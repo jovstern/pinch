@@ -1,3 +1,4 @@
+import { MongoServerError } from "mongodb";
 import { pino } from "pino";
 import { loadConfig } from "./config.ts";
 import { connectToMongo } from "./db/client.ts";
@@ -14,7 +15,13 @@ const client = await connectToMongo(config.MONGODB_URI);
 try {
   const db = client.db(config.DB_NAME);
   const user = await findAccount(db, email);
-  const added = await seedRecipes(db, user._id);
+  const added = await seedRecipes(db, user._id).catch((error: unknown) => {
+    // 11000, a duplicate _id: the samples' fixed ids are another account's (seed.ts).
+    if (!(error instanceof MongoServerError && error.code === 11000)) throw error;
+    throw new Error(
+      "The samples already belong to another account in this database (run db:adopt-dev-data if it's the dev user's).",
+    );
+  });
   logger.info({ db: config.DB_NAME, email: user.email, added }, "sample recipes ready");
 } finally {
   await client.close();

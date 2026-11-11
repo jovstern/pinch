@@ -1,8 +1,11 @@
 import { ImportSchema, RecipeSchema } from "@pinch/shared";
+import { Binary, ObjectId } from "mongodb";
 import { pino } from "pino";
 import request from "supertest";
 import { expect, test } from "vitest";
 import { createApp } from "./app.ts";
+import { importsCollection } from "./db/imports.ts";
+import { recipesCollection } from "./db/recipes.ts";
 import { sessionsCollection } from "./db/sessions.ts";
 import { createTestDb } from "./testDb.ts";
 import { createTestUser } from "./testUser.ts";
@@ -51,15 +54,29 @@ test("one user can't read or change another user's recipe or import", async () =
   const other = request.agent(app).set("Cookie", (await createTestUser(db)).cookie);
   const recipe = RecipeSchema.parse((await owner.post("/api/recipes").send(mine)).body);
   const job = ImportSchema.parse((await owner.post("/api/imports").send(soup)).body);
+  // Each with a picture, and the import ready: the owner gets them, so a 404 below is the owner's.
+  const thumbnail = { width: 1, height: 1, webp: new Binary(Buffer.from("RIFF")) };
+  await recipesCollection(db).updateOne({ _id: new ObjectId(recipe.id) }, { $set: { thumbnail } });
+  await importsCollection(db).updateOne(
+    { _id: new ObjectId(job.id) },
+    { $set: { thumbnail, status: "ready" } },
+  );
 
   expect((await other.get(`/api/recipes/${recipe.id}`)).status).toBe(404);
   expect(
     (await other.put(`/api/recipes/${recipe.id}`).send({ ...mine, title: "Theirs" })).status,
   ).toBe(404);
   expect((await other.delete(`/api/recipes/${recipe.id}`)).status).toBe(404);
+  expect((await other.post(`/api/recipes/${recipe.id}/restore`)).status).toBe(404);
+  expect((await other.get(`/api/recipes/${recipe.id}/thumbnail`)).status).toBe(404);
   expect((await other.get(`/api/imports/${job.id}`)).status).toBe(404);
+  expect((await other.get(`/api/imports/${job.id}/thumbnail`)).status).toBe(404);
+  expect((await other.post(`/api/imports/${job.id}/approve`).send(mine)).status).toBe(404);
+  expect((await other.post(`/api/imports/${job.id}/retry`)).status).toBe(404);
   expect((await other.delete(`/api/imports/${job.id}`)).status).toBe(404);
   // Still the owner's, as they were.
-  expect((await owner.get(`/api/recipes/${recipe.id}`)).body).toEqual(recipe);
-  expect((await owner.get(`/api/imports/${job.id}`)).status).toBe(200);
+  expect((await owner.get(`/api/recipes/${recipe.id}`)).body).toMatchObject({ title: "Mine" });
+  expect((await owner.get(`/api/recipes/${recipe.id}/thumbnail`)).status).toBe(200);
+  expect((await owner.get(`/api/imports/${job.id}`)).body).toMatchObject({ status: "ready" });
+  expect((await owner.get(`/api/imports/${job.id}/thumbnail`)).status).toBe(200);
 });
