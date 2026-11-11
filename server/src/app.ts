@@ -10,12 +10,30 @@ import { authRouter } from "./routes/auth.ts";
 import { importsRouter } from "./routes/imports.ts";
 import { recipesRouter } from "./routes/recipes.ts";
 
-// secureCookies: the session cookie is Secure outside development and tests (design §8.3).
-type AppDeps = { logger: Logger; db: Db; devUserId: string; secureCookies?: boolean };
+// secureCookies: the session cookie is Secure unless the caller says it runs on http (development
+// and tests); a caller who forgets gets the safe one. trustProxy: how many proxies stand in front
+// of the API, so req.ip is the browser's address (TRUST_PROXY in config). now: the rate limit's
+// clock (design §8.3).
+type AppDeps = {
+  logger: Logger;
+  db: Db;
+  devUserId: string;
+  secureCookies?: boolean;
+  trustProxy?: number;
+  now?: () => Date;
+};
 
 // Builds the app without listening, so tests can call it with Supertest (node-api.md).
-export function createApp({ logger, db, devUserId, secureCookies = false }: AppDeps) {
+export function createApp({
+  logger,
+  db,
+  devUserId,
+  secureCookies = true,
+  trustProxy = 0,
+  now = () => new Date(),
+}: AppDeps) {
   const app = express();
+  app.set("trust proxy", trustProxy);
   app.use(helmet());
   // One log line per request, with a request id, method, URL, status and duration. The URL
   // with its query: a search's words are kept, they're not secret. Not the headers (pino-http's
@@ -57,7 +75,7 @@ export function createApp({ logger, db, devUserId, secureCookies = false }: AppD
     res.json({ status: "ok" } satisfies Health);
   });
 
-  app.use("/api/auth", authRouter(db, { secureCookies }));
+  app.use("/api/auth", authRouter(db, { secureCookies, now }));
   app.use("/api/recipes", recipesRouter(db));
   app.use("/api/imports", importsRouter(db));
 

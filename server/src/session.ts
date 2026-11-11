@@ -13,7 +13,15 @@ function cookieOptions(secure: boolean) {
 }
 
 // A new session on every sign-in: the database keeps the token's hash, the browser the token.
-export async function startSession(db: Db, res: Response, userId: ObjectId, secure: boolean) {
+// The browser's previous session, if it sent one, ends: one browser, one session.
+export async function startSession(
+  db: Db,
+  req: Request,
+  res: Response,
+  userId: ObjectId,
+  secure: boolean,
+) {
+  await deleteSession(db, req);
   const token = newToken();
   const now = new Date();
   await sessionsCollection(db).insertOne({
@@ -27,9 +35,13 @@ export async function startSession(db: Db, res: Response, userId: ObjectId, secu
 }
 
 export async function endSession(db: Db, req: Request, res: Response, secure: boolean) {
+  await deleteSession(db, req);
+  res.clearCookie(SESSION_COOKIE, cookieOptions(secure));
+}
+
+async function deleteSession(db: Db, req: Request) {
   const token = readCookie(req, SESSION_COOKIE);
   if (token) await sessionsCollection(db).deleteOne({ tokenHash: hashToken(token) });
-  res.clearCookie(SESSION_COOKIE, cookieOptions(secure));
 }
 
 // The request's user, from its cookie, or null when signed out. A session past its expiresAt

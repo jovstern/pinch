@@ -12,6 +12,7 @@ const app = createApp({
   db: client.db(config.DB_NAME),
   devUserId: config.DEV_USER_ID,
   secureCookies: config.NODE_ENV === "production",
+  trustProxy: config.TRUST_PROXY,
 });
 
 const server = app.listen(config.PORT, (error) => {

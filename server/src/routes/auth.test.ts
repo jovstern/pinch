@@ -9,6 +9,7 @@ import {
   LOGIN_TRIES_PER_EMAIL,
   LOGIN_TRIES_PER_IP,
   loginAttemptsCollection,
+  SIGNUPS_PER_IP,
 } from "../db/loginAttempts.ts";
 import { hashToken, sessionsCollection } from "../db/sessions.ts";
 import { usersCollection } from "../db/users.ts";
@@ -18,7 +19,15 @@ const config = loadConfig(process.env);
 const db = createTestDb();
 // The unique email index answers a second sign-up.
 await createIndexes(db);
-const app = createApp({ logger: pino({ level: "silent" }), db, devUserId: config.DEV_USER_ID });
+// Supertest speaks http, so no Secure cookie. The rate limit's clock is pinned mid-minute: a run
+// that crosses a minute can't split its tries over two counts.
+const deps = {
+  logger: pino({ level: "silent" }),
+  db,
+  devUserId: config.DEV_USER_ID,
+  now: () => new Date("2026-11-11T10:05:30Z"),
+};
+const app = createApp({ ...deps, secureCookies: false });
 
 // Every test logs in from the same address: each starts with no tries counted.
 beforeEach(async () => {
@@ -106,19 +115,14 @@ test("a wrong email and a wrong password get the same 401", async () => {
   expect(wrongPassword.headers["set-cookie"]).toBeUndefined();
 });
 
-test("the session cookie is HttpOnly, SameSite=Lax and lasts 30 days; Secure when asked", async () => {
+test("the session cookie is HttpOnly, SameSite=Lax and lasts 30 days; Secure unless told not", async () => {
   const { response } = await signUp();
   const setCookie = String(response.headers["set-cookie"]);
   expect(setCookie).toMatch(/^pinch_session=[\w-]{43}; Max-Age=2592000; Path=\/; Expires=/);
   expect(setCookie).toContain("; HttpOnly; SameSite=Lax");
   expect(setCookie).not.toContain("Secure");
 
-  const secureApp = createApp({
-    logger: pino({ level: "silent" }),
-    db,
-    devUserId: config.DEV_USER_ID,
-    secureCookies: true,
-  });
+  const secureApp = createApp(deps);
   const secure = await request(secureApp)
     .post("/api/auth/signup")
     .send({ email: "secure@example.com", password: "a long password", name: "Cook" });
@@ -141,7 +145,7 @@ test("logout deletes the session, clears the cookie and answers 204", async () =
   const { response } = await signUp();
   const cookie = sessionCookie(response);
 
-  const logout = await request(app).post("/api/auth/logout").set("Cookie", cookie);
+  const logout = await request(app).post("/api/auth/logout").set("Cookie", cookie).send({});
   expect(logout.status).toBe(204);
   expect(String(logout.headers["set-cookie"])).toMatch(
     /^pinch_session=; Path=\/; Expires=Thu, 01 Jan 1970/,
@@ -206,4 +210,51 @@ test("login with a password over 200 characters answers 400 without checking it"
   expect(response.body).toMatchObject({
     error: { fields: { password: "Keep the password under 200 characters." } },
   });
+});
+
+test("logout without a JSON Content-Type answers 415 and keeps the session", async () => {
+  const { response } = await signUp();
+  const cookie = sessionCookie(response);
+
+  // What a form on another site would send.
+  const logout = await request(app)
+    .post("/api/auth/logout")
+    .set("Cookie", cookie)
+    .type("form")
+    .send("x=1");
+  expect(logout.status).toBe(415);
+  const me = await request(app).get("/api/auth/me").set("Cookie", cookie);
+  expect(me.status).toBe(200);
+});
+
+test("login from a browser with a session ends that session", async () => {
+  const { email, password, response } = await signUp();
+  const oldCookie = sessionCookie(response);
+
+  await request(app).post("/api/auth/login").set("Cookie", oldCookie).send({ email, password });
+  const token = oldCookie.split("=")[1] ?? "";
+  expect(await sessionsCollection(db).findOne({ tokenHash: hashToken(token) })).toBeNull();
+});
+
+test("past the sign-ups a minute from one address, signup answers 429 before hashing", async () => {
+  for (let i = 0; i < SIGNUPS_PER_IP; i++) await signUp();
+
+  const { response } = await signUp();
+  expect(response.status).toBe(429);
+});
+
+test("behind a trusted proxy, each browser's address has its own tries", async () => {
+  const proxied = createApp({ ...deps, secureCookies: false, trustProxy: 1 });
+  for (let i = 0; i < LOGIN_TRIES_PER_IP; i++) {
+    await request(proxied)
+      .post("/api/auth/login")
+      .set("X-Forwarded-For", "203.0.113.1")
+      .send({ email: `guess${String(i)}@example.com`, password: "a guess" });
+  }
+
+  const other = await request(proxied)
+    .post("/api/auth/login")
+    .set("X-Forwarded-For", "203.0.113.2")
+    .send({ email: "guess@example.com", password: "a guess" });
+  expect(other.status).toBe(401);
 });

@@ -133,7 +133,7 @@ Planned, not built yet. In this order:
       imports and on a recipe's source; `POST /api/imports` answers 409 `{ existing }` for one
       of theirs (not deleted, not failed), uncounted; the toasts (View, Review); the indexes;
       `db:backfill-link-keys`
-- [ ] A1 Users and sessions: signup, login, logout, me; argon2id; the hashed cookie token; the
+- [x] A1 Users and sessions: signup, login, logout, me; argon2id; the hashed cookie token; the
       login rate limit; the indexes
 - [ ] A2 The user middleware reads the session (401 without one); e2e signs in once and reuses
       it; `db:adopt-dev-data <email>`

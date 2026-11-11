@@ -501,9 +501,9 @@ POST   /api/imports/:id/retry          failed → pending, attempts, error and n
 DELETE /api/imports/:id                discard / dismiss / Pinch it's Undo: kept an hour (D27) → 204
 POST   /api/imports/:id/restore        Undo of a discard or a dismiss → 200 import, as it was
 
-POST   /api/auth/signup                { email, password, name } → 201 me, signed in (M9; 409 when the email has an account)
+POST   /api/auth/signup                { email, password, name } → 201 me, signed in (M9; 409 when the email has an account; 429 past 10 a minute per IP)
 POST   /api/auth/login                 { email, password } → 200 me (401 the same for either wrong; 429 past the rate limit)
-POST   /api/auth/logout                → 204
+POST   /api/auth/logout                → 204 (with Content-Type: application/json, else 415)
 GET    /api/auth/me                    → 200 { id, email, name } (401 signed out)
 GET    /api/auth/google                → 302 to Google
 GET    /api/auth/google/callback       → signed in, 302 to where they were
@@ -540,26 +540,34 @@ and a request without one gets 401 (the health routes and `/api/auth/*` stay ope
   (D22); a global daily cap on Gemini calls (D30) bounds what many accounts can spend.
 - **Passwords:** argon2id (`@node-rs/argon2`, its default parameters: prebuilt, no compiler);
   emails stored lowercase; at least 8 characters (and at most 200), no other rules. A second
-  sign-up with an email answers 409.
+  sign-up with an email answers 409. Sign-ups are limited to 10 a minute per IP, counted before
+  the hash: each hash takes 19 MiB, so a burst could exhaust the server's memory.
 - **Sessions:** a random 32-byte token (base64url) in a `pinch_session` cookie,
-  `HttpOnly; SameSite=Lax; Path=/`, 30 days' `Max-Age`, and `Secure` when `NODE_ENV` is
-  `production` (development and tests run on `http://localhost`); the database keeps only its
+  `HttpOnly; SameSite=Lax; Path=/`, 30 days' `Max-Age`, and `Secure` in production
+  (`NODE_ENV`); development and tests run on `http://localhost`, so the API turns it off there,
+  while `createApp` defaults to Secure, so a caller who forgets gets the safe one; the database keeps only its
   SHA-256 hash in `sessions`, with `expiresAt` 30 days out and a TTL index. A session past its
-  `expiresAt` counts as none before the TTL deletes it. A new session on every sign-in; logout
-  deletes it and clears the cookie. `currentUser` (`server/src/session.ts`) reads the cookie
+  `expiresAt` counts as none before the TTL deletes it. A new session on every sign-in, which
+  ends the browser's previous one if it sent its cookie; logout deletes it and clears the cookie. `currentUser` (`server/src/session.ts`) reads the cookie
   with a few lines, not a package.
 - **Login:** the same 401 for a wrong email or a wrong password; an unknown email is still
   checked against a fixed hash, so the time doesn't tell which emails have accounts. A rate
   limit counted in Mongo (`loginAttempts`): 5 tries a minute per email and 20 per IP (a
   household shares one), each an atomic `$inc` on a document per key and minute, a fixed
-  window; past either, 429. The IP is Express's `req.ip`, the connection's address, with no
-  `trust proxy`: nothing stands in front of the API but Vite's proxy in development, so
-  behind a real proxy it must be set.
+  window, by a clock the app is given (tests pin it); past either, 429. Accepted for the POC:
+  anyone can lock an email out for a minute at a time by failing 5 logins with it. The IP is
+  Express's `req.ip`: `TRUST_PROXY` (config) is how many proxies stand in front of the API,
+  default 0 (the connection's address; in development that's Vite's proxy, so everyone shares
+  one); behind a real proxy it's set to that count, never `true`, which would let anyone pick
+  their IP from `X-Forwarded-For`. An IPv6 address is counted whole, not by its /64, so someone
+  with a /64 to rotate through gets many IPs' tries: the per-email limit still holds.
 - **Google:** the OpenID Connect code flow (`state` and PKCE), the ID token checked against
   Google's keys. A Google sign-in whose email (verified by Google) already has an account signs
   into that account and stores its `googleId`; otherwise it makes one. The client ID and secret
   live in `.env` (`GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`), set by the user.
-- **CSRF:** SameSite=Lax, one origin (Vite proxies `/api` in dev), JSON-only mutations.
+- **CSRF:** SameSite=Lax, one origin (Vite proxies `/api` in dev), JSON-only mutations. Logout
+  has no body, so it checks for `Content-Type: application/json` itself (415 without it): a form
+  on another site can't send that, so it can't sign the user out.
 - **The client:** Log in and Sign up pages (with "Continue with Google"); a signed-out visit, or
   any 401 from the API, goes to `/login` and comes back where it was; the avatar becomes a menu
   with the name and Log out.

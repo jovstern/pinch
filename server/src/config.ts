@@ -7,6 +7,10 @@ const ConfigSchema = z.object({
   // "production" makes the session cookie Secure (design §8.3); development and tests run on
   // http://localhost, where a browser wouldn't send it back.
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
+  // How many proxies stand in front of the API, so req.ip (the rate limits' IP) is the browser's,
+  // read from X-Forwarded-For; 0, none, trusts no header (design §8.3). A count, never "true":
+  // trusting every hop would let anyone pick their IP.
+  TRUST_PROXY: z.coerce.number().int().min(0).default(0),
   PORT: z.coerce.number().int().positive().default(3000),
   LOG_LEVEL: z.enum(["fatal", "error", "warn", "info", "debug", "trace", "silent"]).default("info"),
   MONGODB_URI: z.string().default("mongodb://localhost:27017"),
