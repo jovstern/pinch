@@ -6,13 +6,14 @@ import { vi } from "vitest";
 import { App } from "./App.tsx";
 
 // Renders the whole app at one address, with what main.tsx provides. No retries, so a failing
-// request shows its error straight away. jsdom has no matchMedia, which the Toaster reads: here
-// the screen is a phone's. Sonner keeps its toasts outside React and shows a new Toaster the ones
-// still open, so a test's toasts are closed before the next.
-export function renderApp(path: string) {
+// request shows its error straight away. jsdom has no matchMedia, which the Toaster and My
+// recipes' Filters panel read: here the screen is a phone's, or with wide a desktop's (1024 px
+// and up). Sonner keeps its toasts outside React and shows a new Toaster the ones still open, so
+// a test's toasts are closed before the next.
+export function renderApp(path: string, { wide = false } = {}) {
   toast.dismiss();
   vi.stubGlobal("matchMedia", () => ({
-    matches: false,
+    matches: wide,
     addEventListener: vi.fn(),
     removeEventListener: vi.fn(),
   }));

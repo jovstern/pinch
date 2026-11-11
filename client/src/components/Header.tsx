@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { PenLine, UserRound } from "lucide-react";
+import { useEffect, useState } from "react";
 import { Link, useLocation } from "react-router";
 import { importListQuery } from "../features/imports/importQueries.ts";
 import { recipeCountQuery } from "../features/recipes/recipeQueries.ts";
@@ -32,8 +33,9 @@ export function Header({ onTabPage }: { onTabPage: boolean }) {
   // The same query as the queue on Add recipe, so the count moves as it polls (§4.2).
   const { data } = useQuery(importListQuery);
   const ready = data?.items.filter((job) => job.status === "ready").length ?? 0;
-  // Not awaited by anything: the tab shows its count once it's there.
-  const recipeCount = useQuery(recipeCountQuery).data?.count;
+  // Not awaited by anything: the tab shows its count once it's there, a second in (useAfterStart).
+  const countWanted = useAfterStart();
+  const recipeCount = useQuery({ ...recipeCountQuery, enabled: countWanted }).data?.count;
 
   return (
     <header className="flex items-center gap-2 px-4 pt-3 md:gap-4 md:border-b md:border-border md:px-6 md:py-3">
@@ -107,4 +109,21 @@ export function Header({ onTabPage }: { onTabPage: boolean }) {
       </Button>
     </header>
   );
+}
+
+// The count isn't urgent: asked for a second after the app starts, it keeps out of the way of
+// the page's own first requests, on every page (cook and the editor too). Asked with them, it
+// cost My recipes 0.2 s of LCP (docs/metrics/m08.md). A timer: something outside React.
+const countDelay = 1000;
+function useAfterStart() {
+  const [started, setStarted] = useState(false);
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setStarted(true);
+    }, countDelay);
+    return () => {
+      clearTimeout(timer);
+    };
+  }, []);
+  return started;
 }

@@ -141,9 +141,9 @@ test("a search asks the API, says how many match, and leaves focus in the box", 
 
 test("tags in the address tick the Filters, and unticking the last one clears them", async () => {
   const fetch = stubList();
-  renderApp("/recipes?tags=meal:breakfast");
+  renderApp("/recipes?tags=meal:breakfast", { wide: true });
 
-  // The panel's checkbox (from 1024 px; jsdom has no widths, so it's always in the page).
+  // The panel's checkbox (from 1024 px: the test's screen is wide).
   const breakfast = await screen.findByRole("checkbox", { name: "breakfast" });
   expect(breakfast).toBeChecked();
   expect(fetch).toHaveBeenCalledWith("/api/recipes?tags=meal%3Abreakfast");
@@ -258,7 +258,7 @@ test("a value written twice in the address is read once", async () => {
 
 test("a source and a time in the address tick the panel, and each one's ✕ takes it off", async () => {
   const fetch = stubList();
-  renderApp("/recipes?source=instagram,manual&time=30");
+  renderApp("/recipes?source=instagram,manual&time=30", { wide: true });
 
   expect(await screen.findByRole("checkbox", { name: "Instagram" })).toBeChecked();
   expect(screen.getByRole("radio", { name: "30 min or less" })).toBeChecked();
@@ -276,7 +276,7 @@ test("a source and a time in the address tick the panel, and each one's ✕ take
 
 test("Clear all clears the search and the tags", async () => {
   const fetch = stubList();
-  renderApp("/recipes?q=eggs&tags=meal:breakfast");
+  renderApp("/recipes?q=eggs&tags=meal:breakfast", { wide: true });
 
   await userEvent.click(await screen.findByRole("button", { name: "Clear all" }));
 
