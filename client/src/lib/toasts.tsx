@@ -123,6 +123,21 @@ export function toastImportFailed(
   });
 }
 
+// A link the user pinched before (design §4.6): not an error, a pointer to what they have. A
+// draft of it that's ready has the queue's own toast (toastReady); these two are neutral, as
+// nothing has just finished.
+export function toastAlreadySaved(title: string, view: () => void) {
+  showToast("message", "Already in My recipes", {
+    description: title,
+    duration: normal,
+    action: { label: "View", onClick: view },
+  });
+}
+
+export function toastAlreadyPinching() {
+  showToast("message", "Already pinching it", { duration: normal });
+}
+
 // Past the day's cap (design §1): trying again won't help, so no Try again.
 export function toastDailyLimit(message: string) {
   showToast("error", message, { duration: untilClosed, closeButton: true });

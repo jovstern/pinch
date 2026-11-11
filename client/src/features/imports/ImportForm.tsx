@@ -1,13 +1,25 @@
-import { dailyLimitMessage, ImportInputSchema, ImportSchema } from "@pinch/shared";
+import {
+  dailyLimitMessage,
+  DuplicateLinkSchema,
+  ImportInputSchema,
+  ImportSchema,
+  type DuplicateLink,
+} from "@pinch/shared";
 import { revalidateLogic, useForm } from "@tanstack/react-form";
 import { useQueryClient } from "@tanstack/react-query";
 import { Sparkles } from "lucide-react";
 import { useId, useRef, type RefObject } from "react";
+import { useNavigate } from "react-router";
 import { FieldError } from "../../components/FieldError.tsx";
 import { Button } from "../../components/ui/Button.tsx";
 import { Input } from "../../components/ui/Input.tsx";
 import { ApiError, sendJson } from "../../lib/api.ts";
-import { toastPinching } from "../../lib/toasts.tsx";
+import {
+  toastAlreadyPinching,
+  toastAlreadySaved,
+  toastPinching,
+  toastReady,
+} from "../../lib/toasts.tsx";
 import { cancelImport, importListQuery } from "./importQueries.ts";
 
 const hint = "Paste a YouTube short, a Facebook or Instagram reel, or a recipe as text";
@@ -18,10 +30,13 @@ const hint = "Paste a YouTube short, a Facebook or Instagram reel, or a recipe a
 // own schema.
 export function ImportForm({ inputRef }: { inputRef: RefObject<HTMLInputElement | null> }) {
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const formRef = useRef<HTMLFormElement>(null);
   // The import just sent: the send is checked as the form's last validator, which can only say
   // whether it worked, so its id waits here for onSubmit's toast, whose Undo cancels it.
   const sentId = useRef("");
+  // Or what the user already has from that link (a 409, design §4.6): a toast points to it.
+  const existing = useRef<DuplicateLink["existing"]>(undefined);
   const id = useId();
   const errorId = `${id}-error`;
   const hintId = `${id}-hint`;
@@ -35,12 +50,19 @@ export function ImportForm({ inputRef }: { inputRef: RefObject<HTMLInputElement 
         return result.success ? undefined : { fields: { pasted: result.error.issues[0]?.message } };
       },
       onSubmitAsync: async ({ value }) => {
+        existing.current = undefined;
         try {
           const input = ImportInputSchema.parse(importInput(value.pasted));
           sentId.current = (await sendJson("POST", "/api/imports", input, ImportSchema)).id;
           return null;
         } catch (error) {
           if (error instanceof ApiError) {
+            // Not an error: the field empties, as for a link sent (onSubmit).
+            const duplicate = DuplicateLinkSchema.safeParse(error.body);
+            if (error.status === 409 && duplicate.success) {
+              existing.current = duplicate.data.existing;
+              return null;
+            }
             const message = error.fields.url ?? error.fields.text;
             if (message) return { fields: { pasted: message } };
             // Past the day's cap (design §1): what was pasted is fine, so not on the field.
@@ -53,11 +75,26 @@ export function ImportForm({ inputRef }: { inputRef: RefObject<HTMLInputElement 
     onSubmit: () => {
       // Empty for the next one; the new import shows in the queue, which starts polling.
       form.reset();
+      if (existing.current) {
+        showExisting(existing.current);
+        return;
+      }
       void queryClient.invalidateQueries({ queryKey: importListQuery.queryKey });
       const id = sentId.current;
       toastPinching(() => cancelImport(queryClient, id));
     },
   });
+
+  function showExisting({ kind, id, title }: DuplicateLink["existing"]) {
+    if (kind === "recipe") {
+      toastAlreadySaved(title ?? "", () => void navigate(`/recipes/${id}`));
+    } else if (title) {
+      // The queue's own toast for it, by its id: one, not two.
+      toastReady(id, title, () => void navigate(`/imports/${id}`));
+    } else {
+      toastAlreadyPinching();
+    }
+  }
 
   async function submit() {
     await form.handleSubmit();
