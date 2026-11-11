@@ -3,7 +3,7 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { BrowserRouter } from "react-router";
 import { App } from "./App.tsx";
-import { importListQuery } from "./features/imports/importQueries.ts";
+import { queueKnown } from "./features/imports/importQueries.ts";
 import { ApiError } from "./lib/api.ts";
 import { loadDisplayFont } from "./lib/displayFont.ts";
 import "./globals.css";
@@ -38,16 +38,13 @@ function render(root: HTMLElement) {
 
 // Add recipe centres its block by the queue's height, so it waits for the queue (ImportPage).
 // Opened there, the app renders once the queue is in, asked for by index.html's preload with the
-// page: the block paints with the header (LCP 0.75 s in Lighthouse, not 2.6). A failed list is
-// left to the page, which shows its error and asks again. Not a top-level await, which splits the
-// entry into many chunks.
+// page: the block paints with the header (LCP 0.75 s in Lighthouse, not 2.6). queueKnown gives up
+// after 1 s or on any failure, and the page then shows its error or its queue when it comes. Not
+// a top-level await, which splits the entry into many chunks.
 if (location.pathname === "/") {
-  void queryClient
-    .query(importListQuery)
-    .catch(() => undefined)
-    .then(() => {
-      render(root);
-    });
+  void queueKnown(queryClient).then(() => {
+    render(root);
+  });
 } else {
   render(root);
 }

@@ -12,6 +12,20 @@ export const importListQuery = queryOptions({
   refetchInterval: (query) => pollInterval(query.state.data),
 });
 
+// Before the first render of / (main.tsx): settles once the queue is in, or has failed (no
+// connection, a non-OK answer such as 401 or 500), or after `ms`, whichever comes first. Never
+// rejects and never waits longer, so the page is never left blank: past it, the page renders as
+// usual and the queue shows when it comes.
+export function queueKnown(queryClient: QueryClient, ms = 1000) {
+  return Promise.race([
+    queryClient.query(importListQuery).then(
+      () => undefined,
+      () => undefined,
+    ),
+    new Promise<void>((resolve) => setTimeout(resolve, ms)),
+  ]);
+}
+
 export function pollInterval(list: ImportList | undefined) {
   const working = list?.items.some(
     (job) => job.status === "pending" || job.status === "processing",
