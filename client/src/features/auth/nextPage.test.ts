@@ -9,10 +9,17 @@ test("without next, it's Add recipe", () => {
   expect(nextPage("")).toBe("/");
 });
 
-// Each of these would leave the site: a browser reads the first four as //evil.
-test.each(["/%09/evil", "/%0A/evil", "%2F%2Fevil", "/%5Cevil", "javascript:alert(1)"])(
-  "next=%s stays on the site",
-  (next) => {
-    expect(nextPage(`?next=${next}`)).toBe("/");
-  },
-);
+// Each of these would leave the site: a browser reads the first four as //evil, and the last
+// three resolve their dots to //evil.com ("%252e" is "%2e", a dot, once next is read).
+test.each([
+  "/%09/evil",
+  "/%0A/evil",
+  "%2F%2Fevil",
+  "/%5Cevil",
+  "javascript:alert(1)",
+  "/.//evil.com",
+  "/x/..//evil.com",
+  "/%252e//evil.com",
+])("next=%s stays on the site", (next) => {
+  expect(nextPage(`?next=${next}`)).toBe("/");
+});
