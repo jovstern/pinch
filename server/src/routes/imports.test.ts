@@ -662,6 +662,10 @@ test("a link the user has a recipe of answers 409 pointing to it, and nothing is
   const stored = await recipesCollection(db).findOne({ _id: new ObjectId(recipe.id) });
   expect(stored?.source.linkKey).toBe("instagram:DOxAbc123");
   expect(recipe.source).toEqual({ type: "instagram", url: reel });
+  // Editing the recipe keeps it, as the rest of its source (D20).
+  await request(app).put(`/api/recipes/${recipe.id}`).send(draft);
+  const edited = await recipesCollection(db).findOne({ _id: new ObjectId(recipe.id) });
+  expect(edited?.source.linkKey).toBe("instagram:DOxAbc123");
 
   const response = await request(app).post("/api/imports").send({ type: "link", url: reelAgain });
 
@@ -679,17 +683,24 @@ test("a link still in the queue answers 409 with the import, and its draft's tit
 
   const pending = await request(app).post("/api/imports").send({ type: "link", url: reelAgain });
   expect(pending.status).toBe(409);
-  expect(DuplicateLinkSchema.parse(pending.body).existing).toEqual({ kind: "import", id });
+  expect(DuplicateLinkSchema.parse(pending.body).existing).toEqual({
+    kind: "import",
+    id,
+    status: "pending",
+  });
 
+  const uncertain = [{ path: "steps.0", reason: "The video skips it." }];
   await importsCollection(db).updateOne(
     { _id: new ObjectId(id) },
-    { $set: { status: "ready", draft } },
+    { $set: { status: "ready", draft: { ...draft, uncertain } } },
   );
   const ready = await request(app).post("/api/imports").send({ type: "link", url: reelAgain });
   expect(DuplicateLinkSchema.parse(ready.body).existing).toEqual({
     kind: "import",
     id,
+    status: "ready",
     title: "Tomato pasta",
+    lookAt: 1,
   });
   expect(await importsCollection(db).countDocuments()).toBe(1);
 });
@@ -714,6 +725,22 @@ test("a deleted recipe, a failed import or a discarded draft doesn't stop the li
   await request(app).delete(`/api/imports/${ImportSchema.parse(afterFailed.body).id}`);
   const afterDiscard = await request(app).post("/api/imports").send({ type: "link", url: reel });
   expect(afterDiscard.status).toBe(202);
+});
+
+test("pinching a link again sets aside its failed import, so its Retry can't make a second recipe", async () => {
+  const created = await request(app).post("/api/imports").send({ type: "link", url: reel });
+  const { id: failed } = ImportSchema.parse(created.body);
+  await importsCollection(db).updateOne(
+    { _id: new ObjectId(failed) },
+    { $set: { status: "failed", error: "No." } },
+  );
+
+  const again = await request(app).post("/api/imports").send({ type: "link", url: reelAgain });
+
+  expect(again.status).toBe(202);
+  expect((await request(app).post(`/api/imports/${failed}/retry`)).status).toBe(404);
+  const list = ImportListSchema.parse((await request(app).get("/api/imports")).body);
+  expect(list.items.map((job) => job.id)).toEqual([ImportSchema.parse(again.body).id]);
 });
 
 test("another user's recipe or import of the same link doesn't stop it", async () => {

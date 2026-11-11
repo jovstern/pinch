@@ -6,9 +6,24 @@ export function linkKey(url: string): string {
   // "www." and "m." are the same site.
   const host = hostname.toLowerCase().replace(/^(www\.|m\.)/, "");
   const path = pathname.replace(/\/+$/, "");
-  // No id in the link (fb.watch/…, Facebook's share/r/…): the link itself, without its query
-  // (tracking) or hash.
-  return postId(host, path, query) ?? `url:${host}${path}`;
+  // No id we know in the link (fb.watch/…, Facebook's share/r/… and story.php?story_fbid=…): the
+  // link itself, without its hash or tracking parameters. The rest of its query stays: it may
+  // name the post, and merging two posts would stop the user pinching the second (§4.6), while
+  // splitting one only costs a Gemini call.
+  const kept = postQuery(query);
+  return postId(host, path, query) ?? `url:${host}${path}${kept ? `?${kept}` : ""}`;
+}
+
+// The query without the platforms' share and tracking parameters, the rest in order, so the
+// same link shared twice reads the same.
+const TRACKING = /^(utm_\w*|igsh|igshid|si|fbclid|mibextid|rdid|feature|ref|share_url)$/i;
+
+function postQuery(query: string) {
+  return query
+    .split("&")
+    .filter((pair) => pair !== "" && !TRACKING.test(pair.split("=")[0] ?? ""))
+    .sort()
+    .join("&");
 }
 
 // The url has passed ImportInputSchema: http(s), on one of the platforms' hosts. Read with a
@@ -30,20 +45,22 @@ function postId(host: string, path: string, query: string) {
     return id && `youtube:${id}`;
   }
   if (host === "youtube.com") {
-    const id = new RegExp(`^/(?:shorts|embed|live)/${ID}$`).exec(path)?.[1] ?? watched(path, query);
+    const id =
+      new RegExp(`^/(?:shorts|embed|live)/${ID}$`).exec(path)?.[1] ??
+      (path === "/watch" ? videoParam(query) : undefined);
     return id && `youtube:${id}`;
   }
   if (host === "facebook.com") {
-    // /reel/ID and /<page>/videos/ID.
+    // /reel/ID, /<page>/videos/ID, /watch?v=ID and /video.php?v=ID.
     const id =
-      new RegExp(`^(?:/reel|/[^/]+/videos)/${ID}$`).exec(path)?.[1] ?? watched(path, query);
+      new RegExp(`^(?:/reel|/[^/]+/videos)/${ID}$`).exec(path)?.[1] ??
+      (path === "/watch" || path === "/video.php" ? videoParam(query) : undefined);
     return id && `facebook:${id}`;
   }
   return undefined;
 }
 
-// /watch?v=ID: the id is the query's v.
-function watched(path: string, query: string) {
-  if (path !== "/watch") return undefined;
+// The query's v: watch?v=ID.
+function videoParam(query: string) {
   return new RegExp(`(?:^|&)v=${ID}`).exec(query)?.[1];
 }

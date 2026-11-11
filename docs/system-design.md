@@ -226,22 +226,28 @@ recipes, correctly rejected one promo, and one call hung. Results and findings a
 Every link import carries `linkKey`, the post it points to: `instagram:C9x…`, `youtube:abc`,
 `facebook:123…` (`shared/src/linkKey.ts`: Instagram's `/reel/`, `/reels/`, `/p/` and `/tv/`,
 also under the author's name (`/chef/reel/…`); YouTube's `shorts/`, `watch?v=`, `youtu.be/`,
-`embed/` and `live/`; Facebook's `/reel/`, `watch?v=` and `/<page>/videos/`). A link whose path holds no id (`fb.watch/…`, Facebook's
-`share/r/…`) keys as `url:` plus its host (lower case, without `www.` or `m.`) and path, with no
-query or hash. Approve copies it to the recipe's `source.linkKey`. The key is stored, never sent:
-the client has no use for it. (It's read with a pattern, not `URL`: `shared/` is plain ES.)
+`embed/` and `live/`; Facebook's `/reel/`, `watch?v=`, `video.php?v=` and `/<page>/videos/`). A
+link with no id we know (`fb.watch/…`, Facebook's `share/r/…` and `story.php?story_fbid=…`) keys
+as `url:` plus its host (lower case, without `www.` or `m.`), its path and its query, without the
+hash and the share and tracking parameters (`utm_*`, `igsh`, `si`, `fbclid`, `mibextid`,
+`feature`, `ref`…), the rest sorted: the query may name the post, and merging two posts would
+stop the user pinching the second, while splitting one only costs a Gemini call. Approve copies
+it to the recipe's `source.linkKey`. The key is stored, never sent: the client has no use for it.
+(It's read with a pattern, not `URL`: `shared/` is plain ES.)
 
 1. **This user has it (L1).** `POST /api/imports` looks first: a recipe of theirs with that key
    (not deleted), or an import of theirs with it that is pending, processing or ready, answers
-   **409** `{ error: { code: "link_pinched_before", message }, existing: { kind: "recipe" |
-   "import", id, title? } }` (`DuplicateLinkSchema`; the title is the recipe's, or a ready
-   draft's), before the daily cap is counted, so nothing is queued or counted. The client
-   shows it as a toast, not an error: "Already in My recipes · Shakshuka" (View), "Already
-   pinching it", "Shakshuka is ready to review" (Review). A deleted recipe and a
-   failed import don't count: pinching again is asking for it again. Two tabs pasting the same
-   link at the same instant can still make two imports (a partial index can't say "only the
-   active ones"): rare, and harmless. `npm run db:backfill-link-keys` gives the key to the links
-   and recipes saved before L1.
+   **409** `{ error: { code: "link_pinched_before", message }, existing }`
+   (`DuplicateLinkSchema`): `existing` is `{ kind: "recipe", id, title }` or `{ kind: "import",
+   id, status, title?, lookAt? }`, a ready draft's title and its count of things to look at. It's
+   answered before the daily cap is counted, so nothing is queued or counted. The client shows it
+   as a toast, not an error: "Already in My recipes · Shakshuka" (View), "Already pinching it",
+   "Shakshuka is ready to review" (Review). A deleted recipe and a failed import don't count:
+   pinching again is asking for it again, so the new import deletes (D27) the failed ones of that
+   link, whose Retry would make a second recipe. Two tabs pasting the same link at the same
+   instant can still make two imports (a partial index can't say "only the active ones"): rare,
+   and harmless. `npm run db:backfill-link-keys` gives the key to the links and recipes saved
+   before L1.
 2. **Anyone has it (L2).** The shared `links` collection keeps the model's answer for each post:
    one document per `{ key, version }`, with no owner. After the worker claims a link import it
    looks there: on a hit it copies the draft and the pictures into the import with the same

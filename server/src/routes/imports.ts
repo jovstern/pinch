@@ -4,6 +4,7 @@ import {
   linkKey,
   MAX_SCREENSHOT_BYTES,
   MAX_SCREENSHOTS,
+  RecipeDraftSchema,
   RecipeInputSchema,
   screenshotsMessage,
   type DuplicateLink,
@@ -61,6 +62,14 @@ export function importsRouter(db: Db) {
       key,
     );
     await imports.insertOne(job);
+    // A failed import of the same link is done with: pinching again asked for it again, and its
+    // Retry would make a second recipe of the post (§4.6). Kept a while, as any deleted (D27).
+    if (key) {
+      await imports.updateMany(
+        { ownerId: req.userId, linkKey: key, status: "failed", ...NOT_DELETED },
+        { $set: { deletedAt: new Date() } },
+      );
+    }
     res.status(202).location(`/api/imports/${job._id.toHexString()}`).json(toImport(job));
   });
 
@@ -92,8 +101,17 @@ export function importsRouter(db: Db) {
       return { kind: "recipe", id: recipe._id.toHexString(), title: recipe.title } as const;
     }
     const [job] = await findImportOfLink(imports, ownerId, key).toArray();
-    if (job) return { kind: "import", id: job._id.toHexString(), title: job.draft?.title } as const;
-    return undefined;
+    // Never a failed one (the query); said again so the type knows.
+    if (!job || job.status === "failed") return undefined;
+    // Read as the API reads any draft (its marks checked), so the count is the queue's.
+    const draft = RecipeDraftSchema.optional().parse(job.draft);
+    return {
+      kind: "import",
+      id: job._id.toHexString(),
+      status: job.status,
+      title: draft?.title,
+      lookAt: draft?.uncertain?.length,
+    } as const;
   }
 
   // Not paged: done imports are deleted and abandoned ones expire, so there are only a few. The
@@ -242,7 +260,7 @@ function importNotFailed() {
 // 409: the user has this link already (§4.6). Not an error to them: the client shows a toast
 // pointing to what they have.
 function linkPinchedBefore(existing: DuplicateLink["existing"]) {
-  return new HttpError(409, "link_pinched_before", "You've pinched this link before.", undefined, {
+  return new HttpError(409, "link_pinched_before", "You've pinched this link before.", {
     existing,
   });
 }
@@ -303,6 +321,6 @@ const receiveScreenshots: RequestHandler = (req, res, next) => {
 
 function invalidScreenshots() {
   return new HttpError(400, "invalid_input", "Some fields are not valid.", {
-    images: screenshotsMessage,
+    fields: { images: screenshotsMessage },
   });
 }

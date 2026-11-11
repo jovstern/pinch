@@ -99,15 +99,21 @@ export const ImportSchema = z.object({
 export const ImportListSchema = z.object({ items: z.array(ImportSchema) });
 
 // POST /api/imports's 409 (design §4.6, D28): this user has pinched this link before. The error
-// as any other's, and what they already have: a recipe (with its title), or an import still in
-// the queue (with its draft's title once it's ready). The client shows it as a toast.
+// as any other's, and what they already have: a recipe, or an import still in the queue. A ready
+// one has its draft's title and how many things it asks to look at, as the queue's toast says.
+// The client shows it as a toast.
 export const DuplicateLinkSchema = z.object({
   error: z.object({ code: z.literal("link_pinched_before"), message: z.string() }),
-  existing: z.object({
-    kind: z.enum(["recipe", "import"]),
-    id: z.string(),
-    title: z.string().optional(),
-  }),
+  existing: z.discriminatedUnion("kind", [
+    z.object({ kind: z.literal("recipe"), id: z.string(), title: z.string() }),
+    z.object({
+      kind: z.literal("import"),
+      id: z.string(),
+      status: z.enum(["pending", "processing", "ready"]),
+      title: z.string().optional(),
+      lookAt: z.int().optional(),
+    }),
+  ]),
 });
 
 export type ImportInput = z.infer<typeof ImportInputSchema>;

@@ -59,7 +59,7 @@ export function findImportOfLink(
   return imports
     .find(
       { ownerId, linkKey, status: { $in: ["pending", "processing", "ready"] }, ...NOT_DELETED },
-      { projection: { status: 1, "draft.title": 1 } },
+      { projection: { status: 1, draft: 1 } },
     )
     .limit(1);
 }
