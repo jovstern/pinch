@@ -61,13 +61,16 @@ export function ImportList({ focusPasteBox }: { focusPasteBox: () => void }) {
             {queueSummary(imports)}
           </h2>
           <ul className="grid gap-3">
-            {imports.map((job) => (
+            {imports.map((job, index) => (
               // min-w-0: a grid item is as wide as its content, and a link is one long line.
               <li
                 key={job.id}
                 className="flex min-w-0 gap-3 rounded-card border border-border bg-card p-3 md:items-center md:gap-4 md:p-4"
               >
-                <Picture job={job} />
+                {/* The first cards' pictures are the page's largest thing on a phone, so they
+                    don't wait to be found near the screen, as My recipes' first row
+                    (docs/metrics/m08.md). */}
+                <Picture job={job} eager={index < 2} />
                 {/* Phone: the action under the words. From 768 px: on the right. */}
                 <div className="min-w-0 flex-1 md:flex md:items-center md:gap-4">
                   <div className="min-w-0 flex-1">
@@ -100,9 +103,16 @@ export function ImportList({ focusPasteBox }: { focusPasteBox: () => void }) {
 }
 
 // The card's picture: the draft's when it has one; else what state it's in.
-function Picture({ job }: { job: Import }) {
+function Picture({ job, eager }: { job: Import; eager: boolean }) {
   if (job.thumbnail) {
-    return <Thumbnail src={`/api/imports/${job.id}/thumbnail`} size={job.thumbnail} shape="tile" />;
+    return (
+      <Thumbnail
+        src={`/api/imports/${job.id}/thumbnail`}
+        size={job.thumbnail}
+        shape="tile"
+        eager={eager}
+      />
+    );
   }
   if (job.status === "failed" || job.stalled) {
     // The alert, not colour alone.

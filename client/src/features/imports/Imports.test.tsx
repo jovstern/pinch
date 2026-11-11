@@ -275,6 +275,29 @@ test("a ready one is named by its draft's title, and counted in the heading", as
   expect(screen.getByRole("link", { name: "Review" })).toHaveAccessibleDescription("Tomato pasta");
 });
 
+test("the first two cards' pictures load at once, first; the rest when near the screen", async () => {
+  const size = { width: 400, height: 225 };
+  stubApi([
+    ["1", "2", "3"].map((n) =>
+      importOf({ id: `6650a1b2c3d4e5f60000000${n}`, status: "ready", draft, thumbnail: size }),
+    ),
+  ]);
+  renderApp("/");
+
+  await screen.findByRole("heading", { name: "3 ready" });
+  const pictures = document.querySelectorAll('img[src^="/api/imports/"]');
+  expect([...pictures].map((img) => img.getAttribute("loading"))).toEqual([
+    "eager",
+    "eager",
+    "lazy",
+  ]);
+  expect([...pictures].map((img) => img.getAttribute("fetchpriority"))).toEqual([
+    "high",
+    "high",
+    "auto",
+  ]);
+});
+
 test("the heading counts what's ready, in progress and failed, a stalled one as failed", async () => {
   stubApi([
     [
