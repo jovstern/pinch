@@ -26,8 +26,9 @@ for (const phone of [false, true]) {
         .getByRole("listitem")
         .filter({ hasText: "Tomato pasta (from facebook) is ready to review" });
       await expect(toast).toBeVisible({ timeout: 15_000 });
-      await page.waitForTimeout(1500);
-      // Sonner's own key (Alt+T) spreads the stack first: other files' toasts may be on top.
+      // Sonner's own key (Alt+T) spreads the stack first: other files' toasts may be on top. At
+      // once, with no pause for the video: Sonner shows only the newest 3, so other files'
+      // drafts turning ready meanwhile would hide this one.
       await page.keyboard.press("Alt+KeyT");
       await toast.getByRole("button", { name: "Review" }).click();
 
