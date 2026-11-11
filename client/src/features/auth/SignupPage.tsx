@@ -11,6 +11,7 @@ import { signUp } from "./authQueries.ts";
 import { nextPage } from "./nextPage.ts";
 import { SubmitAlert } from "./SubmitAlert.tsx";
 import { submitError } from "./submitError.ts";
+import { Wordmark } from "./Wordmark.tsx";
 
 // Sign up (design §8.3, §14), at /signup: as Log in, with a name and a new password.
 export function SignupPage() {
@@ -45,6 +46,7 @@ export function SignupPage() {
   return (
     <AuthFrame
       title="Sign up"
+      logo={<Wordmark />}
       footer={
         <>
           Already have an account?{" "}
@@ -81,12 +83,18 @@ export function SignupPage() {
             />
           )}
         </form.Field>
-        <form.Subscribe selector={(state) => state.errorMap.onSubmit}>
-          {(error) => <SubmitAlert error={error} />}
+        {/* As Log in; the email goes with a 409's Log in link, so it needn't be typed again. */}
+        <form.Subscribe
+          selector={(state) => ({
+            error: state.isSubmitting ? undefined : state.errorMap.onSubmit,
+            email: state.values.email,
+          })}
+        >
+          {({ error, email }) => <SubmitAlert error={error} email={email} />}
         </form.Subscribe>
         <form.Subscribe selector={(state) => state.isSubmitting}>
           {(isSubmitting) => (
-            <Button type="submit" aria-disabled={isSubmitting}>
+            <Button type="submit" aria-disabled={isSubmitting} aria-busy={isSubmitting}>
               {isSubmitting ? "Signing up…" : "Sign up"}
             </Button>
           )}

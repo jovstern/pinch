@@ -98,6 +98,7 @@ export function DeleteRecipeDialog({ recipe, onClose, focusOnClose }: DeleteReci
               deletion.mutate();
             }}
             disabled={deletion.isPending}
+            aria-busy={deletion.isPending}
           >
             {deletion.isPending ? "Deleting…" : "Delete"}
           </Button>

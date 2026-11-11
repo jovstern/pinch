@@ -10,6 +10,7 @@ import { ImagePlus } from "lucide-react";
 import { useId, useState } from "react";
 import { Button } from "../../components/ui/Button.tsx";
 import { ApiError, sendForm } from "../../lib/api.ts";
+import { cn } from "../../lib/cn.ts";
 import { toastPinching } from "../../lib/toasts.tsx";
 import { cancelImport, importListQuery, limitMessage } from "./importQueries.ts";
 
@@ -49,6 +50,8 @@ export function ScreenshotsUpload() {
   }
 
   const message = errorMessage(refused, upload.error);
+  // A day's limit is a quiet note, as under the paste box; the rest are errors.
+  const limit = !refused && limitMessage(upload.error);
   return (
     <div className="mt-2">
       {/* Quiet, under the field: the paste is the main way in (design §14). A label with
@@ -77,7 +80,11 @@ export function ScreenshotsUpload() {
         Up to {MAX_SCREENSHOTS} screenshots of the recipe, when its link and text won't do.
       </p>
       {message && (
-        <p id={errorId} role="alert" className="mt-1 text-sm text-destructive">
+        <p
+          id={errorId}
+          role={limit ? "status" : "alert"}
+          className={cn("mt-1 text-sm", limit ? "text-text-muted" : "text-destructive")}
+        >
           {message}
         </p>
       )}

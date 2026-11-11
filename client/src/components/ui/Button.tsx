@@ -5,11 +5,13 @@ import { cn } from "../../lib/cn.ts";
 
 // shadcn/ui's Button (D26), on Pinch's tokens: 44 px tall for touch, body-size text, and the
 // global focus ring (globals.css). One look per kind of action, so every button and button-like
-// link matches. An unavailable one (aria-disabled) doesn't answer hover or a press.
+// link matches. An unavailable one (aria-disabled) doesn't answer hover or a press, and is faded.
+// A pending one (aria-busy: Logging in…, Saving…) is unavailable too, but keeps its full colour,
+// so its label stays readable (faded, it fell to 2.9:1), with the progress cursor.
 // Where Pinch departs from shadcn: at least 44 px, not exactly, and no nowrap, so a long label
 // (a running timer, text zoom, a 320 px screen) wraps instead of spilling out.
 const buttonVariants = cva(
-  "inline-flex min-h-11 items-center justify-center gap-2 rounded-control px-4 font-semibold disabled:opacity-60 aria-disabled:cursor-not-allowed aria-disabled:opacity-60",
+  "inline-flex min-h-11 items-center justify-center gap-2 rounded-control px-4 font-semibold disabled:not-aria-busy:opacity-60 aria-disabled:not-aria-busy:cursor-not-allowed aria-disabled:not-aria-busy:opacity-60 aria-busy:cursor-progress",
   {
     variants: {
       variant: {

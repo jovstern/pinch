@@ -143,14 +143,18 @@ export function toastAlreadySaved(title: string, view: () => void) {
   });
 }
 
+// A link the worker already has: it says where it is, as there's nothing to open yet.
 export function toastAlreadyPinching() {
-  showToast("message", "Already pinching it", { duration: normal });
+  showToast("message", "Already pinching it", {
+    description: "It's in your queue",
+    duration: normal,
+  });
 }
 
 // Past the day's cap, the user's or everyone's (design §1, D30): trying again won't help, so no
-// Try again.
+// Try again. Neutral, not red: a limit isn't something that went wrong (as under the paste box).
 export function toastLimit(message: string) {
-  showToast("error", message, { duration: untilClosed, closeButton: true });
+  showToast("message", message, { duration: untilClosed, closeButton: true });
 }
 
 // A new recipe in My recipes, from Review or written by hand. Without the wireframe's View:

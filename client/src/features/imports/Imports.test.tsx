@@ -635,8 +635,10 @@ test("past the daily cap, the box says so and keeps the link", async () => {
   await userEvent.type(box, reel);
   await userEvent.click(screen.getByRole("button", { name: "Pinch it" }));
 
-  expect(await screen.findByRole("alert")).toHaveTextContent(dailyLimitMessage);
+  // A quiet note, not an error (design §14).
+  expect(await screen.findByText(dailyLimitMessage)).toHaveAttribute("role", "status");
   expect(box).toHaveValue(reel);
+  expect(box).toHaveAttribute("aria-invalid", "false");
 });
 
 // A link the user pinched before (design §4.6): the API's 409, with what they have.
@@ -709,7 +711,8 @@ test("past the global cap, the box says Pinch has read all it can today", async 
 
   await pinchReel();
 
-  expect(await screen.findByRole("alert")).toHaveTextContent(globalLimitMessage);
+  // A quiet note, not an error (design §14).
+  expect(await screen.findByText(globalLimitMessage)).toHaveAttribute("role", "status");
 });
 
 test("a link still in the queue says it's already being pinched", async () => {
@@ -731,7 +734,8 @@ test("past the daily cap, Retry says so", async () => {
 
   await userEvent.click(await screen.findByRole("button", { name: "Retry" }));
 
-  expect(await screen.findByRole("alert")).toHaveTextContent(dailyLimitMessage);
+  // A quiet note, not an error (design §14).
+  expect(await screen.findByText(dailyLimitMessage)).toHaveAttribute("role", "status");
 });
 
 test("past the global cap, Retry says so", async () => {
@@ -745,7 +749,8 @@ test("past the global cap, Retry says so", async () => {
 
   await userEvent.click(await screen.findByRole("button", { name: "Retry" }));
 
-  expect(await screen.findByRole("alert")).toHaveTextContent(globalLimitMessage);
+  // A quiet note, not an error (design §14).
+  expect(await screen.findByText(globalLimitMessage)).toHaveAttribute("role", "status");
 });
 
 test("polling runs only while the worker has a link in hand", () => {
@@ -846,7 +851,8 @@ test("screenshots past the day's cap say so", async () => {
 
   await userEvent.upload(screen.getByLabelText("Or add screenshots"), [screenshot("one.png")]);
 
-  expect(await screen.findByRole("alert")).toHaveTextContent(dailyLimitMessage);
+  // A quiet note, not an error (design §14).
+  expect(await screen.findByText(dailyLimitMessage)).toHaveAttribute("role", "status");
 });
 
 test("screenshots past the global cap say so", async () => {
@@ -855,5 +861,6 @@ test("screenshots past the global cap say so", async () => {
 
   await userEvent.upload(screen.getByLabelText("Or add screenshots"), [screenshot("one.png")]);
 
-  expect(await screen.findByRole("alert")).toHaveTextContent(globalLimitMessage);
+  // A quiet note, not an error (design §14).
+  expect(await screen.findByText(globalLimitMessage)).toHaveAttribute("role", "status");
 });

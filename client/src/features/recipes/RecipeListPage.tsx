@@ -224,6 +224,7 @@ export function RecipeListPage() {
                 variant="secondary"
                 onClick={() => void refetch()}
                 disabled={isFetching}
+                aria-busy={isFetching}
                 className="mt-4"
               >
                 {isFetching ? "Trying…" : "Try again"}
@@ -305,6 +306,7 @@ export function RecipeListPage() {
               variant="secondary"
               onClick={showMore}
               aria-disabled={isFetchingNextPage}
+              aria-busy={isFetchingNextPage}
               className="mt-6"
             >
               {isFetchingNextPage ? "Loading…" : "Show more"}

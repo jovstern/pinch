@@ -38,6 +38,7 @@ export function ImportList({ focusPasteBox }: { focusPasteBox: () => void }) {
             variant="secondary"
             onClick={() => void refetch()}
             disabled={isFetching}
+            aria-busy={isFetching}
             className="mt-4"
           >
             {isFetching ? "Trying…" : "Try again"}

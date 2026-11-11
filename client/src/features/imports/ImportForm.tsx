@@ -66,9 +66,9 @@ export function ImportForm({ inputRef }: { inputRef: RefObject<HTMLInputElement 
             const message = error.fields.url ?? error.fields.text;
             if (message) return { fields: { pasted: message } };
             // Past the day's cap, the user's or everyone's (D22, D30): what was pasted is fine, so
-            // not on the field.
+            // not on the field, and kept for tomorrow; a note, not an error (below).
             const limit = limitMessage(error);
-            if (limit) return limit;
+            if (limit) return { note: limit };
           }
           return "We couldn't send this. Try again.";
         }
@@ -185,6 +185,7 @@ export function ImportForm({ inputRef }: { inputRef: RefObject<HTMLInputElement 
                     <Button
                       type="submit"
                       aria-disabled={isSubmitting}
+                      aria-busy={isSubmitting}
                       // Attached to the group's right edge.
                       className="-my-px -mr-px shrink-0 self-stretch rounded-l-none"
                     >
@@ -199,16 +200,32 @@ export function ImportForm({ inputRef }: { inputRef: RefObject<HTMLInputElement 
         }}
       </form.Field>
       <form.Subscribe selector={(state) => state.errorMap.onSubmit}>
-        {(error) =>
-          typeof error === "string" && (
-            <p role="alert" className="mt-1 text-sm text-destructive">
-              {error}
-            </p>
-          )
-        }
+        {(error) => {
+          if (typeof error === "string") {
+            return (
+              <p role="alert" className="mt-1 text-sm text-destructive">
+                {error}
+              </p>
+            );
+          }
+          // A day's limit: said quietly (a status, muted), as nothing went wrong.
+          if (isNote(error)) {
+            return (
+              <p role="status" className="mt-1 text-sm text-text-muted">
+                {error.note}
+              </p>
+            );
+          }
+          return null;
+        }}
       </form.Subscribe>
     </form>
   );
+}
+
+// TanStack Form types a form's error as unknown, so this checks it (as FieldError does).
+function isNote(error: unknown): error is { note: string } {
+  return typeof error === "object" && error !== null && "note" in error;
 }
 
 // A pasted text's lines as one line: an input has no new lines. A middle dot, not a comma: a

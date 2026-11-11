@@ -1,4 +1,4 @@
-import { screen } from "@testing-library/react";
+import { screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, test, vi } from "vitest";
 import { loadPage } from "../../lib/loadPage.ts";
@@ -90,6 +90,34 @@ test("signing up with an email that has an account says so, with a link to Log i
   );
 });
 
+test("the 409's Log in link brings the email along, and focus goes to Password", async () => {
+  stubFetch(() =>
+    Promise.resolve(Response.json({ error: { code: "email_taken" } }, { status: 409 })),
+  );
+  renderApp("/signup", { me: null });
+  await fillSignup();
+  await userEvent.setup().click(within(await screen.findByRole("alert")).getByRole("link"));
+  expect(await screen.findByRole("heading", { level: 1, name: "Log in" })).toBeInTheDocument();
+  expect(screen.getByLabelText("Email")).toHaveValue("cook@example.com");
+  expect(screen.getByLabelText("Password")).toHaveFocus();
+});
+
+test("the last error goes while Log in tries again", async () => {
+  let answer: (response: Response) => void = () => undefined;
+  stubFetch(() => Promise.resolve(new Response(null, { status: 401 })));
+  renderApp("/login", { me: null });
+  await fillLogin("not it");
+  expect(await screen.findByRole("alert")).toBeInTheDocument();
+  stubFetch(() => new Promise<Response>((resolve) => (answer = resolve)));
+  await userEvent.setup().click(screen.getByRole("button", { name: "Log in" }));
+  expect(await screen.findByRole("button", { name: "Logging in…" })).toHaveAttribute(
+    "aria-busy",
+    "true",
+  );
+  expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  answer(new Response(null, { status: 401 }));
+});
+
 test("the API's field errors show on their fields, and focus goes to the first", async () => {
   stubFetch(() =>
     Promise.resolve(
@@ -145,6 +173,9 @@ test("when who's signed in can't be asked, the app says so, with Try again", asy
   expect(
     await screen.findByRole("heading", { level: 1, name: "We couldn't reach Pinch" }),
   ).toBeInTheDocument();
+  // Announced, from the card: <main> keeps its own role (axe).
+  expect(screen.getByRole("alert")).toHaveTextContent("Check your connection");
+  expect(screen.getByRole("main")).not.toHaveAttribute("role");
   up = true;
   await userEvent.setup().click(screen.getByRole("button", { name: "Try again" }));
   expect(await screen.findByRole("heading", { level: 1, name: "Page not found" })).toBeVisible();

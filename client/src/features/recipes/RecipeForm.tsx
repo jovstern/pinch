@@ -476,7 +476,12 @@ export function RecipeForm({
                       title={title}
                       changed={changed}
                     />
-                    <Button type="submit" disabled={isSubmitting || discarding} className="flex-1">
+                    <Button
+                      type="submit"
+                      disabled={isSubmitting || discarding}
+                      aria-busy={isSubmitting}
+                      className="flex-1"
+                    >
                       {isSubmitting ? "Saving…" : submitLabel}
                     </Button>
                   </div>
@@ -546,6 +551,7 @@ function LeaveButton({ leave, busy, title, changed }: LeaveButtonProps) {
         variant="outline"
         aria-haspopup="dialog"
         aria-disabled={busy}
+        aria-busy={leave.kind === "discard" && leave.discarding}
         onClick={() => {
           if (!busy) setAsking(true);
         }}
