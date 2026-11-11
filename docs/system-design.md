@@ -415,10 +415,11 @@ Every index is checked with `.explain("executionStats")`: expect `IXSCAN`, and
 `totalDocsExamined` close to `nReturned` (a search fetches each match twice, by the text match
 and the not-deleted check, D27: still only the matches).
 
-**Sample data:** `npm run db:seed` adds ten sample recipes for the dev user (§8.3), so the
-list, search and filters have something to find; the e2e run seeds its own database the same
-way. Each sample has a fixed id and is written only when it's missing: running it again
-leaves an edited sample as it is, and puts back one that was deleted.
+**Sample data:** `npm run db:seed <email>` adds ten sample recipes for that account (sign up
+first, §8.3), so the list, search and filters have something to find; each e2e file's user gets
+the same ten through the API (`e2e/fixtures.ts`). Each sample has a fixed id and is written only
+when it's missing: running it again leaves an edited sample as it is, and puts back one that was
+deleted. The fixed ids make them one account's per database: seeding a second fails.
 
 ## 7. Find
 
@@ -531,10 +532,13 @@ them. No try/catch in each route.
 
 ### 8.3 Accounts (M9, D29)
 
-Until M9 a small middleware sets `req.userId` from config `DEV_USER_ID` (not a secret, so it has
-a default and needs no `.env` entry; `db:seed` creates that user). Every query already filters
-by `ownerId: req.userId`, so M9 changes **only that middleware**: it reads the session instead,
-and a request without one gets 401 (the health routes and `/api/auth/*` stay open).
+Until M9 a small middleware set `req.userId` from config `DEV_USER_ID`. Every query already
+filtered by `ownerId: req.userId`, so M9 changed **only that middleware**: `requireUser`
+(`server/src/requireUser.ts`), in front of `/api/recipes` and `/api/imports`, reads the session
+(`currentSession`: one lookup by the token's hash, not the account) and sets `req.userId`; a
+request without a live session gets 401 `signed_out`. The health routes and `/api/auth/*` stay
+open. Another user's recipe or import is a 404, as before. The worker is unchanged: it reads
+`ownerId` from each job.
 
 - **Sign-up is open:** email and password, or Google. Each account has the daily cap of 20
   (D22); a global daily cap on Gemini calls (D30) bounds what many accounts can spend.
@@ -571,8 +575,18 @@ and a request without one gets 401 (the health routes and `/api/auth/*` stay ope
 - **The client:** Log in and Sign up pages (with "Continue with Google"); a signed-out visit, or
   any 401 from the API, goes to `/login` and comes back where it was; the avatar becomes a menu
   with the name and Log out.
-- **The dev user's data:** `npm run db:adopt-dev-data <email>`, run once, gives the dev user's
-  recipes, imports and usage to that account.
+- **The dev user's data:** `npm run db:adopt-dev-data <email>`, run once after signing up,
+  gives the dev user's (`DEV_USER_ID`, which only this script still reads) recipes, imports and
+  usage to that account; a day both have a count adds them up. It fails if no account has the
+  email, and a second run finds nothing left to move.
+- **Tests:** a route test signs in as a user of its own (`createTestUser`,
+  `server/src/testUser.ts`: an account and a session written to the database, and the cookie).
+  Each e2e file signs up a user of its own through `POST /api/auth/signup` in its first test,
+  adds the samples, and reuses the cookie in its other tests (`e2e/fixtures.ts`), so files
+  running side by side never see each other's imports or toasts. The request goes to the
+  preview's origin, which proxies `/api`, so the cookie is the client's. The e2e API trusts that
+  one proxy (`TRUST_PROXY=1`) and each file signs up from an `X-Forwarded-For` of its own: there
+  are more files than the 10 sign-ups a minute one IP gets.
 - Out of M9: password reset, email verification for password accounts, other providers.
 
 ## 9. Gemini
@@ -621,7 +635,7 @@ and a request without one gets 401 (the health routes and `/api/auth/*` stay ope
 | D10 | Tags as one `facet:value` array from fixed lists; renaming or removing a value needs a migration of the stored recipes | One compound index; clean filters | Separate arrays per facet; free tags |
 | D11 | Cursor pagination | Constant speed at any depth | `skip` / `limit` |
 | D12 | Gemini | Reads video and YouTube URLs natively; has a Files API | Claude (needs frames + transcript for video) |
-| D13 | Auth later, behind a dev-user middleware | Learn the core first; ownership is in every query from day one | Building auth first |
+| D13 | Auth later, behind a dev-user middleware (replaced by the session's in M9 A2, §8.3) | Learn the core first; ownership is in every query from day one | Building auth first |
 | D14 | Nutrition estimated by Gemini, labelled as an estimate | Good enough for a POC | A nutrition database lookup (later) |
 | D15 | Send the post's caption to Gemini with the video | The spike: quantities are often only in the caption (missing quantities fell from 42/106 to 13/101), and it helps spot non-recipes | Video only |
 | D16 | The recipe is in the language of the post | Nothing lost in translation; the model's choice was unstable without a rule | Always Hebrew; always English |

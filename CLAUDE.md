@@ -34,8 +34,10 @@ and types used by both). MongoDB through the native driver + Zod. Gemini for ext
 
 - `npm run db:indexes` — creates the indexes (`server/src/db/indexes.ts`) in the app's
   database; run it once, and again when an index is added.
-- `npm run db:seed` — adds the sample recipes (`server/src/db/seed.ts`) for the dev user in
-  the app's database; safe to run again.
+- `npm run db:seed <email>` — adds the sample recipes (`server/src/db/seed.ts`) for that
+  account (sign up first) in the app's database; safe to run again.
+- `npm run db:adopt-dev-data <email>` — once, after signing up: the pre-accounts dev user's
+  recipes, imports and counts become that account's; safe to run again.
 
 ## How work happens
 
