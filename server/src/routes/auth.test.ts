@@ -150,16 +150,44 @@ test("logout deletes the session, clears the cookie and answers 204", async () =
   const token = cookie.split("=")[1] ?? "";
   expect(await sessionsCollection(db).findOne({ tokenHash: hashToken(token) })).toBeNull();
   const me = await request(app).get("/api/auth/me").set("Cookie", cookie);
-  expect(me.status).toBe(401);
+  expect(me.body).toBeNull();
 });
 
-test("me without a cookie, or with an unknown one, answers 401", async () => {
+test("me without a cookie, or with an unknown one, answers 200 null: nobody", async () => {
   const none = await request(app).get("/api/auth/me");
   const unknown = await request(app).get("/api/auth/me").set("Cookie", "pinch_session=nope");
 
-  expect(none.status).toBe(401);
-  expect(none.body).toMatchObject({ error: { code: "signed_out" } });
-  expect(unknown.status).toBe(401);
+  expect(none.status).toBe(200);
+  expect(none.body).toBeNull();
+  expect(unknown.status).toBe(200);
+  expect(unknown.body).toBeNull();
+});
+
+test("a session comes with the signed-in hint, readable by the page, and logout clears both", async () => {
+  const { response } = await signUp();
+  const hint = String((response.headers["set-cookie"] as unknown as string[])[1]);
+  expect(hint).toMatch(/^pinch_signed_in=1; Max-Age=2592000; Path=\/; Expires=/);
+  expect(hint).toContain("; SameSite=Lax");
+  expect(hint).not.toContain("HttpOnly");
+
+  const logout = await request(app)
+    .post("/api/auth/logout")
+    .set("Cookie", `${sessionCookie(response)}; pinch_signed_in=1`)
+    .send({});
+  expect(String(logout.headers["set-cookie"])).toMatch(
+    /pinch_signed_in=; Path=\/; Expires=Thu, 01/,
+  );
+});
+
+test("me gives a signed-in browser the hint if it lacks one", async () => {
+  const { response } = await signUp();
+  const me = await request(app).get("/api/auth/me").set("Cookie", sessionCookie(response));
+  expect(String(me.headers["set-cookie"])).toMatch(/^pinch_signed_in=1; Max-Age=2592000/);
+});
+
+test("me clears a hint left without a session", async () => {
+  const me = await request(app).get("/api/auth/me").set("Cookie", "pinch_signed_in=1");
+  expect(String(me.headers["set-cookie"])).toMatch(/^pinch_signed_in=; Path=\/; Expires=Thu, 01/);
 });
 
 test("an expired session counts as none, before the TTL index deletes it", async () => {
@@ -172,7 +200,7 @@ test("an expired session counts as none, before the TTL index deletes it", async
   );
 
   const me = await request(app).get("/api/auth/me").set("Cookie", cookie);
-  expect(me.status).toBe(401);
+  expect(me.body).toBeNull();
 });
 
 test("past the tries a minute for an email, even the right password answers 429", async () => {

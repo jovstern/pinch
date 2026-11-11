@@ -151,7 +151,7 @@ test("linking an account by email drops its password and ends its sessions", asy
 
   await callBack(await start(), user);
   const oldSession = await request(app).get("/api/auth/me").set("Cookie", sessionCookie(signup));
-  expect(oldSession.status).toBe(401);
+  expect(oldSession.body).toBeNull();
   const login = await request(app).post("/api/auth/login").send(account);
   expect(login.status).toBe(401);
   const _id = new ObjectId(MeSchema.parse(signup.body).id);

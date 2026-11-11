@@ -21,6 +21,7 @@ import {
   toastReady,
 } from "../../lib/toasts.tsx";
 import { cancelImport, importListQuery, limitMessage } from "./importQueries.ts";
+import { pastePlaceholder } from "./pastePlaceholder.ts";
 
 const hint = "Paste a YouTube short, a Facebook or Instagram reel, or a recipe as text";
 
@@ -143,7 +144,7 @@ export function ImportForm({ inputRef }: { inputRef: RefObject<HTMLInputElement 
                   id={id}
                   name={field.name}
                   value={field.state.value}
-                  placeholder="Paste a video or a recipe"
+                  placeholder={pastePlaceholder}
                   // Hebrew reads right to left: the field follows what's typed in it.
                   dir="auto"
                   aria-invalid={invalid}

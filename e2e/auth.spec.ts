@@ -2,8 +2,9 @@ import { randomInt, randomUUID } from "node:crypto";
 import type { APIRequestContext, Page } from "@playwright/test";
 import { expect, test } from "./fixtures.ts";
 
-// Sign-in (design §8.3). Chrome logs each 401 a signed-out page gets (who's signed in, the
-// queue's preload, a wrong password) as a console error, so those are expected here. What must
+// Sign-in (design §8.3). Chrome logs each 401 as a console error: here a wrong password and a
+// session ended on purpose answer 401, so those are expected. A signed-out page gets none (me
+// answers null, and the queue isn't preloaded without the signed-in hint). What must
 // not happen is checked by the answers themselves (unauthorized, below): once signed in, nothing
 // outside /api/auth/* answers 401.
 test.use({ expectedConsoleErrors: [/status of 401/] });
