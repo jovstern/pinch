@@ -22,6 +22,12 @@ export async function createIndexes(db: Db) {
     // One recipe per import, so approve is safe to repeat (design §4.4). Sparse: recipes made by
     // hand have no sourceImportId, and aren't in it.
     { key: { sourceImportId: 1 }, unique: true, sparse: true },
+    // "Already in My recipes" (findRecipeOfLink, design §4.6). Partial: only recipes from a link
+    // have the key.
+    {
+      key: { ownerId: 1, "source.linkKey": 1 },
+      partialFilterExpression: { "source.linkKey": { $exists: true } },
+    },
     deletedTtl,
   ]);
   await importsCollection(db).createIndexes([
@@ -34,6 +40,9 @@ export async function createIndexes(db: Db) {
     // TTL: Mongo deletes an import once its expiresAt has passed, checking about once a minute
     // (design §4.3).
     { key: { expiresAt: 1 }, expireAfterSeconds: 0 },
+    // "Already pinching it" (findImportOfLink, design §4.6). Partial, as the recipes' one: only
+    // links have it. Mongo then checks the status and deletedAt on the few it finds.
+    { key: { ownerId: 1, linkKey: 1 }, partialFilterExpression: { linkKey: { $exists: true } } },
     deletedTtl,
   ]);
   await usageCollection(db).createIndexes([
