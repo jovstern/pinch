@@ -35,8 +35,8 @@ Status: **design agreed, 2026-10-29.** Changes to the design are made in this fi
 
 ### Later
 
-Auth (see §8.3), share, comments, a WhatsApp bot or PWA share target, nutrition from a real
-database, semantic search ("recipes like this one").
+Share, comments, a WhatsApp bot or PWA share target, nutrition from a real database, semantic
+search. (Accounts are M9: §8.3, D29.) ("recipes like this one").
 
 ### Out of scope
 
@@ -221,6 +221,48 @@ Instagram, 3 Facebook). `yt-dlp` read all of them without cookies; Gemini turned
 recipes, correctly rejected one promo, and one call hung. Results and findings are in
 `docs/spike-results.md`.
 
+### 4.6 A link pinched before (D28; planned: M9 L1, L2)
+
+Every link import carries `linkKey`, the post it points to: `instagram:C9x…`, `youtube:abc`,
+`facebook:123…` (`shared/src/linkKey.ts`: Instagram's `/reel/`, `/reels/`, `/p/` and `/tv/`;
+YouTube's `shorts/`, `watch?v=`, `youtu.be/`, `embed/` and `live/`; Facebook's `/reel/`,
+`watch?v=` and `/<page>/videos/`). A link whose path holds no id (`fb.watch/…`, Facebook's
+`share/r/…`) keys as `url:` plus its host (lower case, without `www.` or `m.`) and path, with no
+query or hash. Approve copies it to the recipe's `source.linkKey`.
+
+1. **This user has it (L1).** `POST /api/imports` looks first: a recipe of theirs with that key
+   (not deleted), or an import of theirs with it that is pending, processing or ready, answers
+   **409** `{ existing: { kind: "recipe" | "import", id, title? } }`, and nothing is queued or
+   counted. The client shows it as a toast, not an error: "Already in My recipes · Shakshuka"
+   (View), "Already pinching it", "Shakshuka is ready to review" (Review). A deleted recipe and a
+   failed import don't count: pinching again is asking for it again. Two tabs pasting the same
+   link at the same instant can still make two imports (a partial index can't say "only the
+   active ones"): rare, and harmless. `npm run db:backfill-link-keys` gives the key to the links
+   and recipes saved before L1.
+2. **Anyone has it (L2).** The shared `links` collection keeps the model's answer for each post:
+   one document per `{ key, version }`, with no owner. After the worker claims a link import it
+   looks there: on a hit it copies the draft and the pictures into the import with the same
+   fenced write as any attempt (§4.3) and makes it ready: no `yt-dlp`, no Gemini, and the user
+   reviews it as any draft. On a miss it runs as now and, when the answer is a recipe, upserts it
+   into `links` (a fresher answer replaces an older one). `links` is a cache, not a queue:
+   nothing claims, leases or retries it, and the queue stays `imports`.
+
+- **The version** is a short hash of the model, the prompt and the response schema
+  (`EXTRACTION_VERSION`), so a change to any of them stops old answers matching, with no bump to
+  forget.
+- **Only recipes are kept:** a failure, "not a recipe" and "too long" never are. Text and
+  screenshot imports are never looked up or kept: they're one user's own.
+- **Copies, not references:** a user's import and recipe get their own copy, so editing,
+  tagging or deleting theirs never touches the shared answer or anyone else's.
+- **Free:** a hit costs no Gemini call, so it doesn't count against the daily cap (D22) or the
+  global one (D30). `POST /api/imports` does the same `{ key, version }` lookup to decide; if the
+  answer arrives between the two, the import is at worst one free Gemini call.
+- **Private posts never reach it:** the worker fetches without logging in, so only public posts
+  are ever read.
+- **A wrong answer** is served to everyone until the prompt or the model changes; for now
+  `npm run links:forget <url>` removes one (L2). Already-ready drafts don't seed the cache: it
+  fills from new imports.
+
 ## 5. Thumbnails
 
 Media is thrown away, but a good-looking list needs images, so each recipe keeps **one tiny
@@ -247,9 +289,25 @@ leaves both images out, so list responses stay small.
 ## 6. Data model (MongoDB)
 
 ```ts
-User {
-  _id, email, name, createdAt
-  // passwordHash etc. arrive with auth (§8.3)
+User {                             // M9 (§8.3, D29)
+  _id, email,                      // lowercase, unique
+  name, createdAt,
+  passwordHash?,                   // argon2id; none for an account made with Google
+  googleId?                        // Google's "sub"; set by a Google sign-in
+}
+
+Session {                          // M9: a signed-in browser (§8.3)
+  _id, userId,
+  tokenHash,                       // SHA-256 of the cookie's token; the token itself is never stored
+  createdAt, expiresAt             // TTL
+}
+
+Link {                             // L2: the model's answer for a public post, shared (§4.6, D28)
+  _id, key, version,               // unique together: "instagram:C9x…", EXTRACTION_VERSION
+  url, platform,
+  draft: RecipeDraft,
+  thumbnail?: { webp: Binary, small?: Binary, width, height },
+  model, extractedAt
 }
 
 Recipe {
@@ -261,7 +319,7 @@ Recipe {
   nutritionPerServing?: { calories, proteinG, carbsG, fatG },   // always Gemini's estimate (D14)
   emoji?: "🍲",                    // its face without a picture (D25): the model's, or its title's
   thumbnail?: { webp: Binary, small?: Binary, width, height },   // the images left out of every query that answers
-  source: { type: "instagram" | "facebook" | "youtube" | "text" | "image" | "manual", url? },
+  source: { type: "instagram" | "facebook" | "youtube" | "text" | "image" | "manual", url?, linkKey? },   // linkKey: L1 (§4.6)
   sourceImportId?,                 // unique + sparse (§4.4)
   createdAt, updatedAt,
   deletedAt?                       // set by DELETE, unset by restore; TTL an hour later (D27)
@@ -272,6 +330,7 @@ Import {
   status: "pending" | "processing" | "ready" | "failed",
   step?: "fetching" | "analyzing",
   input: { type: "link" | "text" | "images", url?, platform?, text?, count?, images? },
+  linkKey?,                        // a link's post (§4.6, L1)
   attempts, nextAttemptAt, leaseUntil?, error?, noRetry?,
   draft?: RecipeDraft, thumbnail?: { webp: Binary, small?: Binary, width, height },   // named as on a recipe
   createdAt, updatedAt, expiresAt,  // TTL
@@ -284,8 +343,8 @@ RecipeDraft = RecipeInput + {
   uncertain?: [{ path, reason }]   // "things to look at": up to 10 (§9); for the review only
 }
 
-Usage {                            // the daily cap (D22)
-  ownerId, day: "2026-11-07",      // the UTC day
+Usage {                            // the daily cap (D22), and the global one (D30, M9)
+  ownerId, day: "2026-11-07",      // the UTC day; ownerId "all" for the global count
   imports,                         // links pasted + Retry clicks that day
   expiresAt                        // TTL: two days later
 }
@@ -331,6 +390,11 @@ Every query that answers imports leaves them out.
 | imports | `{ expiresAt: 1 }` TTL (`expireAfterSeconds: 0`) | Automatic cleanup |
 | usage | `{ ownerId: 1, day: 1 }` unique | Today's count (the daily cap) |
 | usage | `{ expiresAt: 1 }` TTL | Old days go |
+| recipes | `{ ownerId: 1, "source.linkKey": 1 }`, partial: only those that have it | "Already in My recipes" (L1) |
+| imports | `{ ownerId: 1, linkKey: 1 }`, partial: only those that have it | "Already pinching it" (L1) |
+| links | `{ key: 1, version: 1 }` unique | The worker's lookup and upsert (L2) |
+| users | `{ email: 1 }` unique; `{ googleId: 1 }` unique, sparse | Sign-in (M9) |
+| sessions | `{ tokenHash: 1 }` unique; `{ expiresAt: 1 }` TTL | Every request's user; old sessions go (M9) |
 
 Every index is checked with `.explain("executionStats")`: expect `IXSCAN`, and
 `totalDocsExamined` close to `nReturned` (a search fetches each match twice, by the text match
@@ -412,7 +476,7 @@ DELETE /api/recipes/:id                kept an hour, to undo (D27) → 204
 POST   /api/recipes/:id/restore        Undo of a delete → 200 recipe (404 once it's gone for good)
 GET    /api/recipes/:id/thumbnail      image/webp (?size=small: the 160 × 200 tile, §5)
 
-POST   /api/imports                    { type: "link", url } | { type: "text", text }  → 202 import (429 past the daily cap)
+POST   /api/imports                    { type: "link", url } | { type: "text", text }  → 202 import (429 past the daily cap; 409 { existing } when this user has the link, L1)
 POST   /api/imports/screenshots        a form: up to 4 images (10 MB each) as "images"  → 202 import { type: "images", count }
 GET    /api/imports                    my imports that are not done yet (a ready one's draft with its marks: the queue counts them)
 GET    /api/imports/:id                status, step, error, draft (with its uncertain marks, §6)
@@ -421,6 +485,13 @@ POST   /api/imports/:id/approve        the edited draft, as POST /api/recipes; n
 POST   /api/imports/:id/retry          failed → pending, attempts, error and noRetry cleared → 202 (409 if not failed, or noRetry)
 DELETE /api/imports/:id                discard / dismiss / Pinch it's Undo: kept an hour (D27) → 204
 POST   /api/imports/:id/restore        Undo of a discard or a dismiss → 200 import, as it was
+
+POST   /api/auth/signup                { email, password, name } → 201 me, signed in (M9)
+POST   /api/auth/login                 { email, password } → 200 me (401 the same for either wrong)
+POST   /api/auth/logout                → 204
+GET    /api/auth/me                    → 200 { id, email, name } (401 signed out)
+GET    /api/auth/google                → 302 to Google
+GET    /api/auth/google/callback       → signed in, 302 to where they were
 ```
 
 One set of **Zod schemas** defines the Gemini output, the API input and the TypeScript types,
@@ -443,19 +514,32 @@ shown the same way, under the field it names.
 Handlers throw; one Express error middleware turns errors into the JSON shape above and logs
 them. No try/catch in each route.
 
-### 8.3 Auth — later, but designed in now
+### 8.3 Accounts (M9, D29)
 
-v1 has no login. A small middleware sets `req.userId` from config `DEV_USER_ID` (not a secret,
-so it has a default and needs no `.env` entry; `db:seed` creates that user when users are needed).
-Every query already filters by `ownerId: req.userId`. When auth is built, **only that middleware
-changes**. The planned design:
+Until M9 a small middleware sets `req.userId` from config `DEV_USER_ID` (not a secret, so it has
+a default and needs no `.env` entry; `db:seed` creates that user). Every query already filters
+by `ownerId: req.userId`, so M9 changes **only that middleware**: it reads the session instead,
+and a request without one gets 401 (the health routes and `/api/auth/*` stay open).
 
-- Passwords hashed with argon2id (or bcrypt); emails stored lowercase.
-- A random 32-byte session token in an `HttpOnly; Secure; SameSite=Lax` cookie. The database
-  stores only its SHA-256 hash in a `sessions` collection with a TTL index.
-- CSRF: SameSite=Lax, one origin (Vite proxies `/api` in dev), JSON-only mutations.
-- A new session on every login, the same error for wrong email or password, and a login rate limit.
-- Out of the first auth milestone: password reset, email verification, Google sign-in.
+- **Sign-up is open:** email and password, or Google. Each account has the daily cap of 20
+  (D22); a global daily cap on Gemini calls (D30) bounds what many accounts can spend.
+- **Passwords:** argon2id; emails stored lowercase; at least 8 characters, no other rules.
+- **Sessions:** a random 32-byte token in an `HttpOnly; Secure; SameSite=Lax` cookie; the
+  database keeps only its SHA-256 hash in `sessions`, with a TTL index (30 days). A new session
+  on every sign-in; logout deletes it.
+- **Login:** the same error for a wrong email or a wrong password, and a rate limit (per IP and
+  per email, counted in Mongo: a few tries a minute).
+- **Google:** the OpenID Connect code flow (`state` and PKCE), the ID token checked against
+  Google's keys. A Google sign-in whose email (verified by Google) already has an account signs
+  into that account and stores its `googleId`; otherwise it makes one. The client ID and secret
+  live in `.env` (`GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`), set by the user.
+- **CSRF:** SameSite=Lax, one origin (Vite proxies `/api` in dev), JSON-only mutations.
+- **The client:** Log in and Sign up pages (with "Continue with Google"); a signed-out visit, or
+  any 401 from the API, goes to `/login` and comes back where it was; the avatar becomes a menu
+  with the name and Log out.
+- **The dev user's data:** `npm run db:adopt-dev-data <email>`, run once, gives the dev user's
+  recipes, imports and usage to that account.
+- Out of M9: password reset, email verification for password accounts, other providers.
 
 ## 9. Gemini
 
@@ -518,6 +602,9 @@ changes**. The planned design:
 | D25 | Every recipe has a face: the post's picture, else an emoji the model picks for the dish (an optional `emoji` on the recipe and the draft) on a soft tile, else a cooking pot (with sparkles for a video's); a recipe written by hand gets one from its title (§6) — built in M8 F3 | The picture is what the user remembers; a recipe with none still needs something to recognise; the title's list keeps it to the server, and the editor's JS at its budget | Grey placeholders; generated images; an emoji field in the editor; a map from the tags on the client |
 | D26 | The UI is built from **shadcn/ui** components, copied into `client/src/components/ui/`, their variables mapped onto Pinch's tokens; controls 44 px tall for touch | Accessible Radix parts (Tabs, Sheet, DropdownMenu, Dialog, toasts) whose code lives in the repo and can be read line by line; one pattern per control | Pinch's own components only; a packaged kit (MUI, Chakra) |
 | D27 | Undo in the toasts is a **soft delete**: DELETE sets `deletedAt` on the recipe or import, every read (lists, search, a recipe, its picture, edit, cook, the queue, its badge, approve, retry, the worker's claim and saves) leaves those out, `POST …/restore` unsets it, and a partial TTL index deletes them for good an hour later. Pinch it's Undo is the same DELETE: the worker's writes are conditional on the job not being deleted (§4.3), so a cancelled import never turns ready. Built in M8 F4 | Undo needs the thing to still exist; the server is the one place every tab and the worker agree on, and a closed tab can't lose a delete; one field and one filter for both collections, one atomic `updateOne` per write (no transactions, D9). Cancelling counts against the day's cap (D22): the request was already counted | Sending the DELETE only once the toast's 8 s are over (lost if the tab closes, other tabs show the deleted one meanwhile); a `cancelled` status for imports (a second mechanism next to the recipes' delete); moving deleted documents to a trash collection (two writes, no transaction) |
+| D28 | A link pinched before is found by its post (`linkKey`): this user's own copy is pointed to (409, a toast), and anyone's earlier answer is copied from a shared `links` cache keyed by post and `EXTRACTION_VERSION`, silently, skipping `yt-dlp` and Gemini (§4.6) | A public post's recipe is the same for everyone, so a second Gemini call buys nothing; copies keep each user's recipe theirs to edit; the version in the key retires old answers when the prompt or the model changes | Recipes shared by reference (an edit would change everyone's, or need copy-on-write); the link as the job, with imports waiting on it (dedupes two pastes at once, at the cost of a second lifecycle); recipes inside the user document (16 MB limit, no indexes for Find) |
+| D29 | Accounts (M9): open sign-up with email and password or Google; sessions as a hashed token in a cookie; only the user middleware changes (§8.3) | `ownerId` is already in every query (D13), so accounts are one middleware and a few routes; a cookie session is the simplest secure choice for one origin; Google is the sign-in most people expect | JWTs (revoking them needs a list anyway); invite-only sign-up (the user chose open, with caps) |
+| D30 | A global daily cap on Gemini calls (config, default 500), counted beside the per-user one; past it, new imports are refused until the next UTC day, with a message | Open sign-up lets anyone make many accounts, each with 20 a day; this bounds the bill whatever happens | No global cap; a CAPTCHA at sign-up |
 
 ## 11. Risks
 
@@ -546,7 +633,8 @@ Each milestone is a few **small PRs** (roughly ≤ 300 changed lines each), whic
 | M6 | **Instagram / Facebook** — `yt-dlp`, Gemini Files, thumbnails, screenshot fallback | A reel link becomes a draft with a thumbnail |
 | M7 | **Polish** — empty, loading and error states, share and comments placeholders, look and feel | It feels like a finished POC |
 | M8 | **Redesign** (docs/ux/pass-02.md): the two tabs, shadcn/ui, the queue, filters, the recipe, cook mode, one editor; then the features it asks the API for | The wireframes in `docs/ux/wireframes/` are the app |
-| Later | Auth, share, comments, WhatsApp bot / PWA share target, nutrition database, semantic search | — |
+| M9 | **Accounts and links pinched before** (D28–D30): this user's copy found (L1); sign-up and sign-in with email or Google, sessions, the global cap; then the shared answers (L2) | Each person signs in to their own recipes; a link pinched before costs no Gemini call |
+| Later | Share, comments, WhatsApp bot / PWA share target, nutrition database, semantic search | — |
 
 Doing M4 with a fake extractor first is deliberate (it takes 1.5 s a step, and fails every try of a link
 with "fail" in it, to show retries): the queue lessons are learned without AI
