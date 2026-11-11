@@ -37,9 +37,9 @@ test("the header has the logo, the two tabs, Write a recipe and the avatar", () 
     "href",
     "/recipes/new",
   );
-  expect(screen.getByRole("button", { name: "Log in · coming soon" })).toHaveAttribute(
-    "aria-disabled",
-    "true",
+  expect(screen.getByRole("button", { name: "Your account" })).toHaveAttribute(
+    "aria-haspopup",
+    "menu",
   );
 });
 

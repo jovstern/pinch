@@ -60,15 +60,31 @@ export async function deleteResource(path: string) {
   if (!response.ok) throw await apiError("DELETE", path, response);
 }
 
+// A POST with nothing to send or read (logout). Still typed as JSON: the API refuses a POST that
+// isn't, so a form on another site can't send one (design §8.3, CSRF).
+export async function post(path: string) {
+  const response = await fetch(path, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: "{}",
+  });
+  if (!response.ok) throw await apiError("POST", path, response);
+}
+
 // Signing out on the client (design §8.3): a 401 means the session has ended (it expired, or the
-// user logged out in another tab). One handler, set by SessionGate, which knows the cache; none
-// before the app renders.
-let onSignedOut: () => void = () => undefined;
-export function whenSignedOut(handler: () => void) {
+// user logged out in another tab), and Log out ends it on purpose. One handler, set by
+// SessionGate, which knows the cache; none before the app renders. keepPage: come back to this
+// page after Log in (a 401: the user didn't choose to leave it), or not (Log out: the next person
+// on this device shouldn't land on it).
+let onSignedOut: (keepPage: boolean) => void = () => undefined;
+export function whenSignedOut(handler: (keepPage: boolean) => void) {
   onSignedOut = handler;
   return () => {
     onSignedOut = () => undefined;
   };
+}
+export function signedOut(keepPage: boolean) {
+  onSignedOut(keepPage);
 }
 
 const ErrorBodySchema = z.object({
@@ -79,7 +95,7 @@ const ErrorBodySchema = z.object({
 // Every failed answer comes through here, so a 401 is noticed in one place. Not /api/auth/*:
 // there a 401 is an answer (a wrong password, or "nobody" from me), not news.
 async function apiError(method: string, path: string, response: Response) {
-  if (response.status === 401 && !path.startsWith("/api/auth/")) onSignedOut();
+  if (response.status === 401 && !path.startsWith("/api/auth/")) signedOut(true);
   const body: unknown = await response.json().catch(() => null);
   const fields = ErrorBodySchema.safeParse(body).data?.error.fields ?? {};
   return new ApiError(method, path, response.status, fields, body);
