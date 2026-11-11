@@ -1,4 +1,4 @@
-import { QueryClient } from "@tanstack/react-query";
+import { QueryClient, QueryObserver } from "@tanstack/react-query";
 import { afterEach, expect, test, vi } from "vitest";
 import { importListQuery, queueKnown } from "./importQueries.ts";
 
@@ -15,6 +15,20 @@ test("queueKnown settles with the queue in the cache once it answers", async () 
 
   await queueKnown(queryClient);
   expect(queryClient.getQueryData(importListQuery.queryKey)).toEqual({ items: [] });
+});
+
+test("the queue queueKnown fetched isn't fetched again when the page first asks for it", async () => {
+  const fetch = vi.fn(() => Promise.resolve(Response.json({ items: [] })));
+  vi.stubGlobal("fetch", fetch);
+  const queryClient = new QueryClient();
+
+  await queueKnown(queryClient);
+  // As a useQuery mounting on the first render does.
+  const observer = new QueryObserver(queryClient, importListQuery);
+  const unsubscribe = observer.subscribe(() => undefined);
+  expect(observer.getCurrentResult().isFetching).toBe(false);
+  expect(fetch).toHaveBeenCalledTimes(1);
+  unsubscribe();
 });
 
 test("queueKnown settles when the queue answers an error, or can't be reached", async () => {
