@@ -14,7 +14,7 @@ the budgets before its PR opens.
 | Metric | Budget (mobile, production build) |
 |---|---|
 | Lighthouse Performance / Accessibility / Best Practices / SEO | ≥ 95 / 100 / 100 / 100 |
-| LCP | ≤ 2.0 s (Lighthouse mobile throttling); ≤ 2.5 s on pages that draw their content from an API answer after the JS (raised by the user in M7: three round trips in a row — HTML, JS, the data — cost about 2.1 s under that throttling, and 2.5 s is Core Web Vitals' "good" — docs/metrics/m07.md) |
+| LCP | ≤ 2.0 s (Lighthouse mobile throttling); ≤ 2.5 s on pages that draw their content from an API answer after the JS (raised by the user in M7: three round trips in a row — HTML, JS, the data — cost about 2.1 s under that throttling, and 2.5 s is Core Web Vitals' "good" — docs/metrics/m07.md); ≤ 3.0 s on pages whose LCP is a picture drawn from an API answer (a recipe's or a queue item's; `/` with a ready import, `/recipes`, `/recipes/:id`, a draft) — raised by the user in M8: a picture can only be asked for after the entry JS (about 2.4 s under that throttling) and its data, so it lands at 2.7–3.1 s whatever the picture's size (docs/metrics/m08.md). Text-first pages keep 2.0 s (`/` with an empty queue, `/recipes/new`) |
 | CLS | ≤ 0.05 |
 | TBT (lab proxy for INP) | ≤ 150 ms |
 | First-load JS per route | ≤ 130 kB gzip (Next.js) / SPA: ≤ 180 kB on the app's routes, ≤ 185 kB on routes that add their own chunk to the first load (the editor: write, edit, review; cook mode). 150 until M4, 165 until M8; raised by the user in M8 rather than drop TanStack Form from the paste box or tailwind-merge from `cn`: the libraries the conventions require fill most of it, and LCP is set by round trips, not bytes (docs/metrics/m04.md, m08.md) |
