@@ -129,7 +129,7 @@ Then the features the design asks the API for, one PR each:
 
 Planned, not built yet. In this order:
 
-- [ ] L1 This user's link found: `linkKey` (`shared/src/linkKey.ts`, every link form tested), on
+- [x] L1 This user's link found: `linkKey` (`shared/src/linkKey.ts`, every link form tested), on
       imports and on a recipe's source; `POST /api/imports` answers 409 `{ existing }` for one
       of theirs (not deleted, not failed), uncounted; the toasts (View, Review); the indexes;
       `db:backfill-link-keys`

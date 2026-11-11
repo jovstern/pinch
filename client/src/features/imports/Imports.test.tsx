@@ -1,6 +1,7 @@
 import {
   dailyLimitMessage,
   linkMessage,
+  type DuplicateLink,
   screenshotsMessage,
   textMessage,
   type Import,
@@ -635,6 +636,76 @@ test("past the daily cap, the box says so and keeps the link", async () => {
 
   expect(await screen.findByRole("alert")).toHaveTextContent(dailyLimitMessage);
   expect(box).toHaveValue(reel);
+});
+
+// A link the user pinched before (design §4.6): the API's 409, with what they have.
+function pinchedBefore(existing: DuplicateLink["existing"]) {
+  return () =>
+    Response.json(
+      {
+        error: { code: "link_pinched_before", message: "You've pinched this link before." },
+        existing,
+      },
+      { status: 409 },
+    );
+}
+
+async function pinchReel() {
+  const box = await screen.findByRole("textbox", { name: "Pinch a recipe from a reel" });
+  await userEvent.type(box, reel);
+  await userEvent.click(screen.getByRole("button", { name: "Pinch it" }));
+  return box;
+}
+
+test("a link already in My recipes empties the box and points to the recipe, not an error", async () => {
+  const recipeId = "6650a1b2c3d4e5f600000009";
+  const fetch = stubApi([[]], pinchedBefore({ kind: "recipe", id: recipeId, title: "Shakshuka" }));
+  renderApp("/");
+
+  const box = await pinchReel();
+
+  const toast = await findToast("Already in My recipes");
+  expect(within(toast).getByText("Shakshuka")).toBeInTheDocument();
+  expect(box).toHaveValue("");
+  expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  fireEvent.click(within(toast).getByRole("button", { name: "View" }));
+  await waitFor(() => {
+    expect(fetch).toHaveBeenCalledWith(`/api/recipes/${recipeId}`);
+  });
+});
+
+test("a link whose draft is ready says so as the queue does, with Review", async () => {
+  const fetch = stubApi(
+    [[]],
+    pinchedBefore({
+      kind: "import",
+      id: importOf({}).id,
+      status: "ready",
+      title: "Shakshuka",
+      lookAt: 2,
+    }),
+  );
+  renderApp("/");
+
+  await pinchReel();
+
+  const toast = await findToast("Shakshuka is ready to review");
+  expect(within(toast).getByText("2 things to look at")).toBeInTheDocument();
+  fireEvent.click(within(toast).getByRole("button", { name: "Review" }));
+  await waitFor(() => {
+    expect(fetch).toHaveBeenCalledWith(`/api/imports/${importOf({}).id}`);
+  });
+});
+
+test("a link still in the queue says it's already being pinched", async () => {
+  stubApi([[]], pinchedBefore({ kind: "import", id: importOf({}).id, status: "processing" }));
+  renderApp("/");
+
+  const box = await pinchReel();
+
+  expect(await screen.findByText("Already pinching it")).toBeInTheDocument();
+  expect(box).toHaveValue("");
+  expect(screen.queryByText("Pinching it")).not.toBeInTheDocument();
 });
 
 test("past the daily cap, Retry says so", async () => {
