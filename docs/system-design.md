@@ -564,10 +564,11 @@ the browser's console). Another user's recipe or import is a 404, as before. The
   SHA-256 hash in `sessions`, with `expiresAt` 30 days out and a TTL index. A session past its
   `expiresAt` counts as none before the TTL deletes it. Beside it, a **hint cookie**,
   `pinch_signed_in=1` (`SameSite=Lax; Path=/`, the same `Max-Age` and `Secure`, but not
-  `HttpOnly`): set with every session, cleared by logout, and cleared by any answer to a request
+  `HttpOnly`): set with every session (and by `me` for a session that lacks it), cleared by logout, and cleared by any answer to a request
   without a live session (`requireUser`'s 401, `me`'s `null`). `index.html` reads it in a tiny
-  inline script and preloads `/api/imports` only when it's there, so a signed-out page asks for
-  nothing that would answer 401. It's only a hint: it holds nothing secret, and the API decides
+  inline script and preloads `/api/imports` only when it's there, and `main.tsx` waits for the
+  queue before rendering `/` only then, so a signed-out page asks for nothing that would answer
+  401. It's only a hint: it holds nothing secret, and the API decides
   from the session alone; a wrong hint costs at most one unused preload, or the queue asked a
   moment later. Pinch sets no Content-Security-Policy; one would need the script's hash
   (`script-src 'sha256-…'`). A new session on every sign-in, which

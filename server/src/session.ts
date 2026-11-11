@@ -50,6 +50,11 @@ export async function startSession(
     expiresAt: new Date(now.getTime() + SESSION_MS),
   });
   res.cookie(SESSION_COOKIE, token, { ...cookieOptions(secure), maxAge: SESSION_MS });
+  setSignedInHint(res, secure);
+}
+
+// Also from me, for a session that began before the hint did: it lasts as long as a new one.
+export function setSignedInHint(res: Response, secure: boolean) {
   res.cookie(SIGNED_IN_HINT, "1", { ...hintOptions(secure), maxAge: SESSION_MS });
 }
 

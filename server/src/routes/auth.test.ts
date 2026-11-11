@@ -179,6 +179,12 @@ test("a session comes with the signed-in hint, readable by the page, and logout 
   );
 });
 
+test("me gives a signed-in browser the hint if it lacks one", async () => {
+  const { response } = await signUp();
+  const me = await request(app).get("/api/auth/me").set("Cookie", sessionCookie(response));
+  expect(String(me.headers["set-cookie"])).toMatch(/^pinch_signed_in=1; Max-Age=2592000/);
+});
+
 test("me clears a hint left without a session", async () => {
   const me = await request(app).get("/api/auth/me").set("Cookie", "pinch_signed_in=1");
   expect(String(me.headers["set-cookie"])).toMatch(/^pinch_signed_in=; Path=\/; Expires=Thu, 01/);

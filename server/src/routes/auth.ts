@@ -10,7 +10,15 @@ import {
 } from "../db/loginAttempts.ts";
 import { toMe, usersCollection, type UserDocument } from "../db/users.ts";
 import { HttpError, parseInput } from "../errors.ts";
-import { clearSignedInHint, currentUser, endSession, startSession } from "../session.ts";
+import {
+  clearSignedInHint,
+  currentUser,
+  endSession,
+  readCookie,
+  setSignedInHint,
+  SIGNED_IN_HINT,
+  startSession,
+} from "../session.ts";
 
 // A login with an unknown email still checks a password, against this hash, so it takes as long
 // as a wrong password: the time doesn't say which emails have accounts (design §8.3).
@@ -92,6 +100,7 @@ export function authRouter(db: Db, { secureCookies, now }: AuthDeps) {
       res.json(null);
       return;
     }
+    if (!readCookie(req, SIGNED_IN_HINT)) setSignedInHint(res, secureCookies);
     res.json(toMe(user) satisfies Me);
   });
 
