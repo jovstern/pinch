@@ -7,7 +7,8 @@ import { nextPage } from "./nextPage.ts";
 // "Continue with Google" (design §8.3), under Log in's and Sign up's button: a plain link, as the
 // sign-in is a trip to Google and back, page loads, not a fetch. It carries the page's ?next=, so
 // the user comes back where they were going. Hidden until the API says Google is on. A failed
-// sign-in comes back to /login?error=google, and the message stands above the button to try again.
+// sign-in comes back to /login?error=google, and the message stands right above this button, under
+// a quiet "or", so it isn't read as the email form's.
 export function GoogleButton() {
   const { search } = useLocation();
   const { data } = useQuery(providersQuery);
@@ -15,6 +16,12 @@ export function GoogleButton() {
   const failed = new URLSearchParams(search).get("error") === "google";
   return (
     <>
+      {/* "or": a second way in, apart from the form's own button. The rules are decoration. */}
+      <p className="flex items-center gap-3 text-sm text-text-muted">
+        <span aria-hidden="true" className="h-px flex-1 bg-border" />
+        or
+        <span aria-hidden="true" className="h-px flex-1 bg-border" />
+      </p>
       {failed && (
         <p role="alert" className="text-sm text-danger">
           Couldn&apos;t sign in with Google. Try again.

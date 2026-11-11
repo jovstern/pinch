@@ -23,6 +23,7 @@ export function RecipeLoadError({ error, retry, retrying }: RecipeLoadErrorProps
         variant="secondary"
         onClick={retry}
         disabled={retrying}
+        aria-busy={retrying}
         className="mt-3"
       >
         {retrying ? "Trying…" : "Try again"}

@@ -40,7 +40,7 @@ export function LazyRecipeMenu({ recipe }: { recipe: Recipe }) {
       aria-haspopup="menu"
       aria-expanded={false}
       aria-busy={pressed && !menuLoaded}
-      className="px-3 aria-busy:cursor-progress aria-busy:opacity-60"
+      className="px-3"
       onPointerEnter={preloadMenu}
       onFocus={preloadMenu}
       onClick={() => {

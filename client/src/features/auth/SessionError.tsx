@@ -1,24 +1,39 @@
 import { Button } from "../../components/ui/Button.tsx";
+import { AuthFrame } from "./AuthFrame.tsx";
 
 // Who's signed in couldn't be asked (offline, a 500): without it no page knows what to show, so
-// this says so, with Try again (SessionGate).
+// this says so, with Try again (SessionGate). In Log in's frame, as nobody is known to be signed
+// in. It's in the entry (it shows when the network is gone, so no chunk can load), so the logo is
+// the file, not Log in's inline Wordmark, which would cost every page its paths.
 export function SessionError({ retry, retrying }: { retry: () => void; retrying: boolean }) {
   return (
-    <main role="alert" className="mx-auto max-w-3xl px-4 py-8 sm:px-6">
-      <title>Can't reach Pinch · Pinch</title>
-      <h1 className="mt-8 text-3xl font-bold tracking-tight text-balance">
-        We couldn't reach Pinch
-      </h1>
-      <p className="mt-3 text-pretty text-text-muted">Check your connection, then try again.</p>
+    <AuthFrame
+      title="We couldn't reach Pinch"
+      tabTitle="We couldn't reach Pinch"
+      logo={
+        <picture>
+          <source media="(prefers-color-scheme: dark)" srcSet="/logo-dark.svg" />
+          <img src="/logo.svg" alt="Pinch" width={79} height={32} className="h-10 w-auto" />
+        </picture>
+      }
+    >
+      {/* The alert is the message alone, not the card: <main> keeps its own role (axe), and the
+          button inside an alert would be read again on every try. */}
+      <p role="alert" className="mt-3 text-pretty text-text-muted">
+        Check your connection, then try again.
+      </p>
+      {/* Not disabled while it asks, so focus stays on it (as Pinch it). */}
       <Button
         type="button"
-        variant="secondary"
-        onClick={retry}
-        disabled={retrying}
-        className="mt-3"
+        onClick={() => {
+          if (!retrying) retry();
+        }}
+        aria-disabled={retrying}
+        aria-busy={retrying}
+        className="mt-6 w-full"
       >
         {retrying ? "Trying…" : "Try again"}
       </Button>
-    </main>
+    </AuthFrame>
   );
 }

@@ -633,10 +633,14 @@ test("past the daily cap, the box says so and keeps the link", async () => {
 
   const box = await screen.findByRole("textbox", { name: "Pinch a recipe from a reel" });
   await userEvent.type(box, reel);
+  // The live regions are on the page before the answer, so screen readers hear the note.
+  const regions = screen.getAllByRole("status");
   await userEvent.click(screen.getByRole("button", { name: "Pinch it" }));
 
-  expect(await screen.findByRole("alert")).toHaveTextContent(dailyLimitMessage);
+  // A quiet note, not an error (design §14), in a region that was already there.
+  expect(regions).toContain(await screen.findByText(dailyLimitMessage));
   expect(box).toHaveValue(reel);
+  expect(box).toHaveAttribute("aria-invalid", "false");
 });
 
 // A link the user pinched before (design §4.6): the API's 409, with what they have.
@@ -707,9 +711,12 @@ test("past the global cap, the box says Pinch has read all it can today", async 
   );
   renderApp("/");
 
+  await screen.findByRole("textbox", { name: "Pinch a recipe from a reel" });
+  const regions = screen.getAllByRole("status");
   await pinchReel();
 
-  expect(await screen.findByRole("alert")).toHaveTextContent(globalLimitMessage);
+  // A quiet note, not an error (design §14), in a region that was already there.
+  expect(regions).toContain(await screen.findByText(globalLimitMessage));
 });
 
 test("a link still in the queue says it's already being pinched", async () => {
@@ -729,9 +736,12 @@ test("past the daily cap, Retry says so", async () => {
   );
   renderApp("/");
 
-  await userEvent.click(await screen.findByRole("button", { name: "Retry" }));
+  const retry = await screen.findByRole("button", { name: "Retry" });
+  const regions = screen.getAllByRole("status");
+  await userEvent.click(retry);
 
-  expect(await screen.findByRole("alert")).toHaveTextContent(dailyLimitMessage);
+  // A quiet note, not an error (design §14), in a region that was already there.
+  expect(regions).toContain(await screen.findByText(dailyLimitMessage));
 });
 
 test("past the global cap, Retry says so", async () => {
@@ -743,9 +753,12 @@ test("past the global cap, Retry says so", async () => {
   );
   renderApp("/");
 
-  await userEvent.click(await screen.findByRole("button", { name: "Retry" }));
+  const retry = await screen.findByRole("button", { name: "Retry" });
+  const regions = screen.getAllByRole("status");
+  await userEvent.click(retry);
 
-  expect(await screen.findByRole("alert")).toHaveTextContent(globalLimitMessage);
+  // A quiet note, not an error (design §14), in a region that was already there.
+  expect(regions).toContain(await screen.findByText(globalLimitMessage));
 });
 
 test("polling runs only while the worker has a link in hand", () => {
@@ -844,16 +857,20 @@ test("screenshots past the day's cap say so", async () => {
   stubApi([[]], () => Response.json({ error: { code: "daily_limit" } }, { status: 429 }));
   renderScreenshots();
 
+  const regions = screen.getAllByRole("status");
   await userEvent.upload(screen.getByLabelText("Or add screenshots"), [screenshot("one.png")]);
 
-  expect(await screen.findByRole("alert")).toHaveTextContent(dailyLimitMessage);
+  // A quiet note, not an error (design §14), in a region that was already there.
+  expect(regions).toContain(await screen.findByText(dailyLimitMessage));
 });
 
 test("screenshots past the global cap say so", async () => {
   stubApi([[]], () => Response.json({ error: { code: "global_limit" } }, { status: 429 }));
   renderScreenshots();
 
+  const regions = screen.getAllByRole("status");
   await userEvent.upload(screen.getByLabelText("Or add screenshots"), [screenshot("one.png")]);
 
-  expect(await screen.findByRole("alert")).toHaveTextContent(globalLimitMessage);
+  // A quiet note, not an error (design §14), in a region that was already there.
+  expect(regions).toContain(await screen.findByText(globalLimitMessage));
 });

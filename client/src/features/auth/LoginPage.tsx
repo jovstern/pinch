@@ -1,6 +1,6 @@
 import { fieldErrors, LoginInputSchema } from "@pinch/shared";
 import { revalidateLogic, useForm } from "@tanstack/react-form";
-import { useRef } from "react";
+import { useEffect, useRef } from "react";
 import { Link, useLocation } from "react-router";
 import { TextField } from "../../components/TextField.tsx";
 import { loadPage } from "../../lib/loadPage.ts";
@@ -11,11 +11,19 @@ import { logIn } from "./authQueries.ts";
 import { nextPage } from "./nextPage.ts";
 import { SubmitAlert } from "./SubmitAlert.tsx";
 import { submitError } from "./submitError.ts";
+import { Wordmark } from "./Wordmark.tsx";
 
 // Log in (design §8.3, §14), at /login. Checked as every form is (RecipeForm): on the first
 // submit, then on every change, with the API's own schema; then the API's answer.
 export function LoginPage() {
-  const { search } = useLocation();
+  const location = useLocation();
+  const { search } = location;
+  // From Sign up's "already uses this email" link: the email they typed, so only the password is
+  // left to type. Router state, not the address: it stays out of the URL, so out of the address
+  // bar's history, server logs and Referer. Typed any by the router, as in useHeadingFocus.
+  const state: unknown = location.state;
+  const email = typeof state === "object" && state !== null && "email" in state && state.email;
+  const knownEmail = typeof email === "string" ? email : "";
   // ?next= (the page the user was going to) goes with them to Sign up; a failed Google sign-in's
   // ?error= and ?reason= don't: that message is Log in's.
   const signupQuery = new URLSearchParams(search);
@@ -24,7 +32,7 @@ export function LoginPage() {
   const signupLink = signupQuery.size > 0 ? `/signup?${signupQuery.toString()}` : "/signup";
   const formRef = useRef<HTMLFormElement>(null);
   const form = useForm({
-    defaultValues: { email: "", password: "" },
+    defaultValues: { email: knownEmail, password: "" },
     validationLogic: revalidateLogic(),
     validators: {
       onDynamic: ({ value }) => {
@@ -44,6 +52,11 @@ export function LoginPage() {
     },
   });
 
+  // An effect: focus is the DOM's. With the email filled in, the password is what's left.
+  useEffect(() => {
+    if (knownEmail) formRef.current?.querySelector<HTMLElement>("[name=password]")?.focus();
+  }, [knownEmail]);
+
   async function submit() {
     await form.handleSubmit();
     // ui-craft: after a failed submit, focus moves to the first field to fix (as RecipeForm).
@@ -53,6 +66,7 @@ export function LoginPage() {
   return (
     <AuthFrame
       title="Log in"
+      logo={<Wordmark />}
       footer={
         <>
           New to Pinch?{" "}
@@ -86,12 +100,15 @@ export function LoginPage() {
             />
           )}
         </form.Field>
-        <form.Subscribe selector={(state) => state.errorMap.onSubmit}>
+        {/* The last try's error goes while the next is sent: it may no longer be true. */}
+        <form.Subscribe
+          selector={(state) => (state.isSubmitting ? undefined : state.errorMap.onSubmit)}
+        >
           {(error) => <SubmitAlert error={error} />}
         </form.Subscribe>
         <form.Subscribe selector={(state) => state.isSubmitting}>
           {(isSubmitting) => (
-            <Button type="submit" aria-disabled={isSubmitting}>
+            <Button type="submit" aria-disabled={isSubmitting} aria-busy={isSubmitting}>
               {isSubmitting ? "Logging in…" : "Log in"}
             </Button>
           )}

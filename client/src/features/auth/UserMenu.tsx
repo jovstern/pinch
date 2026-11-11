@@ -37,10 +37,16 @@ export function UserMenu({ me }: { me: Me }) {
       <DropdownMenuTrigger asChild>
         <Avatar me={me} />
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="max-w-[calc(100vw-2rem)]">
+      {/* A fixed width, so a short name doesn't make a narrow menu; never wider than the screen.
+          A long name or email is cut, and its title shows it whole. */}
+      <DropdownMenuContent align="end" className="w-72 max-w-[calc(100vw-2rem)]">
         <DropdownMenuLabel>
-          <span className="block truncate font-semibold">{me.name}</span>
-          <span className="block truncate text-sm text-text-muted">{me.email}</span>
+          <span title={me.name} className="block truncate font-semibold">
+            {me.name}
+          </span>
+          <span title={me.email} className="block truncate text-sm text-text-muted">
+            {me.email}
+          </span>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
         <DropdownMenuItem
