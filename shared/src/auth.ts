@@ -39,3 +39,8 @@ export type LoginInput = z.infer<typeof LoginInputSchema>;
 // The signed-in user: what signup, login and GET /api/auth/me answer.
 export const MeSchema = z.object({ id: z.string(), email: z.string(), name: z.string() });
 export type Me = z.infer<typeof MeSchema>;
+
+// GET /api/auth/providers: the ways to sign in besides a password. Google is on only when the
+// API has its settings (§8.3).
+export const ProvidersSchema = z.object({ google: z.boolean() });
+export type Providers = z.infer<typeof ProvidersSchema>;

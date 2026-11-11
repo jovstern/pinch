@@ -3,9 +3,11 @@
 export {
   LoginInputSchema,
   MeSchema,
+  ProvidersSchema,
   SignupInputSchema,
   type LoginInput,
   type Me,
+  type Providers,
   type SignupInput,
 } from "./auth.ts";
 export { fieldErrors } from "./fieldErrors.ts";

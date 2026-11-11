@@ -1,5 +1,5 @@
 import type { Me } from "@pinch/shared";
-import type { Db, ObjectId } from "mongodb";
+import { ObjectId, type Db } from "mongodb";
 
 // An account (design §6, §8.3). The email is lowercase (the schema makes it so) and unique.
 export type UserDocument = {
@@ -27,5 +27,21 @@ export function toMe(user: UserDocument): Me {
 export async function findAccount(db: Db, email: string) {
   const user = await usersCollection(db).findOne({ email: email.trim().toLowerCase() });
   if (!user) throw new Error(`No account has the email ${email}: sign up in the app first.`);
+  return user;
+}
+
+// A Google sign-in's account (design §8.3): the one with this Google id; else the one with this
+// email, which Google has verified, now linked to it; else a new one, with no password.
+export async function googleAccount(
+  db: Db,
+  { googleId, email, name }: { googleId: string; email: string; name: string },
+) {
+  const users = usersCollection(db);
+  const found =
+    (await users.findOne({ googleId })) ??
+    (await users.findOneAndUpdate({ email }, { $set: { googleId } }, { returnDocument: "after" }));
+  if (found) return found;
+  const user: UserDocument = { _id: new ObjectId(), email, name, googleId, createdAt: new Date() };
+  await users.insertOne(user);
   return user;
 }

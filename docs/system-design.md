@@ -506,8 +506,9 @@ POST   /api/auth/signup                { email, password, name } → 201 me, sig
 POST   /api/auth/login                 { email, password } → 200 me (401 the same for either wrong; 429 past the rate limit)
 POST   /api/auth/logout                → 204 (with Content-Type: application/json, else 415)
 GET    /api/auth/me                    → 200 { id, email, name } (401 signed out)
-GET    /api/auth/google                → 302 to Google
-GET    /api/auth/google/callback       → signed in, 302 to where they were
+GET    /api/auth/providers             → 200 { google: boolean } (Google is on only with its settings)
+GET    /api/auth/google?next=…         → 302 to Google (404 without Google's settings; counted as a login per IP)
+GET    /api/auth/google/callback       → signed in, 302 to next; a failure → 302 /login?error=google&reason=…
 ```
 
 One set of **Zod schemas** defines the Gemini output, the API input and the TypeScript types,
@@ -565,10 +566,39 @@ open. Another user's recipe or import is a 404, as before. The worker is unchang
   one); behind a real proxy it's set to that count, never `true`, which would let anyone pick
   their IP from `X-Forwarded-For`. An IPv6 address is counted whole, not by its /64, so someone
   with a /64 to rotate through gets many IPs' tries: the per-email limit still holds.
-- **Google:** the OpenID Connect code flow (`state` and PKCE), the ID token checked against
-  Google's keys. A Google sign-in whose email (verified by Google) already has an account signs
-  into that account and stores its `googleId`; otherwise it makes one. The client ID and secret
-  live in `.env` (`GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`), set by the user.
+- **Google:** the OpenID Connect code flow with `state`, a `nonce` and PKCE (S256), written by
+  hand in `server/src/google.ts` and `routes/google.ts`: two plain requests and `jose`'s
+  `jwtVerify`, which checks the ID token's signature against Google's published keys (fetched
+  once and kept), its issuer, its audience (our client ID) and its expiry; `openid-client` would
+  hide the steps a learner should see, for no fewer lines. `GET /api/auth/google?next=…` (counted
+  with the logins per IP) makes the state, nonce and code verifier, keeps them with `next` (made
+  safe as the client's `nextPage` does) in a `pinch_google` cookie (base64url JSON, `HttpOnly;
+  SameSite=Lax; Path=/api/auth/google`, 10 minutes' `Max-Age`, `Secure` as the session's) and
+  sends the browser to Google with `scope=openid email profile` and the verifier's SHA-256. The
+  cookie needs no signature: it never leaves the browser but to these routes, no script reads
+  it, and changing it gains nothing, as Google's answer must match it; and no collection is
+  needed. `/callback` clears it (one use), then checks in order: the cookie is there
+  (`expired`), the state matches (`state`), a code came (`denied`: a refused consent), the
+  exchange with the verifier and the ID token (`token`), the nonce (`nonce`), `email_verified`
+  (`unverified`); each failure goes to `/login?error=google&reason=<that word>`, never Google's
+  own words. Then the account: the one with this `googleId` (Google's `sub`); else the one with
+  the email (lowercase), which Google has verified, linked by storing its `googleId`; else a new
+  one with Google's name and no password. A new session, then a 302 to `next`. The routes take
+  Google as a dependency of `createApp` (`google`, built by `googleFromConfig`), so the tests
+  pass a fake exchange and need no network; `jose`'s check has its own tests with a key of
+  their own. Without `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` (in `.env`, set by the user)
+  the routes are 404 and `GET /api/auth/providers` says `{ google: false }`. The redirect URI is
+  `<PUBLIC_URL>/api/auth/google/callback`: `PUBLIC_URL` (config) is where the browser opens the
+  app, by default Vite's `http://localhost:5173`, which proxies `/api`.
+
+  **To turn on Google sign-in:**
+  1. In Google Cloud Console, APIs & Services → Credentials, create an OAuth client ID of type
+     **Web application** (the consent screen first, if asked: External, with your email as a
+     test user).
+  2. Add the authorised redirect URI `http://localhost:5173/api/auth/google/callback` (in
+     production, `<PUBLIC_URL>/api/auth/google/callback`).
+  3. Put its ID and secret in `.env` as `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET`.
+  4. Restart the API (`npm run dev:api`).
 - **CSRF:** SameSite=Lax, one origin (Vite proxies `/api` in dev), JSON-only mutations. Logout
   has no body, so it checks for `Content-Type: application/json` itself (415 without it): a form
   on another site can't send that, so it can't sign the user out.

@@ -1,11 +1,13 @@
-import type { Health } from "@pinch/shared";
+import type { Health, Providers } from "@pinch/shared";
 import express from "express";
 import helmet from "helmet";
 import type { Db } from "mongodb";
 import type { Logger } from "pino";
 import { pinoHttp } from "pino-http";
 import { errorHandler, HttpError, notFound } from "./errors.ts";
+import type { Google } from "./google.ts";
 import { authRouter } from "./routes/auth.ts";
+import { googleRouter } from "./routes/google.ts";
 import { importsRouter } from "./routes/imports.ts";
 import { recipesRouter } from "./routes/recipes.ts";
 import { requireUser } from "./requireUser.ts";
@@ -13,13 +15,15 @@ import { requireUser } from "./requireUser.ts";
 // secureCookies: the session cookie is Secure unless the caller says it runs on http (development
 // and tests); a caller who forgets gets the safe one. trustProxy: how many proxies stand in front
 // of the API, so req.ip is the browser's address (TRUST_PROXY in config). now: the rate limit's
-// clock (design §8.3).
+// clock (design §8.3). google: Google sign-in, when configured (googleFromConfig; tests pass a
+// fake exchange).
 type AppDeps = {
   logger: Logger;
   db: Db;
   secureCookies?: boolean;
   trustProxy?: number;
   now?: () => Date;
+  google?: Google;
 };
 
 // Builds the app without listening, so tests can call it with Supertest (node-api.md).
@@ -29,6 +33,7 @@ export function createApp({
   secureCookies = true,
   trustProxy = 0,
   now = () => new Date(),
+  google,
 }: AppDeps) {
   const app = express();
   app.set("trust proxy", trustProxy);
@@ -72,6 +77,12 @@ export function createApp({
     res.json({ status: "ok" } satisfies Health);
   });
 
+  // Which ways to sign in the Log in page offers (§8.3). Without Google's settings, its routes
+  // aren't mounted: 404.
+  app.get("/api/auth/providers", (_req, res) => {
+    res.json({ google: google !== undefined } satisfies Providers);
+  });
+  if (google) app.use("/api/auth/google", googleRouter(db, { google, secureCookies, now }));
   app.use("/api/auth", authRouter(db, { secureCookies, now }));
   // Health and auth above are open; a user's recipes and imports need a session (§8.3).
   app.use("/api/recipes", requireUser(db), recipesRouter(db));
