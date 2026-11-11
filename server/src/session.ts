@@ -62,9 +62,9 @@ export async function currentUser(db: Db, req: Request) {
   return usersCollection(db).findOne({ _id: session.userId });
 }
 
-// The one cookie we read, from the Cookie header ("a=1; pinch_session=…"). A few lines instead
-// of a package: our token is base64url, so it needs no decoding.
-function readCookie(req: Request, name: string) {
+// A cookie of ours, from the Cookie header ("a=1; pinch_session=…"). A few lines instead of a
+// package: our values are base64url, so they need no decoding.
+export function readCookie(req: Request, name: string) {
   for (const pair of (req.headers.cookie ?? "").split(";")) {
     const [key, value] = pair.trim().split("=");
     if (key === name) return value;

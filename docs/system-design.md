@@ -506,8 +506,9 @@ POST   /api/auth/signup                { email, password, name } → 201 me, sig
 POST   /api/auth/login                 { email, password } → 200 me (401 the same for either wrong; 429 past the rate limit)
 POST   /api/auth/logout                → 204 (with Content-Type: application/json, else 415)
 GET    /api/auth/me                    → 200 { id, email, name } (401 signed out)
-GET    /api/auth/google                → 302 to Google
-GET    /api/auth/google/callback       → signed in, 302 to where they were
+GET    /api/auth/providers             → 200 { google: boolean } (Google is on only with its settings)
+GET    /api/auth/google?next=…         → 302 to Google (404 without Google's settings; counted as a login per IP)
+GET    /api/auth/google/callback       → signed in, 302 to next; a failure → 302 /login?error=google&reason=… (counted per IP too)
 ```
 
 One set of **Zod schemas** defines the Gemini output, the API input and the TypeScript types,
@@ -565,14 +566,54 @@ open. Another user's recipe or import is a 404, as before. The worker is unchang
   one); behind a real proxy it's set to that count, never `true`, which would let anyone pick
   their IP from `X-Forwarded-For`. An IPv6 address is counted whole, not by its /64, so someone
   with a /64 to rotate through gets many IPs' tries: the per-email limit still holds.
-- **Google:** the OpenID Connect code flow (`state` and PKCE), the ID token checked against
-  Google's keys. A Google sign-in whose email (verified by Google) already has an account signs
-  into that account and stores its `googleId`; otherwise it makes one. The client ID and secret
-  live in `.env` (`GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`), set by the user.
+- **Google:** the OpenID Connect code flow with `state`, a `nonce` and PKCE (S256), written by
+  hand in `server/src/google.ts` and `routes/google.ts`: two plain requests and `jose`'s
+  `jwtVerify`, which checks the ID token's signature against Google's published keys (fetched
+  once and kept; RS256 only), its issuer, its audience (our client ID) and its expiry; `openid-client` would
+  hide the steps a learner should see, for no fewer lines. `GET /api/auth/google?next=…` (counted
+  with the logins per IP) makes the state, nonce and code verifier, keeps them with `next` (made
+  safe as the client's `nextPage` does, `//` after its dots included) in a `pinch_google` cookie (base64url JSON, `HttpOnly;
+  SameSite=Lax; Path=/api/auth/google`, 10 minutes' `Max-Age`, `Secure` as the session's) and
+  sends the browser to Google with `scope=openid email profile` and the verifier's SHA-256. The
+  cookie needs no signature: it never leaves the browser but to these routes, no script reads
+  it, and changing it gains nothing, as Google's answer must match it; and no collection is
+  needed. A sibling subdomain could set ("toss") it, which a signature would stop; accepted, as
+  Pinch has one origin and no subdomains of its own. `/callback` clears it (one use), counts
+  with the logins per IP (`too_many_tries`), then checks in order: the cookie is there
+  (`expired`), the state matches (`state`), a code came (`denied`: a refused consent), the
+  exchange with the verifier (10 s at most) and the ID token (`token`; the log keeps jose's
+  error code and message, not the error, which carries the token's claims), the nonce (`nonce`), `email_verified`
+  (`unverified`); each failure goes to `/login?error=google&reason=<that word>`, never Google's
+  own words. Its query (the code and state) is left out of the request's log line. Then the
+  account: the one with this `googleId` (Google's `sub`); else the one with the email
+  (lowercase) and no `googleId`, linked by storing it, which also **drops its password and ends
+  its sessions**: Google proved the email is theirs, the unverified password hasn't (someone
+  could have signed up with it first and waited); else a new one with Google's name and no
+  password. An email whose account has another `googleId` can't sign in this way
+  (`linked_elsewhere`). A new session, then a 302 to `next`. The routes take
+  Google as a dependency of `createApp` (`google`, built by `googleFromConfig`), so the tests
+  pass a fake exchange and need no network; `jose`'s check has its own tests with a key of
+  their own. Without `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` (in `.env`, set by the user)
+  the routes are 404 and `GET /api/auth/providers` says `{ google: false }`. The redirect URI is
+  `<PUBLIC_URL>/api/auth/google/callback`: `PUBLIC_URL` (config) is where the browser opens the
+  app, by default Vite's `http://localhost:5173`, which proxies `/api`.
+
+  **To turn on Google sign-in:**
+  1. In Google Cloud Console, APIs & Services → Credentials, create an OAuth client ID of type
+     **Web application** (the consent screen first, if asked: External, with your email as a
+     test user).
+  2. Add the authorised redirect URI `http://localhost:5173/api/auth/google/callback` (in
+     production, `<PUBLIC_URL>/api/auth/google/callback`).
+  3. Put its ID and secret in `.env` as `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET`.
+  4. Restart the API (`npm run dev:api`).
 - **CSRF:** SameSite=Lax, one origin (Vite proxies `/api` in dev), JSON-only mutations. Logout
   has no body, so it checks for `Content-Type: application/json` itself (415 without it): a form
   on another site can't send that, so it can't sign the user out.
-- **The client:** Log in and Sign up pages (lazy chunks; "Continue with Google" comes with A4).
+- **The client:** Log in and Sign up pages (lazy chunks), each with "Continue with Google" under
+  its button once `providersQuery` says Google is on (it asks only there): an outline button with
+  Google's "G", a plain link to `/api/auth/google?next=<the page's next>`, as the sign-in is page
+  loads, not a fetch. A failed one comes back to `/login?error=google`, which says "Couldn't sign
+  in with Google. Try again." above it.
   `GET /api/auth/me` is a query (`meQuery`, preloaded by `index.html` with the queue, so it adds no
   round trip), and `SessionGate`, a layout route around each group of routes (D21), shows nothing
   until it answers (or, when it can't be asked, "We couldn't reach Pinch" with Try again), then
@@ -745,7 +786,7 @@ green (`success` on `success-soft`); the rest stay neutral, and errors red.
 | `/recipes/new` | Write a recipe | The editor, empty (breadcrumbs *Add recipe › Write a recipe*), under a tip: got it as text? Paste it on Add recipe. Title (examples as placeholders), description, ingredients as amount · unit · name rows with a note (on its own line on a phone) and ✕, steps as numbered boxes with ✕, Add ingredient and Add step (Paste a list and reordering aren't built: nothing parses a pasted line yet, and the form never had an order to change); then the source ("Written by you"), serves and times, and tags as chips with ✕ and Add tag (a sheet of the facets, as Filters); Cancel and **Save recipe** pinned to the bottom. No picture by hand, and no Change picture or source link: the API has no upload and keeps the source (D20) | Each error under its field from the first Save (§8.1), focus on the first, "N things to fix before saving" above the Save bar; saving; failed (keeps what was typed) |
 | `/recipes/:id/edit` | Edit a recipe | The same editor, filled, with its picture (*My recipes › title › Edit*); Cancel and **Save changes** | Loading, error, not found; then as Write a recipe |
 | `/imports/:id` | Review a draft | The same editor, filled from the draft (*Add recipe › Review: title*), with its picture, under a banner that says where Pinch read it (the site, the text you pasted, your screenshots) and links to the post (Watch the video). The fields the model was unsure of (§6) are marked: a dashed box, and under its row ◆ and the reason, which the box points to (`aria-describedby`); changing the field clears its mark, and removing a row moves the marks of the rows under it. Under the banner, "◆ N things to look at, marked below" and Go to the first (focus on the first marked box). Marks don't block Save, and a saved recipe doesn't keep them. Discard (asks first, "Discard this draft?" with its title as it is now, then the toast; not while saving) and **Save to My recipes** (approves it and opens the recipe) | Loading, error; no draft yet, or no such import (says so, links to Add recipe); then as Write a recipe |
-| `/login` | Log in | Signed out only (§8.3): no header, the wordmark over a card in the middle of the screen (the tabs and counts are a signed-in user's). Email and Password (filled in by the browser: `email`, `current-password`), **Log in**, then "New to Pinch? Sign up" (keeping `?next=`); room under the button for "Continue with Google" (A4) | Each error under its field from the first Log in, focus on the first; logging in; "That email and password don't match." (401, either one wrong); "Too many tries. Wait a minute and try again." (429); "Something went wrong. Try again." (a 500); "We couldn't reach Pinch. Try again." (no answer) |
+| `/login` | Log in | Signed out only (§8.3): no header, the wordmark over a card in the middle of the screen (the tabs and counts are a signed-in user's). Email and Password (filled in by the browser: `email`, `current-password`), **Log in**, then "New to Pinch? Sign up" (keeping `?next=`); "Continue with Google" under it (an outline button with Google's "G"; hidden when the API has no Google settings, §8.3) | Each error under its field from the first Log in, focus on the first; logging in; "That email and password don't match." (401, either one wrong); "Too many tries. Wait a minute and try again." (429); "Something went wrong. Try again." (a 500); "We couldn't reach Pinch. Try again." (no answer); "Couldn't sign in with Google. Try again." (back from Google with `?error=google`) |
 | `/signup` | Sign up | As Log in: Name, Email, Password ("At least 8 characters", `new-password`; the hint gives way to an error), **Sign up**, then "Already have an account? Log in" | As Log in; an email with an account (409) says "An account already uses this email." with a Log in link; the API's field errors (400) on their fields |
 | anything else | Page not found | Get back to My recipes | — |
 

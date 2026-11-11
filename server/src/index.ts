@@ -3,6 +3,7 @@ import { pino } from "pino";
 import { createApp } from "./app.ts";
 import { loadConfig } from "./config.ts";
 import { connectToMongo } from "./db/client.ts";
+import { googleFromConfig } from "./google.ts";
 
 const config = loadConfig(process.env);
 const logger = pino({ level: config.LOG_LEVEL });
@@ -12,6 +13,7 @@ const app = createApp({
   db: client.db(config.DB_NAME),
   secureCookies: config.NODE_ENV === "production",
   trustProxy: config.TRUST_PROXY,
+  google: googleFromConfig(config),
 });
 
 const server = app.listen(config.PORT, (error) => {

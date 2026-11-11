@@ -139,7 +139,7 @@ Planned, not built yet. In this order:
       it; `db:adopt-dev-data <email>`; `db:seed <email>`
 - [x] A3 The client: Log in and Sign up, redirect to `/login` and back, a 401 signs out, the
       avatar's menu (name, Log out)
-- [ ] A4 Google sign-in: the OIDC code flow (state, PKCE), linking by verified email; the user
+- [x] A4 Google sign-in: the OIDC code flow (state, PKCE), linking by verified email; the user
       sets `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` in `.env`
 - [ ] A5 The global daily cap on Gemini calls (D30)
 - [ ] L2 The shared `links` cache: `EXTRACTION_VERSION`, the worker's lookup (a hit copies and

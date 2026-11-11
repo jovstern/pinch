@@ -25,6 +25,13 @@ const ConfigSchema = z.object({
   // key and costs nothing. The key is a secret, so it has no default: it's in .env.
   EXTRACTOR: z.enum(["gemini", "fake"]).default("gemini"),
   GEMINI_API_KEY: z.string().optional(),
+  // Google sign-in (design §8.3): off unless both are set, in .env, by the user. Secrets, so no
+  // defaults.
+  GOOGLE_CLIENT_ID: z.string().min(1).optional(),
+  GOOGLE_CLIENT_SECRET: z.string().min(1).optional(),
+  // The address the browser opens the app at: Google sends the user back to
+  // <PUBLIC_URL>/api/auth/google/callback. In development that's Vite's, which proxies /api.
+  PUBLIC_URL: z.url().default("http://localhost:5173"),
 });
 
 export type Config = z.infer<typeof ConfigSchema>;

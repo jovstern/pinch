@@ -11,6 +11,7 @@ test("every setting has a default for local development", () => {
     DB_NAME: "pinch",
     DEV_USER_ID: "000000000000000000000001",
     EXTRACTOR: "gemini",
+    PUBLIC_URL: "http://localhost:5173",
   });
 });
 
