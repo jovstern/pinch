@@ -172,7 +172,7 @@ test("a session comes with the signed-in hint, readable by the page, and logout 
 
   const logout = await request(app)
     .post("/api/auth/logout")
-    .set("Cookie", sessionCookie(response))
+    .set("Cookie", `${sessionCookie(response)}; pinch_signed_in=1`)
     .send({});
   expect(String(logout.headers["set-cookie"])).toMatch(
     /pinch_signed_in=; Path=\/; Expires=Thu, 01/,

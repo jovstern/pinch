@@ -23,11 +23,11 @@ function hintOptions(secure: boolean) {
   return { ...cookieOptions(secure), httpOnly: false };
 }
 
-// A browser whose session has ended (expired, or logged out elsewhere) but still has the hint:
-// it goes, so the next page doesn't preload the queue for nothing. A browser matches a cookie
-// to clear by its name and path.
-export function clearSignedInHint(req: Request, res: Response) {
-  if (readCookie(req, SIGNED_IN_HINT)) res.clearCookie(SIGNED_IN_HINT, { path: "/" });
+// The hint goes when the session does (logout), and when a browser still has it but no live
+// session (expired, or logged out elsewhere), so the next page doesn't preload the queue for
+// nothing. Only when the request has it: no cookie to clear, no header.
+export function clearSignedInHint(req: Request, res: Response, secure: boolean) {
+  if (readCookie(req, SIGNED_IN_HINT)) res.clearCookie(SIGNED_IN_HINT, hintOptions(secure));
 }
 
 // A new session on every sign-in: the database keeps the token's hash, the browser the token.
@@ -61,7 +61,7 @@ export function setSignedInHint(res: Response, secure: boolean) {
 export async function endSession(db: Db, req: Request, res: Response, secure: boolean) {
   await deleteSession(db, req);
   res.clearCookie(SESSION_COOKIE, cookieOptions(secure));
-  res.clearCookie(SIGNED_IN_HINT, hintOptions(secure));
+  clearSignedInHint(req, res, secure);
 }
 
 async function deleteSession(db: Db, req: Request) {

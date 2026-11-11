@@ -96,7 +96,7 @@ export function authRouter(db: Db, { secureCookies, now }: AuthDeps) {
   router.get("/me", async (req, res) => {
     const user = await currentUser(db, req);
     if (!user) {
-      clearSignedInHint(req, res);
+      clearSignedInHint(req, res, secureCookies);
       res.json(null);
       return;
     }

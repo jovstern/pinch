@@ -39,6 +39,15 @@ test("signed out, a page sends the user to Log in, which keeps the page to come 
   );
 });
 
+test("me's null (nobody signed in, not an error) sends / to Log in", async () => {
+  stubFetch((path) =>
+    path === "/api/auth/me" ? Promise.resolve(Response.json(null)) : notFound(),
+  );
+  renderApp("/", { me: "ask" });
+  expect(await screen.findByRole("heading", { level: 1, name: "Log in" })).toBeInTheDocument();
+  expect(screen.getByRole("link", { name: "Sign up" })).toHaveAttribute("href", "/signup");
+});
+
 test("logging in loads the page the user asked for, a new page for the new user", async () => {
   const fetch = vi.fn((path: string) =>
     path === "/api/auth/login" ? Promise.resolve(Response.json(testUser)) : notFound(),

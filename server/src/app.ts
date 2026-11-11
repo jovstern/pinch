@@ -93,10 +93,10 @@ export function createApp({
   if (google) app.use("/api/auth/google", googleRouter(db, { google, secureCookies, now }));
   app.use("/api/auth", authRouter(db, { secureCookies, now }));
   // Health and auth above are open; a user's recipes and imports need a session (§8.3).
-  app.use("/api/recipes", requireUser(db), recipesRouter(db));
+  app.use("/api/recipes", requireUser(db, secureCookies), recipesRouter(db));
   app.use(
     "/api/imports",
-    requireUser(db),
+    requireUser(db, secureCookies),
     importsRouter(db, { globalCap: globalDailyImports, extractionVersion, now }),
   );
 
