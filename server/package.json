@@ -28,6 +28,7 @@
   },
   "dependencies": {
     "@google/genai": "^3.0.0",
+    "@node-rs/argon2": "^2.2.2",
     "@pinch/shared": "*",
     "express": "^5.3.0",
     "helmet": "^8.3.0",

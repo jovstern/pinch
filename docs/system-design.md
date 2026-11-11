@@ -495,7 +495,7 @@ POST   /api/imports/:id/retry          failed → pending, attempts, error and n
 DELETE /api/imports/:id                discard / dismiss / Pinch it's Undo: kept an hour (D27) → 204
 POST   /api/imports/:id/restore        Undo of a discard or a dismiss → 200 import, as it was
 
-POST   /api/auth/signup                { email, password, name } → 201 me, signed in (M9)
+POST   /api/auth/signup                { email, password, name } → 201 me, signed in (M9; 409 when the email has an account)
 POST   /api/auth/login                 { email, password } → 200 me (401 the same for either wrong)
 POST   /api/auth/logout                → 204
 GET    /api/auth/me                    → 200 { id, email, name } (401 signed out)
@@ -532,12 +532,15 @@ and a request without one gets 401 (the health routes and `/api/auth/*` stay ope
 
 - **Sign-up is open:** email and password, or Google. Each account has the daily cap of 20
   (D22); a global daily cap on Gemini calls (D30) bounds what many accounts can spend.
-- **Passwords:** argon2id; emails stored lowercase; at least 8 characters, no other rules.
+- **Passwords:** argon2id (`@node-rs/argon2`, its default parameters: prebuilt, no compiler);
+  emails stored lowercase; at least 8 characters (and at most 200), no other rules. A second
+  sign-up with an email answers 409.
 - **Sessions:** a random 32-byte token in an `HttpOnly; Secure; SameSite=Lax` cookie; the
   database keeps only its SHA-256 hash in `sessions`, with a TTL index (30 days). A new session
   on every sign-in; logout deletes it.
-- **Login:** the same error for a wrong email or a wrong password, and a rate limit (per IP and
-  per email, counted in Mongo: a few tries a minute).
+- **Login:** the same 401 for a wrong email or a wrong password; an unknown email is still
+  checked against a fixed hash, so the time doesn't tell which emails have accounts. A rate
+  limit (per IP and per email, counted in Mongo: a few tries a minute).
 - **Google:** the OpenID Connect code flow (`state` and PKCE), the ID token checked against
   Google's keys. A Google sign-in whose email (verified by Google) already has an account signs
   into that account and stores its `googleId`; otherwise it makes one. The client ID and secret

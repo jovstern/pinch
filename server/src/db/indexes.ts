@@ -3,6 +3,7 @@ import { importsCollection } from "./imports.ts";
 import { recipesCollection, TITLE_COLLATION } from "./recipes.ts";
 import { DELETED_KEPT_SECONDS } from "./softDelete.ts";
 import { usageCollection } from "./usage.ts";
+import { usersCollection } from "./users.ts";
 
 // Every query the app runs has its index here (design §6, mongodb.md); `npm run db:indexes`
 // creates them. One that already exists is left as it is, so it's safe to run again.
@@ -50,6 +51,12 @@ export async function createIndexes(db: Db) {
     { key: { ownerId: 1, day: 1 }, unique: true },
     // TTL: a day's count goes two days later.
     { key: { expiresAt: 1 }, expireAfterSeconds: 0 },
+  ]);
+  await usersCollection(db).createIndexes([
+    // Login finds the account by its email; unique, so one account per email (design §8.3).
+    { key: { email: 1 }, unique: true },
+    // A Google sign-in finds its account (A4). Sparse: password accounts have no googleId.
+    { key: { googleId: 1 }, unique: true, sparse: true },
   ]);
 }
 
