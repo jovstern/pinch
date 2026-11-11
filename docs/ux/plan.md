@@ -272,10 +272,11 @@ illustration.
 → recipe header uses the View Transition API where supported; all off under
 `prefers-reduced-motion`.
 
-**Mark.** The word "Pinch" in Fraunces with a pinched-fingers glyph (two strokes) as the
-favicon and the PWA icon; the current orange wordmark is replaced. Built (U4 PR 2): the SVG
-favicon and the header's mark; the 192/512 PNG icons come with the manifest in U8 (PWA,
-later).
+**Mark.** The user's own (2026-11-11): a "Pinch" script wordmark in `#A33612`
+(`--color-accent-strong`) and its "P" as the favicon; they replace the pinched-fingers glyph
+of U4. In the header (design §14, D24): the wordmark from 768 px, the P mark on a phone, each
+in `#F0693A` (the dark `--color-accent`) in the dark theme. The 192/512 PNG icons come with the
+manifest in U8 (PWA, later).
 
 ## 7. The experience
 
@@ -294,7 +295,7 @@ later).
 | `*` | Page not found | — |
 
 Pass 02 (U13, revision 1 from the user's sketch): two tabs, **New recipe** (first, the
-default) and **My recipes**, as shadcn Tabs (revision 2: no logo for now). Phone: the tabs and the
+default) and **My recipes**, as shadcn Tabs (revision 2: no logo for now; the user's logo came on 2026-11-11, design §14). Phone: the tabs and the
 avatar are the header, and **Write a recipe** floats bottom right on both tabs. Desktop: the
 tabs on the left, Write a recipe and the avatar on the right. Every inner page has breadcrumbs
 under the header. Every async change to a recipe's status confirms itself in a toast. (Replaces "no bottom tab bar yet": the user asked for a clear split between

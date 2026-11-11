@@ -13,7 +13,7 @@ import { LazyImportForm } from "./LazyImportForm.tsx";
 // what's being turned into recipes.
 export function ImportPage() {
   // The paste box, where focus goes after an import is retried or dismissed.
-  const pasteBoxRef = useRef<HTMLTextAreaElement>(null);
+  const pasteBoxRef = useRef<HTMLInputElement>(null);
   const headingRef = useHeadingFocus();
   // The queue's height decides where the centred block sits, so the block shows once the queue
   // is known (or failed to load): drawn before, it would jump as the cards arrive (CLS).

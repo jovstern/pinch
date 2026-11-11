@@ -18,8 +18,6 @@ import { ScreenshotsUpload } from "./ScreenshotsUpload.tsx";
 afterEach(() => {
   vi.unstubAllGlobals();
   vi.useRealTimers();
-  // Paste's clipboard, if a test gave it one.
-  Reflect.deleteProperty(navigator, "clipboard");
 });
 
 const reel = "https://www.instagram.com/p/DOxAbc123/";
@@ -116,54 +114,21 @@ test("Enter sends what's in the box", async () => {
   });
 });
 
-test("Shift+Enter makes a new line, and the text is sent with it", async () => {
+test("a pasted recipe's lines become one line, at the caret, and are sent so", async () => {
   const fetch = stubApi([[]]);
   renderApp("/");
 
   const box = await screen.findByRole("textbox", { name: "Pinch a recipe from a reel" });
-  await userEvent.type(box, "Shakshuka{Shift>}{Enter}{/Shift}4 eggs, 1 can of tomatoes.");
-  expect(box).toHaveValue("Shakshuka\n4 eggs, 1 can of tomatoes.");
-  expect(fetch).not.toHaveBeenCalledWith("/api/imports", expect.anything());
+  await userEvent.type(box, "Shakshuka: ");
+  await userEvent.paste("\n4 eggs\r\n1 can of tomatoes, crushed\n\n");
+  expect(box).toHaveValue("Shakshuka: 4 eggs · 1 can of tomatoes, crushed");
 
   await userEvent.type(box, "{Enter}");
   expect(fetch).toHaveBeenCalledWith("/api/imports", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ type: "text", text: "Shakshuka\n4 eggs, 1 can of tomatoes." }),
+    body: JSON.stringify({ type: "text", text: "Shakshuka: 4 eggs · 1 can of tomatoes, crushed" }),
   });
-});
-
-// A clipboard that holds this text, for Paste (jsdom has none).
-function stubClipboard(text: string) {
-  Object.defineProperty(navigator, "clipboard", {
-    value: { readText: () => Promise.resolve(text) },
-    configurable: true,
-  });
-}
-
-test("Paste fills the box from the clipboard, and doesn't send it", async () => {
-  const fetch = stubApi([[]]);
-  stubClipboard(reel);
-  renderApp("/");
-
-  await userEvent.click(screen.getByRole("button", { name: "Paste" }));
-
-  const box = await screen.findByRole("textbox", { name: "Pinch a recipe from a reel" });
-  expect(box).toHaveValue(reel);
-  expect(box).toHaveFocus();
-  expect(fetch).not.toHaveBeenCalledWith("/api/imports", expect.anything());
-});
-
-test("Paste with an empty clipboard keeps what's in the box", async () => {
-  stubApi([[]]);
-  stubClipboard("");
-  renderApp("/");
-
-  const box = await screen.findByRole("textbox", { name: "Pinch a recipe from a reel" });
-  await userEvent.type(box, reel);
-  await userEvent.click(screen.getByRole("button", { name: "Paste" }));
-
-  expect(box).toHaveValue(reel);
 });
 
 test("the API's message for a text shows under the box", async () => {

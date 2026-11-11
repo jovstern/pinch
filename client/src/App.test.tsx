@@ -27,9 +27,10 @@ test("an unknown address shows the not-found page with a way back", () => {
   );
 });
 
-test("the header has the two tabs, Write a recipe and the avatar", () => {
+test("the header has the logo, the two tabs, Write a recipe and the avatar", () => {
   stubNotFound();
   renderApp("/nope");
+  expect(screen.getByRole("link", { name: "Pinch, Add recipe" })).toHaveAttribute("href", "/");
   expect(tab("Add recipe")).toHaveAttribute("href", "/");
   expect(tab("My recipes")).toHaveAttribute("href", "/recipes");
   expect(screen.getByRole("link", { name: "Write a recipe" })).toHaveAttribute(
