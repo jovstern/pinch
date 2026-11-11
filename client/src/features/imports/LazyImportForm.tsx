@@ -9,10 +9,10 @@ const ImportForm = lazy(async () => ({
 
 export function LazyImportForm(props: ComponentProps<typeof ImportForm>) {
   return (
-    // The field's own box (52 px, as measured), so nothing moves when it arrives.
+    // The field's own box (46 px, as measured), so nothing moves when it arrives.
     <Suspense
       fallback={
-        <div aria-hidden="true" className="h-13 rounded-control border border-input bg-card" />
+        <div aria-hidden="true" className="h-11.5 rounded-control border border-input bg-card" />
       }
     >
       <ImportForm {...props} />

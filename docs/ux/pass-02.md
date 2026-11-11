@@ -408,7 +408,7 @@ wireframes replace `library`, `pinch`, `check` and `library-hifi`, which are kep
 |---|---|---|
 | "Add a Recipe" → **New recipe** | The tab's name | — |
 | "Write a recipe by hand" on both tabs, not in the profile menu | Phone: a floating outline button, bottom right, on both tabs. Desktop: in the header | Thumb reach, and the same place on every tab. It's an outline button, so Pinch it stays the one filled one. *Risk:* it can cover a card's last line; the list gets 96 px of padding at the bottom |
-| An **Input**, not a textarea; it grows when the text no longer fits; on a phone, a short placeholder with an ellipsis | An input group (Paste · input · Pinch it) that becomes an auto-sized textarea (up to 6 lines) once the text wraps | A link never wraps, so a link paste stays one line |
+| An **Input**, not a textarea; it grows when the text no longer fits; on a phone, a short placeholder with an ellipsis | An input group (Paste · input · Pinch it) that becomes an auto-sized textarea (up to 6 lines) once the text wraps; since 2026-11-11 (the user) a single-line input, no Paste, the sparkles inside it, one short placeholder (design §14) | A link never wraps, so a link paste stays one line |
 | Cooking: the spinner in a **disabled button** | "◌ Cooking…" in the button's place, which becomes Review when the draft is ready | The action's place is learned before it can be used |
 | Remove the logo for now | The header is the tabs and the avatar | — |
 | A toast for **every async status change** | Seven events, each with its next step (table in home.html). Toasts sit at the top on a phone and bottom right on desktop | A change that happens elsewhere (ready, failed) toasts on whatever page you're on |
