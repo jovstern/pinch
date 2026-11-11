@@ -37,12 +37,19 @@ test("a cookie with an unknown or expired token answers 401", async () => {
   expect((await request(app).get("/api/recipes").set("Cookie", cookie)).status).toBe(401);
 });
 
+test("a 401 clears the signed-in hint, so the next page doesn't preload the queue", async () => {
+  const response = await request(app).get("/api/imports").set("Cookie", "pinch_signed_in=1");
+  expect(response.status).toBe(401);
+  expect(String(response.headers["set-cookie"])).toMatch(/^pinch_signed_in=; Path=\/; Expires=/);
+});
+
 test("health, ready and auth stay open without a session", async () => {
   expect((await request(app).get("/api/health")).status).toBe(200);
   expect((await request(app).get("/api/ready")).status).toBe(200);
-  // 401 from the route itself: me says who's signed in, and no one is.
+  // me says who's signed in, and no one is: null.
   const me = await request(app).get("/api/auth/me");
-  expect(me.status).toBe(401);
+  expect(me.status).toBe(200);
+  expect(me.body).toBeNull();
   const signup = await request(app)
     .post("/api/auth/signup")
     .send({ email: "open@example.com", password: "a long password", name: "Open" });

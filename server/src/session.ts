@@ -12,6 +12,24 @@ function cookieOptions(secure: boolean) {
   return { httpOnly: true, sameSite: "lax", path: "/", secure } as const;
 }
 
+// A hint for index.html, beside the session (design §8.3): "1" while this browser has one. Not
+// HttpOnly, so the page's script can read it before any request, and preload the queue only for a
+// browser that is signed in (a signed-out one would get a 401, an error in the console). Only a
+// hint: it holds nothing secret, and the API still decides from the session cookie. It goes with
+// the session, and as soon as the API sees a request without a live one (clearSignedInHint).
+export const SIGNED_IN_HINT = "pinch_signed_in";
+
+function hintOptions(secure: boolean) {
+  return { ...cookieOptions(secure), httpOnly: false };
+}
+
+// A browser whose session has ended (expired, or logged out elsewhere) but still has the hint:
+// it goes, so the next page doesn't preload the queue for nothing. A browser matches a cookie
+// to clear by its name and path.
+export function clearSignedInHint(req: Request, res: Response) {
+  if (readCookie(req, SIGNED_IN_HINT)) res.clearCookie(SIGNED_IN_HINT, { path: "/" });
+}
+
 // A new session on every sign-in: the database keeps the token's hash, the browser the token.
 // The browser's previous session, if it sent one, ends: one browser, one session.
 export async function startSession(
@@ -32,11 +50,13 @@ export async function startSession(
     expiresAt: new Date(now.getTime() + SESSION_MS),
   });
   res.cookie(SESSION_COOKIE, token, { ...cookieOptions(secure), maxAge: SESSION_MS });
+  res.cookie(SIGNED_IN_HINT, "1", { ...hintOptions(secure), maxAge: SESSION_MS });
 }
 
 export async function endSession(db: Db, req: Request, res: Response, secure: boolean) {
   await deleteSession(db, req);
   res.clearCookie(SESSION_COOKIE, cookieOptions(secure));
+  res.clearCookie(SIGNED_IN_HINT, hintOptions(secure));
 }
 
 async function deleteSession(db: Db, req: Request) {

@@ -10,7 +10,7 @@ import {
 } from "../db/loginAttempts.ts";
 import { toMe, usersCollection, type UserDocument } from "../db/users.ts";
 import { HttpError, parseInput } from "../errors.ts";
-import { currentUser, endSession, startSession } from "../session.ts";
+import { clearSignedInHint, currentUser, endSession, startSession } from "../session.ts";
 
 // A login with an unknown email still checks a password, against this hash, so it takes as long
 // as a wrong password: the time doesn't say which emails have accounts (design §8.3).
@@ -83,9 +83,15 @@ export function authRouter(db: Db, { secureCookies, now }: AuthDeps) {
     res.status(204).end();
   });
 
+  // Who is signed in, or null: nobody is an answer here, not an error (a 401 would be logged in
+  // the console of every signed-out page, which asks this first, §8.3).
   router.get("/me", async (req, res) => {
     const user = await currentUser(db, req);
-    if (!user) throw new HttpError(401, "signed_out", "Log in to continue.");
+    if (!user) {
+      clearSignedInHint(req, res);
+      res.json(null);
+      return;
+    }
     res.json(toMe(user) satisfies Me);
   });
 

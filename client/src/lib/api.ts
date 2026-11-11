@@ -88,7 +88,7 @@ const ErrorBodySchema = z.object({
 
 // The API's error shape (design §8.2). A proxy's error page isn't JSON: then there are no fields.
 // Every failed answer comes through here, so a 401 is noticed in one place. Not /api/auth/*:
-// there a 401 is an answer (a wrong password, or "nobody" from me), not news.
+// there a 401 is an answer (a wrong password), not news.
 async function apiError(method: string, path: string, response: Response) {
   if (response.status === 401 && !path.startsWith("/api/auth/")) onSignedOut();
   const body: unknown = await response.json().catch(() => null);

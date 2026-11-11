@@ -29,7 +29,14 @@ export default defineConfig({
       cwd: "server",
       url: `http://localhost:${String(apiPort)}/api/ready`,
       // TRUST_PROXY: the client's preview is the one proxy in front of it (e2e/fixtures.ts).
-      env: { PORT: String(apiPort), DB_NAME: process.env.E2E_DB_NAME, TRUST_PROXY: "1" },
+      // EXTRACTOR as the worker's: the API checks the links cache against the extractor's version
+      // (§4.6), so with Gemini's it would never find the fake worker's drafts.
+      env: {
+        PORT: String(apiPort),
+        DB_NAME: process.env.E2E_DB_NAME,
+        TRUST_PROXY: "1",
+        EXTRACTOR: "fake",
+      },
       // Runs the API's own shutdown (server/src/index.ts) instead of killing it.
       gracefulShutdown: { signal: "SIGTERM", timeout: 2000 },
     },

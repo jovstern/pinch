@@ -546,7 +546,9 @@ filtered by `ownerId: req.userId`, so M9 changed **only that middleware**: `requ
 (`server/src/requireUser.ts`), in front of `/api/recipes` and `/api/imports`, reads the session
 (`currentSession`: one lookup by the token's hash, not the account) and sets `req.userId`; a
 request without a live session gets 401 `signed_out`. The health routes and `/api/auth/*` stay
-open. Another user's recipe or import is a 404, as before. The worker is unchanged: it reads
+open; `GET /api/auth/me` answers 200 with the user, or with `null` when nobody is signed in:
+signed out is a state every signed-out page asks about first, not an error (a 401 is logged in
+the browser's console). Another user's recipe or import is a 404, as before. The worker is unchanged: it reads
 `ownerId` from each job.
 
 - **Sign-up is open:** email and password, or Google. Each account has the daily cap of 20
@@ -560,7 +562,15 @@ open. Another user's recipe or import is a 404, as before. The worker is unchang
   (`NODE_ENV`); development and tests run on `http://localhost`, so the API turns it off there,
   while `createApp` defaults to Secure, so a caller who forgets gets the safe one; the database keeps only its
   SHA-256 hash in `sessions`, with `expiresAt` 30 days out and a TTL index. A session past its
-  `expiresAt` counts as none before the TTL deletes it. A new session on every sign-in, which
+  `expiresAt` counts as none before the TTL deletes it. Beside it, a **hint cookie**,
+  `pinch_signed_in=1` (`SameSite=Lax; Path=/`, the same `Max-Age` and `Secure`, but not
+  `HttpOnly`): set with every session, cleared by logout, and cleared by any answer to a request
+  without a live session (`requireUser`'s 401, `me`'s `null`). `index.html` reads it in a tiny
+  inline script and preloads `/api/imports` only when it's there, so a signed-out page asks for
+  nothing that would answer 401. It's only a hint: it holds nothing secret, and the API decides
+  from the session alone; a wrong hint costs at most one unused preload, or the queue asked a
+  moment later. Pinch sets no Content-Security-Policy; one would need the script's hash
+  (`script-src 'sha256-…'`). A new session on every sign-in, which
   ends the browser's previous one if it sent its cookie; logout deletes it and clears the cookie. `currentUser` (`server/src/session.ts`) reads the cookie
   with a few lines, not a package.
 - **Login:** the same 401 for a wrong email or a wrong password; an unknown email is still

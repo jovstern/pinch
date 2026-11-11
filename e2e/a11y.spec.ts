@@ -121,11 +121,10 @@ test("the avatar's menu, open, has no accessibility violations", async ({ page }
   expect((await scan(page)).violations).toEqual([]);
 });
 
-// Log in and Sign up, signed out (the fixture's cookie cleared), each in both themes and with its
-// errors showing. Chrome logs each 401 a signed-out page gets (who's signed in, the queue's
-// preload) as an error: expected here, and only the 401s.
+// Log in and Sign up, signed out (the fixture's cookies cleared), each in both themes and with its
+// errors showing. No console errors here either: signed out, me answers null and the queue isn't
+// preloaded (design §8.3).
 test.describe("signed out", () => {
-  test.use({ expectedConsoleErrors: [/status of 401/] });
   for (const colorScheme of ["light", "dark"] as const) {
     test(`Log in and Sign up have no accessibility violations (${colorScheme})`, async ({
       page,
