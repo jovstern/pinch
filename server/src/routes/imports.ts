@@ -24,6 +24,7 @@ import {
   toImport,
   type ImportDocument,
 } from "../db/imports.ts";
+import { isCached, linksCollection } from "../db/links.ts";
 import {
   findRecipeOfLink,
   insertRecipeOnce,
@@ -41,12 +42,14 @@ import { sendThumbnail } from "./thumbnail.ts";
 // Imports turn a link, or a post's text, into a draft recipe (design §4). The API only records
 // the job; the worker does it. As with recipes, every query filters by ownerId, and every read
 // leaves out the deleted ones, kept a while for Undo (D27). globalCap: everyone's imports a day
-// (GLOBAL_DAILY_IMPORTS, D30). now: the clock the daily caps count days by, and only them (tests
-// pin it); the dates an import or recipe is stamped with are the real time.
-type ImportsDeps = { globalCap: number; now: () => Date };
+// (GLOBAL_DAILY_IMPORTS, D30). extractionVersion: the worker's, for the shared cache (§4.6). now:
+// the clock the daily caps count days by, and only them (tests pin it); the dates an import or
+// recipe is stamped with are the real time.
+type ImportsDeps = { globalCap: number; extractionVersion: string; now: () => Date };
 
-export function importsRouter(db: Db, { globalCap, now }: ImportsDeps) {
+export function importsRouter(db: Db, { globalCap, extractionVersion, now }: ImportsDeps) {
   const imports = importsCollection(db);
+  const links = linksCollection(db);
   const recipes = recipesCollection(db);
   const usage = usageCollection(db);
   const router = express.Router();
@@ -60,8 +63,11 @@ export function importsRouter(db: Db, { globalCap, now }: ImportsDeps) {
       const existing = await pinchedBefore(req.userId, key);
       if (existing) throw linkPinchedBefore(existing);
     }
-    // After the input is checked: one refused as invalid doesn't count.
-    await countOrRefuse(req.userId);
+    // After the input is checked: one refused as invalid doesn't count. A post anyone pinched
+    // before is copied by the worker, with no Gemini call, so it's free against both caps (§4.6,
+    // D28). Should its answer land just after this, the import costs one call uncounted.
+    const free = key !== undefined && (await isCached(links, key, extractionVersion));
+    if (!free) await countOrRefuse(req.userId);
     const job = newImport(
       req.userId,
       sent.type === "link" ? { type: "link", url: sent.url, platform: platformOf(sent.url) } : sent,

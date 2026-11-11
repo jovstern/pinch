@@ -9,6 +9,7 @@
     "db:seed": "node --env-file-if-exists=../.env src/dbSeed.ts",
     "db:backfill-link-keys": "node --env-file-if-exists=../.env src/dbBackfillLinkKeys.ts",
     "db:adopt-dev-data": "node --env-file-if-exists=../.env src/dbAdoptDevData.ts",
+    "links:forget": "node --env-file-if-exists=../.env src/linksForget.ts",
     "lint": "eslint .",
     "typecheck": "tsc",
     "test": "vitest run",

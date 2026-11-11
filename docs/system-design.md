@@ -221,7 +221,7 @@ Instagram, 3 Facebook). `yt-dlp` read all of them without cookies; Gemini turned
 recipes, correctly rejected one promo, and one call hung. Results and findings are in
 `docs/spike-results.md`.
 
-### 4.6 A link pinched before (D28; L1 built in M9, L2 planned)
+### 4.6 A link pinched before (D28; L1 and L2 built in M9)
 
 Every link import carries `linkKey`, the post it points to: `instagram:C9x…`, `youtube:abc`,
 `facebook:123…` (`shared/src/linkKey.ts`: Instagram's `/reel/`, `/reels/`, `/p/` and `/tv/`,
@@ -253,19 +253,26 @@ it to the recipe's `source.linkKey`. The key is stored, never sent: the client h
    looks there: on a hit it copies the draft and the pictures into the import with the same
    fenced write as any attempt (§4.3) and makes it ready: no `yt-dlp`, no Gemini, and the user
    reviews it as any draft. On a miss it runs as now and, when the answer is a recipe, upserts it
-   into `links` (a fresher answer replaces an older one). `links` is a cache, not a queue:
-   nothing claims, leases or retries it, and the queue stays `imports`.
+   into `links` (a fresher answer replaces an older one, whole), once it has reached the import:
+   an answer for a job deleted meanwhile isn't kept. A job with no `linkKey` (from before L1)
+   isn't looked up. `links` is a cache, not a queue: nothing claims, leases or retries it, and the
+   queue stays `imports`. The worker logs `cache hit` with the key, never the user.
 
 - **The version** is a short hash of the model, the prompt and the response schema
-  (`EXTRACTION_VERSION`), so a change to any of them stops old answers matching, with no bump to
-  forget.
+  (`EXTRACTION_VERSION`: the first 12 hex characters of SHA-256 over the three, in
+  `geminiExtract.ts`), so a change to any of them stops old answers matching, with no bump to
+  forget. The fake extractor's is `fake-1`, so its answers never mix with Gemini's. The API and
+  the worker both read it from `EXTRACTION[EXTRACTOR]` (`server/src/extraction.ts`): each reads
+  `EXTRACTOR` from the same `.env`.
 - **Only recipes are kept:** a failure, "not a recipe" and "too long" never are. Text and
   screenshot imports are never looked up or kept: they're one user's own.
 - **Copies, not references:** a user's import and recipe get their own copy, so editing,
   tagging or deleting theirs never touches the shared answer or anyone else's.
 - **Free:** a hit costs no Gemini call, so it doesn't count against the daily cap (D22) or the
-  global one (D30). `POST /api/imports` does the same `{ key, version }` lookup to decide; if the
-  answer arrives between the two, the import is at worst one free Gemini call.
+  global one (D30). `POST /api/imports` does the same `{ key, version }` lookup to decide, after
+  L1's 409 and before either cap is counted; if the answer arrives between the two, the import is
+  at worst one free Gemini call. Retry is counted as before: a failed link is rare, and its
+  retry is one route more to change for little.
 - **Private posts never reach it:** the worker fetches without logging in, so only public posts
   are ever read.
 - **A wrong answer** is served to everyone until the prompt or the model changes; for now
@@ -668,6 +675,8 @@ open. Another user's recipe or import is a 404, as before. The worker is unchang
   an upload's chunks, which the SDK tries up to 3 times: the worker's retries are the others.
 - The worker uses the fake extractor of M4 instead when `EXTRACTOR=fake`: e2e runs that way,
   so no test calls Gemini.
+- A link's answer is kept in the shared `links` cache by `EXTRACTION_VERSION`, a hash of the
+  model, the prompt and the response schema (§4.6), so changing any of them is a fresh start.
 - The output is validated with Zod anyway; invalid output counts as a failed attempt. The
   model often returns `""` for a field it doesn't know (e.g. `unit`); the schema treats an
   empty string as "not set".
@@ -703,7 +712,7 @@ open. Another user's recipe or import is a 404, as before. The worker is unchang
 | D25 | Every recipe has a face: the post's picture, else an emoji the model picks for the dish (an optional `emoji` on the recipe and the draft) on a soft tile, else a cooking pot (with sparkles for a video's); a recipe written by hand gets one from its title (§6) — built in M8 F3 | The picture is what the user remembers; a recipe with none still needs something to recognise; the title's list keeps it to the server, and the editor's JS at its budget | Grey placeholders; generated images; an emoji field in the editor; a map from the tags on the client |
 | D26 | The UI is built from **shadcn/ui** components, copied into `client/src/components/ui/`, their variables mapped onto Pinch's tokens; controls 44 px tall for touch | Accessible Radix parts (Tabs, Sheet, DropdownMenu, Dialog, toasts) whose code lives in the repo and can be read line by line; one pattern per control | Pinch's own components only; a packaged kit (MUI, Chakra) |
 | D27 | Undo in the toasts is a **soft delete**: DELETE sets `deletedAt` on the recipe or import, every read (lists, search, a recipe, its picture, edit, cook, the queue, its badge, approve, retry, the worker's claim and saves) leaves those out, `POST …/restore` unsets it, and a partial TTL index deletes them for good an hour later. Pinch it's Undo is the same DELETE: the worker's writes are conditional on the job not being deleted (§4.3), so a cancelled import never turns ready. Built in M8 F4 | Undo needs the thing to still exist; the server is the one place every tab and the worker agree on, and a closed tab can't lose a delete; one field and one filter for both collections, one atomic `updateOne` per write (no transactions, D9). Cancelling counts against the day's cap (D22): the request was already counted | Sending the DELETE only once the toast's 8 s are over (lost if the tab closes, other tabs show the deleted one meanwhile); a `cancelled` status for imports (a second mechanism next to the recipes' delete); moving deleted documents to a trash collection (two writes, no transaction) |
-| D28 | A link pinched before is found by its post (`linkKey`): this user's own copy is pointed to (409, a toast), and anyone's earlier answer is copied from a shared `links` cache keyed by post and `EXTRACTION_VERSION`, silently, skipping `yt-dlp` and Gemini (§4.6) | A public post's recipe is the same for everyone, so a second Gemini call buys nothing; copies keep each user's recipe theirs to edit; the version in the key retires old answers when the prompt or the model changes | Recipes shared by reference (an edit would change everyone's, or need copy-on-write); the link as the job, with imports waiting on it (dedupes two pastes at once, at the cost of a second lifecycle); recipes inside the user document (16 MB limit, no indexes for Find) |
+| D28 | A link pinched before is found by its post (`linkKey`): this user's own copy is pointed to (409, a toast), and anyone's earlier answer is copied from a shared `links` cache keyed by post and `EXTRACTION_VERSION`, silently, skipping `yt-dlp` and Gemini, and free against both caps (§4.6). Built in M9 (L1, L2) | A public post's recipe is the same for everyone, so a second Gemini call buys nothing; copies keep each user's recipe theirs to edit; the version in the key retires old answers when the prompt or the model changes | Recipes shared by reference (an edit would change everyone's, or need copy-on-write); the link as the job, with imports waiting on it (dedupes two pastes at once, at the cost of a second lifecycle); recipes inside the user document (16 MB limit, no indexes for Find) |
 | D29 | Accounts (M9): open sign-up with email and password or Google; sessions as a hashed token in a cookie; only the user middleware changes (§8.3) | `ownerId` is already in every query (D13), so accounts are one middleware and a few routes; a cookie session is the simplest secure choice for one origin; Google is the sign-in most people expect | JWTs (revoking them needs a list anyway); invite-only sign-up (the user chose open, with caps) |
 | D30 | A global daily cap on Gemini calls (`GLOBAL_DAILY_IMPORTS`, default 500), counted beside the per-user one in `usage` (`ownerId: "all"`), by the same routes and the same atomic `$inc`, after the user's (one refused by the user's cap doesn't use up everyone's; nothing refused is un-counted); past it, new imports and Retry are refused until the next UTC day: 429 `global_limit`, "Pinch has read all it can for today. Try again tomorrow." | Open sign-up lets anyone make many accounts, each with 20 a day; this bounds the bill whatever happens | No global cap; a CAPTCHA at sign-up |
 

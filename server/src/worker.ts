@@ -4,6 +4,8 @@ import { pino } from "pino";
 import { loadConfig } from "./config.ts";
 import { connectToMongo } from "./db/client.ts";
 import { importsCollection } from "./db/imports.ts";
+import { linksCollection } from "./db/links.ts";
+import { EXTRACTION } from "./extraction.ts";
 import { fakeExtract } from "./worker/fakeExtract.ts";
 import { geminiExtract } from "./worker/geminiExtract.ts";
 import { workLoop, type Extract } from "./worker/workLoop.ts";
@@ -28,16 +30,19 @@ if (config.EXTRACTOR === "gemini") {
 }
 
 const client = await connectToMongo(config.MONGODB_URI);
-const imports = importsCollection(client.db(config.DB_NAME));
+const db = client.db(config.DB_NAME);
+const imports = importsCollection(db);
+// The shared answers (design §4.6), at this extractor's version.
+const cache = { links: linksCollection(db), ...EXTRACTION[config.EXTRACTOR] };
 
 // Loops side by side, each a job at a time: at most two jobs at once, within Gemini's rate
 // limits (§4.3). A database error doesn't end it: each loop logs it and tries again (workLoop).
 const JOBS_AT_A_TIME = 2;
 const stop = new AbortController();
 const loops = Array.from({ length: JOBS_AT_A_TIME }, () =>
-  workLoop({ imports, extract, logger, signal: stop.signal }),
+  workLoop({ imports, cache, extract, logger, signal: stop.signal }),
 );
-logger.info({ extractor: config.EXTRACTOR }, "worker started");
+logger.info({ extractor: config.EXTRACTOR, version: cache.version }, "worker started");
 
 // As the API: on SIGTERM, take no new jobs, finish the ones in hand, then close the database. A
 // job cut off by a harder stop is claimed again when its lease runs out.

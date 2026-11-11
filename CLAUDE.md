@@ -38,6 +38,8 @@ and types used by both). MongoDB through the native driver + Zod. Gemini for ext
   account (sign up first) in the app's database; safe to run again.
 - `npm run db:adopt-dev-data <email>` — once, after signing up: the pre-accounts dev user's
   recipes, imports and counts become that account's; safe to run again.
+- `npm run links:forget <url>` — removes a post's shared answer (the `links` cache, design
+  §4.6) at every version from the app's database, so the next pinch reads it again.
 
 ## How work happens
 
