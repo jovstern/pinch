@@ -1,6 +1,7 @@
 import {
   dailyLimitMessage,
   linkMessage,
+  type DuplicateLink,
   screenshotsMessage,
   textMessage,
   type Import,
@@ -638,7 +639,7 @@ test("past the daily cap, the box says so and keeps the link", async () => {
 });
 
 // A link the user pinched before (design §4.6): the API's 409, with what they have.
-function pinchedBefore(existing: { kind: "recipe" | "import"; id: string; title?: string }) {
+function pinchedBefore(existing: DuplicateLink["existing"]) {
   return () =>
     Response.json(
       {
@@ -673,16 +674,23 @@ test("a link already in My recipes empties the box and points to the recipe, not
   });
 });
 
-test("a link whose draft is ready says so, with Review", async () => {
+test("a link whose draft is ready says so as the queue does, with Review", async () => {
   const fetch = stubApi(
     [[]],
-    pinchedBefore({ kind: "import", id: importOf({}).id, title: "Shakshuka" }),
+    pinchedBefore({
+      kind: "import",
+      id: importOf({}).id,
+      status: "ready",
+      title: "Shakshuka",
+      lookAt: 2,
+    }),
   );
   renderApp("/");
 
   await pinchReel();
 
   const toast = await findToast("Shakshuka is ready to review");
+  expect(within(toast).getByText("2 things to look at")).toBeInTheDocument();
   fireEvent.click(within(toast).getByRole("button", { name: "Review" }));
   await waitFor(() => {
     expect(fetch).toHaveBeenCalledWith(`/api/imports/${importOf({}).id}`);
@@ -690,7 +698,7 @@ test("a link whose draft is ready says so, with Review", async () => {
 });
 
 test("a link still in the queue says it's already being pinched", async () => {
-  stubApi([[]], pinchedBefore({ kind: "import", id: importOf({}).id }));
+  stubApi([[]], pinchedBefore({ kind: "import", id: importOf({}).id, status: "processing" }));
   renderApp("/");
 
   const box = await pinchReel();

@@ -14,6 +14,7 @@ import { FieldError } from "../../components/FieldError.tsx";
 import { Button } from "../../components/ui/Button.tsx";
 import { Input } from "../../components/ui/Input.tsx";
 import { ApiError, sendJson } from "../../lib/api.ts";
+import { thingsToLookAt } from "../../lib/thingsToLookAt.ts";
 import {
   toastAlreadyPinching,
   toastAlreadySaved,
@@ -85,12 +86,15 @@ export function ImportForm({ inputRef }: { inputRef: RefObject<HTMLInputElement 
     },
   });
 
-  function showExisting({ kind, id, title }: DuplicateLink["existing"]) {
-    if (kind === "recipe") {
-      toastAlreadySaved(title ?? "", () => void navigate(`/recipes/${id}`));
-    } else if (title) {
-      // The queue's own toast for it, by its id: one, not two.
-      toastReady(id, title, () => void navigate(`/imports/${id}`));
+  function showExisting(existing: DuplicateLink["existing"]) {
+    const { id } = existing;
+    if (existing.kind === "recipe") {
+      toastAlreadySaved(existing.title, () => void navigate(`/recipes/${id}`));
+    } else if (existing.status === "ready") {
+      // The queue's own toast for it, by its id, saying the same: one, not two.
+      const { title = "Your draft", lookAt = 0 } = existing;
+      const review = () => void navigate(`/imports/${id}`);
+      toastReady(id, title, review, lookAt > 0 ? thingsToLookAt(lookAt) : undefined);
     } else {
       toastAlreadyPinching();
     }
