@@ -127,8 +127,6 @@ Then the features the design asks the API for, one PR each:
 
 ## M9 — Accounts and links pinched before (design §4.6, §8.3, D28–D30)
 
-Planned, not built yet. In this order:
-
 - [x] L1 This user's link found: `linkKey` (`shared/src/linkKey.ts`, every link form tested), on
       imports and on a recipe's source; `POST /api/imports` answers 409 `{ existing }` for one
       of theirs (not deleted, not failed), uncounted; the toasts (View, Review); the indexes;
@@ -144,4 +142,5 @@ Planned, not built yet. In this order:
 - [x] A5 The global daily cap on Gemini calls (D30)
 - [x] L2 The shared `links` cache: `EXTRACTION_VERSION`, the worker's lookup (a hit copies and
       is ready) and upsert, recipes only; hits free against both caps; `links:forget <url>`
-- [ ] End of milestone: UI review, observer, e2e, demo
+- [x] End of milestone: UI review, observer, e2e, demo; the fixes (the review's, signed-out pages
+      without 401s, the entry as one file: every LCP within its budget, docs/metrics/m09.md)
