@@ -8,6 +8,10 @@
     <meta name="theme-color" content="#fbf8f2" media="(prefers-color-scheme: light)" />
     <meta name="theme-color" content="#17130f" media="(prefers-color-scheme: dark)" />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <!-- The queue, asked for with the page, not after its JS has run: every page's header counts
+         it, and Add recipe shows nothing until it's known (ImportPage), so it is that page's
+         LCP. fetch() picks this answer up (same address, mode and credentials). -->
+    <link rel="preload" href="/api/imports" as="fetch" crossorigin="anonymous" />
     <title>Pinch</title>
   </head>
   <body>

@@ -72,6 +72,13 @@ function undoAction(undo: () => Promise<void>) {
   return { label: "Undo", onClick: run };
 }
 
+// Green, for a step that finished while the user was elsewhere: a draft ready, a recipe saved or
+// back (design §14). Merged with the Toaster's own classes; important (!) over Sonner's. The
+// other toasts stay neutral: an undo's, a cancel's, an error's.
+const finished = {
+  classNames: { toast: "border-success! bg-success-soft! text-success!", icon: "*:text-success!" },
+};
+
 // Sent: the queue takes it from here. Undo cancels it.
 export function toastPinching(undo: () => Promise<void>) {
   showToast("message", "Pinching it", {
@@ -92,6 +99,7 @@ export function toastCancelled() {
 // lookAt: what the draft asks the user to check ("3 things to look at"), when it asks anything.
 export function toastReady(id: string, title: string, review: () => void, lookAt?: string) {
   showToast("success", `${title} is ready to review`, {
+    ...finished,
     id,
     description: lookAt,
     duration: long,
@@ -123,7 +131,11 @@ export function toastDailyLimit(message: string) {
 // A new recipe in My recipes, from Review or written by hand. Without the wireframe's View:
 // saving already opens the recipe.
 export function toastSaved(title: string) {
-  showToast("success", "Saved to My recipes", { description: title, duration: normal });
+  showToast("success", "Saved to My recipes", {
+    ...finished,
+    description: title,
+    duration: normal,
+  });
 }
 
 export function toastChangesSaved() {
@@ -137,6 +149,7 @@ export function toastDeleted(title: string, undo: () => Promise<void>) {
 // A deleted recipe undone. The user has left its page (Delete goes to My recipes), so View.
 export function toastRestored(title: string, view: () => void) {
   showToast("success", "Back in My recipes", {
+    ...finished,
     description: title,
     duration: normal,
     action: { label: "View", onClick: view },

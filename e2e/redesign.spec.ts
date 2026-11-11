@@ -1,6 +1,6 @@
 import { expect, test } from "./fixtures.ts";
 
-// M8's demo (pr-demo skill), at a desktop's width and a phone's: a link pasted on New recipe
+// M8's demo (pr-demo skill), at a desktop's width and a phone's: a link pasted on Add recipe
 // cooks in the queue, its ready toast opens the review, the saved recipe is found in My recipes
 // by a tag, and cooked with a swipe. A Facebook link, so the toast is this test's own: the files
 // share one database and one user, and every import's toast shows on every page. The pauses let

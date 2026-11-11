@@ -4,6 +4,7 @@ import {
   RecipeSortSchema,
   TagSchema,
   TimeLimitSchema,
+  type RecipeCount,
   type RecipeList,
   type RecipeSort,
 } from "@pinch/shared";
@@ -51,6 +52,13 @@ export function recipesRouter(db: Db) {
     const nextCursor =
       found.length > PAGE_SIZE && last ? toCursorText(last, sort ?? "newest") : null;
     res.json({ items: items.map(toRecipe), nextCursor } satisfies RecipeList);
+  });
+
+  // The tab's count (design §14): the list is paged, so it can't count them. Its own route, not a
+  // total on the list: the header asks on every page, and a count needs no recipes sent.
+  router.get("/count", async (req, res) => {
+    const count = await recipes.countDocuments({ ownerId: req.userId, ...NOT_DELETED });
+    res.json({ count } satisfies RecipeCount);
   });
 
   router.post("/", async (req, res) => {

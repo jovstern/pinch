@@ -75,7 +75,7 @@ for (const colorScheme of ["light", "dark"] as const) {
     expect((await scan(page)).violations).toEqual([]);
     await page.getByRole("button", { name: "Discard" }).click();
     await page.getByRole("alertdialog").getByRole("button", { name: "Discard draft" }).click();
-    await expect(page.getByRole("heading", { level: 1, name: "New recipe" })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: "Add recipe" })).toBeVisible();
   });
 }
 

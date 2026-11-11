@@ -1,7 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
 import { PenLine, UserRound } from "lucide-react";
+import { useEffect, useState } from "react";
 import { Link, useLocation } from "react-router";
 import { importListQuery } from "../features/imports/importQueries.ts";
+import { recipeCountQuery } from "../features/recipes/recipeQueries.ts";
 import { cn } from "../lib/cn.ts";
 import { Badge } from "./ui/Badge.tsx";
 import { Button } from "./ui/Button.tsx";
@@ -16,9 +18,11 @@ function tabOf(pathname: string) {
   return null;
 }
 
-// shadcn's TabsTrigger look; the selected one is lifted out of the row.
+// shadcn's TabsTrigger look; the selected one is lifted out of the row. Tighter on a phone, and
+// smaller under 360 px, so both tabs with their counts ("Add recipe 13", "My recipes 120") fit
+// beside the avatar on a 320 px screen.
 const tabClass =
-  "inline-flex min-h-11 flex-1 items-center justify-center gap-1.5 rounded-control px-3 font-medium whitespace-nowrap text-muted-foreground aria-[current=page]:bg-background aria-[current=page]:text-foreground aria-[current=page]:shadow-sm";
+  "inline-flex min-h-11 flex-1 items-center justify-center gap-1 rounded-control px-2 font-medium whitespace-nowrap max-[22.5rem]:text-sm sm:gap-1.5 sm:px-3 text-muted-foreground aria-[current=page]:bg-background aria-[current=page]:text-foreground aria-[current=page]:shadow-sm";
 
 // The app's frame, on every page (design §14, D24): the two tabs, Write a recipe and the avatar,
 // and the imports read for the tab's count. No logo for now. Phone: the tabs fill the row beside the avatar, and Write a recipe floats
@@ -26,9 +30,12 @@ const tabClass =
 export function Header({ onTabPage }: { onTabPage: boolean }) {
   const { pathname } = useLocation();
   const tab = tabOf(pathname);
-  // The same query as the queue on New recipe, so the count moves as it polls (§4.2).
+  // The same query as the queue on Add recipe, so the count moves as it polls (§4.2).
   const { data } = useQuery(importListQuery);
   const ready = data?.items.filter((job) => job.status === "ready").length ?? 0;
+  // Not awaited by anything: the tab shows its count once it's there, a second in (useAfterStart).
+  const countWanted = useAfterStart();
+  const recipeCount = useQuery({ ...recipeCountQuery, enabled: countWanted }).data?.count;
 
   return (
     <header className="flex items-center gap-2 px-4 pt-3 md:gap-4 md:border-b md:border-border md:px-6 md:py-3">
@@ -39,10 +46,10 @@ export function Header({ onTabPage }: { onTabPage: boolean }) {
         className="flex flex-1 rounded-control bg-muted p-1 md:w-88 md:flex-none"
       >
         <Link to="/" aria-current={tab === "new" ? "page" : undefined} className={tabClass}>
-          New recipe
+          Add recipe
           {/* A bare "2" says nothing to a screen reader: the hidden words say what it counts
-              ("New recipe 2 ready to review"). Not an aria-label: axe reads the visible text as
-              "New recipe2", which no label contains (label-content-name-mismatch). The spaces
+              ("Add recipe 2 ready to review"). Not an aria-label: axe reads the visible text as
+              "Add recipe2", which no label contains (label-content-name-mismatch). The spaces
               part the words when read; flex drops them on screen. */}
           {ready > 0 && (
             <>
@@ -58,6 +65,15 @@ export function Header({ onTabPage }: { onTabPage: boolean }) {
           className={tabClass}
         >
           My recipes
+          {/* How many there are, quiet: it informs, it doesn't ask for anything (the ready count
+              does). Said as the ready count is, with hidden words: "My recipes 12 recipes". */}
+          {recipeCount !== undefined && recipeCount > 0 && (
+            <>
+              {" "}
+              <span className="text-sm text-muted-foreground tabular-nums">{recipeCount}</span>{" "}
+              <span className="sr-only">{recipeCount === 1 ? "recipe" : "recipes"}</span>
+            </>
+          )}
         </Link>
       </nav>
 
@@ -93,4 +109,21 @@ export function Header({ onTabPage }: { onTabPage: boolean }) {
       </Button>
     </header>
   );
+}
+
+// The count isn't urgent: asked for a second after the app starts, it keeps out of the way of
+// the page's own first requests, on every page (cook and the editor too). Asked with them, it
+// cost My recipes 0.2 s of LCP (docs/metrics/m08.md). A timer: something outside React.
+const countDelay = 1000;
+function useAfterStart() {
+  const [started, setStarted] = useState(false);
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setStarted(true);
+    }, countDelay);
+    return () => {
+      clearTimeout(timer);
+    };
+  }, []);
+  return started;
 }

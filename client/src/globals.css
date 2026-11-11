@@ -41,6 +41,12 @@
      and an edge (UI, 3:1): 4.78:1 on the page, 5.07:1 on a card; in dark, 10.6:1 or more. */
   --color-check-mark: #8a6a00;
   --color-cooked: #5e7a3a;
+  /* A finished step (a draft ready, a recipe saved or back): the toast's tint, its edge, icon and
+     title. Success on its soft: 5.47:1, on the page 6.03:1; muted text on the soft 5.06:1, the
+     action (accent-strong) 5.81:1. In dark: 8.13:1 on its soft, 9.88:1 on the page, muted 5.66:1,
+     the action 4.91:1. */
+  --color-success: #2f6b3a;
+  --color-success-soft: #e4f1e1;
   /* Only for what can't be undone (delete). Its label is on-accent too. */
   --color-danger: #b3261e;
   /* Behind a dialog: dark in both themes. */
@@ -110,6 +116,8 @@
     --color-check: #f2c94c;
     --color-check-mark: #f2c94c;
     --color-cooked: #8fb35e;
+    --color-success: #7fcf8f;
+    --color-success-soft: #162a1b;
     --color-danger: #f2706a;
   }
 }

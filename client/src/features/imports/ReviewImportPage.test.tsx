@@ -74,12 +74,12 @@ test("the draft opens in the form; Save approves it as edited and shows the reci
   });
 });
 
-test("the draft sits under New recipe, says where Pinch read it and links to the post", async () => {
+test("the draft sits under Add recipe, says where Pinch read it and links to the post", async () => {
   stubApi();
   renderApp(`/imports/${ready.id}`);
 
   const breadcrumb = await screen.findByRole("navigation", { name: "Breadcrumb" });
-  expect(within(breadcrumb).getByRole("link", { name: "New recipe" })).toHaveAttribute("href", "/");
+  expect(within(breadcrumb).getByRole("link", { name: "Add recipe" })).toHaveAttribute("href", "/");
   expect(within(breadcrumb).getByText("Review: Tomato pasta")).toHaveAttribute(
     "aria-current",
     "page",
@@ -136,14 +136,14 @@ test("Discard doesn't open while the draft is being saved", async () => {
   expect(fetch.mock.calls.some(([, init]) => init?.method === "DELETE")).toBe(false);
 });
 
-test("Discard draft deletes the import and goes back to New recipe", async () => {
+test("Discard draft deletes the import and goes back to Add recipe", async () => {
   const fetch = stubApi();
   renderApp(`/imports/${ready.id}`);
 
   await userEvent.click(await screen.findByRole("button", { name: "Discard" }));
   await userEvent.click(screen.getByRole("button", { name: "Discard draft" }));
 
-  const heading = await screen.findByRole("heading", { level: 1, name: "New recipe" });
+  const heading = await screen.findByRole("heading", { level: 1, name: "Add recipe" });
   // Still there once the dialog's own focus handling (a tick later) is done.
   await new Promise((resolve) => setTimeout(resolve, 10));
   expect(heading).toHaveFocus();
@@ -189,14 +189,14 @@ test("an import with no draft yet says so", async () => {
   ).toBeInTheDocument();
 });
 
-test("an import that doesn't exist has no draft either, and leads back to New recipe", async () => {
+test("an import that doesn't exist has no draft either, and leads back to Add recipe", async () => {
   vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(null, { status: 404 })));
   renderApp(`/imports/${ready.id}`);
 
   expect(
     await screen.findByRole("heading", { level: 1, name: "No draft yet" }),
   ).toBeInTheDocument();
-  expect(screen.getByRole("link", { name: "Back to New recipe" })).toHaveAttribute("href", "/");
+  expect(screen.getByRole("link", { name: "Back to Add recipe" })).toHaveAttribute("href", "/");
 });
 
 test("a draft's things to look at are marked on their fields, and editing a field clears its mark", async () => {

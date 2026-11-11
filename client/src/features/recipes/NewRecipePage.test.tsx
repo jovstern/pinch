@@ -76,14 +76,14 @@ test("saves a new recipe and shows it, its title focused", async () => {
   });
 });
 
-test("writing by hand sits under New recipe, with a tip to paste instead", async () => {
+test("writing by hand sits under Add recipe, with a tip to paste instead", async () => {
   stubApi(() => Response.json(saved, { status: 201 }));
   renderApp("/recipes/new");
 
   const breadcrumb = await screen.findByRole("navigation", { name: "Breadcrumb" });
-  expect(within(breadcrumb).getByRole("link", { name: "New recipe" })).toHaveAttribute("href", "/");
+  expect(within(breadcrumb).getByRole("link", { name: "Add recipe" })).toHaveAttribute("href", "/");
   expect(within(breadcrumb).getByText("Write a recipe")).toHaveAttribute("aria-current", "page");
-  expect(screen.getByRole("link", { name: "Paste it on New recipe" })).toHaveAttribute("href", "/");
+  expect(screen.getByRole("link", { name: "Paste it on Add recipe" })).toHaveAttribute("href", "/");
   expect(await screen.findByText("Source: Written by you")).toBeInTheDocument();
   expect(screen.getByRole("link", { name: "Cancel" })).toHaveAttribute("href", "/");
 });

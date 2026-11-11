@@ -16,12 +16,23 @@ test("delete a recipe, then Undo: it's back in My recipes", async ({ page }) => 
   await expect(page.getByRole("heading", { level: 1, name: "My recipes" })).toBeVisible();
   await expect(page.getByRole("link", { name: /Undo dumplings/ })).toHaveCount(0);
   await page.waitForTimeout(500);
-  await page.getByRole("button", { name: "Undo" }).click();
+  // As below: other files' toasts may be in front, so Alt+T spreads them out first.
+  await page.keyboard.press("Alt+KeyT");
+  await page
+    .getByRole("listitem")
+    .filter({ hasText: "Deleted Undo dumplings" })
+    .getByRole("button", { name: "Undo" })
+    .click();
 
   await expect(page.getByRole("link", { name: /Undo dumplings/ })).toBeVisible();
   await expect(page.getByText("Back in My recipes")).toBeVisible();
   await page.waitForTimeout(1000);
-  await page.getByRole("button", { name: "View" }).click();
+  await page.keyboard.press("Alt+KeyT");
+  await page
+    .getByRole("listitem")
+    .filter({ hasText: "Back in My recipes" })
+    .getByRole("button", { name: "View" })
+    .click();
   await expect(page.getByRole("heading", { level: 1, name: "Undo dumplings" })).toBeVisible();
 
   await page.request.delete(`/api/recipes/${id}`);
@@ -35,7 +46,15 @@ test("Pinch it, then Undo: the link leaves the queue", async ({ page }) => {
   const link = page.getByRole("listitem").filter({ hasText: "youtu.be/e2e-undo" });
   await expect(link).toBeVisible();
   await page.waitForTimeout(500);
-  await page.getByRole("button", { name: "Undo" }).click();
+  // Other files' imports share the queue (one user), and their "ready" toasts can land in front of
+  // this one: Alt+T (Sonner's key) moves focus to the toasts, which spreads them out, and Undo is
+  // this toast's.
+  await page.keyboard.press("Alt+KeyT");
+  await page
+    .getByRole("listitem")
+    .filter({ hasText: "Pinching it" })
+    .getByRole("button", { name: "Undo" })
+    .click();
 
   // The worker never saves a cancelled import's draft: workLoop.test.ts.
   await expect(page.getByText("Cancelled")).toBeVisible();
