@@ -588,6 +588,9 @@ test("past the global cap, any user's import is refused with 429 until the next 
   const failed = await insertDone({ status: "failed", attempts: 3, error: "No." });
   expect((await mine.post(`/api/imports/${failed}/retry`)).status).toBe(429);
   expect(await importsCollection(db).countDocuments({ status: "pending" })).toBe(2);
+  // Refused by everyone's cap, still counted as theirs: nothing is un-counted (D30).
+  const theirCount = await usage.findOne({ ownerId: other.userId, day: utcDay(today) });
+  expect(theirCount?.imports).toBe(2);
 
   today = new Date(today.getTime() + 24 * 60 * 60 * 1000);
   expect((await theirs.post("/api/imports").send(text)).status).toBe(202);

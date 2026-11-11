@@ -147,8 +147,9 @@ export function toastAlreadyPinching() {
   showToast("message", "Already pinching it", { duration: normal });
 }
 
-// Past the day's cap (design §1): trying again won't help, so no Try again.
-export function toastDailyLimit(message: string) {
+// Past the day's cap, the user's or everyone's (design §1, D30): trying again won't help, so no
+// Try again.
+export function toastLimit(message: string) {
   showToast("error", message, { duration: untilClosed, closeButton: true });
 }
 

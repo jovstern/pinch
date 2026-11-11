@@ -100,6 +100,10 @@ export const ImportSchema = z.object({
 // GET /api/imports: my imports, newest first. Done ones are deleted, so the list stays short.
 export const ImportListSchema = z.object({ items: z.array(ImportSchema) });
 
+// A 429 past the global cap (design D30), by its code: the client then says globalLimitMessage
+// rather than the user's own daily one.
+export const GlobalLimitSchema = z.object({ error: z.object({ code: z.literal("global_limit") }) });
+
 // POST /api/imports's 409 (design §4.6, D28): this user has pinched this link before. The error
 // as any other's, and what they already have: a recipe, or an import still in the queue. A ready
 // one has its draft's title and how many things it asks to look at, as the queue's toast says.

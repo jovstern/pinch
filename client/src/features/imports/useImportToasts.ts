@@ -5,7 +5,7 @@ import { useNavigate } from "react-router";
 import {
   dismissToast,
   toastCouldntSave,
-  toastDailyLimit,
+  toastLimit,
   toastImportFailed,
   toastReady,
 } from "../../lib/toasts.tsx";
@@ -33,7 +33,7 @@ export function useImportToasts() {
     onError: (error, id) => {
       const limit = limitMessage(error);
       if (limit) {
-        toastDailyLimit(limit);
+        toastLimit(limit);
       } else {
         toastCouldntSave(() => {
           retry.mutate(id);

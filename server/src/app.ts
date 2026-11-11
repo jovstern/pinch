@@ -93,7 +93,7 @@ export function createApp({
   app.use(
     "/api/imports",
     requireUser(db),
-    importsRouter(db, { globalCap: globalDailyImports, clock: now }),
+    importsRouter(db, { globalCap: globalDailyImports, now }),
   );
 
   app.use(notFound);

@@ -41,10 +41,11 @@ import { sendThumbnail } from "./thumbnail.ts";
 // Imports turn a link, or a post's text, into a draft recipe (design §4). The API only records
 // the job; the worker does it. As with recipes, every query filters by ownerId, and every read
 // leaves out the deleted ones, kept a while for Undo (D27). globalCap: everyone's imports a day
-// (GLOBAL_DAILY_IMPORTS, D30). clock: what the caps count days by (tests pin it).
-type ImportsDeps = { globalCap: number; clock: () => Date };
+// (GLOBAL_DAILY_IMPORTS, D30). now: the clock the daily caps count days by, and only them (tests
+// pin it); the dates an import or recipe is stamped with are the real time.
+type ImportsDeps = { globalCap: number; now: () => Date };
 
-export function importsRouter(db: Db, { globalCap, clock }: ImportsDeps) {
+export function importsRouter(db: Db, { globalCap, now }: ImportsDeps) {
   const imports = importsCollection(db);
   const recipes = recipesCollection(db);
   const usage = usageCollection(db);
@@ -102,7 +103,7 @@ export function importsRouter(db: Db, { globalCap, clock }: ImportsDeps) {
   // cap refuses still counts as one of the user's: nothing is un-counted (as D22), and both start
   // again at midnight UTC anyway.
   async function countOrRefuse(ownerId: ObjectId) {
-    const today = clock();
+    const today = now();
     if (!(await countImport(usage, ownerId, DAILY_IMPORT_CAP, today))) throw dailyLimit();
     if (!(await countImport(usage, "all", globalCap, today))) {
       throw new HttpError(429, "global_limit", globalLimitMessage);
@@ -178,7 +179,7 @@ export function importsRouter(db: Db, { globalCap, clock }: ImportsDeps) {
     if (job.status !== "ready") {
       throw new HttpError(409, "import_not_ready", "This import has no draft to save yet.");
     }
-    const now = new Date();
+    const savedAt = new Date();
     const recipe = await insertRecipeOnce(recipes, {
       ...input,
       _id: new ObjectId(),
@@ -192,8 +193,8 @@ export function importsRouter(db: Db, { globalCap, clock }: ImportsDeps) {
       thumbnail: job.thumbnail,
       source: sourceOf(job),
       sourceImportId: job._id,
-      createdAt: now,
-      updatedAt: now,
+      createdAt: savedAt,
+      updatedAt: savedAt,
     });
     await imports.deleteOne({ _id: job._id, ownerId: req.userId });
     res.status(201).location(`/api/recipes/${recipe._id.toHexString()}`).json(toRecipe(recipe));
@@ -213,11 +214,11 @@ export function importsRouter(db: Db, { globalCap, clock }: ImportsDeps) {
       throw new HttpError(409, "import_no_retry", "This import would fail the same way again.");
     }
     await countOrRefuse(req.userId);
-    const now = new Date();
+    const retriedAt = new Date();
     const job = await imports.findOneAndUpdate(
       { ...filter, status: "failed" },
       {
-        $set: { status: "pending", attempts: 0, nextAttemptAt: now, updatedAt: now },
+        $set: { status: "pending", attempts: 0, nextAttemptAt: retriedAt, updatedAt: retriedAt },
         $unset: { error: "", noRetry: "" },
       },
       { returnDocument: "after", projection: WITHOUT_MEDIA },

@@ -16,6 +16,7 @@ export {
   DAILY_IMPORT_CAP,
   dailyLimitMessage,
   globalLimitMessage,
+  GlobalLimitSchema,
   DuplicateLinkSchema,
   ImportInputSchema,
   ImportListSchema,

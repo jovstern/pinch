@@ -1,16 +1,14 @@
 import {
   dailyLimitMessage,
   globalLimitMessage,
+  GlobalLimitSchema,
   ImportListSchema,
   ImportSchema,
   type ImportList,
 } from "@pinch/shared";
 import { queryOptions, type QueryClient } from "@tanstack/react-query";
-import { z } from "zod";
 import { ApiError, deleteResource, getJson, sendJson } from "../../lib/api.ts";
 import { dismissToast, toastCancelled } from "../../lib/toasts.tsx";
-
-const GlobalLimitSchema = z.object({ error: z.object({ code: z.literal("global_limit") }) });
 
 // What a 429 from sending or retrying an import says (none for any other error): the user's day's
 // cap (D22), or everyone's (D30), which the API names by its code.
