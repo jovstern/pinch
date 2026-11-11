@@ -10,7 +10,6 @@ export function SessionError({ retry, retrying }: { retry: () => void; retrying:
     <AuthFrame
       title="We couldn't reach Pinch"
       tabTitle="We couldn't reach Pinch"
-      role="alert"
       logo={
         <picture>
           <source media="(prefers-color-scheme: dark)" srcSet="/logo-dark.svg" />
@@ -18,7 +17,11 @@ export function SessionError({ retry, retrying }: { retry: () => void; retrying:
         </picture>
       }
     >
-      <p className="mt-3 text-pretty text-text-muted">Check your connection, then try again.</p>
+      {/* The alert is the message alone, not the card: <main> keeps its own role (axe), and the
+          button inside an alert would be read again on every try. */}
+      <p role="alert" className="mt-3 text-pretty text-text-muted">
+        Check your connection, then try again.
+      </p>
       {/* Not disabled while it asks, so focus stays on it (as Pinch it). */}
       <Button
         type="button"

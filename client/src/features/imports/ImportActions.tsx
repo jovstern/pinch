@@ -77,17 +77,16 @@ export function ImportActions({ job, focusPasteBox }: { job: Import; focusPasteB
           </Button>
         )}
       </div>
-      {/* A day's limit is a quiet note, as under the paste box; anything else an error. */}
-      {retry.isError &&
-        (limit ? (
-          <p role="status" className="mt-1 text-right text-sm text-text-muted">
-            {limit}
-          </p>
-        ) : (
-          <p role="alert" className="mt-1 text-right text-sm text-destructive">
-            It couldn&apos;t be retried. Try again.
-          </p>
-        ))}
+      {/* A day's limit is a quiet note, as under the paste box, in a live region that is always
+          on the page (empty until then), so screen readers hear it; anything else an error. */}
+      <p role="status" className="text-right text-sm text-text-muted not-empty:mt-1">
+        {limit}
+      </p>
+      {retry.isError && !limit && (
+        <p role="alert" className="mt-1 text-right text-sm text-destructive">
+          It couldn&apos;t be retried. Try again.
+        </p>
+      )}
     </div>
   );
 }

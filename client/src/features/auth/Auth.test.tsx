@@ -173,7 +173,7 @@ test("when who's signed in can't be asked, the app says so, with Try again", asy
   expect(
     await screen.findByRole("heading", { level: 1, name: "We couldn't reach Pinch" }),
   ).toBeInTheDocument();
-  // Announced, from the card: <main> keeps its own role (axe).
+  // Announced, the message alone: <main> keeps its own role (axe).
   expect(screen.getByRole("alert")).toHaveTextContent("Check your connection");
   expect(screen.getByRole("main")).not.toHaveAttribute("role");
   up = true;

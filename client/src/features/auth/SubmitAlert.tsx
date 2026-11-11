@@ -3,8 +3,8 @@ import type { SubmitError } from "./submitError.ts";
 
 // A failed Log in or Sign up (submitError), above its button, announced as it appears. TanStack
 // Form types a form's error as unknown, so this checks it, as FieldError does a field's. The link
-// to Log in keeps the page the user was going to (?next=), and Sign up's email (router state), which
-// Log in fills in.
+// to Log in keeps the page the user was going to (?next=), and Sign up's email, which Log in fills
+// in: router state, kept out of the address (and so out of URL history, logs and Referer).
 export function SubmitAlert({ error, email }: { error: unknown; email?: string }) {
   const { search } = useLocation();
   if (!isSubmitError(error)) return null;

@@ -200,24 +200,21 @@ export function ImportForm({ inputRef }: { inputRef: RefObject<HTMLInputElement 
         }}
       </form.Field>
       <form.Subscribe selector={(state) => state.errorMap.onSubmit}>
-        {(error) => {
-          if (typeof error === "string") {
-            return (
+        {(error) => (
+          <>
+            {typeof error === "string" && (
               <p role="alert" className="mt-1 text-sm text-destructive">
                 {error}
               </p>
-            );
-          }
-          // A day's limit: said quietly (a status, muted), as nothing went wrong.
-          if (isNote(error)) {
-            return (
-              <p role="status" className="mt-1 text-sm text-text-muted">
-                {error.note}
-              </p>
-            );
-          }
-          return null;
-        }}
+            )}
+            {/* A day's limit: said quietly (a status, muted), as nothing went wrong. Always on
+                the page, empty until then: a live region must be there before its text, or
+                screen readers may miss it (as RecipeListPage's count). */}
+            <p role="status" className="text-sm text-text-muted not-empty:mt-1">
+              {isNote(error) && error.note}
+            </p>
+          </>
+        )}
       </form.Subscribe>
     </form>
   );

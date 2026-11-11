@@ -19,8 +19,8 @@ export function LoginPage() {
   const location = useLocation();
   const { search } = location;
   // From Sign up's "already uses this email" link: the email they typed, so only the password is
-  // left to type (router state, not the address, which would keep it in the history). Typed any
-  // by the router, as in useHeadingFocus.
+  // left to type. Router state, not the address: it stays out of the URL, so out of the address
+  // bar's history, server logs and Referer. Typed any by the router, as in useHeadingFocus.
   const state: unknown = location.state;
   const email = typeof state === "object" && state !== null && "email" in state && state.email;
   const knownEmail = typeof email === "string" ? email : "";

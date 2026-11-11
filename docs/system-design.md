@@ -626,7 +626,7 @@ open. Another user's recipe or import is a 404, as before. The worker is unchang
   `GET /api/auth/me` is a query (`meQuery`, preloaded by `index.html` with the queue, so it adds no
   round trip), and `SessionGate`, a layout route around each group of routes (D21), shows nothing
   until it answers (or, when it can't be asked, "We couldn't reach Pinch" with Try again, in Log in's frame, its
-  card the alert), then
+  message the alert), then
   sends a signed-out visitor to `/login?next=<the page>` and a signed-in one from `/login` or
   `/signup` to `next`. `next` is read as the browser reads it (`new URL`) and must stay on the
   site's origin, with a path that doesn't start `//` once its dots are resolved (`/.//x` is
