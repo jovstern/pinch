@@ -9,7 +9,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "../../components/ui/DropdownMenu.tsx";
-import { signedOut } from "../../lib/api.ts";
+import { loadPage } from "../../lib/loadPage.ts";
 import { toastCouldntSave } from "../../lib/toasts.tsx";
 import { Avatar } from "./Avatar.tsx";
 import { logOut } from "./authQueries.ts";
@@ -17,12 +17,13 @@ import { logOut } from "./authQueries.ts";
 // The avatar's menu (design §14): who is signed in, and Log out. Loaded on its first press
 // (LazyUserMenu), and open as it appears.
 export function UserMenu({ me }: { me: Me }) {
-  // Signed out: the cache goes and the gate (SessionGate) sends the user to plain /login, as a
-  // 401 does, but without the page they were on: they chose to leave.
+  // Signed out: Log in, as a new page (design §8.3: a change of user leaves nothing of the last
+  // one's), and plain /login, without the page they were on: they chose to leave it, and the
+  // next person on this device shouldn't land on it.
   const logOutNow = useMutation({
     mutationFn: logOut,
     onSuccess: () => {
-      signedOut(false);
+      loadPage("/login");
     },
     onError: () => {
       toastCouldntSave(() => {

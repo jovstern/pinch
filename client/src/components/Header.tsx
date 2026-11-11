@@ -133,8 +133,8 @@ export function Header({ onTabPage }: { onTabPage: boolean }) {
         </Link>
       </Button>
 
-      {/* The avatar opens the user's menu: their name, and Log out (design §14). me is only
-          missing when the API couldn't say who's signed in (SessionGate shows the page anyway). */}
+      {/* The avatar opens the user's menu: their name, and Log out (design §14). SessionGate
+          only shows the page once me is known, so it's here; the check is for TypeScript. */}
       {me && <LazyUserMenu me={me} />}
     </header>
   );

@@ -150,7 +150,7 @@ test("when who's signed in can't be asked, the app says so, with Try again", asy
   expect(await screen.findByRole("heading", { level: 1, name: "Page not found" })).toBeVisible();
 });
 
-test("the avatar's menu names the user, and Log out signs them out to plain Log in", async () => {
+test("the avatar's menu names the user, and Log out loads plain Log in", async () => {
   const user = userEvent.setup();
   const fetch = vi.fn((path: string) =>
     path === "/api/auth/logout" ? Promise.resolve(new Response(null, { status: 204 })) : notFound(),
@@ -160,9 +160,10 @@ test("the avatar's menu names the user, and Log out signs them out to plain Log 
   await user.click(screen.getByRole("button", { name: "Your account" }));
   expect(await screen.findByRole("menu")).toHaveTextContent("Danacook@example.com");
   await user.click(screen.getByRole("menuitem", { name: "Log out" }));
-  expect(await screen.findByRole("heading", { level: 1, name: "Log in" })).toBeInTheDocument();
-  // Plain /login: no ?next=, so Log in doesn't bring the next person back to this page.
-  expect(screen.getByRole("link", { name: "Sign up" })).toHaveAttribute("href", "/signup");
+  // Plain /login, as a new page: no ?next=, so Log in doesn't bring the next person back here.
+  await vi.waitFor(() => {
+    expect(loadPage).toHaveBeenCalledWith("/login");
+  });
   expect(fetch).toHaveBeenCalledWith("/api/auth/logout", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
