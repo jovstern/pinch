@@ -225,7 +225,10 @@ recipes, correctly rejected one promo, and one call hung. Results and findings a
 
 Media is thrown away, but a good-looking list needs images, so each recipe keeps **one tiny
 thumbnail** inside its document: WebP inside 400 × 500 (its own shape kept), 20–40 KB, made
-with `sharp`, with its width and height so the page keeps its place before it loads. The
+with `sharp`, with its width and height so the page keeps its place before it loads, and
+beside it (`small`) the queue's tile: 160 × 200 cropped to it (the 64 × 80 tile at 2.5× DPR),
+a few KB, made at the same time, so the queue's pictures don't compete with the entry JS
+(docs/metrics/m08.md; My recipes' cards and a recipe's page are bigger and keep the picture). The
 worker saves it on the import as soon as it has it (as the step), reading at most 5 MB, from
 https, with no redirect; approve copies it to the recipe, and editing keeps it (D20). Making it
 never fails an import: no picture, no thumbnail.
@@ -237,8 +240,9 @@ never fails an import: no picture, no thumbnail.
 | Text / manual | None → the recipe's emoji on a soft tile (D25) |
 
 Served by `GET /api/recipes/:id/thumbnail` (a draft's by `GET /api/imports/:id/thumbnail`) with
-long cache headers; every query that answers recipes or imports leaves the image out, so list
-responses stay small.
+long cache headers; `?size=small` sends the tile, or the picture when it was made before tiles
+(no migration: the browser shrinks it, as before). Every query that answers recipes or imports
+leaves both images out, so list responses stay small.
 
 ## 6. Data model (MongoDB)
 
@@ -256,7 +260,7 @@ Recipe {
   servings?, prepMinutes?, cookMinutes?,
   nutritionPerServing?: { calories, proteinG, carbsG, fatG },   // always Gemini's estimate (D14)
   emoji?: "🍲",                    // its face without a picture (D25): the model's, or its title's
-  thumbnail?: { webp: Binary, width, height },   // the image left out of every query that answers
+  thumbnail?: { webp: Binary, small?: Binary, width, height },   // the images left out of every query that answers
   source: { type: "instagram" | "facebook" | "youtube" | "text" | "image" | "manual", url? },
   sourceImportId?,                 // unique + sparse (§4.4)
   createdAt, updatedAt,
@@ -269,7 +273,7 @@ Import {
   step?: "fetching" | "analyzing",
   input: { type: "link" | "text" | "images", url?, platform?, text?, count?, images? },
   attempts, nextAttemptAt, leaseUntil?, error?, noRetry?,
-  draft?: RecipeDraft, thumbnail?: { webp: Binary, width, height },   // named as on a recipe
+  draft?: RecipeDraft, thumbnail?: { webp: Binary, small?: Binary, width, height },   // named as on a recipe
   createdAt, updatedAt, expiresAt,  // TTL
   deletedAt?                       // as a recipe's (D27)
 }
@@ -406,13 +410,13 @@ GET    /api/recipes/:id
 PUT    /api/recipes/:id                replace what the user can edit (the form sends it all)
 DELETE /api/recipes/:id                kept an hour, to undo (D27) → 204
 POST   /api/recipes/:id/restore        Undo of a delete → 200 recipe (404 once it's gone for good)
-GET    /api/recipes/:id/thumbnail      image/webp
+GET    /api/recipes/:id/thumbnail      image/webp (?size=small: the 160 × 200 tile, §5)
 
 POST   /api/imports                    { type: "link", url } | { type: "text", text }  → 202 import (429 past the daily cap)
 POST   /api/imports/screenshots        a form: up to 4 images (10 MB each) as "images"  → 202 import { type: "images", count }
 GET    /api/imports                    my imports that are not done yet (a ready one's draft with its marks: the queue counts them)
 GET    /api/imports/:id                status, step, error, draft (with its uncertain marks, §6)
-GET    /api/imports/:id/thumbnail      image/webp: the draft's picture
+GET    /api/imports/:id/thumbnail      image/webp: the draft's picture (?size=small: the queue's tile, §5)
 POST   /api/imports/:id/approve        the edited draft, as POST /api/recipes; nutritionPerServing, the emoji and the thumbnail from the stored import (D20), the marks dropped → 201 recipe (409 if not ready)
 POST   /api/imports/:id/retry          failed → pending, attempts, error and noRetry cleared → 202 (409 if not failed, or noRetry)
 DELETE /api/imports/:id                discard / dismiss / Pinch it's Undo: kept an hour (D27) → 204

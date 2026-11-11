@@ -366,6 +366,34 @@ test("a draft's picture is served apart, kept out of the list, and goes with it 
   expect(kept.body).toEqual(webp);
 });
 
+test("?size=small sends the queue's tile, or the picture when it was made before tiles", async () => {
+  const webp = Buffer.from("a webp");
+  const small = Buffer.from("a small webp");
+  const id = await insertDone({
+    draft,
+    thumbnail: { webp: new Binary(webp), small: new Binary(small), width: 400, height: 500 },
+  });
+  // The list leaves the tile out too: only the size is sent.
+  const listed = ImportListSchema.parse((await request(app).get("/api/imports")).body);
+  expect(listed.items.find((item) => item.id === id)?.thumbnail).toEqual({
+    width: 400,
+    height: 500,
+  });
+  const tile = await request(app).get(`/api/imports/${id}/thumbnail?size=small`);
+  expect(tile.headers["content-type"]).toBe("image/webp");
+  expect(tile.headers["cache-control"]).toBe("private, max-age=31536000, immutable");
+  expect(tile.body).toEqual(small);
+  expect((await request(app).get(`/api/imports/${id}/thumbnail`)).body).toEqual(webp);
+  expect((await request(app).get(`/api/imports/${id}/thumbnail?size=huge`)).status).toBe(400);
+
+  // No migration: an older picture has no tile, and sends itself.
+  const older = await insertDone({
+    draft,
+    thumbnail: { webp: new Binary(webp), width: 400, height: 500 },
+  });
+  expect((await request(app).get(`/api/imports/${older}/thumbnail?size=small`)).body).toEqual(webp);
+});
+
 test("an import or a recipe with no picture: its thumbnail is not found", async () => {
   const id = await insertDone({ draft });
   expect((await request(app).get(`/api/imports/${id}/thumbnail`)).status).toBe(404);

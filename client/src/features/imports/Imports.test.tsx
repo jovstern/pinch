@@ -286,6 +286,11 @@ test("the first two cards' pictures load at once, first; the rest when near the 
 
   await screen.findByRole("heading", { name: "3 ready" });
   const pictures = document.querySelectorAll('img[src^="/api/imports/"]');
+  // The server's small tile, not the whole picture (design §5).
+  expect(pictures[0]).toHaveAttribute(
+    "src",
+    "/api/imports/6650a1b2c3d4e5f600000001/thumbnail?size=small",
+  );
   expect([...pictures].map((img) => img.getAttribute("loading"))).toEqual([
     "eager",
     "eager",

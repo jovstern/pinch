@@ -96,7 +96,7 @@ export function importsRouter(db: Db) {
     );
     // No picture: as good as no import, for an <img>.
     if (!job?.thumbnail) throw importNotFound();
-    sendThumbnail(res, job.thumbnail);
+    sendThumbnail(req, res, job.thumbnail);
   });
 
   // Saves the reviewed draft, as the user edited it, as a recipe, then deletes the import
