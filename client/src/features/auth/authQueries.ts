@@ -1,6 +1,6 @@
 import { MeSchema, type LoginInput, type Me, type SignupInput } from "@pinch/shared";
 import { queryOptions, type QueryClient } from "@tanstack/react-query";
-import { ApiError, getJson, sendJson } from "../../lib/api.ts";
+import { ApiError, getJson, post, sendJson } from "../../lib/api.ts";
 import { dismissAllToasts } from "../../lib/toasts.tsx";
 
 // Who is signed in (design §8.3): the user, or null when nobody is (the API's 401). index.html
@@ -36,4 +36,8 @@ export function logIn(input: LoginInput) {
 
 export function signUp(input: SignupInput) {
   return sendJson("POST", "/api/auth/signup", input, MeSchema);
+}
+
+export function logOut() {
+  return post("/api/auth/logout");
 }

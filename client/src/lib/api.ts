@@ -60,6 +60,17 @@ export async function deleteResource(path: string) {
   if (!response.ok) throw await apiError("DELETE", path, response);
 }
 
+// A POST with nothing to send or read (logout). Still typed as JSON: the API refuses a POST that
+// isn't, so a form on another site can't send one (design §8.3, CSRF).
+export async function post(path: string) {
+  const response = await fetch(path, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: "{}",
+  });
+  if (!response.ok) throw await apiError("POST", path, response);
+}
+
 // Signing out on the client (design §8.3): a 401 means the session has ended (it expired, or the
 // user logged out in another tab). One handler, set by SessionGate, which knows the cache; none
 // before the app renders.

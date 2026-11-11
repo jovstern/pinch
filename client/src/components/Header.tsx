@@ -1,7 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
-import { PenLine, UserRound } from "lucide-react";
+import { PenLine } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link, useLocation } from "react-router";
+import { LazyUserMenu } from "../features/auth/LazyUserMenu.tsx";
+import { meQuery } from "../features/auth/authQueries.ts";
 import { importListQuery } from "../features/imports/importQueries.ts";
 import { recipeCountQuery } from "../features/recipes/recipeQueries.ts";
 import { cn } from "../lib/cn.ts";
@@ -37,6 +39,7 @@ export function Header({ onTabPage }: { onTabPage: boolean }) {
   // Not awaited by anything: the tab shows its count once it's there, a second in (useAfterStart).
   const countWanted = useAfterStart();
   const recipeCount = useQuery({ ...recipeCountQuery, enabled: countWanted }).data?.count;
+  const me = useQuery(meQuery).data;
 
   return (
     <header className="flex items-center gap-2 px-4 pt-3 md:gap-4 md:border-b md:border-border md:px-6 md:py-3">
@@ -130,18 +133,9 @@ export function Header({ onTabPage }: { onTabPage: boolean }) {
         </Link>
       </Button>
 
-      {/* A placeholder until auth (design §8.3, D13), as Share is (§1): unavailable, not
-          hidden, and in the tab order so it can be read. A menu with nothing to choose in it
-          would be more code for the same message. */}
-      <Button
-        type="button"
-        variant="secondary"
-        aria-disabled="true"
-        aria-label="Log in · coming soon"
-        className="size-11 shrink-0 rounded-full px-0 text-muted-foreground"
-      >
-        <UserRound aria-hidden="true" className="size-5" />
-      </Button>
+      {/* The avatar opens the user's menu: their name, and Log out (design §14). SessionGate
+          only shows the page once me is known, so it's here; the check is for TypeScript. */}
+      {me && <LazyUserMenu me={me} />}
     </header>
   );
 }

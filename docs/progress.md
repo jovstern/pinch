@@ -137,7 +137,7 @@ Planned, not built yet. In this order:
       login rate limit; the indexes
 - [x] A2 The user middleware reads the session (401 without one); e2e signs in once and reuses
       it; `db:adopt-dev-data <email>`; `db:seed <email>`
-- [ ] A3 The client: Log in and Sign up, redirect to `/login` and back, a 401 signs out, the
+- [x] A3 The client: Log in and Sign up, redirect to `/login` and back, a 401 signs out, the
       avatar's menu (name, Log out)
 - [ ] A4 Google sign-in: the OIDC code flow (state, PKCE), linking by verified email; the user
       sets `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` in `.env`

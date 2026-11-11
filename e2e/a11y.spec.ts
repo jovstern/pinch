@@ -112,3 +112,37 @@ test("the Filters sheet, open, has no accessibility violations", async ({ page }
     expect.arrayContaining(["aria-dialog-name", "label", "button-name"]),
   );
 });
+
+// The avatar's menu, as ⋯'s: not modal, so the page around it stays readable.
+test("the avatar's menu, open, has no accessibility violations", async ({ page }) => {
+  await page.goto("/recipes");
+  await page.getByRole("button", { name: "Your account" }).click();
+  await expect(page.getByRole("menuitem", { name: "Log out" })).toBeVisible();
+  expect((await scan(page)).violations).toEqual([]);
+});
+
+// Log in and Sign up, signed out (the fixture's cookie cleared), each in both themes and with its
+// errors showing. Chrome logs each 401 a signed-out page gets (who's signed in, the queue's
+// preload) as an error: expected here, and only the 401s.
+test.describe("signed out", () => {
+  test.use({ expectedConsoleErrors: [/status of 401/] });
+  for (const colorScheme of ["light", "dark"] as const) {
+    test(`Log in and Sign up have no accessibility violations (${colorScheme})`, async ({
+      page,
+    }) => {
+      await page.context().clearCookies();
+      await page.emulateMedia({ colorScheme });
+      await page.goto("/login");
+      await expect(page.getByRole("heading", { level: 1, name: "Log in" })).toBeVisible();
+      expect((await scan(page)).violations).toEqual([]);
+      await page.getByRole("button", { name: "Log in" }).click();
+      await expect(page.getByText("Enter your password.")).toBeVisible();
+      expect((await scan(page)).violations).toEqual([]);
+
+      await page.getByRole("link", { name: "Sign up" }).click();
+      await page.getByRole("button", { name: "Sign up" }).click();
+      await expect(page.getByText("Enter your name.")).toBeVisible();
+      expect((await scan(page)).violations).toEqual([]);
+    });
+  }
+});
