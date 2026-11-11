@@ -187,11 +187,15 @@ test("with Google on, Continue with Google goes to the API, carrying next", asyn
   );
 });
 
-test("a failed Google sign-in says so on Log in", async () => {
+test("a failed Google sign-in says so on Log in, and not on Sign up", async () => {
   stubFetch(googleOn);
-  renderApp("/login?error=google&reason=state", { me: null });
+  renderApp("/login?next=%2Frecipes&error=google&reason=state", { me: null });
   expect(await screen.findByRole("alert")).toHaveTextContent(
     "Couldn't sign in with Google. Try again.",
+  );
+  expect(screen.getByRole("link", { name: "Sign up" })).toHaveAttribute(
+    "href",
+    "/signup?next=%2Frecipes",
   );
 });
 

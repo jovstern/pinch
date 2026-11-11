@@ -15,8 +15,13 @@ import { submitError } from "./submitError.ts";
 // Log in (design §8.3, §14), at /login. Checked as every form is (RecipeForm): on the first
 // submit, then on every change, with the API's own schema; then the API's answer.
 export function LoginPage() {
-  // ?next= (the page the user was going to) goes with them to Sign up.
   const { search } = useLocation();
+  // ?next= (the page the user was going to) goes with them to Sign up; a failed Google sign-in's
+  // ?error= and ?reason= don't: that message is Log in's.
+  const signupQuery = new URLSearchParams(search);
+  signupQuery.delete("error");
+  signupQuery.delete("reason");
+  const signupLink = signupQuery.size > 0 ? `/signup?${signupQuery.toString()}` : "/signup";
   const formRef = useRef<HTMLFormElement>(null);
   const form = useForm({
     defaultValues: { email: "", password: "" },
@@ -51,7 +56,7 @@ export function LoginPage() {
       footer={
         <>
           New to Pinch?{" "}
-          <Link to={`/signup${search}`} className="font-semibold text-accent-strong underline">
+          <Link to={signupLink} className="font-semibold text-accent-strong underline">
             Sign up
           </Link>
         </>
