@@ -10,6 +10,10 @@ export const importListQuery = queryOptions({
   queryKey: ["imports", "list"],
   queryFn: () => getJson("/api/imports", ImportListSchema),
   refetchInterval: (query) => pollInterval(query.state.data),
+  // Fresh for 2 s, so the queue that queueKnown has just fetched isn't asked for again when /
+  // first renders (a second request on every load). The poll and every change's
+  // invalidateQueries refetch whatever this says.
+  staleTime: 2000,
 });
 
 // Before the first render of / (main.tsx): settles once the queue is in, or has failed (no
