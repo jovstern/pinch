@@ -21,6 +21,9 @@ type TextFieldProps = {
   multiline?: boolean;
   // "numeric" for numbers: a text input with the number keyboard, so nothing typed is lost.
   inputMode?: "numeric";
+  // For Log in and Sign up: the keyboard, hidden typing, and what the browser may fill in.
+  type?: "email" | "password";
+  autoComplete?: string;
   // Always shown under the input, and read with it.
   hint?: string;
   // A draft's "thing to look at" (design §14): the id of its note, which the form shows under
@@ -38,6 +41,8 @@ export function TextField({
   placeholder,
   multiline,
   inputMode,
+  type,
+  autoComplete,
   hint,
   markId,
   className = "",
@@ -84,6 +89,8 @@ export function TextField({
       ) : (
         <Input
           inputMode={inputMode}
+          type={type}
+          autoComplete={autoComplete}
           className={marked}
           {...shared}
           onChange={(event) => {

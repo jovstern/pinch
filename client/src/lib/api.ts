@@ -27,7 +27,7 @@ export class ApiError extends Error {
 // error state), and the body is parsed with its shared schema before a component sees it.
 export async function getJson<T>(path: string, schema: z.ZodType<T>): Promise<T> {
   const response = await fetch(path);
-  if (!response.ok) throw new ApiError("GET", path, response.status);
+  if (!response.ok) throw await apiError("GET", path, response);
   return schema.parse(await response.json());
 }
 
@@ -57,7 +57,18 @@ export async function sendForm<T>(path: string, body: FormData, schema: z.ZodTyp
 
 export async function deleteResource(path: string) {
   const response = await fetch(path, { method: "DELETE" });
-  if (!response.ok) throw new ApiError("DELETE", path, response.status);
+  if (!response.ok) throw await apiError("DELETE", path, response);
+}
+
+// Signing out on the client (design §8.3): a 401 means the session has ended (it expired, or the
+// user logged out in another tab). One handler, set by SessionGate, which knows the cache; none
+// before the app renders.
+let onSignedOut: () => void = () => undefined;
+export function whenSignedOut(handler: () => void) {
+  onSignedOut = handler;
+  return () => {
+    onSignedOut = () => undefined;
+  };
 }
 
 const ErrorBodySchema = z.object({
@@ -65,7 +76,10 @@ const ErrorBodySchema = z.object({
 });
 
 // The API's error shape (design §8.2). A proxy's error page isn't JSON: then there are no fields.
+// Every failed answer comes through here, so a 401 is noticed in one place. Not /api/auth/*:
+// there a 401 is an answer (a wrong password, or "nobody" from me), not news.
 async function apiError(method: string, path: string, response: Response) {
+  if (response.status === 401 && !path.startsWith("/api/auth/")) onSignedOut();
   const body: unknown = await response.json().catch(() => null);
   const fields = ErrorBodySchema.safeParse(body).data?.error.fields ?? {};
   return new ApiError(method, path, response.status, fields, body);
