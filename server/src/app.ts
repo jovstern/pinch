@@ -6,6 +6,7 @@ import type { Logger } from "pino";
 import { pinoHttp } from "pino-http";
 import { devUser } from "./devUser.ts";
 import { errorHandler, HttpError, notFound } from "./errors.ts";
+import { authRouter } from "./routes/auth.ts";
 import { importsRouter } from "./routes/imports.ts";
 import { recipesRouter } from "./routes/recipes.ts";
 
@@ -55,6 +56,7 @@ export function createApp({ logger, db, devUserId }: AppDeps) {
     res.json({ status: "ok" } satisfies Health);
   });
 
+  app.use("/api/auth", authRouter(db));
   app.use("/api/recipes", recipesRouter(db));
   app.use("/api/imports", importsRouter(db));
 
