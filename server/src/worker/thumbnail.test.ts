@@ -17,6 +17,9 @@ test("a picture becomes a WebP inside 400 × 500, of the same shape", async () =
 
   expect(thumbnail).toMatchObject({ width: 281, height: 500 });
   expect((await sharp(thumbnail.webp.buffer).metadata()).format).toBe("webp");
+  // And the queue's tile: 160 × 200, cropped, whatever the picture's shape.
+  const small = await sharp(thumbnail.small?.buffer).metadata();
+  expect(small).toMatchObject({ format: "webp", width: 160, height: 200 });
 });
 
 test("a small picture isn't made bigger", async () => {

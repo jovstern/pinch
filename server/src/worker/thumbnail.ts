@@ -15,6 +15,11 @@ const MAX_PIXELS = 40_000_000;
 const MAX_WIDTH = 400;
 const MAX_HEIGHT = 500;
 
+// The queue's tile is 64 × 80 CSS px (Thumbnail's "tile"): this is it at 2.5× DPR, cropped to
+// its 4:5, a few KB, so the queue's pictures don't compete with the app's JS (docs/metrics/m08.md).
+const SMALL_WIDTH = 160;
+const SMALL_HEIGHT = 200;
+
 // The post's own picture (yt-dlp's "thumbnail": YouTube's, or the reel's cover), made small.
 // Never fails the import: without a picture the recipe is still a recipe, so any error is
 // "no thumbnail" (not logged: Extract has no logger). The picture is read now and kept, as
@@ -38,11 +43,26 @@ export async function makeThumbnail(
   }
 }
 
-// Any image to WebP inside the box (never bigger than it was), keeping its shape.
+// Any image to WebP inside the box (never bigger than it was), keeping its shape; and the
+// queue's tile, cropped to it.
 export async function shrink(image: Buffer): Promise<StoredThumbnail> {
-  const { data, info } = await sharp(image, { limitInputPixels: MAX_PIXELS })
-    .resize({ width: MAX_WIDTH, height: MAX_HEIGHT, fit: "inside", withoutEnlargement: true })
-    .webp({ quality: 70 })
-    .toBuffer({ resolveWithObject: true });
-  return { webp: new Binary(data), width: info.width, height: info.height };
+  const input = sharp(image, { limitInputPixels: MAX_PIXELS });
+  const [{ data, info }, small] = await Promise.all([
+    input
+      .clone()
+      .resize({ width: MAX_WIDTH, height: MAX_HEIGHT, fit: "inside", withoutEnlargement: true })
+      .webp({ quality: 70 })
+      .toBuffer({ resolveWithObject: true }),
+    input
+      .clone()
+      .resize({ width: SMALL_WIDTH, height: SMALL_HEIGHT, fit: "cover" })
+      .webp({ quality: 70 })
+      .toBuffer(),
+  ]);
+  return {
+    webp: new Binary(data),
+    small: new Binary(small),
+    width: info.width,
+    height: info.height,
+  };
 }

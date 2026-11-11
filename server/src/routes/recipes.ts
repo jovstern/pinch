@@ -95,7 +95,7 @@ export function recipesRouter(db: Db) {
     );
     // No picture: as good as no recipe, for an <img>.
     if (!recipe?.thumbnail) throw recipeNotFound();
-    sendThumbnail(res, recipe.thumbnail);
+    sendThumbnail(req, res, recipe.thumbnail);
   });
 
   // PUT, not PATCH: the form always sends the whole recipe, so an optional field it leaves out
