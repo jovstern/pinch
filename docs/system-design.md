@@ -578,7 +578,8 @@ open. Another user's recipe or import is a 404, as before. The worker is unchang
   until it answers (or, when it can't be asked, "We couldn't reach Pinch" with Try again), then
   sends a signed-out visitor to `/login?next=<the page>` and a signed-in one from `/login` or
   `/signup` to `next`. `next` is read as the browser reads it (`new URL`) and must stay on the
-  site's origin, else `/`. **A change of user is a new page:** Log in and Sign up load `next` (and
+  site's origin, with a path that doesn't start `//` once its dots are resolved (`/.//x` is
+  another site to a browser), else `/`. **A change of user is a new page:** Log in and Sign up load `next` (and
   Log out `/login`) with `location.replace`, so the new document asks again for what `index.html`
   preloads, now with the new cookie, and keeps nothing of the last user's (cached queries, toasts,
   module state). A session that ends mid-visit (any 401 from the API outside `/api/auth/*`,
