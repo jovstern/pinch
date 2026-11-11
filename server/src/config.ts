@@ -4,6 +4,9 @@ import { z } from "zod";
 // The environment is parsed once at startup, so a bad value stops the app before it serves
 // anything (node-api.md).
 const ConfigSchema = z.object({
+  // "production" makes the session cookie Secure (design §8.3); development and tests run on
+  // http://localhost, where a browser wouldn't send it back.
+  NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
   PORT: z.coerce.number().int().positive().default(3000),
   LOG_LEVEL: z.enum(["fatal", "error", "warn", "info", "debug", "trace", "silent"]).default("info"),
   MONGODB_URI: z.string().default("mongodb://localhost:27017"),

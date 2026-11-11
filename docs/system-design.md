@@ -311,6 +311,11 @@ Session {                          // M9: a signed-in browser (§8.3)
   createdAt, expiresAt             // TTL
 }
 
+LoginAttempt {                     // M9: the login rate limit (§8.3)
+  _id: "email a@b.com 2026-11-11T10:05",   // what is counted ("ip …" or "email …") and its minute
+  tries, expiresAt                 // TTL: two minutes later
+}
+
 Link {                             // L2: the model's answer for a public post, shared (§4.6, D28)
   _id, key, version,               // unique together: "instagram:C9x…", EXTRACTION_VERSION
   url, platform,
@@ -404,6 +409,7 @@ Every query that answers imports leaves them out.
 | links | `{ key: 1, version: 1 }` unique | The worker's lookup and upsert (L2) |
 | users | `{ email: 1 }` unique; `{ googleId: 1 }` unique, sparse | Sign-in (M9) |
 | sessions | `{ tokenHash: 1 }` unique; `{ expiresAt: 1 }` TTL | Every request's user; old sessions go (M9) |
+| loginAttempts | `{ expiresAt: 1 }` TTL (found by `_id`, so no other index) | Old minutes' counts go (M9) |
 
 Every index is checked with `.explain("executionStats")`: expect `IXSCAN`, and
 `totalDocsExamined` close to `nReturned` (a search fetches each match twice, by the text match
@@ -496,7 +502,7 @@ DELETE /api/imports/:id                discard / dismiss / Pinch it's Undo: kept
 POST   /api/imports/:id/restore        Undo of a discard or a dismiss → 200 import, as it was
 
 POST   /api/auth/signup                { email, password, name } → 201 me, signed in (M9; 409 when the email has an account)
-POST   /api/auth/login                 { email, password } → 200 me (401 the same for either wrong)
+POST   /api/auth/login                 { email, password } → 200 me (401 the same for either wrong; 429 past the rate limit)
 POST   /api/auth/logout                → 204
 GET    /api/auth/me                    → 200 { id, email, name } (401 signed out)
 GET    /api/auth/google                → 302 to Google
@@ -535,12 +541,20 @@ and a request without one gets 401 (the health routes and `/api/auth/*` stay ope
 - **Passwords:** argon2id (`@node-rs/argon2`, its default parameters: prebuilt, no compiler);
   emails stored lowercase; at least 8 characters (and at most 200), no other rules. A second
   sign-up with an email answers 409.
-- **Sessions:** a random 32-byte token in an `HttpOnly; Secure; SameSite=Lax` cookie; the
-  database keeps only its SHA-256 hash in `sessions`, with a TTL index (30 days). A new session
-  on every sign-in; logout deletes it.
+- **Sessions:** a random 32-byte token (base64url) in a `pinch_session` cookie,
+  `HttpOnly; SameSite=Lax; Path=/`, 30 days' `Max-Age`, and `Secure` when `NODE_ENV` is
+  `production` (development and tests run on `http://localhost`); the database keeps only its
+  SHA-256 hash in `sessions`, with `expiresAt` 30 days out and a TTL index. A session past its
+  `expiresAt` counts as none before the TTL deletes it. A new session on every sign-in; logout
+  deletes it and clears the cookie. `currentUser` (`server/src/session.ts`) reads the cookie
+  with a few lines, not a package.
 - **Login:** the same 401 for a wrong email or a wrong password; an unknown email is still
   checked against a fixed hash, so the time doesn't tell which emails have accounts. A rate
-  limit (per IP and per email, counted in Mongo: a few tries a minute).
+  limit counted in Mongo (`loginAttempts`): 5 tries a minute per email and 20 per IP (a
+  household shares one), each an atomic `$inc` on a document per key and minute, a fixed
+  window; past either, 429. The IP is Express's `req.ip`, the connection's address, with no
+  `trust proxy`: nothing stands in front of the API but Vite's proxy in development, so
+  behind a real proxy it must be set.
 - **Google:** the OpenID Connect code flow (`state` and PKCE), the ID token checked against
   Google's keys. A Google sign-in whose email (verified by Google) already has an account signs
   into that account and stores its `googleId`; otherwise it makes one. The client ID and secret

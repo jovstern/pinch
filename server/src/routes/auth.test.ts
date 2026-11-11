@@ -1,10 +1,16 @@
 import { MeSchema } from "@pinch/shared";
 import { pino } from "pino";
 import request from "supertest";
-import { expect, test } from "vitest";
+import { beforeEach, expect, test } from "vitest";
 import { createApp } from "../app.ts";
 import { loadConfig } from "../config.ts";
 import { createIndexes } from "../db/indexes.ts";
+import {
+  LOGIN_TRIES_PER_EMAIL,
+  LOGIN_TRIES_PER_IP,
+  loginAttemptsCollection,
+} from "../db/loginAttempts.ts";
+import { hashToken, sessionsCollection } from "../db/sessions.ts";
 import { usersCollection } from "../db/users.ts";
 import { createTestDb } from "../testDb.ts";
 
@@ -13,6 +19,11 @@ const db = createTestDb();
 // The unique email index answers a second sign-up.
 await createIndexes(db);
 const app = createApp({ logger: pino({ level: "silent" }), db, devUserId: config.DEV_USER_ID });
+
+// Every test logs in from the same address: each starts with no tries counted.
+beforeEach(async () => {
+  await loginAttemptsCollection(db).deleteMany({});
+});
 
 let accounts = 0;
 // A new account for each test, so they don't share one.
@@ -25,7 +36,13 @@ async function signUp() {
   return { ...account, response };
 }
 
-test("signup makes an account and answers 201 me, its email lowercase", async () => {
+// The token the response set, as a Cookie header to send back.
+function sessionCookie(response: request.Response) {
+  const setCookie = response.headers["set-cookie"] as unknown as string[];
+  return setCookie[0]?.split(";")[0] ?? "";
+}
+
+test("signup makes an account, signed in, and answers 201 me", async () => {
   const response = await request(app)
     .post("/api/auth/signup")
     .send({ email: " New@Example.com ", password: "a long password", name: "Dana" });
@@ -34,7 +51,8 @@ test("signup makes an account and answers 201 me, its email lowercase", async ()
   const { id } = MeSchema.parse(response.body);
   // The email is stored lowercase (design §8.3).
   expect(response.body).toEqual({ id, email: "new@example.com", name: "Dana" });
-  expect(await usersCollection(db).countDocuments({ email: "new@example.com" })).toBe(1);
+  const me = await request(app).get("/api/auth/me").set("Cookie", sessionCookie(response));
+  expect(me.body).toEqual(response.body);
 });
 
 test("signup with an email that has an account answers 409, whatever its case", async () => {
@@ -64,20 +82,13 @@ test("signup with a bad email or a short password answers 400 naming them", asyn
   });
 });
 
-test("the database keeps the password's argon2id hash, never the password", async () => {
-  const { email, password } = await signUp();
-
-  const user = await usersCollection(db).findOne({ email });
-  expect(user?.passwordHash).toMatch(/^\$argon2id\$/);
-  expect(JSON.stringify(user)).not.toContain(password);
-});
-
-test("login with the right password answers 200 me", async () => {
+test("login with the right password answers 200 me and a new session", async () => {
   const { email, password, response: signup } = await signUp();
 
   const response = await request(app).post("/api/auth/login").send({ email, password });
   expect(response.status).toBe(200);
   expect(response.body).toEqual(signup.body);
+  expect(sessionCookie(response)).not.toBe(sessionCookie(signup));
 });
 
 test("a wrong email and a wrong password get the same 401", async () => {
@@ -92,6 +103,98 @@ test("a wrong email and a wrong password get the same 401", async () => {
   expect(wrongEmail.status).toBe(401);
   expect(wrongPassword.status).toBe(401);
   expect(wrongEmail.body).toEqual(wrongPassword.body);
+  expect(wrongPassword.headers["set-cookie"]).toBeUndefined();
+});
+
+test("the session cookie is HttpOnly, SameSite=Lax and lasts 30 days; Secure when asked", async () => {
+  const { response } = await signUp();
+  const setCookie = String(response.headers["set-cookie"]);
+  expect(setCookie).toMatch(/^pinch_session=[\w-]{43}; Max-Age=2592000; Path=\/; Expires=/);
+  expect(setCookie).toContain("; HttpOnly; SameSite=Lax");
+  expect(setCookie).not.toContain("Secure");
+
+  const secureApp = createApp({
+    logger: pino({ level: "silent" }),
+    db,
+    devUserId: config.DEV_USER_ID,
+    secureCookies: true,
+  });
+  const secure = await request(secureApp)
+    .post("/api/auth/signup")
+    .send({ email: "secure@example.com", password: "a long password", name: "Cook" });
+  expect(String(secure.headers["set-cookie"])).toContain("; Secure");
+});
+
+test("the database keeps only the token's hash and the password's argon2id hash", async () => {
+  const { email, password, response } = await signUp();
+  const token = sessionCookie(response).split("=")[1] ?? "";
+
+  const user = await usersCollection(db).findOne({ email });
+  expect(user?.passwordHash).toMatch(/^\$argon2id\$/);
+  expect(user?.passwordHash).not.toContain(password);
+  const session = await sessionsCollection(db).findOne({ userId: user?._id });
+  expect(session?.tokenHash).toBe(hashToken(token));
+  expect(JSON.stringify(session)).not.toContain(token);
+});
+
+test("logout deletes the session, clears the cookie and answers 204", async () => {
+  const { response } = await signUp();
+  const cookie = sessionCookie(response);
+
+  const logout = await request(app).post("/api/auth/logout").set("Cookie", cookie);
+  expect(logout.status).toBe(204);
+  expect(String(logout.headers["set-cookie"])).toMatch(
+    /^pinch_session=; Path=\/; Expires=Thu, 01 Jan 1970/,
+  );
+  const token = cookie.split("=")[1] ?? "";
+  expect(await sessionsCollection(db).findOne({ tokenHash: hashToken(token) })).toBeNull();
+  const me = await request(app).get("/api/auth/me").set("Cookie", cookie);
+  expect(me.status).toBe(401);
+});
+
+test("me without a cookie, or with an unknown one, answers 401", async () => {
+  const none = await request(app).get("/api/auth/me");
+  const unknown = await request(app).get("/api/auth/me").set("Cookie", "pinch_session=nope");
+
+  expect(none.status).toBe(401);
+  expect(none.body).toMatchObject({ error: { code: "signed_out" } });
+  expect(unknown.status).toBe(401);
+});
+
+test("an expired session counts as none, before the TTL index deletes it", async () => {
+  const { response } = await signUp();
+  const cookie = sessionCookie(response);
+  const token = cookie.split("=")[1] ?? "";
+  await sessionsCollection(db).updateOne(
+    { tokenHash: hashToken(token) },
+    { $set: { expiresAt: new Date(Date.now() - 1000) } },
+  );
+
+  const me = await request(app).get("/api/auth/me").set("Cookie", cookie);
+  expect(me.status).toBe(401);
+});
+
+test("past the tries a minute for an email, even the right password answers 429", async () => {
+  const { email, password } = await signUp();
+  for (let i = 0; i < LOGIN_TRIES_PER_EMAIL; i++) {
+    await request(app).post("/api/auth/login").send({ email, password: "not the password" });
+  }
+
+  const response = await request(app).post("/api/auth/login").send({ email, password });
+  expect(response.status).toBe(429);
+  expect(response.body).toMatchObject({ error: { code: "too_many_tries" } });
+});
+
+test("past the tries a minute from one address, any email answers 429", async () => {
+  for (let i = 0; i < LOGIN_TRIES_PER_IP; i++) {
+    await request(app)
+      .post("/api/auth/login")
+      .send({ email: `guess${String(i)}@example.com`, password: "a guess" });
+  }
+  const { email, password } = await signUp();
+
+  const response = await request(app).post("/api/auth/login").send({ email, password });
+  expect(response.status).toBe(429);
 });
 
 test("login with a password over 200 characters answers 400 without checking it", async () => {
