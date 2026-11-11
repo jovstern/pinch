@@ -1,8 +1,6 @@
 import { expect, test } from "./fixtures.ts";
 
-// M2's whole flow, and its demo (pr-demo skill): the pauses let a viewer follow the video. The
-// database holds the sample recipes (playwright.config.ts); this test and import.spec.ts write,
-// and each deletes what it wrote, because files run in parallel against one database.
+// M2's whole flow, and its demo (pr-demo skill): the pauses let a viewer follow the video.
 test("write a recipe, find it in the list, edit it, delete it", async ({ page }) => {
   await page.goto("/");
   await page.getByRole("link", { name: "Write a recipe" }).click();

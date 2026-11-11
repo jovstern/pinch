@@ -21,14 +21,15 @@ export default defineConfig({
   projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
   webServer: [
     {
-      // The database gets the app's indexes (text search needs its own) and the sample
-      // recipes, then the API starts. Its log is kept for the observer, who reads it for 5xx
-      // and errors (metrics skill).
+      // The database gets the app's indexes (text search needs its own), then the API starts;
+      // each test file signs up its own user, with the sample recipes (e2e/fixtures.ts). Its log
+      // is kept for the observer, who reads it for 5xx and errors (metrics skill).
       command:
-        "node src/dbIndexes.ts && node src/dbSeed.ts && mkdir -p ../.metrics && node src/index.ts > ../.metrics/e2e-server.log",
+        "node src/dbIndexes.ts && mkdir -p ../.metrics && node src/index.ts > ../.metrics/e2e-server.log",
       cwd: "server",
       url: `http://localhost:${String(apiPort)}/api/ready`,
-      env: { PORT: String(apiPort), DB_NAME: process.env.E2E_DB_NAME },
+      // TRUST_PROXY: the client's preview is the one proxy in front of it (e2e/fixtures.ts).
+      env: { PORT: String(apiPort), DB_NAME: process.env.E2E_DB_NAME, TRUST_PROXY: "1" },
       // Runs the API's own shutdown (server/src/index.ts) instead of killing it.
       gracefulShutdown: { signal: "SIGTERM", timeout: 2000 },
     },

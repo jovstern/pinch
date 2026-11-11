@@ -1,7 +1,7 @@
 import { expect, test } from "./fixtures.ts";
 
 // M9 L1 (design §4.6): a link saved before, pasted again from another share (other tracking), is
-// pointed to, not pinched twice. It deletes the recipe it made: the files share one database.
+// pointed to, not pinched twice.
 // The API's 409 is expected: Chrome logs it as a console error (fixtures.ts).
 test.use({ expectedConsoleErrors: [/status of 409 \(Conflict\)/] });
 
@@ -30,8 +30,4 @@ test("a link already in My recipes, pasted again, points to the recipe", async (
   await toast.getByRole("button", { name: "View" }).click();
 
   await expect(page.getByRole("heading", { level: 1, name: "Pasta pinched twice" })).toBeVisible();
-  await page.getByRole("button", { name: "More actions" }).click();
-  await page.getByRole("menuitem", { name: "Delete…" }).click();
-  await page.getByRole("alertdialog").getByRole("button", { name: "Delete" }).click();
-  await expect(page.getByRole("heading", { level: 1, name: "My recipes" })).toBeVisible();
 });

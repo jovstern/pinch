@@ -3,7 +3,6 @@ import { expect, test } from "./fixtures.ts";
 // M5's demo (pr-demo skill): a post's text, pasted in the same box as a link, becomes a draft,
 // which is saved as a recipe with its nutrition estimate and its emoji. The fake extractor stands
 // in for Gemini (design §9), so the draft is its fixed one. The pauses let a viewer follow the video.
-// It deletes the recipe it made, as import.spec.ts does: the files share one database.
 test("paste a recipe's text, review the draft, save it with its nutrition", async ({ page }) => {
   await page.goto("/");
   await page
@@ -43,9 +42,7 @@ test("paste a recipe's text, review the draft, save it with its nutrition", asyn
   await expect(card).toContainText("🍝");
   await page.waitForTimeout(1000);
   await card.click();
-
-  await page.getByRole("button", { name: "More actions" }).click();
-  await page.getByRole("menuitem", { name: "Delete…" }).click();
-  await page.getByRole("alertdialog").getByRole("button", { name: "Delete" }).click();
-  await expect(page.getByRole("heading", { level: 1, name: "My recipes" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { level: 1, name: "Tomato pasta (from text)" }),
+  ).toBeVisible();
 });

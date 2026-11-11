@@ -3,8 +3,7 @@ import type { Page } from "@playwright/test";
 import { expect, test } from "./fixtures.ts";
 
 // Scans the page once nothing on it is moving: a toast fading in or out is drawn in half its
-// colours (a contrast failure that isn't one), and the files share one user, so another file's
-// import may toast at any time. Endless animations (a spinner) don't count. `include` scans one
+// colours (a contrast failure that isn't one). Endless animations (a spinner) don't count. `include` scans one
 // part of the page only.
 async function scan(page: Page, include?: string) {
   await page.waitForFunction(() =>
@@ -22,7 +21,7 @@ async function scan(page: Page, include?: string) {
 
 test("My recipes has no accessibility violations", async ({ page }) => {
   await page.goto("/recipes");
-  // Scan the settled page, with the sample recipes (playwright.config.ts), not the loading state.
+  // Scan the settled page, with the sample recipes (e2e/fixtures.ts), not the loading state.
   await expect(page.getByRole("link", { name: /Red lentil soup/ })).toBeVisible();
   const results = await scan(page);
   expect(results.violations).toEqual([]);
@@ -60,7 +59,7 @@ for (const colorScheme of ["light", "dark"] as const) {
   }) => {
     await page.emulateMedia({ colorScheme });
     await page.goto("/");
-    // Its own link, so the files sharing the database never pick up each other's imports.
+    // A link of its own: the light and dark tests share the file's user (e2e/fixtures.ts).
     const url = `https://www.instagram.com/reel/e2e-a11y-${colorScheme}/`;
     await page.getByLabel("Pinch a recipe from a reel").fill(url);
     await page.getByRole("button", { name: "Pinch it" }).click();

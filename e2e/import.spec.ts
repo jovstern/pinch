@@ -3,7 +3,6 @@ import { expect, test } from "./fixtures.ts";
 // M4's whole flow, and its demo (pr-demo skill): a pasted link becomes a draft (the fake
 // extractor, about 4 s with the worker's claim), which is checked, edited and saved as a recipe.
 // The pauses let a viewer follow the video.
-// It deletes the recipe it made, as recipes.spec.ts does: the files share one database.
 test("paste a link, review the draft, save it as a recipe", async ({ page }) => {
   await page.goto("/");
   await page.getByLabel("Pinch a recipe from a reel").fill("https://youtu.be/e2e-pasta");
@@ -46,10 +45,4 @@ test("paste a link, review the draft, save it as a recipe", async ({ page }) => 
   await page.getByRole("link", { name: "My recipes" }).click();
   await expect(page.getByRole("link", { name: /Weeknight tomato pasta/ })).toBeVisible();
   await page.waitForTimeout(1000);
-
-  await page.getByRole("link", { name: /Weeknight tomato pasta/ }).click();
-  await page.getByRole("button", { name: "More actions" }).click();
-  await page.getByRole("menuitem", { name: "Delete…" }).click();
-  await page.getByRole("alertdialog").getByRole("button", { name: "Delete" }).click();
-  await expect(page.getByRole("heading", { level: 1, name: "My recipes" })).toBeVisible();
 });
