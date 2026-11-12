@@ -55,7 +55,7 @@ Meal planning, shopping lists, scaling servings, Instagram/Facebook **stories** 
 | Look and feel | Clean and friendly; it should feel finished |
 | CRUD latency | < 300 ms |
 | Import time | Typically < 60 s, always **asynchronous**: the UI never waits on it |
-| Video length | ≤ 3 minutes (checked before downloading when the platform reports it; otherwise right after, see §4.1) |
+| Video length | ≤ 5 minutes (checked before downloading when the platform reports it; otherwise right after, see §4.1) |
 | Reliability | A crash never loses an import or creates a duplicate recipe |
 | Media | **Never stored**, beyond an import's own: a video lives for one attempt, uploaded screenshots until the draft is made (§6). Only text, plus a tiny thumbnail (§5) |
 | Cost | Imports per user per day are capped (default 20); online for about $5–9 a month plus Gemini (§15.7) |
@@ -181,7 +181,7 @@ of an attempt clears it.
   spike one Gemini call hung for 27 minutes. A timeout is a failed attempt and retries as usual.
 - **Retries with backoff.** A failed attempt goes back to `pending` with `nextAttemptAt` = now +
   10 s, then 60 s. After 3 attempts → `failed` with a readable `error`. A failure no retry can
-  fix (not a recipe, a video over 3 minutes) fails the import at once, with its own message
+  fix (not a recipe, a video over 5 minutes) fails the import at once, with its own message
   and `noRetry: true` (D23): the list offers only Dismiss, and the API refuses its retry. A
   job whose worker died on its third attempt is failed when it's claimed again, not run a
   fourth time.
@@ -811,7 +811,7 @@ the browser's console). Another user's recipe or import is a 404, as before. The
 | Gemini invents ingredients or quantities | The caption as a second source (D15); draft review; Zod validation; a prompt that allows "unknown" |
 | Nutrition numbers are wrong | Shown as "≈ estimate" |
 | The estimate isn't redone when servings or ingredients are edited: it's Gemini's, for the draft as it came | Shown as "≈ estimate"; a nutrition database later (D14) |
-| Gemini cost or rate limits | Daily cap per user; 2 jobs at a time; videos ≤ 3 min |
+| Gemini cost or rate limits | Daily cap per user; 2 jobs at a time; videos ≤ 5 min |
 | Long or non-recipe videos | Length check before download (right after it when the platform doesn't report a length); "not a recipe" failure |
 | A Gemini call hangs | A deadline per attempt under the lease, a timeout on every call (§4.3); then the normal retry |
 | The platforms block Fly's IPs | The spike first (S0); the caption and paste-the-text fallback (D34, §15.6); a proxy only with the user's yes |
