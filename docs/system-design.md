@@ -26,6 +26,9 @@ Status: **design agreed, 2026-10-29.** Changes to the design are made in this fi
 9. **Ownership.** Every recipe belongs to one user and only that user sees it.
 10. **Cook mode.** A recipe opens for cooking: one step at a time in large type, with the
     screen kept on (docs/ux/plan.md U2).
+11. **English and Hebrew** (M10, §16). The user picks the language in the avatar's menu; it is
+    saved on the account and follows them to other devices. Hebrew turns the whole interface
+    right to left; a recipe, and anything else the user wrote, keeps its own direction.
 
 ### Placeholders (UI only, no backend in v1)
 
@@ -56,7 +59,8 @@ Meal planning, shopping lists, scaling servings, Instagram/Facebook **stories** 
 | Reliability | A crash never loses an import or creates a duplicate recipe |
 | Media | **Never stored**, beyond an import's own: a video lives for one attempt, uploaded screenshots until the draft is made (§6). Only text, plus a tiny thumbnail (§5) |
 | Cost | Imports per user per day are capped (default 20); online for about $5–9 a month plus Gemini (§15.7) |
-| Online | At the user's own domain over HTTPS, deployed by every merge to `master` (M10, §15) |
+| Languages | English and Hebrew (right to left), with no flash of the wrong language or direction; English looks exactly as before (M10, §16) |
+| Online | At the user's own domain over HTTPS, deployed by every merge to `master` (M11, §15) |
 | Code | Simple and consistent above all — every line should be easy to read |
 
 ## 2. Back-of-envelope numbers
@@ -88,7 +92,7 @@ Three processes, one codebase:
 
 Mongo is the only shared state. There is no Redis, no queue service and no object storage.
 
-Online (M10), the API and the worker are two process groups of one image on Fly.io, the API
+Online (M11), the API and the worker are two process groups of one image on Fly.io, the API
 also serves the client's build, and Mongo is Atlas: §15.
 
 ## 4. The import pipeline
@@ -314,7 +318,8 @@ User {                             // M9 (§8.3, D29)
   _id, email,                      // lowercase, unique
   name, createdAt,
   passwordHash?,                   // argon2id; none for an account made with Google
-  googleId?                        // Google's "sub"; set by a Google sign-in
+  googleId?,                       // Google's "sub"; set by a Google sign-in
+  language?: "en" | "he"           // M10: the interface's language (§16, D40); none reads as "en"
 }
 
 Session {                          // M9: a signed-in browser (§8.3)
@@ -323,7 +328,7 @@ Session {                          // M9: a signed-in browser (§8.3)
   createdAt, expiresAt             // TTL
 }
 
-PasswordReset {                    // M10: a link to set a new password (§8.3, D33)
+PasswordReset {                    // M11: a link to set a new password (§8.3, D33)
   _id,                             // the user's id: one live link per account
   tokenHash,                       // SHA-256 of the emailed token, as a session's
   createdAt, expiresAt             // TTL: an hour later
@@ -428,7 +433,7 @@ Every query that answers imports leaves them out.
 | users | `{ email: 1 }` unique; `{ googleId: 1 }` unique, sparse | Sign-in (M9) |
 | sessions | `{ tokenHash: 1 }` unique; `{ expiresAt: 1 }` TTL | Every request's user; old sessions go (M9) |
 | loginAttempts | `{ expiresAt: 1 }` TTL (found by `_id`, so no other index) | Old minutes' counts go (M9) |
-| passwordResets | `{ tokenHash: 1 }` unique; `{ expiresAt: 1 }` TTL (replaced by `_id`) | A reset link's lookup; old links go (M10) |
+| passwordResets | `{ tokenHash: 1 }` unique; `{ expiresAt: 1 }` TTL (replaced by `_id`) | A reset link's lookup; old links go (M11) |
 
 Every index is checked with `.explain("executionStats")`: expect `IXSCAN`, and
 `totalDocsExamined` close to `nReturned` (a search fetches each match twice, by the text match
@@ -521,14 +526,15 @@ POST   /api/imports/:id/retry          failed → pending, attempts, error and n
 DELETE /api/imports/:id                discard / dismiss / Pinch it's Undo: kept an hour (D27) → 204
 POST   /api/imports/:id/restore        Undo of a discard or a dismiss → 200 import, as it was
 
-POST   /api/auth/signup                { email, password, name } → 201 me, signed in (M9; 409 when the email has an account; 429 past 10 a minute per IP)
+POST   /api/auth/signup                { email, password, name, language? } → 201 me, signed in (M9; language: the page's, M10; 409 when the email has an account; 429 past 10 a minute per IP)
 POST   /api/auth/login                 { email, password } → 200 me (401 the same for either wrong; 429 past the rate limit)
 POST   /api/auth/logout                → 204 (with Content-Type: application/json, else 415)
-GET    /api/auth/me                    → 200 { id, email, name } (401 signed out)
+GET    /api/auth/me                    → 200 { id, email, name, language } (null signed out, §8.3; language: M10)
+PATCH  /api/auth/me                    { language: "en" | "he" } → 200 me, and the pinch_lang cookie (M10, §16; JSON only, 401 signed out, 400 any other field or value)
 GET    /api/auth/providers             → 200 { google: boolean } (Google is on only with its settings)
-GET    /api/auth/google?next=…         → 302 to Google (404 without Google's settings; counted as a login per IP)
+GET    /api/auth/google?next=…&lang=…  → 302 to Google (404 without Google's settings; counted as a login per IP; lang: the page's, for a new account, M10)
 GET    /api/auth/google/callback       → signed in, 302 to next; a failure → 302 /login?error=google&reason=… (counted per IP too)
-POST   /api/auth/forgot                { email } → 202, the same whether or not it has an account; emails a reset link if it has (M10; 429 past the rate limit)
+POST   /api/auth/forgot                { email } → 202, the same whether or not it has an account; emails a reset link if it has (M11; 429 past the rate limit)
 POST   /api/auth/reset                 { token, password } → 200 me, signed in, every other session ended (400 `reset_expired` for a used or expired link; 429 past 10 a minute per IP)
 ```
 
@@ -587,6 +593,13 @@ the browser's console). Another user's recipe or import is a 404, as before. The
   the API computes from the file it serves (§15.4). A new session on every sign-in, which
   ends the browser's previous one if it sent its cookie; logout deletes it and clears the cookie. `currentUser` (`server/src/session.ts`) reads the cookie
   with a few lines, not a package.
+- **The language cookie (M10, §16.2):** `pinch_lang=en|he`, as the hint is (`SameSite=Lax;
+  Path=/`, `Secure` in production, not `HttpOnly`, nothing secret), but a year's `Max-Age` and
+  **kept by logout**: the device stays in the last language, so Log in shows in it. The API
+  sets it from the account with every sign-in, every `me` that has a user and every `PATCH
+  /api/auth/me`; signed out, the page's switch sets it (`document.cookie`). The same inline
+  script reads it and sets `<html lang dir>` before the first paint. The account decides once
+  someone is signed in; the cookie only says it early.
 - **Login:** the same 401 for a wrong email or a wrong password; an unknown email is still
   checked against a fixed hash, so the time doesn't tell which emails have accounts. A rate
   limit counted in Mongo (`loginAttempts`): 5 tries a minute per email and 20 per IP (a
@@ -662,7 +675,7 @@ the browser's console). Another user's recipe or import is a 404, as before. The
   itself, and the gate goes to `/login?next=…`, so Log in comes back where it was. Log out is in
   the avatar's menu, with the name and email; it lands on plain `/login`, without `next`: the
   user chose to leave, and the next person on the device shouldn't land on their page.
-- **Password reset (M10, D33):** "Forgot password?" on Log in opens `/forgot`, which sends
+- **Password reset (M11, D33):** "Forgot password?" on Log in opens `/forgot`, which sends
   `POST /api/auth/forgot { email }`. It always answers **202** the same way, before anything is
   looked up or sent, so neither the answer nor its time tells who has an account. It's counted
   in `loginAttempts` as the logins are, whether or not the email has an account: 5 a minute per
@@ -674,7 +687,9 @@ the browser's console). Another user's recipe or import is a 404, as before. The
   a dependency of `createApp`, so tests pass a fake that keeps what was sent). The link is
   `<PUBLIC_URL>/reset#<token>`: in the hash, so it never reaches a request log, ours included
   (the request line keeps the URL). "It works once, for an hour. If you didn't ask, ignore this
-  email." A failed send is logged, without the token. With no `RESEND_API_KEY` nothing is sent;
+  email." The email is in the account's language (`language`, M10, §16.7): its subject and
+  lines in English and Hebrew in `email.ts`, the Hebrew one `dir="rtl"`, the link `dir="ltr"`.
+  A failed send is logged, without the token. With no `RESEND_API_KEY` nothing is sent;
   in development the link is logged instead, so the flow can be tried locally.
   `/reset` takes the token from the hash, asks for a new password (`new-password`, the sign-up
   rules) and sends `POST /api/auth/reset { token, password }`, counted per IP as sign-ups are
@@ -702,7 +717,7 @@ the browser's console). Another user's recipe or import is a 404, as before. The
   preview's origin, which proxies `/api`, so the cookie is the client's. The e2e API trusts that
   one proxy (`TRUST_PROXY=1`) and each file signs up from an `X-Forwarded-For` of its own: there
   are more files than the 10 sign-ups a minute one IP gets.
-- Out of M9: password reset (M10, above), email verification for password accounts (left
+- Out of M9: password reset (M11, above), email verification for password accounts (left
   out, above), other providers.
 
 ## 9. Gemini
@@ -779,6 +794,14 @@ the browser's console). Another user's recipe or import is a 404, as before. The
 | D36 | Security headers with **`helmet`**, already on every answer, now on the pages too; its CSP allows the inline script by a hash the API computes at start from the `index.html` it serves (§15.4) | helmet is already in the code (node-api.md) and its defaults are right; a hash from the served file can't drift from the script | Headers by hand (more lines to get right); moving the script to a file (a round trip on every page's LCP, the reason it's inline); `'unsafe-inline'` (no protection) |
 | D37 | Monitoring: Fly's logs (pino JSON) and its free Grafana dashboards; a warning log at 80% of the global cap; optional free alerts: UptimeRobot on `/api/ready`, Healthchecks.io pinged by the worker (§15.5) | Enough to see errors and know when something stops, at no cost and with almost no code | Sentry (an SDK in both processes and the client, for one household's traffic); log shipping to a paid service |
 | D38 | Backups: a nightly GitHub Actions job `mongodump`s Atlas, encrypts the archive with `age` to the user's public key, and keeps it 14 days as a workflow artifact | M0 has no backups; the repo is public, so only an encrypted file may sit in it, and only the user's own machine can decrypt it | No backups (accepted only until O1); a paid Atlas tier for its snapshots; a Fly volume and a scheduled machine (more parts) |
+| D39 | Strings through **i18next + react-i18next** (the user's choice): English bundled, Hebrew a lazy chunk loaded before the first render when it's needed; keys typed from the English file, so `he` must have every key; plurals by i18next (`Intl.PluralRules`), numbers and times by `Intl` (§16.3) | The common pair, with plurals, interpolation and typed keys built in; nothing is drawn before its strings are there, so no English flashes | A `t()` of our own over `Intl.PluralRules` (about 0.5 kB, but plurals, variables and types by hand); FormatJS / react-intl (ICU messages, a heavier runtime); Lingui (a compile step and macros); both languages bundled (every English user pays for Hebrew) |
+| D40 | **The language is saved on the account** (`language`, default English), changed by `PATCH /api/auth/me` from the avatar's menu; signed out, the browser's language decides, with a switch on Log in and Sign up, and a sign-up keeps the language it was shown in; **switching reloads** the page (§16.1) | Facebook's model, the user's guide: the choice follows the person to every device; a reload redraws everything at once (every string, date, toast and Radix part) with no in-place switching code | The browser only (`localStorage`: lost on another device); the language in the address (`/he/…`: every route and link changes, for a site that isn't indexed); switching without a reload (every cached string and component must follow) |
+| D41 | **The direction is set before the first paint** by the inline script in `index.html` (§8.3), from a `pinch_lang` cookie the API sets from the account, else the browser's language; online, the CSP's hash is computed from the served file (D36), so it follows the script with no change (§16.2) | `lang` and `dir` must be right on the very first frame, before any CSS or JS; the script already runs there for the hint, and a cookie is what it can read | Setting them in `main.tsx` (a second place that decides; and fonts and the scrollbar side would already follow `ltr`); the API templating `index.html` per language (two files to hash, and Vite serves it in development); the language in `localStorage` (the server can't set it from the account) |
+| D42 | **Logical CSS:** Tailwind v4's `ms-/me-/ps-/pe-/start-/end-/text-start/rounded-s-/border-s-` instead of left and right; `rtl:` only where a logical class can't say it (a mirrored icon); a test fails on a physical class in `client/src` (§16.4) | One set of classes serves both directions, so English stays exactly as it is; the test keeps the next class honest | An RTL post-processor (`rtlcss`: a second stylesheet to build and load); `rtl:` beside every physical class (twice the classes) |
+| D43 | **User content keeps its own direction:** `dir="auto"` on everything a user or a post wrote (titles, ingredients, steps, notes, pasted text, names), `dir="ltr"` on links and emails; the import card follows the interface, reversing #113's `ltr` (§16.5) | A Hebrew recipe reads right to left in English, and an English one left to right in Hebrew; a link is always left to right | The interface's direction on content too (an English recipe would read backwards in Hebrew); `<bdi>` around each piece (`dir="auto"` on the element does the same, and is already used) |
+| D44 | **Server messages are translated in the client.** The API's errors already carry a `code`, and the client already words them itself. The other texts the server sends (the schemas' field messages, the import's failure reasons) are named in one `messages` object in `shared/`; the client finds a known English text's key and translates it, and shows an unknown one as it came (§16.7) | Nothing on the server or in the database changes, so old imports read as before and the server's tests stay; one list is the English source for both sides | The server translating by the user's language (the worker and every route would need it, and the strings live twice); an `errorCode` field on imports (a schema change, and old imports still need the fallback) |
+| D45 | **Fonts:** Fraunces has no Hebrew, so Hebrew display text gets **Frank Ruhl Libre** (OFL), a Hebrew-only subset, weights 500–700, self-hosted, declared with a Hebrew `unicode-range` beside Fraunces and added at the same moment after load, so it's fetched only when Hebrew display text is on the page; the body stays the system sans, which has Hebrew everywhere (§16.6) | Fraunces' warmth in Hebrew, where the system serif (Times New Roman) looks like a form; no bytes for English pages, and none before the LCP | Heebo or Assistant for the body (a download on every Hebrew page for text the system already draws well, and English's body is the system's too); the system serif only (today's); Noto Serif Hebrew (plainer) |
+| D46 | **Some words stay in English** in Hebrew: Pinch, the platforms' and Google's names, links, emails, and the codes in the address (§16.8) | They're names and addresses, not words: they are what the user sees on the logo, the site, the button they'll press and the URL bar | Transliterating them ("פינץ'", "יוטיוב": a second name to recognise) |
 
 ## 11. Risks
 
@@ -799,6 +822,10 @@ the browser's console). Another user's recipe or import is a 404, as before. The
 | A merge ships a bad change | The gates first; blue-green with health checks; roll back with `fly deploy --image <the previous image>` or a revert |
 | Someone uses up Resend's 100 emails a day with Forgot password | Rate limits per IP and per email; a reset may fail for the rest of that day: accepted |
 | `yt-dlp` falls behind the platforms | Its version is pinned in the Dockerfile and bumped by a PR when imports start failing |
+| A Hebrew string reads as a translation, or is wrong | Claude drafts, the user (a native speaker) reads every string in its PR; the copy rules (§16.9) |
+| i18next costs 18 kB of every page's JS (§16.10) | Measured, and the budgets raised by that much with the user's yes; Hebrew is lazy, so English pays only the library; LCP is checked in both languages |
+| A physical class (`ml-`, `right-`) slips in and breaks Hebrew | The test of D42; the UI review in both languages at the milestone's end |
+| A key is missing in Hebrew | `he` is typed against `en` (§16.3), so `tsc` fails; i18next falls back to English at worst |
 
 ## 12. Build plan (small PRs)
 
@@ -816,7 +843,8 @@ Each milestone is a few **small PRs** (roughly ≤ 300 changed lines each), whic
 | M7 | **Polish** — empty, loading and error states, share and comments placeholders, look and feel | It feels like a finished POC |
 | M8 | **Redesign** (docs/ux/pass-02.md): the two tabs, shadcn/ui, the queue, filters, the recipe, cook mode, one editor; then the features it asks the API for | The wireframes in `docs/ux/wireframes/` are the app |
 | M9 | **Accounts and links pinched before** (D28–D30): this user's copy found (L1); sign-up and sign-in with email or Google, sessions, the global cap; then the shared answers (L2) | Each person signs in to their own recipes; a link pinched before costs no Gemini call |
-| M10 | **Pinch online** (D31–D38, §15): a spike from a cloud IP first; Fly.io, Atlas, deploy on merge, security headers; password reset by email; monitoring and backups | Pinch runs at the user's domain over HTTPS, a merge deploys it, and a forgotten password can be reset |
+| M10 | **English and Hebrew** (D39–D46, §16): the language on the account, chosen in the avatar's menu; right to left with logical CSS; every string through i18next, with Hebrew; the server's messages translated in the client; a Hebrew display font | A Hebrew speaker uses Pinch in Hebrew, right to left, on every device they sign in on, and English looks exactly as before |
+| M11 | **Pinch online** (D31–D38, §15): a spike from a cloud IP first; Fly.io, Atlas, deploy on merge, security headers; password reset by email; monitoring and backups | Pinch runs at the user's domain over HTTPS, a merge deploys it, and a forgotten password can be reset |
 | Later | Share, comments, WhatsApp bot / PWA share target, nutrition database, semantic search | — |
 
 Doing M4 with a fake extractor first is deliberate (it takes 1.5 s a step, and fails every try of a link
@@ -834,8 +862,9 @@ Phone first (§1); the wireframes in `docs/ux/wireframes/` (pass 02, revision 2)
 screen at 360 and 1440 px. Every page sits in one frame (D24): a header of two tabs, **New
 recipe** (its badge counts drafts ready to review) and **My recipes**, then the avatar: the first
 letter of the user's name in a 44 px circle, which opens a menu (not modal, loaded on its first
-press as ⋯ is), 288 px wide, with the name and email (a long one cut, whole in its title), then Log out (§8.3; the theme follows the system, so it
-has no switch). **Write a recipe** is on both tabs: in the header from
+press as ⋯ is), 288 px wide, with the name and email (a long one cut, whole in its title), then Language, its two choices
+each named in itself, "English" and "עברית", the current one checked (M10, §16.1), then Log out
+(§8.3; the theme follows the system, so it has no switch). **Write a recipe** is on both tabs: in the header from
 768 px, a floating button at the bottom right on a phone. The logo comes first and links to
 Add recipe: the "Pinch" wordmark from 768 px, the "P" mark on a phone from 360 px (none
 narrower), each in the dark theme's accent in the dark theme (`client/public/logo*.svg`, as
@@ -868,9 +897,9 @@ green (`success` on `success-soft`); the rest stay neutral, and errors red.
 | `/recipes/new` | Write a recipe | The editor, empty (breadcrumbs *Add recipe › Write a recipe*), under a tip: got it as text? Paste it on Add recipe. Title (examples as placeholders), description, ingredients as amount · unit · name rows with a note (on its own line on a phone) and ✕, steps as numbered boxes with ✕, Add ingredient and Add step (Paste a list and reordering aren't built: nothing parses a pasted line yet, and the form never had an order to change); then the source ("Written by you"), serves and times, and tags as chips with ✕ and Add tag (a sheet of the facets, as Filters); Cancel and **Save recipe** pinned to the bottom. No picture by hand, and no Change picture or source link: the API has no upload and keeps the source (D20) | Each error under its field from the first Save (§8.1), focus on the first, "N things to fix before saving" above the Save bar; saving; failed (keeps what was typed) |
 | `/recipes/:id/edit` | Edit a recipe | The same editor, filled, with its picture (*My recipes › title › Edit*); Cancel and **Save changes** | Loading, error, not found; then as Write a recipe |
 | `/imports/:id` | Review a draft | The same editor, filled from the draft (*Add recipe › Review: title*), with its picture, under a banner that says where Pinch read it (the site, the text you pasted, your screenshots) and links to the post (Watch the video). The fields the model was unsure of (§6) are marked: a dashed box, and under its row ◆ and the reason, which the box points to (`aria-describedby`); changing the field clears its mark, and removing a row moves the marks of the rows under it. Under the banner, "◆ N things to look at, marked below" and Go to the first (focus on the first marked box). Marks don't block Save, and a saved recipe doesn't keep them. Discard (asks first, "Discard this draft?" with its title as it is now, then the toast; not while saving) and **Save to My recipes** (approves it and opens the recipe) | Loading, error; no draft yet, or no such import (says so, links to Add recipe); then as Write a recipe |
-| `/login` | Log in | Signed out only (§8.3): no header, the wordmark over a card in the middle of the screen (the tabs and counts are a signed-in user's). Email and Password (filled in by the browser: `email`, `current-password`; "Forgot password?" by Password's label, M10, keeping the email typed), **Log in**, then "New to Pinch? Sign up" (keeping `?next=`); "or", then "Continue with Google" (an outline button with Google's "G"; hidden when the API has no Google settings, §8.3); the wordmark is drawn inline (an `<img>` was the page's LCP, docs/metrics/m09.md) | Each error under its field from the first Log in, focus on the first; logging in; "That email and password don't match." (401, either one wrong); "Too many tries. Wait a minute and try again." (429); "Something went wrong. Try again." (a 500); "We couldn't reach Pinch. Try again." (no answer); "Couldn't sign in with Google. Try again." (back from Google with `?error=google`, right above the Google button); a sent form's error goes while it's sent again; a pending button (Logging in…, and every button's pending state) keeps its colour, with `aria-busy`, and only an unavailable one is faded |
+| `/login` | Log in | Signed out only (§8.3): no header, the wordmark over a card in the middle of the screen (the tabs and counts are a signed-in user's). Email and Password (filled in by the browser: `email`, `current-password`; "Forgot password?" by Password's label, M11, keeping the email typed), **Log in**, then "New to Pinch? Sign up" (keeping `?next=`); "or", then "Continue with Google" (an outline button with Google's "G"; hidden when the API has no Google settings, §8.3); the wordmark is drawn inline (an `<img>` was the page's LCP, docs/metrics/m09.md) | Each error under its field from the first Log in, focus on the first; logging in; "That email and password don't match." (401, either one wrong); "Too many tries. Wait a minute and try again." (429); "Something went wrong. Try again." (a 500); "We couldn't reach Pinch. Try again." (no answer); "Couldn't sign in with Google. Try again." (back from Google with `?error=google`, right above the Google button); a sent form's error goes while it's sent again; a pending button (Logging in…, and every button's pending state) keeps its colour, with `aria-busy`, and only an unavailable one is faded |
 | `/signup` | Sign up | As Log in: Name, Email, Password ("At least 8 characters", `new-password`; the hint gives way to an error), **Sign up**, then "Already have an account? Log in" | As Log in; an email with an account (409) says "An account already uses this email." with a Log in link, which brings the email along (router state) and puts focus on Password; the API's field errors (400) on their fields |
-| `/forgot` | Forgot password | As Log in (M10, §8.3): Email, **Send the link**, then "Back to Log in" | Sending; then, in the card's place, "Check your email" and "If an account uses a@b.com, a link to set a new password is on its way. It works for an hour." (the same for any email); 429 and no answer as Log in |
+| `/forgot` | Forgot password | As Log in (M11, §8.3): Email, **Send the link**, then "Back to Log in" | Sending; then, in the card's place, "Check your email" and "If an account uses a@b.com, a link to set a new password is on its way. It works for an hour." (the same for any email); 429 and no answer as Log in |
 | `/reset` | Set a new password | As Log in, signed in or out (a reset ends every session anyway): New password ("At least 8 characters", `new-password`), **Set password**; signed in, it loads `/` | Saving; "This link has expired or was already used." with "Ask for a new link" (`/forgot`); no token in the address says the same; the password's errors under it |
 | anything else | Page not found | Get back to My recipes | — |
 
@@ -887,7 +916,17 @@ the same order (source, details and tags after the steps; only the picture comes
 recipe's page), so the keyboard and the eye go the same way; the Save bar's buttons are a
 phone's width up to 1024 px.
 
-## 15. Running in production (M10, D31–D38)
+**In Hebrew** (M10, §16) every screen is the mirror of the above, "left" and "right" read as
+start and end: the logo at the right of the header and the avatar at the left, its menu opening
+from there; Write a recipe floats bottom left on a phone; toasts sit bottom left from 768 px;
+My recipes' filter panel is on the right from 1024 px, and the editor's main column too; a
+breadcrumb's › and cook mode's ‹ › point the other way, and there the next card comes in from
+the left, and ← goes to the next step. What a user or a post wrote keeps its own direction
+(D43): a Hebrew recipe reads right to left in English, an English one left to right in Hebrew.
+Log in and Sign up have a quiet switch under the card, the other language named in itself
+("עברית" in English, "English" in Hebrew), which reloads the page in it.
+
+## 15. Running in production (M11, D31–D38)
 
 Pinch runs at the user's domain (`PUBLIC_URL`, say `https://pinch.example`) on Fly.io, with
 MongoDB Atlas and Resend. The code is the development code; only config differs. Claude never
@@ -980,7 +1019,7 @@ served by the app, and Google sign-in is a page load, not a fetch, so no other o
   global count passes 80% of `GLOBAL_DAILY_IMPORTS`; a budget alert in Google Cloud's billing
   (the user's) catches the spend itself.
 - **The data's size:** Atlas's page shows it against M0's 512 MB (§11).
-- **Real users' vitals** aren't collected in M10: the observer measures the production URL at the
+- **Real users' vitals** aren't collected in M11: the observer measures the production URL at the
   milestone's end.
 - **Backups (D38):** `.github/workflows/backup.yml`, nightly and by hand: `mongodump --uri
   "$MONGODB_URI" --archive --gzip`, encrypted with `age` to the user's public key (in the
@@ -1042,3 +1081,232 @@ line moves all of it, the account included (the same email and password):
 - [ ] `fly secrets set` the secrets of §15.2.
 - [ ] Add the repo secrets `FLY_API_TOKEN` (`fly tokens create deploy`) and `MONGODB_URI` (for
       backups); generate the `age` key pair and keep its private key.
+
+## 16. English and Hebrew (M10, D39–D46)
+
+Pinch speaks English and Hebrew. Facebook's language switching is the guide: the choice is saved
+on the account and follows the user to other devices, switching reloads into the new language,
+the whole interface turns direction, and what the user wrote keeps its own. English stays exactly
+as it is today.
+
+### 16.1 Choosing the language (D40)
+
+- **On the account:** `language: "en" | "he"` on the user (§6), in `me` (§8). An account from
+  before M10 has none and reads as English, so nothing changes for it until its user switches.
+- **The picker** is in the avatar's menu (§14): Language, then "English" and "עברית" as radio
+  items, each named in its own language (with `lang` on each, so a screen reader says it right).
+  Picking the other one sends `PATCH /api/auth/me { language }` (JSON only, as D29's mutations;
+  any other field is a 400), which saves it and sets `pinch_lang`; then `location.reload()`. A
+  failure is the "Couldn't save" toast with Try again, in the current language.
+- **Signed out** (Log in, Sign up, Forgot password): the cookie if this device has one, else the
+  browser's first language (`navigator.languages[0]`): Hebrew if it starts with `he` or the old
+  `iw`, otherwise English. A quiet switch under the card names the other language in itself;
+  it sets `pinch_lang` in the browser and reloads. A sign-up keeps the language it was shown
+  in: Sign up sends it (`language` in the body), and "Continue with Google" carries it
+  (`/api/auth/google?next=…&lang=he`, kept in the `pinch_google` cookie with `next`) for an
+  account Google creates. Signing in to an existing account takes the account's.
+- **A new device:** the page starts in the cookie's or the browser's language. When `me` answers
+  with a user whose language differs, its answer has already set the cookie, so the client
+  reloads once, before anything is drawn (SessionGate is still waiting). Only when the cookie now
+  says the account's language: a browser that refuses cookies stays as it is rather than loop.
+
+### 16.2 Before the first paint (D41)
+
+The inline script in `index.html` (§8.3) grows by a few lines, before the queue's preload:
+
+```js
+const saved = /(?:^|; )pinch_lang=(en|he)/.exec(document.cookie)?.[1];
+const lang = saved ?? (/^(he|iw)\b/i.test(navigator.languages[0] ?? "") ? "he" : "en");
+document.documentElement.lang = lang;
+document.documentElement.dir = lang === "he" ? "rtl" : "ltr";
+```
+
+It runs before any CSS or JS, so the first frame has the right `lang` and `dir` (and with them
+the scrollbar's side and the fonts). From then on `document.documentElement.lang` is the
+language: `main.tsx` reads it, never the cookie. It stays one script, so online the CSP still
+has one hash, and that hash is computed by the API from the file it serves (D36, §15.4): the
+change needs nothing else. `index.html`'s own `lang="en"` stays, for a browser without scripts.
+
+### 16.3 Strings (D39)
+
+- `client/src/i18n.ts` sets up i18next with `lng` from `<html lang>`, `fallbackLng: "en"`,
+  React's escaping (`escapeValue: false`), and the English resources in the bundle
+  (`client/src/locales/en.ts`, one object, keys grouped by area: `header`, `auth`, `imports`,
+  `recipes`, `editor`, `cook`, `toasts`, `validation`). In Hebrew, `main.tsx` waits for
+  `import("./locales/he.ts")` before the first render, alongside the queue's wait it already
+  has (§8.3), so the chunk adds no round trip of its own on `/`, and no English is ever drawn.
+- **Typed keys:** i18next's `CustomTypeOptions` reads the type of `en`, so `t("a.missing")`
+  fails `tsc`. `he` is declared as `Translation<typeof en>`: the same keys, each a string, and an
+  optional `_two` beside a plural (Hebrew's dual, "שעתיים"). A missing or extra Hebrew key fails
+  the build.
+- **Plurals** by i18next's `count` (`Intl.PluralRules`: English one/other, Hebrew one/two/other),
+  with each form written whole. The hand-made ones go: `count === 1 ? … : …` in the queue's
+  heading, "N images", "N recipes match.", "Show N recipes", "N things to fix", "N things to look
+  at", the header's hidden "recipe(s)" and the card's "N ingredients".
+- **Numbers and times by `Intl`** with the page's language (`he-IL` in Hebrew), never by hand:
+  minutes as `Intl.NumberFormat(lang, { style: "unit", unit: "minute", unitDisplay: "short" })`
+  ("10 min", "10 דק׳"), counts and nutrition by `Intl.NumberFormat` (today `String(Math.round())`
+  and `${minutes} min`). The cook timer's `19:58` stays digits; its words are translated. No
+  dates or relative times are shown today; one would use `Intl.DateTimeFormat` or
+  `Intl.RelativeTimeFormat`. Text a user wrote (a step's "8–10 minutes") is theirs, not formatted.
+- **Page titles** (React's `<title>`): translated, with "· Pinch" kept. A title that holds a
+  recipe's (Cooking {{title}}) wraps it in Unicode isolates (U+2068 … U+2069), as a `<title>`
+  can't hold `<bdi>`.
+- `index.html`'s meta description stays English: the only page a crawler reaches is Log in,
+  and a crawler sends no Hebrew cookie or language.
+
+### 16.4 Right to left (D42)
+
+- **Logical classes.** About 30 physical classes are in `client/src` today (`pl-9`, `left-3`,
+  `-ml-4`, `right-1.5!` in Sonner's classes, `rounded-l-none`…, by grep, 2026-11-12). Each
+  becomes its logical twin: `ms-/me-`, `ps-/pe-`, `start-/end-`, `text-start/end`,
+  `rounded-s-/e-`, `border-s-/e-`. Centred ones (`left-1/2` with a translate, the dialog) are the
+  same both ways and are written `inset-x-0 mx-auto`, so the test of D42 has no exceptions. `rtl:`
+  is used only where no logical class says it: a mirrored icon. `justify-*`, `flex` and `grid`
+  already follow `dir`.
+- **The test:** a Vitest file reads every `.ts` and `.tsx` in `client/src` and fails on a
+  physical class (`ml-`, `mr-`, `pl-`, `pr-`, `left-`, `right-`, `text-left`, `text-right`,
+  `rounded-l`, `rounded-r`, `border-l`, `border-r`), naming the file and line.
+- **Icons that mirror** (`rtl:-scale-x-100`): those that point the reading way. ChevronLeft and
+  ChevronRight (cook mode's ‹ ›, a breadcrumb's separator), ExternalLink (its arrow leaves toward
+  the end), LogOut (its arrow too), and any back, forward or send arrow added later. **Not
+  mirrored:** the logo and the P mark, Sparkles, the cooking pot, emoji, Check and CircleCheck,
+  a clock or timer, a play triangle, Search, the pens, Plus, X, Trash, Share, ImagePlus,
+  SlidersHorizontal, Ellipsis, the spinner, the warning triangle, ChevronDown. They are things,
+  not directions (Material's rule).
+- **Radix** reads the direction from a `DirectionProvider` (`Direction.Provider` from
+  `radix-ui`) around the app, set from `<html dir>`: the dropdowns' `align="end"` then opens
+  toward the left in Hebrew, and the radio groups' arrow keys follow. Sheets open from the
+  bottom (or in the middle from 768 px), so they don't flip; their ✕ moves with `end-`.
+- **Sonner** gets `dir`, and its wide position becomes `bottom-left` in Hebrew (`top-center`
+  stays); the close button's `right-1.5! left-auto!` and the room kept for it (`pr-8!`) become
+  `end-1.5! start-auto!` and `pe-8!`.
+- **Cook mode's row** scrolls the other way: in RTL `scrollLeft` runs from 0 to negative, and
+  the cards' `offsetLeft` from the right. `StepCarousel` and `nearestStep` measure each card's
+  distance from the row's start edge, so one rule serves both; ← and → swap meaning (→ is back
+  in Hebrew), as the swipe does by itself.
+- **Number fields** (servings, minutes) are text fields with `inputMode="numeric"`: digits are
+  neutral, so they take the interface's direction and need no `dir`; the value sits at the start.
+- **Native controls** (the Sort select, checkboxes, the scrollbar) follow `<html dir>` by
+  themselves.
+
+### 16.5 The user's own text (D43)
+
+- `dir="auto"` on everything a user or a post wrote: a recipe's title, description,
+  ingredients, steps and notes, in the list, the recipe, cook mode and the editor's fields (most
+  have it since M5 and U11); the queue card's title and pasted text; a draft's "things to look
+  at" reasons (in the recipe's language already, §9); the user's name in the menu; the breadcrumb's
+  title. A list (ingredients, steps) takes it once, on the list: a recipe is in one language.
+- `dir="ltr"` on links and emails, wherever shown: the queue card's link, the source link's
+  text, the email in the menu and in Forgot password's answer, the email fields.
+- **The import card** follows the interface again: today its lines are `dir="ltr"` "until the
+  app is localised" (#113, the user's call on 2026-11-12). In M10 the card is laid out by the
+  interface's direction, its title and pasted text `dir="auto"`, and a link `dir="ltr"`. This
+  reverses #113 on purpose; the card's comment says why.
+- Interpolated user text inside a translated sentence ("Discard {{title}}?") goes in `<bdi>`
+  (react-i18next's `Trans`), so a Hebrew title in an English sentence, or the reverse, keeps the
+  punctuation where it belongs.
+
+### 16.6 Fonts (D45)
+
+- **Fraunces has no Hebrew** (the subset is Latin, as was the face; globals.css already says so):
+  a Hebrew title today falls back to Times New Roman, or Noto Serif Hebrew on Android.
+- **The body font** is the system sans (zero bytes), which has Hebrew on every platform (San
+  Francisco with its Hebrew, Segoe UI, Roboto with Noto Sans Hebrew). It stays, in both
+  languages.
+- **The Hebrew display face** is Frank Ruhl Libre (SIL OFL), self-hosted beside Fraunces:
+  `public/fonts/frank-ruhl-libre.woff2`, the Hebrew block only, weights 500–700 (about 25–35 kB,
+  measured in its slice). `displayFont.ts` adds it as a second "Fraunces" face with
+  `unicodeRange: "U+0590-05FF, U+FB1D-FB4F"`, at the same moment as Fraunces, 1.5 s after load,
+  added to `document.fonts` without `load()`: the browser fetches it only when a Hebrew title is
+  drawn, so an English page with no Hebrew recipe pays nothing, and no page pays before its LCP.
+- Until it arrives, a Hebrew title is in a fallback sized to match (`Frank Ruhl Fallback`, from
+  the system serif's metrics, as `Fraunces Fallback` is from Georgia's), so nothing moves when it
+  swaps in. `font-display` doesn't apply (it's added once loaded), as for Fraunces. Nothing is
+  preloaded: neither face is on the LCP's path.
+
+### 16.7 Server messages (D44)
+
+What the server says that the user reads, found by grep on 2026-11-12:
+
+| Where | How many | In M10 |
+|---|---|---|
+| `HttpError`s in the routes and `errors.ts` (`signed_out`, `too_many_tries`, `email_taken`, `daily_limit`, `link_pinched_before`, `not_found`…) | 18 | Already shown by `code` and status in the client's own words (`submitError`, `limitMessage`, the toasts): those words are translated; the server's English stays for logs and tests |
+| The shared schemas' field messages (`shared/src/recipe.ts`, `auth.ts`, `import.ts`, `tags.ts`), shown under fields from the client's own check and from the API's 400 `fields` (a few only for a hand-made address: Sort, Time, Source) | 36 | Named in `shared/src/messages.ts` (`titleRequired: "Give the recipe a title."`), which the schemas use; the client turns a message back into its key and shows `t("validation.<key>")` |
+| The limit notes (`dailyLimitMessage`, `globalLimitMessage`) | 2 | Already chosen by the 429's code in the client (`limitMessage`): it returns `t("imports.dailyLimit", { count: 20 })` or `t("imports.globalLimit")` instead |
+| The worker's failure reasons, stored on the import's `error` (`NOT_A_RECIPE`, `TOO_LONG`, `FAILED_MESSAGE`; M11's "Instagram wouldn't let Pinch read this post" will be the fourth) | 3 | The same list: the worker stores the English as now; the queue card shows `t()` of its key |
+
+- A message the client doesn't know (an import failed before its wording changed, as `TOO_LONG`
+  did from 3 to 5 minutes in #113) is shown as it came: in English, and only until the import's
+  7-day TTL. No migration and no new field.
+- `validation` in `en.ts` is `messages` itself, imported from `shared/`: one English source.
+- The draft is still in the post's language (D16), whatever the interface's, and so are the
+  model's "things to look at" reasons (§9). Tag labels (D10) are translated in the client; the
+  codes stay.
+- **Email (M11):** the reset email is in the account's language (§8.3): `email.ts` keeps its two
+  short texts beside each other, as the client's are.
+
+### 16.8 Words left in English (D46)
+
+| Word | Why |
+|---|---|
+| **Pinch**, wherever it's shown: the wordmark, the page titles ("· Pinch"), and inside Hebrew sentences ("Pinch קורא סרטונים של עד 5 דקות") | The brand, as on the logo; a transliteration would be a second name |
+| The **Pinch it** button | To decide (the user): the plan's default is "Pinch" alone in Hebrew, the brand as the action, as "it" has no place in a Hebrew sentence |
+| **Instagram, Facebook, YouTube** (source chips, the card's "on Instagram", Filters' Source) | Their own names, as on their apps and their Hebrew sites |
+| **Google** ("להמשיך עם Google") | Its name and "G" mark as Google's sign-in rules ask; what the user will see on Google's page |
+| **Links and emails** | Addresses, typed and read in Latin; always `dir="ltr"` |
+| **Codes:** tags in the address and the data (`cuisine:italian`), `sort=quickest`, the API's error codes | Addresses and data, the same in both languages, so a shared link works for either; the labels on screen are translated |
+| **Units in a recipe** ("2 cups", "1 tbsp") | User content: kept as written; the interface's own units (min, kcal) are translated |
+| **Gemini** | Not shown today; if it is, a product's name |
+
+### 16.9 Hebrew copy
+
+The English rules stay (sentence case, the ui-craft voice); Hebrew has its own, for every PR
+that adds a string:
+
+- **No gendered imperatives.** Actions (buttons, menu items, links) in the infinitive, as many
+  Israeli apps do: "להוסיף מתכון", "לשמור", "לבטל". A sentence to the user is in the plural
+  ("הדביקו קישור") or says it without "you" ("אפשר להדביק קישור"). Never a slash (הוסף/י).
+  A status is a noun, not a gendered present ("בהכנה…" for Cooking…).
+- **No case:** Hebrew has no capitals, so sentence case doesn't apply; Latin names keep theirs.
+- **Punctuation:** the real geresh and gershayim (דק׳, ק״ג), not `'` and `"`; "…" as in English.
+- **Numbers and times** through `Intl` with `he-IL` (§16.3): Western digits, as Hebrew uses.
+- **Plurals** through i18next: `_one`, `_two` where Hebrew has a dual ("שעתיים"), `_other`; each
+  form a whole phrase ("מתכון אחד", "2 מתכונים").
+- **Who writes them:** Claude drafts every Hebrew string with its English one; the user, a
+  native speaker, reads every string in the PR, as every line is read.
+
+### 16.10 Bundle and budgets
+
+- **Measured** (2026-11-12, a throwaway Vite 8.3.8 build in the scratchpad: a React page, then
+  the same page with i18next 27.1.1 and react-i18next 18.0.1 set up and one `t()`; Vite's own gzip
+  figures, as docs/metrics/m09.md, never `gzip -9`): **+18.1 kB** gzip (i18next 15.0,
+  react-i18next 3.1). The English strings move from the components into `en.ts`; keys add a
+  little, and the strings of lazy chunks (the editor, cook) join the entry: about +2–3 kB more.
+  Hebrew is a lazy chunk (about 6–8 kB gzip, Hebrew being two bytes a letter), fetched only in
+  Hebrew.
+- **Expected after M10** (m09's figures + about 20 kB): app routes about 177 (`/recipes`) to 184
+  (cook), `/` about 196, the editor about 201, Log in about 200.
+- **Budgets** (the metrics skill's row, raised by the user for M10): 185 → **195** kB on the app's
+  routes, 190 → **205** kB on routes that add their own chunk. The user accepted about 10 kB;
+  the measured library is 18, which the second row needs: the editor would be at about 201. I1
+  records the app's own figure, and the observer checks LCP in Hebrew too (the lazy chunk and
+  the reload of a new device).
+
+### 16.11 Tests
+
+- **Unit tests stay in English,** the default: the test setup starts i18next with `en`, so no
+  existing test changes its words.
+- **One Hebrew render test per main screen** (Add recipe, My recipes, a recipe, cook mode, the
+  editor, Log in): a `renderInHebrew` helper sets `<html lang="he" dir="rtl">` and loads `he`;
+  each checks a heading and a few strings, and the icon that should mirror.
+- **Keys:** `tsc` checks that `he` has every key of `en` (§16.3); a test checks that each Hebrew
+  string has the same `{{variables}}` as its English one.
+- **The physical-class test** (§16.4).
+- **Server:** `PATCH /api/auth/me` (saved, the cookie, 400 for another field or value, 401
+  signed out, 415 without JSON); `me` with and without `language`; sign-up's and Google's new
+  account keep the page's language.
+- **e2e:** the accessibility run (axe) also in Hebrew, on the same pages; one flow switches to
+  עברית in the avatar's menu, sees the reload in RTL, then signs in from a fresh context (a
+  second device) and lands in Hebrew. Expected without a config change (a cookie on the context);
+  if Playwright's config must change (a `locale`), the user is asked first.
