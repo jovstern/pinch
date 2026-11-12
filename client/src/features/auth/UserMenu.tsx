@@ -1,22 +1,28 @@
-import type { Me } from "@pinch/shared";
+import { LanguageSchema, type Me } from "@pinch/shared";
 import { useMutation } from "@tanstack/react-query";
 import { LogOut } from "lucide-react";
+import { useId } from "react";
+import { useTranslation } from "react-i18next";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "../../components/ui/DropdownMenu.tsx";
-import { loadPage } from "../../lib/loadPage.ts";
+import { loadPage, reloadPage } from "../../lib/loadPage.ts";
 import { toastCouldntSave } from "../../lib/toasts.tsx";
 import { Avatar } from "./Avatar.tsx";
-import { logOut } from "./authQueries.ts";
+import { changeLanguage, logOut } from "./authQueries.ts";
 
-// The avatar's menu (design §14): who is signed in, and Log out. Loaded on its first press
-// (LazyUserMenu), and open as it appears.
+// The avatar's menu (design §14): who is signed in, the language, and Log out. Loaded on its first
+// press (LazyUserMenu), and open as it appears.
 export function UserMenu({ me }: { me: Me }) {
+  const { t } = useTranslation();
+  const languageId = useId();
   // Signed out: Log in, as a new page (design §8.3: a change of user leaves nothing of the last
   // one's), and plain /login, without the page they were on: they chose to leave it, and the
   // next person on this device shouldn't land on it.
@@ -28,7 +34,17 @@ export function UserMenu({ me }: { me: Me }) {
     onError: () => {
       toastCouldntSave(() => {
         logOutNow.mutate();
-      }, "Couldn't log out");
+      }, t("header.couldntLogOut"));
+    },
+  });
+  // Saved on the account, then the same page again, all of it in the new language (§16.1, D40).
+  const switchLanguage = useMutation({
+    mutationFn: changeLanguage,
+    onSuccess: reloadPage,
+    onError: (_error, language) => {
+      toastCouldntSave(() => {
+        switchLanguage.mutate(language);
+      });
     },
   });
   return (
@@ -49,13 +65,33 @@ export function UserMenu({ me }: { me: Me }) {
           </span>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
+        <DropdownMenuLabel id={languageId} className="pb-1 text-sm text-text-muted">
+          {t("header.language")}
+        </DropdownMenuLabel>
+        {/* Each language named in itself, with its lang, so a screen reader says it right. */}
+        <DropdownMenuRadioGroup
+          aria-labelledby={languageId}
+          value={me.language}
+          onValueChange={(value) => {
+            const language = LanguageSchema.parse(value);
+            if (language !== me.language) switchLanguage.mutate(language);
+          }}
+        >
+          <DropdownMenuRadioItem value="en" lang="en">
+            English
+          </DropdownMenuRadioItem>
+          <DropdownMenuRadioItem value="he" lang="he">
+            עברית
+          </DropdownMenuRadioItem>
+        </DropdownMenuRadioGroup>
+        <DropdownMenuSeparator />
         <DropdownMenuItem
           onSelect={() => {
             logOutNow.mutate();
           }}
         >
           <LogOut aria-hidden="true" />
-          Log out
+          {t("header.logOut")}
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

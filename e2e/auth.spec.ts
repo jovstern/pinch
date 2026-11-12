@@ -1,6 +1,6 @@
 import { randomInt, randomUUID } from "node:crypto";
 import type { APIRequestContext, Page } from "@playwright/test";
-import { expect, test } from "./fixtures.ts";
+import { expect, newVisitor, test } from "./fixtures.ts";
 
 // Sign-in (design §8.3). Chrome logs each 401 as a console error: here a wrong password and a
 // session ended on purpose answer 401, so those are expected. A signed-out page gets none (me
@@ -50,7 +50,7 @@ async function signUpUser(request: APIRequestContext) {
 // which no other test signs up from: one of the 10 a minute it gets, in a database of the run's own.
 test("a new user signs up, logs out, and logs back in", async ({ page }) => {
   const seen = unauthorized(page);
-  await page.context().clearCookies();
+  await newVisitor(page);
   await page.goto("/recipes");
   await expect(page).toHaveURL(/\/login\?next=%2Frecipes$/);
 
@@ -87,7 +87,7 @@ test("a new user signs up, logs out, and logs back in", async ({ page }) => {
 
 test("a session that ends mid-visit goes to Log in and comes back", async ({ page, request }) => {
   const email = await signUpUser(request);
-  await page.context().clearCookies();
+  await newVisitor(page);
   await page.goto("/login");
   // Once the count is in, nothing else is on its way that a cleared cookie would turn into a 401.
   const count = counted(page);
@@ -95,7 +95,7 @@ test("a session that ends mid-visit goes to Log in and comes back", async ({ pag
   await count;
 
   // The session ends (as if it expired): the next request answers 401.
-  await page.context().clearCookies();
+  await newVisitor(page);
   await page
     .getByRole("navigation", { name: "Main" })
     .getByRole("link", { name: /^My recipes/ })
@@ -135,7 +135,7 @@ test("after Log out, the next user sees nothing of the last one's", async ({ pag
 // The e2e API has no Google settings (design §8.3), so Log in offers no Google button. A real
 // Google sign-in isn't tested: it needs Google.
 test("without Google's settings, Log in has no Google button", async ({ page }) => {
-  await page.context().clearCookies();
+  await newVisitor(page);
   const providers = page.waitForResponse((response) =>
     response.url().endsWith("/api/auth/providers"),
   );

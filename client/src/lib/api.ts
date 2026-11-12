@@ -34,7 +34,7 @@ export async function getJson<T>(path: string, schema: z.ZodType<T>): Promise<T>
 // Every write that answers JSON: the same, plus the fields of a 400. The body may be undefined
 // (retry has none): JSON.stringify(undefined) is undefined, so fetch sends no body.
 export async function sendJson<T>(
-  method: "POST" | "PUT",
+  method: "POST" | "PUT" | "PATCH",
   path: string,
   body: unknown,
   schema: z.ZodType<T>,
