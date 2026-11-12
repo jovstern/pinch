@@ -1251,7 +1251,7 @@ What the server says that the user reads, found by grep on 2026-11-12:
 | Word | Why |
 |---|---|
 | **Pinch**, wherever it's shown: the wordmark, the page titles ("· Pinch"), and inside Hebrew sentences ("Pinch קורא סרטונים של עד 5 דקות") | The brand, as on the logo; a transliteration would be a second name |
-| The **Pinch it** button | To decide (the user): the plan's default is "Pinch" alone in Hebrew, the brand as the action, as "it" has no place in a Hebrew sentence |
+| The **Pinch it** button | "Pinch" alone in Hebrew (the user, 2026-11-12): the brand as the action, as "it" has no place in a Hebrew sentence |
 | **Instagram, Facebook, YouTube** (source chips, the card's "on Instagram", Filters' Source) | Their own names, as on their apps and their Hebrew sites |
 | **Google** ("להמשיך עם Google") | Its name and "G" mark as Google's sign-in rules ask; what the user will see on Google's page |
 | **Links and emails** | Addresses, typed and read in Latin; always `dir="ltr"` |
