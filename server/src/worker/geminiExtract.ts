@@ -22,7 +22,7 @@ export const GEMINI_MODEL = "gemini-3.5-flash";
 const GEMINI_TIMEOUT_MS = 120_000;
 
 // Longer videos cost more and are rarely one recipe (design §1).
-const MAX_VIDEO_SECONDS = 3 * 60;
+const MAX_VIDEO_SECONDS = 5 * 60;
 
 // Read here; the worker checks the rest, the draft.
 const IsRecipeSchema = z.object({ isRecipe: z.boolean() });
@@ -65,7 +65,7 @@ export const GEMINI_VERSION = createHash("sha256")
   .slice(0, 12);
 
 export const NOT_A_RECIPE = "This doesn't look like a recipe.";
-export const TOO_LONG = "This video is over 3 minutes. Pinch reads shorter ones.";
+export const TOO_LONG = "This video is over 5 minutes. Pinch reads shorter ones.";
 
 // The one place that knows about Gemini (§9): the worker hands it an import's input and gets a
 // draft back, which it checks with Zod as it would any other.

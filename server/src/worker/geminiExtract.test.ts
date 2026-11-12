@@ -153,8 +153,8 @@ test("the calls are given the attempt's deadline, and Gemini's a timeout of its 
   expect(config?.httpOptions?.timeout).toBe(120_000);
 });
 
-test("a video over 3 minutes isn't sent, and isn't tried again", async () => {
-  vi.mocked(readVideoInfo).mockResolvedValue({ seconds: 181, caption: "" });
+test("a video over 5 minutes isn't sent, and isn't tried again", async () => {
+  vi.mocked(readVideoInfo).mockResolvedValue({ seconds: 301, caption: "" });
   const generate = vi.spyOn(ai.models, "generateContent");
 
   await expect(extract(youtube, noDeadline, quiet)).rejects.toThrow(new NoRetryError(TOO_LONG));
@@ -273,9 +273,9 @@ test("a video Gemini can't read is a failed attempt, and the upload is still del
   expect(remove).toHaveBeenCalledWith({ name: "files/reel" });
 });
 
-test("a reel over 3 minutes, measured once it's here, isn't uploaded, and isn't tried again", async () => {
+test("a reel over 5 minutes, measured once it's here, isn't uploaded, and isn't tried again", async () => {
   const folder = downloadsReel();
-  vi.mocked(measureSeconds).mockResolvedValue(200);
+  vi.mocked(measureSeconds).mockResolvedValue(320);
   const { upload } = filesApi();
 
   await expect(extract(reel, noDeadline, quiet)).rejects.toThrow(new NoRetryError(TOO_LONG));
