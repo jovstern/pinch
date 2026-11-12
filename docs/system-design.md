@@ -802,6 +802,7 @@ the browser's console). Another user's recipe or import is a 404, as before. The
 | D44 | **Server messages are translated in the client.** The API's errors already carry a `code`, and the client already words them itself. The other texts the server sends (the schemas' field messages, the import's failure reasons) are named in one `messages` object in `shared/`; the client finds a known English text's key and translates it, and shows an unknown one as it came (§16.7) | Nothing on the server or in the database changes, so old imports read as before and the server's tests stay; one list is the English source for both sides | The server translating by the user's language (the worker and every route would need it, and the strings live twice); an `errorCode` field on imports (a schema change, and old imports still need the fallback) |
 | D45 | **Fonts:** Fraunces has no Hebrew, so Hebrew display text gets **Frank Ruhl Libre** (OFL), a Hebrew-only subset, weights 500–700, self-hosted, declared with a Hebrew `unicode-range` beside Fraunces and added at the same moment after load, so it's fetched only when Hebrew display text is on the page; the body stays the system sans, which has Hebrew everywhere (§16.6) | Fraunces' warmth in Hebrew, where the system serif (Times New Roman) looks like a form; no bytes for English pages, and none before the LCP | Heebo or Assistant for the body (a download on every Hebrew page for text the system already draws well, and English's body is the system's too); the system serif only (today's); Noto Serif Hebrew (plainer) |
 | D46 | **Some words stay in English** in Hebrew: Pinch, the platforms' and Google's names, links, emails, and the codes in the address (§16.8) | They're names and addresses, not words: they are what the user sees on the logo, the site, the button they'll press and the URL bar | Transliterating them ("פינץ'", "יוטיוב": a second name to recognise) |
+| D47 | **The unit is a combobox** in the editor: a text field that suggests the common units in the interface's language as you type (English: g, kg, ml, l, tsp, tbsp, cup, clove, can, pinch, handful; Hebrew: גרם, ק"ג, מ"ל, ליטר, כפית, כף, כוס, שן, קופסה, קמצוץ, חופן), and still takes any text or none; the stored unit stays free text, as written (§16.12) | The user wants units consistent and quicker to enter, mostly on a phone, when writing or editing; picking a suggestion makes new recipes consistent by itself; no change to the data, the API, Gemini or the links cache, since imports already read units well | A select box (no "2 cloves", "1 ball", or no unit for "3 eggs" without an "Other" field beside it); units stored as codes and translated for display, with a migration and a prompt change (worth it only for scaling and conversion, which the user ruled out in docs/ux/plan.md §9); the native `<datalist>` (no code, but it looks different in every browser: the user chose the combobox) |
 
 ## 11. Risks
 
@@ -843,7 +844,7 @@ Each milestone is a few **small PRs** (roughly ≤ 300 changed lines each), whic
 | M7 | **Polish** — empty, loading and error states, share and comments placeholders, look and feel | It feels like a finished POC |
 | M8 | **Redesign** (docs/ux/pass-02.md): the two tabs, shadcn/ui, the queue, filters, the recipe, cook mode, one editor; then the features it asks the API for | The wireframes in `docs/ux/wireframes/` are the app |
 | M9 | **Accounts and links pinched before** (D28–D30): this user's copy found (L1); sign-up and sign-in with email or Google, sessions, the global cap; then the shared answers (L2) | Each person signs in to their own recipes; a link pinched before costs no Gemini call |
-| M10 | **English and Hebrew** (D39–D46, §16): the language on the account, chosen in the avatar's menu; right to left with logical CSS; every string through i18next, with Hebrew; the server's messages translated in the client; a Hebrew display font | A Hebrew speaker uses Pinch in Hebrew, right to left, on every device they sign in on, and English looks exactly as before |
+| M10 | **English and Hebrew** (D39–D47, §16): the language on the account, chosen in the avatar's menu; right to left with logical CSS; every string through i18next, with Hebrew; the server's messages translated in the client; a Hebrew display font | A Hebrew speaker uses Pinch in Hebrew, right to left, on every device they sign in on, and English looks exactly as before |
 | M11 | **Pinch online** (D31–D38, §15): a spike from a cloud IP first; Fly.io, Atlas, deploy on merge, security headers; password reset by email; monitoring and backups | Pinch runs at the user's domain over HTTPS, a merge deploys it, and a forgotten password can be reset |
 | Later | Share, comments, WhatsApp bot / PWA share target, nutrition database, semantic search | — |
 
@@ -1082,7 +1083,7 @@ line moves all of it, the account included (the same email and password):
 - [ ] Add the repo secrets `FLY_API_TOKEN` (`fly tokens create deploy`) and `MONGODB_URI` (for
       backups); generate the `age` key pair and keep its private key.
 
-## 16. English and Hebrew (M10, D39–D46)
+## 16. English and Hebrew (M10, D39–D47)
 
 Pinch speaks English and Hebrew. Facebook's language switching is the guide: the choice is saved
 on the account and follows the user to other devices, switching reloads into the new language,
@@ -1319,3 +1320,14 @@ that adds a string:
   עברית in the avatar's menu, sees the reload in RTL, then signs in from a fresh context (a
   second device) and lands in Hebrew. Expected without a config change (a cookie on the context);
   if Playwright's config must change (a `locale`), the user is asked first.
+
+### 16.12 The unit's combobox (D47)
+
+In the editor (writing, editing, reviewing a draft), an ingredient's Unit is a combobox: a text
+field with a list under it of the common units in the interface's language, filtered by what's
+typed (from its start, ignoring case). A tap or Enter picks one; anything else typed is kept as
+it is, and the unit can stay empty ("3 eggs"). The lists live in `en.ts` and `he.ts` beside the
+other strings. The keyboard and screen readers get the ARIA combobox pattern: `role="combobox"`,
+`aria-expanded`, `aria-controls`, the arrow keys move through the list (`aria-activedescendant`),
+Escape closes it. The stored unit stays free text as written (§6): a Hebrew recipe's "כף" reads
+"כף" in English too, as its ingredients' names do (D43, §16.8). Gemini's prompt is unchanged.

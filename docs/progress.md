@@ -145,7 +145,7 @@ Then the features the design asks the API for, one PR each:
 - [x] End of milestone: UI review, observer, e2e, demo; the fixes (the review's, signed-out pages
       without 401s, the entry as one file: every LCP within its budget, docs/metrics/m09.md)
 
-## M10 — English and Hebrew (design §16, §8.3, D39–D46)
+## M10 — English and Hebrew (design §16, §8.3, D39–D47)
 
 Every Hebrew string is drafted by Claude and read by the user in its PR (§16.9). English stays
 exactly as it is: each slice's English screens look the same before and after.
@@ -172,6 +172,8 @@ exactly as it is: each slice's English screens look the same before and after.
       worker, `validation` in the client; minutes, counts and nutrition through `Intl`
 - [ ] I9 The Hebrew display face: Frank Ruhl Libre's Hebrew subset with its `unicode-range`,
       its sized fallback, measured
+- [ ] I10 The unit's combobox (D47, §16.12): the editor's Unit suggests the common units in the
+      interface's language, any text still allowed; the ARIA combobox pattern; tests
 - [ ] End of milestone: UI review in both languages (each screen at 360 and 1440 px in Hebrew),
       observer (budgets, LCP in Hebrew too), e2e with axe in Hebrew and the switch flow, demo
 
