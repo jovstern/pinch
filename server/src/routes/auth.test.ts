@@ -338,6 +338,16 @@ test("an account from before languages reads as English, and me sets its cookie"
   expect(setCookieNamed(me, "pinch_lang")).toMatch(/^pinch_lang=en; Max-Age=31536000/);
 });
 
+test("me leaves a language cookie that says the account's, and corrects one that doesn't", async () => {
+  const { response } = await signUp();
+  const session = sessionCookie(response);
+
+  const same = await request(app).get("/api/auth/me").set("Cookie", `${session}; pinch_lang=en`);
+  const other = await request(app).get("/api/auth/me").set("Cookie", `${session}; pinch_lang=he`);
+  expect(setCookieNamed(same, "pinch_lang")).toBeUndefined();
+  expect(setCookieNamed(other, "pinch_lang")).toMatch(/^pinch_lang=en; Max-Age=31536000/);
+});
+
 test("login sets the account's language cookie, whatever the browser had", async () => {
   const { email, password } = await signUp();
   await usersCollection(db).updateOne({ email }, { $set: { language: "he" } });
@@ -386,6 +396,14 @@ test("PATCH me with another field, or another language, answers 400 and changes 
     .set("Cookie", cookie)
     .send({ language: "fr" });
   expect(otherField.status).toBe(400);
+  // The field is named, not "send the data as a JSON object".
+  expect(otherField.body).toMatchObject({
+    error: {
+      code: "invalid_input",
+      message: "This request doesn't take name.",
+      fields: { name: "Not a field of this request." },
+    },
+  });
   expect(otherValue.status).toBe(400);
   expect(await usersCollection(db).findOne({ email })).toMatchObject({
     name: "Cook",

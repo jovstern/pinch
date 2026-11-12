@@ -14,6 +14,7 @@ import {
   clearSignedInHint,
   currentUser,
   endSession,
+  LANGUAGE_COOKIE,
   readCookie,
   setLanguageCookie,
   setSignedInHint,
@@ -107,8 +108,11 @@ export function authRouter(db: Db, { secureCookies, now }: AuthDeps) {
       return;
     }
     if (!readCookie(req, SIGNED_IN_HINT)) setSignedInHint(res, secureCookies);
-    // The account's language, so a new device's next page starts in it (§16.1).
-    setLanguageCookie(res, user, secureCookies);
+    // The account's language, so a new device's next page starts in it (§16.1). As the hint: only
+    // when the browser's cookie doesn't already say it.
+    if (readCookie(req, LANGUAGE_COOKIE) !== toMe(user).language) {
+      setLanguageCookie(res, user, secureCookies);
+    }
     res.json(toMe(user) satisfies Me);
   });
 

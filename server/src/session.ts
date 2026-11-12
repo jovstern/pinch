@@ -33,8 +33,9 @@ export function clearSignedInHint(req: Request, res: Response, secure: boolean) 
 // The interface's language, for index.html (design §8.3, §16.2): its script reads it before the
 // first paint and sets <html lang dir>. Like the hint, not HttpOnly and nothing secret, but it lasts
 // a year and logout keeps it: the device stays in the last language, so Log in shows in it. The
-// account decides; the cookie only says it early. Set with every session, by me and by PATCH me.
-const LANGUAGE_COOKIE = "pinch_lang";
+// account decides; the cookie only says it early. Set with every session and by PATCH me; by me
+// when the browser's doesn't say the account's language.
+export const LANGUAGE_COOKIE = "pinch_lang";
 const LANGUAGE_MS = 365 * 24 * 60 * 60_000;
 
 export function setLanguageCookie(res: Response, user: UserDocument, secure: boolean) {
