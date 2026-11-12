@@ -19,7 +19,7 @@
          out it would be a 401, an error in the console, and never used. A script, as a <link>
          can't look at a cookie; inline, so it runs before anything else is asked for. -->
     <script>
-      const saved = /(?:^|; )pinch_lang=(en|he)/.exec(document.cookie)?.[1];
+      const saved = /(?:^|; )pinch_lang=(en|he)(?=;|$)/.exec(document.cookie)?.[1];
       const zone = Intl.DateTimeFormat().resolvedOptions().timeZone;
       const hebrew =
         navigator.languages.some((l) => /^(he|iw)\b/i.test(l)) ||

@@ -280,6 +280,25 @@ test("picking עברית in the avatar's menu saves it on the account, then relo
   });
 });
 
+test("while the language saves, the menu stays open and its choices are unavailable", async () => {
+  const user = userEvent.setup();
+  stubFetch((path) =>
+    path === "/api/auth/me" ? new Promise<Response>(() => undefined) : notFound(),
+  );
+  renderApp("/nope");
+  await user.click(screen.getByRole("button", { name: "Your account" }));
+  await user.click(await screen.findByRole("menuitemradio", { name: "עברית" }));
+  const languages = screen.getByRole("group", { name: "Language" });
+  expect(languages).toHaveAttribute("aria-busy", "true");
+  for (const name of ["English", "עברית"]) {
+    expect(within(languages).getByRole("menuitemradio", { name })).toHaveAttribute(
+      "aria-disabled",
+      "true",
+    );
+  }
+  expect(reloadPage).not.toHaveBeenCalled();
+});
+
 test("a language that couldn't be saved says so, with Try again, and doesn't reload", async () => {
   const user = userEvent.setup();
   let up = false;

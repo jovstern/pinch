@@ -5,7 +5,8 @@ import { en } from "./locales/en.ts";
 
 // The interface's language (design §16, D39–D41). index.html's script has already chosen it,
 // before the first paint (the pinch_lang cookie, else the browser), and set <html lang dir>:
-// from then on <html lang> is the language, never the cookie.
+// from then on <html lang> is the language, never the cookie. This is the source of truth for
+// the language: Intl's formats take it from here (pageLanguage()), not from i18next.
 export function pageLanguage(): Language {
   return document.documentElement.lang === "he" ? "he" : "en";
 }
@@ -36,14 +37,17 @@ export function startI18n(language: Language) {
 }
 
 // Hebrew is its own chunk, fetched only by a page in Hebrew, before its first render (main.tsx).
+// Started in Hebrew without its strings, i18next resolved to English, the fallback: changing to
+// Hebrew again, now that they're here, makes it say Hebrew (resolvedLanguage, dir()).
 export async function loadHebrew() {
   const { he } = await import("./locales/he.ts");
   i18next.addResourceBundle("he", "translation", he);
+  await i18next.changeLanguage("he");
 }
 
 // The language this device keeps (§8.3): the API sets the cookie from the account; signed out, the
 // switch on Log in and Sign up sets it here. As the API's: a year, readable by index.html's script.
-const cookie = /(?:^|; )pinch_lang=(en|he)/;
+const cookie = /(?:^|; )pinch_lang=(en|he)(?=;|$)/;
 
 export function saveLanguageOnDevice(language: Language) {
   const secure = location.protocol === "https:" ? "; Secure" : "";

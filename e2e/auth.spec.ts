@@ -94,7 +94,8 @@ test("a session that ends mid-visit goes to Log in and comes back", async ({ pag
   await logIn(page, email);
   await count;
 
-  // The session ends (as if it expired): the next request answers 401.
+  // The session ends (as if it expired): the next request answers 401. newVisitor clears the
+  // session's cookies, as an expired session would leave none (the language's stays).
   await newVisitor(page);
   await page
     .getByRole("navigation", { name: "Main" })

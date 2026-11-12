@@ -20,6 +20,11 @@ import { changeLanguage, logOut } from "./authQueries.ts";
 
 // The avatar's menu (design §14): who is signed in, the language, and Log out. Loaded on its first
 // press (LazyUserMenu), and open as it appears.
+// A language picked keeps the menu open: it shows the save under way, until the page reloads.
+function keepOpen(event: Event) {
+  event.preventDefault();
+}
+
 export function UserMenu({ me }: { me: Me }) {
   const { t } = useTranslation();
   const languageId = useId();
@@ -38,6 +43,8 @@ export function UserMenu({ me }: { me: Me }) {
     },
   });
   // Saved on the account, then the same page again, all of it in the new language (§16.1, D40).
+  // The menu stays open while it saves, its choices unavailable until the reload (isSuccess); a
+  // failure makes them available again, beside its toast.
   const switchLanguage = useMutation({
     mutationFn: changeLanguage,
     onSuccess: reloadPage,
@@ -47,6 +54,7 @@ export function UserMenu({ me }: { me: Me }) {
       });
     },
   });
+  const saving = switchLanguage.isPending || switchLanguage.isSuccess;
   return (
     // Not modal, as RecipeMenu: a modal menu hides the page from screen readers (axe).
     <DropdownMenu modal={false} defaultOpen>
@@ -71,16 +79,17 @@ export function UserMenu({ me }: { me: Me }) {
         {/* Each language named in itself, with its lang, so a screen reader says it right. */}
         <DropdownMenuRadioGroup
           aria-labelledby={languageId}
+          aria-busy={saving}
           value={me.language}
           onValueChange={(value) => {
             const language = LanguageSchema.parse(value);
             if (language !== me.language) switchLanguage.mutate(language);
           }}
         >
-          <DropdownMenuRadioItem value="en" lang="en">
+          <DropdownMenuRadioItem value="en" lang="en" disabled={saving} onSelect={keepOpen}>
             English
           </DropdownMenuRadioItem>
-          <DropdownMenuRadioItem value="he" lang="he">
+          <DropdownMenuRadioItem value="he" lang="he" disabled={saving} onSelect={keepOpen}>
             עברית
           </DropdownMenuRadioItem>
         </DropdownMenuRadioGroup>
