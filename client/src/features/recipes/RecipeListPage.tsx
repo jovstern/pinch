@@ -1,7 +1,7 @@
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { useEffect, useRef } from "react";
 import { Link, useSearchParams } from "react-router";
-import { X } from "lucide-react";
+import { ShoppingBasket, X } from "lucide-react";
 import { Badge } from "../../components/ui/Badge.tsx";
 import { Button } from "../../components/ui/Button.tsx";
 import { Skeleton } from "../../components/ui/Skeleton.tsx";
@@ -117,7 +117,7 @@ export function RecipeListPage() {
         <Button
           type="button"
           variant="secondary"
-          className="sr-only focus-visible:not-sr-only focus-visible:mb-3 focus-visible:px-4 max-lg:hidden"
+          className="sr-only self-start focus-visible:not-sr-only focus-visible:mb-3 focus-visible:px-4 max-lg:hidden"
           onClick={() => {
             searchRef.current?.focus();
           }}
@@ -127,7 +127,8 @@ export function RecipeListPage() {
       )}
 
       {/* Two columns from 1024 px: the Filters panel and the grid. */}
-      <div className="lg:flex lg:gap-8">
+      {/* With no recipes yet, a column that fills main (Layout), so the message can centre. */}
+      <div className={cn("lg:flex lg:gap-8", noRecipesYet && "flex flex-1 flex-col")}>
         {!noRecipesYet && wide && (
           <LazyFiltersPanel
             filters={filters}
@@ -139,7 +140,7 @@ export function RecipeListPage() {
           />
         )}
 
-        <div className="min-w-0 flex-1">
+        <div className={cn("min-w-0 flex-1", noRecipesYet && "flex flex-col")}>
           {!noRecipesYet && (
             <>
               <ListFilters
@@ -266,8 +267,12 @@ export function RecipeListPage() {
           )}
 
           {noRecipesYet && (
-            <div className="mt-16 text-center">
-              <h2 className="text-xl font-semibold">No recipes yet</h2>
+            // In the middle of the height the header leaves, as Add recipe's field (ImportPage).
+            <div className="my-auto text-center">
+              <div className="flex justify-center text-muted-foreground">
+                <ShoppingBasket className="size-[5em]" strokeWidth={1.5} />
+              </div>
+              <h2 className="mt-1 text-xl font-semibold">No recipes yet</h2>
               <p className="mt-2 text-pretty text-muted-foreground">
                 Pinch one from a reel, or write your own.
               </p>

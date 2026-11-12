@@ -29,7 +29,7 @@ export function RecipeFace({ emoji, fromVideo, className }: RecipeFaceProps) {
         <span className="relative text-muted-foreground">
           <CookingPot className="size-[1em]" strokeWidth={1.5} />
           {fromVideo && (
-            <Sparkles className="absolute -top-[0.15em] -right-[0.3em] size-[0.45em]" />
+            <Sparkles className="absolute -top-[0.15em] -right-[0.4em] size-[0.45em]" />
           )}
         </span>
       )}
