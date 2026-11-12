@@ -144,3 +144,32 @@ Then the features the design asks the API for, one PR each:
       is ready) and upsert, recipes only; hits free against both caps; `links:forget <url>`
 - [x] End of milestone: UI review, observer, e2e, demo; the fixes (the review's, signed-out pages
       without 401s, the entry as one file: every LCP within its budget, docs/metrics/m09.md)
+
+## M10 — Pinch online (design §15, §8.3, D31–D38)
+
+The user's steps (accounts, the domain, secrets) are listed in design §15.9; each slice says
+which it needs.
+
+- [ ] S0 The cloud-IP spike: the Dockerfile's first version, a throwaway Fly app and Atlas
+      database, about 10 real links through the worker on Fly; the results in
+      `docs/spike-results.md` and the choice of (a), (b) or (c) (§15.6). Needs the Fly and
+      Atlas accounts
+- [ ] B1 Only if S0 finds blocks: the fallback (b): a failed download read from its caption, a
+      YouTube Short by its URL alone, a readable "Paste its text instead"
+- [ ] D1 The production server: the API serves `client/dist` (long cache for `/assets`,
+      `no-cache` for `index.html`, the SPA fallback) when `NODE_ENV=production`; the Dockerfile
+      builds the client; tested with a built folder
+- [ ] D2 Fly: `fly.toml` (two process groups, the release command, blue-green), the API's check
+      on `/api/ready`, the worker's health port; `ci.yml` (the gates on every PR, deploy on
+      `master`). Needs `FLY_API_TOKEN` and the secrets; the first deploy, on `*.fly.dev`
+- [ ] D3 The domain and the headers: helmet's CSP with the inline script's hash computed at start;
+      `PUBLIC_URL` and Google's production redirect. Needs the domain and its certificate
+- [ ] P1 Password reset, the API: `passwordResets` and its indexes, `POST /api/auth/forgot` and
+      `/reset`, their rate limits, every session ended; `email.ts` (Resend through `fetch`, a
+      fake in tests). Needs Resend and the domain verified
+- [ ] P2 Password reset, the pages: "Forgot password?" on Log in, `/forgot`, `/reset`; e2e of a
+      reset (the test writes its own token's hash, so no email is read)
+- [ ] O1 Monitoring and backups: the 80% warning, the worker's `HEARTBEAT_URL` ping,
+      `backup.yml` (nightly, `age`-encrypted)
+- [ ] End of milestone: e2e locally as always; UI review and observer (Lighthouse, axe) on the
+      production URL; a smoke test there (sign up, a real link, a reset email); demo
