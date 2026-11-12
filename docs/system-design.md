@@ -795,7 +795,7 @@ the browser's console). Another user's recipe or import is a 404, as before. The
 | D37 | Monitoring: Fly's logs (pino JSON) and its free Grafana dashboards; a warning log at 80% of the global cap; optional free alerts: UptimeRobot on `/api/ready`, Healthchecks.io pinged by the worker (§15.5) | Enough to see errors and know when something stops, at no cost and with almost no code | Sentry (an SDK in both processes and the client, for one household's traffic); log shipping to a paid service |
 | D38 | Backups: a nightly GitHub Actions job `mongodump`s Atlas, encrypts the archive with `age` to the user's public key, and keeps it 14 days as a workflow artifact | M0 has no backups; the repo is public, so only an encrypted file may sit in it, and only the user's own machine can decrypt it | No backups (accepted only until O1); a paid Atlas tier for its snapshots; a Fly volume and a scheduled machine (more parts) |
 | D39 | Strings through **i18next + react-i18next** (the user's choice): English bundled, Hebrew a lazy chunk loaded before the first render when it's needed; keys typed from the English file, so `he` must have every key; plurals by i18next (`Intl.PluralRules`), numbers and times by `Intl` (§16.3) | The common pair, with plurals, interpolation and typed keys built in; nothing is drawn before its strings are there, so no English flashes | A `t()` of our own over `Intl.PluralRules` (about 0.5 kB, but plurals, variables and types by hand); FormatJS / react-intl (ICU messages, a heavier runtime); Lingui (a compile step and macros); both languages bundled (every English user pays for Hebrew) |
-| D40 | **The language is saved on the account** (`language`, default English), changed by `PATCH /api/auth/me` from the avatar's menu; signed out, the browser's language decides, with a switch on Log in and Sign up, and a sign-up keeps the language it was shown in; **switching reloads** the page (§16.1) | Facebook's model, the user's guide: the choice follows the person to every device; a reload redraws everything at once (every string, date, toast and Radix part) with no in-place switching code | The browser only (`localStorage`: lost on another device); the language in the address (`/he/…`: every route and link changes, for a site that isn't indexed); switching without a reload (every cached string and component must follow) |
+| D40 | **The language is saved on the account** (`language`, default English), changed by `PATCH /api/auth/me` from the avatar's menu; signed out, the browser decides (its languages, else its time zone: Israel's means Hebrew), with a switch on Log in and Sign up, and a sign-up keeps the language it was shown in; **switching reloads** the page (§16.1) | Facebook's model, the user's guide: the choice follows the person to every device; a reload redraws everything at once (every string, date, toast and Radix part) with no in-place switching code | The browser only (`localStorage`: lost on another device); the language in the address (`/he/…`: every route and link changes, for a site that isn't indexed); switching without a reload (every cached string and component must follow) |
 | D41 | **The direction is set before the first paint** by the inline script in `index.html` (§8.3), from a `pinch_lang` cookie the API sets from the account, else the browser's language; online, the CSP's hash is computed from the served file (D36), so it follows the script with no change (§16.2) | `lang` and `dir` must be right on the very first frame, before any CSS or JS; the script already runs there for the hint, and a cookie is what it can read | Setting them in `main.tsx` (a second place that decides; and fonts and the scrollbar side would already follow `ltr`); the API templating `index.html` per language (two files to hash, and Vite serves it in development); the language in `localStorage` (the server can't set it from the account) |
 | D42 | **Logical CSS:** Tailwind v4's `ms-/me-/ps-/pe-/start-/end-/text-start/rounded-s-/border-s-` instead of left and right; `rtl:` only where a logical class can't say it (a mirrored icon); a test fails on a physical class in `client/src` (§16.4) | One set of classes serves both directions, so English stays exactly as it is; the test keeps the next class honest | An RTL post-processor (`rtlcss`: a second stylesheet to build and load); `rtl:` beside every physical class (twice the classes) |
 | D43 | **User content keeps its own direction:** `dir="auto"` on everything a user or a post wrote (titles, ingredients, steps, notes, pasted text, names), `dir="ltr"` on links and emails; the import card follows the interface, reversing #113's `ltr` (§16.5) | A Hebrew recipe reads right to left in English, and an English one left to right in Hebrew; a link is always left to right | The interface's direction on content too (an English recipe would read backwards in Hebrew); `<bdi>` around each piece (`dir="auto"` on the element does the same, and is already used) |
@@ -1098,9 +1098,14 @@ as it is today.
   Picking the other one sends `PATCH /api/auth/me { language }` (JSON only, as D29's mutations;
   any other field is a 400), which saves it and sets `pinch_lang`; then `location.reload()`. A
   failure is the "Couldn't save" toast with Try again, in the current language.
-- **Signed out** (Log in, Sign up, Forgot password): the cookie if this device has one, else the
-  browser's first language (`navigator.languages[0]`): Hebrew if it starts with `he` or the old
-  `iw`, otherwise English. A quiet switch under the card names the other language in itself;
+- **Signed out** (Log in, Sign up, Forgot password): the cookie if this device has one, else
+  the browser: Hebrew if any of its languages (`navigator.languages`) starts with `he` or the old
+  `iw`, or if its time zone is Israel's (`Asia/Jerusalem`, or the old `Asia/Tel_Aviv`), otherwise
+  English. The time zone is the browser's location without asking (the user's call, 2026-11-12):
+  many Israelis keep their phone in English, and the zone needs no permission prompt, as the
+  Geolocation API would, nor a lookup of the IP's country on the server. One who'd rather have
+  English (a tourist, a Russian or Arabic speaker) has the switch, and the account keeps the
+  choice from then on. A quiet switch under the card names the other language in itself;
   it sets `pinch_lang` in the browser and reloads. A sign-up keeps the language it was shown
   in: Sign up sends it (`language` in the body), and "Continue with Google" carries it
   (`/api/auth/google?next=…&lang=he`, kept in the `pinch_google` cookie with `next`) for an
@@ -1116,7 +1121,11 @@ The inline script in `index.html` (§8.3) grows by a few lines, before the queue
 
 ```js
 const saved = /(?:^|; )pinch_lang=(en|he)/.exec(document.cookie)?.[1];
-const lang = saved ?? (/^(he|iw)\b/i.test(navigator.languages[0] ?? "") ? "he" : "en");
+const zone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+const hebrew =
+  navigator.languages.some((l) => /^(he|iw)\b/i.test(l)) ||
+  zone === "Asia/Jerusalem" || zone === "Asia/Tel_Aviv";
+const lang = saved ?? (hebrew ? "he" : "en");
 document.documentElement.lang = lang;
 document.documentElement.dir = lang === "he" ? "rtl" : "ltr";
 ```
