@@ -1211,8 +1211,8 @@ change needs nothing else. `index.html`'s own `lang="en"` stays, for a browser w
   have it since M5 and U11); the queue card's title and pasted text; a draft's "things to look
   at" reasons (in the recipe's language already, §9); the user's name in the menu; the breadcrumb's
   title. A list (ingredients, steps) takes it once, on the list: a recipe is in one language.
-- `dir="ltr"` on links and emails, wherever shown: the queue card's link, the source link's
-  text, the email in the menu and in Forgot password's answer, the email fields.
+- `dir="ltr"` on links and emails, wherever shown: the queue card's link, the email in the menu
+  and in Forgot password's answer, the email fields (TextField gives `type="email"` it).
 - **The import card** follows the interface again: today its lines are `dir="ltr"` "until the
   app is localised" (#113, the user's call on 2026-11-12). In M10 the card is laid out by the
   interface's direction, its title and pasted text `dir="auto"`, and a link `dir="ltr"`. This

@@ -133,8 +133,11 @@ export function ImportForm({ inputRef }: { inputRef: RefObject<HTMLInputElement 
                 {hint}
               </p>
               {/* shadcn's input group: the group draws the field's edge and focus ring, the
-                  input inside has none. The sparkles are Pinch's mark, not a control. */}
-              <div className="relative flex items-center rounded-control border border-input bg-card has-[[aria-invalid=true]]:border-destructive has-[input:focus-visible]:outline-2 has-[input:focus-visible]:outline-offset-2 has-[input:focus-visible]:outline-ring">
+                  input inside has none. The sparkles are Pinch's mark, not a control. The room
+                  for them (ps-6, plus the input's own px-3) is the group's: the input is
+                  dir="auto", so its own padding would follow what's typed, not the page
+                  (design §16.4). */}
+              <div className="relative flex items-center rounded-control border border-input bg-card ps-6 has-[[aria-invalid=true]]:border-destructive has-[input:focus-visible]:outline-2 has-[input:focus-visible]:outline-offset-2 has-[input:focus-visible]:outline-ring">
                 <Sparkles
                   aria-hidden="true"
                   className="pointer-events-none absolute start-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
@@ -152,7 +155,7 @@ export function ImportForm({ inputRef }: { inputRef: RefObject<HTMLInputElement 
                   enterKeyHint="send"
                   // The group shows focus and the edge. Important (!): the global focus ring is
                   // unlayered, so a plain utility can't remove it.
-                  className="flex-1 rounded-none border-0 bg-transparent ps-9 outline-none!"
+                  className="flex-1 rounded-none border-0 bg-transparent outline-none!"
                   onChange={(event) => {
                     field.handleChange(event.target.value);
                   }}
@@ -187,7 +190,7 @@ export function ImportForm({ inputRef }: { inputRef: RefObject<HTMLInputElement 
                       type="submit"
                       aria-disabled={isSubmitting}
                       aria-busy={isSubmitting}
-                      // Attached to the group's right edge.
+                      // Attached to the group's end edge.
                       className="-my-px -me-px shrink-0 self-stretch rounded-s-none"
                     >
                       {isSubmitting ? "Sending…" : "Pinch it"}

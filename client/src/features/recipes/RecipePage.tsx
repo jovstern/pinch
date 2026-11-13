@@ -88,7 +88,7 @@ export function RecipePage() {
             )}
           </div>
           {recipe.description && (
-            <p dir="auto" className="mt-3 max-w-prose text-pretty">
+            <p dir="auto" className="me-auto mt-3 max-w-prose text-pretty">
               {recipe.description}
             </p>
           )}
