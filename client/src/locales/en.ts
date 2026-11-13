@@ -140,6 +140,8 @@ export const en = {
     matches_other: "{{count}} recipes match.",
     // Nothing matched: what to clear. {{q}} is what was searched, in its own <bdi> (§16.5).
     noMatch: "No recipes match",
+    // The search, quoted, first in the line of what was asked: “soup”, italian.
+    searched: "“{{q}}”",
     clearSearch: "Clear search",
     clearFilters: "Clear filters",
     searchAll: "Search all recipes for “{{q}}”",

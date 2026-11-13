@@ -99,9 +99,6 @@ export function RecipeListPage() {
   // By the data, not the status: a failed next page or refetch turns the status to "error" and
   // keeps the list.
   const noMatch = filtering && !isPlaceholderData && recipes?.length === 0;
-  // What narrowed it, as typed and picked: “soup”, 30 min or less, italian.
-  const asked = applied.map(({ label }) => label);
-  if (filters.q !== "") asked.unshift(`“${filters.q}”`);
   // Not before the first recipe: there's nothing to search yet. Known only once a list without
   // filters has loaded, so the search box stays while one loads (it keeps its focus).
   const noRecipesYet = !filtering && !isPlaceholderData && recipes?.length === 0;
@@ -240,8 +237,14 @@ export function RecipeListPage() {
           {noMatch && (
             <div className="mt-10 text-center">
               <h2 className="text-xl font-semibold">{t("recipes.noMatch")}</h2>
-              <p dir="auto" className="mt-2 text-pretty text-muted-foreground">
-                {asked.join(", ")}
+              {/* What narrowed it, as typed and picked: “soup”, 30 min or less, italian. In the
+                  page's direction, the search in its own <bdi> (design §16.5). */}
+              <p className="mt-2 text-pretty text-muted-foreground">
+                {filters.q !== "" && (
+                  <InSentence sentence={(q) => t("recipes.searched", { q })} text={filters.q} />
+                )}
+                {filters.q !== "" && applied.length > 0 && ", "}
+                {applied.map(({ label }) => label).join(", ")}
               </p>
               <Button
                 type="button"

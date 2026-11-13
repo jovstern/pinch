@@ -246,6 +246,21 @@ test("the Filters sheet says when a search shows only its 50 best", async () => 
   await userEvent.click(await screen.findByRole("button", { name: "Filters" }));
   const sheet = await screen.findByRole("dialog", { name: "Filters" });
   expect(within(sheet).getByRole("button", { name: "Show the 50 best" })).toBeInTheDocument();
+  expect(screen.getByText("The 50 best matches.")).toHaveAttribute("role", "status");
+});
+
+test("a page with more after it says so, on the page and in the Filters sheet", async () => {
+  const items = Array.from({ length: 50 }, (_, i) => ({
+    ...omelette,
+    id: `6650a1b2c3d4e5f6000000${String(i).padStart(2, "0")}`,
+  }));
+  stubFetch(vi.fn().mockResolvedValue(Response.json({ items, nextCursor: "next-page" })));
+  renderApp("/recipes?tags=meal:breakfast");
+
+  expect(await screen.findByText("More than 50 recipes match.")).toHaveAttribute("role", "status");
+  await userEvent.click(screen.getByRole("button", { name: "Filters 1 applied" }));
+  const sheet = await screen.findByRole("dialog", { name: "Filters" });
+  expect(within(sheet).getByRole("button", { name: "Show 50+ recipes" })).toBeInTheDocument();
 });
 
 test("a value written twice in the address is read once", async () => {
@@ -325,7 +340,9 @@ test("when nothing matches, it says what was asked and offers to clear the searc
   renderApp("/recipes?q=soup&tags=cuisine:italian");
 
   expect(await screen.findByText("No recipes match.")).toHaveAttribute("role", "status");
-  expect(screen.getByText("“soup”, italian")).toBeInTheDocument();
+  expect(screen.getByText("soup", { selector: "p bdi" }).closest("p")).toHaveTextContent(
+    "“soup”, italian",
+  );
   expect(screen.getByRole("searchbox")).toHaveValue("soup");
 
   await userEvent.click(screen.getByRole("button", { name: "Clear filters" }));
@@ -440,7 +457,7 @@ test("in Hebrew, with no recipes, it offers to add the first one", async () => {
   await renderInHebrew("/recipes");
 
   expect(await screen.findByRole("heading", { name: "עדיין אין מתכונים" })).toBeInTheDocument();
-  expect(screen.getByText("אפשר לשמור מתכון מסרטון או לכתוב אחד ידנית.")).toBeInTheDocument();
+  expect(screen.getByText("אפשר לשמור מתכון מסרטון או לכתוב מתכון ידנית.")).toBeInTheDocument();
   // As the header's tab says it, to the same page.
   expect(
     within(screen.getByRole("main")).getByRole("link", { name: "להוסיף מתכון" }),
@@ -452,7 +469,9 @@ test("in Hebrew, when nothing matches, the search is in its own <bdi> inside the
   await renderInHebrew("/recipes?q=soup&tags=cuisine:italian");
 
   expect(await screen.findByRole("heading", { name: "אין מתכונים מתאימים" })).toBeInTheDocument();
-  expect(screen.getByText("“soup”, איטלקי")).toBeInTheDocument();
+  const asked = screen.getByText("soup", { selector: "p bdi" }).closest("p");
+  expect(asked).toHaveTextContent('"soup", איטלקי');
+  expect(asked).not.toHaveAttribute("dir");
   expect(screen.getByRole("button", { name: "לנקות את הסינון" })).toBeInTheDocument();
   const searchAll = screen.getByRole("button", { name: 'לחפש את "soup" בכל המתכונים' });
   expect(within(searchAll).getByText("soup").tagName).toBe("BDI");
@@ -464,7 +483,7 @@ test("in Hebrew, the Filters sheet, its choices, its count and its close are in 
 
   await userEvent.click(await screen.findByRole("button", { name: "סינון" }));
   const sheet = await screen.findByRole("dialog", { name: "סינון" });
-  for (const legend of ["מיון", "זמן", "מקור", "מטבח", "ארוחה", "תזונה", "טעם", "מתאים ל…"]) {
+  for (const legend of ["מיון", "זמן", "מקור", "מטבח", "ארוחה", "תזונה", "טעם", "מתאים"]) {
     expect(within(sheet).getByRole("group", { name: legend })).toBeInTheDocument();
   }
   expect(within(sheet).getByRole("radio", { name: "הכי חדשים" })).toBeChecked();
@@ -494,7 +513,7 @@ test("in Hebrew, the Filters panel and the filters beside the grid are in Hebrew
   expect(screen.getByRole("combobox", { name: "מיון" })).toHaveDisplayValue("הכי חדשים");
   expect(await screen.findByText("מתכון אחד מתאים.")).toBeInTheDocument();
 
-  await userEvent.click(screen.getByRole("button", { name: "להסיר את נכתבו ידנית" }));
+  await userEvent.click(screen.getByRole("button", { name: "להסיר: נכתבו ידנית" }));
   await waitFor(() => {
     expect(fetch).toHaveBeenLastCalledWith("/api/recipes?tags=meal%3Abreakfast");
   });

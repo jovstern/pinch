@@ -126,7 +126,7 @@ test("Undo on Delete's toast restores the recipe, and View opens it", async () =
 test("in Hebrew, Delete's toast is in English, left to right, the title in its <bdi>", async () => {
   stubApi();
   await renderInHebrew(`/recipes/${omelette.id}`);
-  await chooseDelete(inHebrew);
+  await chooseDelete(hebrewMenu);
   const dialog = await screen.findByRole("alertdialog", { name: "למחוק את המתכון?" });
   await userEvent.click(within(dialog).getByRole("button", { name: "למחוק" }));
   // The toasts are English in both languages (design §16.8, D46).
@@ -149,7 +149,9 @@ test("Keep it closes the question without deleting", async () => {
   renderApp(`/recipes/${omelette.id}`);
 
   await chooseDelete();
-  await userEvent.click(await screen.findByRole("button", { name: "Keep it" }));
+  const dialog = await screen.findByRole("alertdialog", { name: "Delete this recipe?" });
+  expect(dialog).toHaveAccessibleDescription("“Omelette” will be deleted from My recipes.");
+  await userEvent.click(within(dialog).getByRole("button", { name: "Keep it" }));
 
   expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
   // Focus goes back to ⋯, for a keyboard to carry on from there (a tick later: Radix's way).
@@ -255,9 +257,9 @@ test("a recipe from a link names its site and links to the post, in a new tab", 
 });
 
 // Delete is in the ⋯ menu, named in the page's language.
-const inEnglish = { more: "More actions", delete: "Delete…" };
-const inHebrew = { more: "פעולות נוספות", delete: "למחוק…" };
-async function chooseDelete(names = inEnglish) {
+const englishMenu = { more: "More actions", delete: "Delete…" };
+const hebrewMenu = { more: "פעולות נוספות", delete: "למחוק…" };
+async function chooseDelete(names = englishMenu) {
   await userEvent.click(await screen.findByRole("button", { name: names.more }));
   await userEvent.click(await screen.findByRole("menuitem", { name: names.delete }));
 }

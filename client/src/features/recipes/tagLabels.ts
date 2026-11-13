@@ -10,7 +10,9 @@ export function facetName(facet: TagFacet) {
   return i18next.t(`tags.facets.${facet}`);
 }
 
-// A tag's key in the locales: "cuisine:middle-eastern" is tags.cuisine.middle-eastern.
+// A tag's key in the locales: "cuisine:middle-eastern" is tags.cuisine.middle-eastern. The cast
+// below is safe: tagLabels.test.ts walks shared's tags against en, and he is Translation<typeof en>,
+// so every tag has its key in both.
 type TagKey = { [F in TagFacet]: `tags.${F}.${keyof (typeof en)["tags"][F] & string}` }[TagFacet];
 
 // "cuisine:middle-eastern" → "middle eastern", or in Hebrew "מזרח תיכוני": its value, in words
