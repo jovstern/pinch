@@ -1,7 +1,7 @@
 import type { Language, Me } from "@pinch/shared";
 import i18next from "i18next";
 import { initReactI18next } from "react-i18next";
-import { en } from "./locales/en.ts";
+import type { en } from "./locales/en.ts";
 
 // The interface's language (design §16, D39–D41). index.html's script has already chosen it,
 // before the first paint (the pinch_lang cookie, else the browser), and set <html lang dir>:
@@ -35,25 +35,25 @@ export type Translation<T> = {
       : Translation<T[K]>;
 } & { [K in keyof T as K extends `${infer Key}_other` ? `${Key}_two` : never]?: string };
 
-// English is in the bundle, the fallback for any key. Synchronous (initAsync: false), so t()
-// works as soon as this returns. React escapes what it draws, so i18next doesn't.
-export function startI18n(language: Language) {
-  void i18next.use(initReactI18next).init({
-    lng: language,
-    fallbackLng: "en",
-    resources: { en: { translation: en } },
-    interpolation: { escapeValue: false },
-    initAsync: false,
-  });
-}
+// Each language's strings are their own chunk, and a page fetches only its own (D39): a page in
+// Hebrew never asks for English's, nor one in English for Hebrew's. No fallback language: tsc
+// makes both complete (Translation), and a fallback to English would fetch it for Hebrew too.
+const strings = {
+  en: async () => (await import("./locales/en.ts")).en,
+  he: async () => (await import("./locales/he.ts")).he,
+};
 
-// Hebrew is its own chunk, fetched only by a page in Hebrew, before its first render (main.tsx).
-// Started in Hebrew without its strings, i18next resolved to English, the fallback: changing to
-// Hebrew again, now that they're here, makes it say Hebrew (resolvedLanguage, dir()).
-export async function loadHebrew() {
-  const { he } = await import("./locales/he.ts");
-  i18next.addResourceBundle("he", "translation", he);
-  await i18next.changeLanguage("he");
+// Started before the first render (main.tsx), so t() has its strings on the first frame. If they
+// can't be fetched, the page still renders, its words as keys, rather than nothing; a reload
+// fetches them again. React escapes what it draws, so i18next doesn't.
+export async function startI18n(language: Language) {
+  const translation = await strings[language]().catch(() => ({}));
+  await i18next.use(initReactI18next).init({
+    lng: language,
+    fallbackLng: false,
+    resources: { [language]: { translation } },
+    interpolation: { escapeValue: false },
+  });
 }
 
 // The language this device keeps (§8.3): the API sets the cookie from the account; signed out, the
