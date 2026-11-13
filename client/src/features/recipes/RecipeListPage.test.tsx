@@ -63,7 +63,9 @@ test("with no recipes, it offers to pinch the first one", async () => {
   stubFetch(vi.fn().mockResolvedValue(Response.json({ items: [], nextCursor: null })));
   renderApp("/recipes");
 
-  expect(await screen.findByRole("link", { name: "Pinch a recipe" })).toHaveAttribute("href", "/");
+  expect(await screen.findByRole("heading", { level: 2, name: "No recipes yet" })).toBeVisible();
+  expect(screen.getByText("Pinch one from a reel, or write your own.")).toBeInTheDocument();
+  expect(screen.getByRole("link", { name: "Pinch a recipe" })).toHaveAttribute("href", "/");
   // Nothing to search yet.
   expect(screen.queryByRole("searchbox")).not.toBeInTheDocument();
 });

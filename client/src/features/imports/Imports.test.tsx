@@ -238,6 +238,20 @@ test("while a link is worked on, its status is asked again until it's ready to r
   expect(screen.getByRole("heading", { name: "1 ready" })).toBeInTheDocument();
 });
 
+// The shimmer itself is CSS (globals.css), still under reduced motion: here, which lines have it.
+test("a status shimmers while the worker has the import, and not while it waits", async () => {
+  stubApi([
+    [
+      importOf({ status: "processing", attempts: 1, step: "analyzing" }),
+      importOf({ id: "6650a1b2c3d4e5f600000002", status: "pending", attempts: 0 }),
+    ],
+  ]);
+  renderApp("/");
+
+  expect(await screen.findByText("Reading the recipe…")).toHaveClass("shimmer");
+  expect(screen.getByText("Waiting to start…")).not.toHaveClass("shimmer");
+});
+
 test("a pasted text shows as such, with its text", async () => {
   const text = "Shakshuka: 4 eggs, 1 can of tomatoes.";
   stubApi([[importOf({ input: { type: "text", text } })]]);

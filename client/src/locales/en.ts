@@ -30,6 +30,7 @@ export const en = {
     backToRecipes: "Back to My recipes",
     didntLoad: "This page didn't load",
     checkAndReload: "Check your connection, then reload the page.",
+    reload: "Reload",
   },
   // Log in, Sign up and the session's error (SessionError), with what a failed submit says
   // (submitError). A field's own messages are the shared schemas' (validation, design §16.7).

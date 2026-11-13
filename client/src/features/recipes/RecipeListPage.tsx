@@ -2,8 +2,8 @@ import { useInfiniteQuery } from "@tanstack/react-query";
 import i18next from "i18next";
 import { useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
-import { Link, useSearchParams } from "react-router";
-import { ShoppingBasket, X } from "lucide-react";
+import { useSearchParams } from "react-router";
+import { X } from "lucide-react";
 import { InSentence } from "../../components/InSentence.tsx";
 import { Badge } from "../../components/ui/Badge.tsx";
 import { Button } from "../../components/ui/Button.tsx";
@@ -13,6 +13,7 @@ import { useHeadingFocus } from "../../lib/useHeadingFocus.ts";
 import { useMediaQuery } from "../../lib/useMediaQuery.ts";
 import { LazyFiltersPanel } from "./LazyFiltersPanel.tsx";
 import { ListFilters } from "./ListFilters.tsx";
+import { NoRecipesYet } from "./NoRecipesYet.tsx";
 import { RecipeCard } from "./RecipeCard.tsx";
 import { appliedFilters } from "./filterLabels.ts";
 import {
@@ -273,20 +274,8 @@ export function RecipeListPage() {
             </div>
           )}
 
-          {noRecipesYet && (
-            // In the middle of the height the header leaves, as Add recipe's field (ImportPage).
-            <div className="my-auto text-center">
-              <div className="flex justify-center text-muted-foreground">
-                <ShoppingBasket className="size-[5em]" strokeWidth={1.5} />
-              </div>
-              <h2 className="mt-1 text-xl font-semibold">{t("recipes.noRecipesYet")}</h2>
-              <p className="mt-2 text-pretty text-muted-foreground">{t("recipes.pinchOrWrite")}</p>
-              {/* Write a recipe is already on the page (Header). */}
-              <Button asChild className="mt-4">
-                <Link to="/">{t("recipes.pinchRecipe")}</Link>
-              </Button>
-            </div>
-          )}
+          {/* In the middle of the height the header leaves, as Add recipe's field (ImportPage). */}
+          {noRecipesYet && <NoRecipesYet />}
 
           {recipes !== undefined && recipes.length > 0 && (
             <ul

@@ -1,5 +1,6 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import { expect, test, vi } from "vitest";
+import { inHebrew } from "../test-utils.tsx";
 import { ErrorBoundary } from "./ErrorBoundary.tsx";
 
 function Broken(): never {
@@ -15,7 +16,29 @@ test("a screen that throws shows a way forward, not a blank page", () => {
     </ErrorBoundary>,
   );
 
-  expect(screen.getByRole("heading", { name: "This page didn't load" })).toBeInTheDocument();
+  const alert = screen.getByRole("alert");
+  expect(
+    within(alert).getByRole("heading", { level: 1, name: "This page didn't load" }),
+  ).toBeInTheDocument();
+  expect(
+    within(alert).getByText("Check your connection, then reload the page."),
+  ).toBeInTheDocument();
+  expect(within(alert).getByRole("button", { name: "Reload" })).toBeInTheDocument();
+  vi.restoreAllMocks();
+});
+
+test("in Hebrew, the page that didn't load says so in Hebrew", async () => {
+  vi.spyOn(console, "error").mockImplementation(() => undefined);
+  await inHebrew();
+  render(
+    <ErrorBoundary>
+      <Broken />
+    </ErrorBoundary>,
+  );
+
+  expect(screen.getByRole("heading", { level: 1, name: "הדף לא נטען" })).toBeInTheDocument();
+  expect(screen.getByText("כדאי לבדוק את החיבור ולטעון את הדף מחדש.")).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "לטעון מחדש" })).toBeInTheDocument();
   vi.restoreAllMocks();
 });
 
