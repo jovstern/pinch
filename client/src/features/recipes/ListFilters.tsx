@@ -47,7 +47,7 @@ export function ListFilters({ filters, onChange, onChangeTags, searchRef }: List
           </label>
           <Search
             aria-hidden="true"
-            className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground"
+            className="pointer-events-none absolute start-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
           />
           <Input
             ref={searchRef}
@@ -63,7 +63,7 @@ export function ListFilters({ filters, onChange, onChangeTags, searchRef }: List
             }}
             placeholder="Search recipes"
             // No native ✕: the browser's own, unlike the rest of Pinch (Escape still empties it).
-            className="pl-9 [&::-webkit-search-cancel-button]:appearance-none"
+            className="ps-9 [&::-webkit-search-cancel-button]:appearance-none"
           />
         </form>
         {/* From 1024 px the Filters are a panel beside the grid (FiltersPanel), and the

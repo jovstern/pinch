@@ -1,12 +1,14 @@
 import { fieldErrors, LoginInputSchema } from "@pinch/shared";
 import { revalidateLogic, useForm } from "@tanstack/react-form";
 import { useEffect, useRef } from "react";
+import { useTranslation } from "react-i18next";
 import { Link, useLocation } from "react-router";
 import { TextField } from "../../components/TextField.tsx";
 import { loadPage } from "../../lib/loadPage.ts";
 import { Button } from "../../components/ui/Button.tsx";
 import { AuthFrame } from "./AuthFrame.tsx";
 import { GoogleButton } from "./GoogleButton.tsx";
+import { LanguageSwitch } from "./LanguageSwitch.tsx";
 import { logIn } from "./authQueries.ts";
 import { nextPage } from "./nextPage.ts";
 import { SubmitAlert } from "./SubmitAlert.tsx";
@@ -16,6 +18,7 @@ import { Wordmark } from "./Wordmark.tsx";
 // Log in (design §8.3, §14), at /login. Checked as every form is (RecipeForm): on the first
 // submit, then on every change, with the API's own schema; then the API's answer.
 export function LoginPage() {
+  const { t } = useTranslation();
   const location = useLocation();
   const { search } = location;
   // From Sign up's "already uses this email" link: the email they typed, so only the password is
@@ -65,13 +68,14 @@ export function LoginPage() {
 
   return (
     <AuthFrame
-      title="Log in"
+      title={t("auth.logIn")}
       logo={<Wordmark />}
+      languageSwitch={<LanguageSwitch />}
       footer={
         <>
-          New to Pinch?{" "}
+          {t("auth.newToPinch")}{" "}
           <Link to={signupLink} className="font-semibold text-accent-strong underline">
-            Sign up
+            {t("auth.signUp")}
           </Link>
         </>
       }
@@ -88,13 +92,15 @@ export function LoginPage() {
         }}
       >
         <form.Field name="email">
-          {(field) => <TextField field={field} label="Email" type="email" autoComplete="email" />}
+          {(field) => (
+            <TextField field={field} label={t("auth.email")} type="email" autoComplete="email" />
+          )}
         </form.Field>
         <form.Field name="password">
           {(field) => (
             <TextField
               field={field}
-              label="Password"
+              label={t("auth.password")}
               type="password"
               autoComplete="current-password"
             />
@@ -109,7 +115,7 @@ export function LoginPage() {
         <form.Subscribe selector={(state) => state.isSubmitting}>
           {(isSubmitting) => (
             <Button type="submit" aria-disabled={isSubmitting} aria-busy={isSubmitting}>
-              {isSubmitting ? "Logging in…" : "Log in"}
+              {isSubmitting ? t("auth.loggingIn") : t("auth.logIn")}
             </Button>
           )}
         </form.Subscribe>

@@ -1,10 +1,12 @@
 import { LoaderCircle } from "lucide-react";
-import { useSyncExternalStore } from "react";
+import { useSyncExternalStore, type ReactNode } from "react";
 import type { ExternalToast } from "sonner";
 import { ApiError } from "./api.ts";
 
 // Every toast in the app, by name, with how long it stays (design §14; the table in the
-// wireframe home.html).
+// wireframe home.html). In English in both languages (the user's call, design §16.8, D46), so
+// written here, not in the locales; the Toaster lays them out left to right. A recipe's title is
+// in a <bdi>, in its own direction (design §16.5).
 const seconds = (n: number) => n * 1000;
 const short = seconds(3);
 const normal = seconds(5);
@@ -32,7 +34,11 @@ export function useToastSent() {
 
 // Sonner is its own chunk, as the Toaster is (Layout): it keeps ~9 kB out of the first load. If
 // it can't be fetched, nothing is shown: a toast is a nicety, and the page shows the change too.
-function showToast(kind: "message" | "success" | "error", title: string, options: ExternalToast) {
+function showToast(
+  kind: "message" | "success" | "error",
+  title: ReactNode,
+  options: ExternalToast,
+) {
   if (!toastSent) {
     toastSent = true;
     listeners.forEach((listener) => {
@@ -72,7 +78,10 @@ function undoAction(undo: () => Promise<void>) {
   const run = () => {
     undo().catch((error: unknown) => {
       if (error instanceof ApiError && error.status === 404) {
-        showToast("error", "Can't undo", { description: "It's already gone", duration: normal });
+        showToast("error", "Can't undo", {
+          description: "It's already gone",
+          duration: normal,
+        });
       } else {
         toastCouldntSave(run, "Couldn't undo");
       }
@@ -107,13 +116,19 @@ export function toastCancelled() {
 // can be closed once it's retried or gone (importToasts.ts).
 // lookAt: what the draft asks the user to check ("3 things to look at"), when it asks anything.
 export function toastReady(id: string, title: string, review: () => void, lookAt?: string) {
-  showToast("success", `${title} is ready to review`, {
-    ...finished,
-    id,
-    description: lookAt,
-    duration: long,
-    action: { label: "Review", onClick: review },
-  });
+  showToast(
+    "success",
+    <>
+      <bdi>{title}</bdi> is ready to review
+    </>,
+    {
+      ...finished,
+      id,
+      description: lookAt,
+      duration: long,
+      action: { label: "Review", onClick: review },
+    },
+  );
 }
 
 // retry is left out when no retry can fix it (D23).
@@ -137,7 +152,7 @@ export function toastImportFailed(
 // nothing has just finished.
 export function toastAlreadySaved(title: string, view: () => void) {
   showToast("message", "Already in My recipes", {
-    description: title,
+    description: <bdi>{title}</bdi>,
     duration: normal,
     action: { label: "View", onClick: view },
   });
@@ -162,7 +177,7 @@ export function toastLimit(message: string) {
 export function toastSaved(title: string) {
   showToast("success", "Saved to My recipes", {
     ...finished,
-    description: title,
+    description: <bdi>{title}</bdi>,
     duration: normal,
   });
 }
@@ -172,14 +187,23 @@ export function toastChangesSaved() {
 }
 
 export function toastDeleted(title: string, undo: () => Promise<void>) {
-  showToast("success", `Deleted ${title}`, { duration: long, action: undoAction(undo) });
+  showToast(
+    "success",
+    <>
+      Deleted <bdi>{title}</bdi>
+    </>,
+    {
+      duration: long,
+      action: undoAction(undo),
+    },
+  );
 }
 
 // A deleted recipe undone. The user has left its page (Delete goes to My recipes), so View.
 export function toastRestored(title: string, view: () => void) {
   showToast("success", "Back in My recipes", {
     ...finished,
-    description: title,
+    description: <bdi>{title}</bdi>,
     duration: normal,
     action: { label: "View", onClick: view },
   });
@@ -189,7 +213,7 @@ export function toastRestored(title: string, view: () => void) {
 // the queue's toast says it is ready to review, or failed (useImportToasts).
 export function toastDiscarded(title: string | undefined, undo: () => Promise<void>) {
   showToast("success", "Discarded", {
-    description: title,
+    description: title === undefined ? undefined : <bdi>{title}</bdi>,
     duration: long,
     action: undoAction(undo),
   });

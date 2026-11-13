@@ -31,7 +31,8 @@ export function Breadcrumb({ links, page }: BreadcrumbProps) {
               </Link>
             </li>
             <li role="presentation" aria-hidden="true" className="shrink-0">
-              <ChevronRight className="size-3.5" />
+              {/* Points the reading way, so it mirrors in Hebrew (design §16.4). */}
+              <ChevronRight className="size-3.5 rtl:-scale-x-100" />
             </li>
           </Fragment>
         ))}

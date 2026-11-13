@@ -1,21 +1,32 @@
 import {
   MeSchema,
   ProvidersSchema,
+  type Language,
   type LoginInput,
   type Me,
+  type MePatch,
   type SignupInput,
 } from "@pinch/shared";
 import { queryOptions, type QueryClient } from "@tanstack/react-query";
+import { needsReloadFor } from "../../i18n.ts";
 import { getJson, post, sendJson } from "../../lib/api.ts";
+import { reloadPage } from "../../lib/loadPage.ts";
 import { dismissAllToasts } from "../../lib/toasts.tsx";
 
 // Who is signed in (design §8.3): the user, or null when nobody is (the API's answer). index.html
 // preloads it with the page, so it's in by the time the JS runs. Never stale: Log in, Sign up and
 // Log out load a new page (loadPage), and a 401 mid-visit sets it (signedOutHere). Asked even
 // offline ("always"), so a start without a connection shows SessionGate's error, not a blank page.
+// On a new device the account's language may not be the page's: then the page reloads in it, and
+// the query never settles, so SessionGate draws nothing before it does (design §16.1).
 export const meQuery = queryOptions({
   queryKey: ["me"],
-  queryFn: (): Promise<Me | null> => getJson("/api/auth/me", MeSchema.nullable()),
+  queryFn: async (): Promise<Me | null> => {
+    const me = await getJson("/api/auth/me", MeSchema.nullable());
+    if (!needsReloadFor(me)) return me;
+    reloadPage();
+    return new Promise(() => undefined);
+  },
   staleTime: Infinity,
   networkMode: "always",
 });
@@ -43,6 +54,10 @@ export function logIn(input: LoginInput) {
 
 export function signUp(input: SignupInput) {
   return sendJson("POST", "/api/auth/signup", input, MeSchema);
+}
+
+export function changeLanguage(language: Language) {
+  return sendJson("PATCH", "/api/auth/me", { language } satisfies MePatch, MeSchema);
 }
 
 export function logOut() {

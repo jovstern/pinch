@@ -1,15 +1,19 @@
 import { useQuery } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 import { useLocation } from "react-router";
 import { Button } from "../../components/ui/Button.tsx";
+import { pageLanguage } from "../../i18n.ts";
 import { providersQuery } from "./authQueries.ts";
 import { nextPage } from "./nextPage.ts";
 
 // "Continue with Google" (design §8.3), under Log in's and Sign up's button: a plain link, as the
 // sign-in is a trip to Google and back, page loads, not a fetch. It carries the page's ?next=, so
-// the user comes back where they were going. Hidden until the API says Google is on. A failed
+// the user comes back where they were going, and its language, for an account Google creates
+// (§16.1). Hidden until the API says Google is on. A failed
 // sign-in comes back to /login?error=google, and the message stands right above this button, under
 // a quiet "or", so it isn't read as the email form's.
 export function GoogleButton() {
+  const { t } = useTranslation();
   const { search } = useLocation();
   const { data } = useQuery(providersQuery);
   if (!data?.google) return null;
@@ -19,16 +23,18 @@ export function GoogleButton() {
       {/* "or": a second way in, apart from the form's own button. The rules are decoration. */}
       <p className="flex items-center gap-3 text-sm text-text-muted">
         <span aria-hidden="true" className="h-px flex-1 bg-border" />
-        or
+        {t("auth.or")}
         <span aria-hidden="true" className="h-px flex-1 bg-border" />
       </p>
       {failed && (
         <p role="alert" className="text-sm text-danger">
-          Couldn&apos;t sign in with Google. Try again.
+          {t("auth.googleFailed")}
         </p>
       )}
       <Button variant="outline" asChild>
-        <a href={`/api/auth/google?next=${encodeURIComponent(nextPage(search))}`}>
+        <a
+          href={`/api/auth/google?next=${encodeURIComponent(nextPage(search))}&lang=${pageLanguage()}`}
+        >
           {/* Google's "G", in its own colours, as its brand rules ask of a sign-in button. */}
           <svg viewBox="0 0 48 48" aria-hidden="true" className="size-5 shrink-0">
             <path
@@ -48,7 +54,7 @@ export function GoogleButton() {
               d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"
             />
           </svg>
-          Continue with Google
+          {t("auth.continueWithGoogle")}
         </a>
       </Button>
     </>

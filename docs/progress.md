@@ -144,3 +144,69 @@ Then the features the design asks the API for, one PR each:
       is ready) and upsert, recipes only; hits free against both caps; `links:forget <url>`
 - [x] End of milestone: UI review, observer, e2e, demo; the fixes (the review's, signed-out pages
       without 401s, the entry as one file: every LCP within its budget, docs/metrics/m09.md)
+
+## M10 — English and Hebrew (design §16, §8.3, D39–D47)
+
+Every Hebrew string is drafted by Claude and read by the user in its PR (§16.9). English stays
+exactly as it is: each slice's English screens look the same before and after.
+
+- [ ] I1 The language on the account, the API: `language` on the user and in `me` (none reads
+      as English), `PATCH /api/auth/me` (JSON only, 400 for anything else), the `pinch_lang`
+      cookie on every sign-in, `me` and change (logout keeps it); sign-up's `language` and
+      Google's `lang`
+- [ ] I2 The plumbing, the client: i18next and react-i18next, `en.ts` and `he.ts` typed against
+      it; the inline script sets `lang` and `dir`; `main.tsx` waits for Hebrew; Radix's
+      `DirectionProvider`; the picker in the avatar's menu, the switch on Log in and Sign up, the
+      reload on a new device. Only Header and UserMenu through `t()`; the budget row with the
+      app's measured figure (§16.10)
+- [ ] I3 Right to left: the logical classes and the physical-class test, the mirrored icons,
+      Sonner's side, cook mode's row and arrow keys, the import card back to the interface's
+      direction (reverses #113); checked with `dir="rtl"`, no Hebrew text yet
+- [ ] I4 Strings with Hebrew: the frame and accounts (header, Log in, Sign up, the session
+      gate, not found); the toasts stay English in both languages (D46, the user's call on
+      2026-11-13), left to right with `lang="en"`, a title in its `<bdi>`; `renderInHebrew` and
+      its first tests
+- [ ] I5 Strings with Hebrew: Add recipe and the queue (its heading's plurals, the failure
+      reasons by their key; the queue's toasts in `useImportToasts`, "Couldn't read that video",
+      "Your recipe" and the things to look at in them, stay English, as every toast, D46)
+- [ ] I6 Strings with Hebrew: My recipes, Filters and the tag labels; a recipe's page; the
+      shared `ui/` labels they bring (Sheet's `aria-label="Close"`, Breadcrumb's
+      `aria-label="Breadcrumb"`)
+- [ ] I7 Strings with Hebrew: the editor and cook mode, page titles with their isolates
+- [ ] I8 The server's messages and `Intl`: `shared/src/messages.ts` used by the schemas and the
+      worker, `validation` in the client; minutes, counts and nutrition through `Intl`
+- [ ] I9 The Hebrew display face: Frank Ruhl Libre's Hebrew subset with its `unicode-range`,
+      its sized fallback, measured
+- [ ] I10 The unit's combobox (D47, §16.12): the editor's Unit suggests the common units in the
+      interface's language, any text still allowed; the ARIA combobox pattern; tests
+- [ ] End of milestone: UI review in both languages (each screen at 360 and 1440 px in Hebrew),
+      observer (budgets, LCP in Hebrew too), e2e with axe in Hebrew and the switch flow, demo
+
+## M11 — Pinch online (design §15, §8.3, D31–D38)
+
+The user's steps (accounts, the domain, secrets) are listed in design §15.9; each slice says
+which it needs.
+
+- [ ] S0 The cloud-IP spike: the Dockerfile's first version, a throwaway Fly app and Atlas
+      database, about 10 real links through the worker on Fly; the results in
+      `docs/spike-results.md` and the choice of (a), (b) or (c) (§15.6). Needs the Fly and
+      Atlas accounts
+- [ ] B1 Only if S0 finds blocks: the fallback (b): a failed download read from its caption, a
+      YouTube Short by its URL alone, a readable "Paste its text instead"
+- [ ] D1 The production server: the API serves `client/dist` (long cache for `/assets`,
+      `no-cache` for `index.html`, the SPA fallback) when `NODE_ENV=production`; the Dockerfile
+      builds the client; tested with a built folder
+- [ ] D2 Fly: `fly.toml` (two process groups, the release command, blue-green), the API's check
+      on `/api/ready`, the worker's health port; `ci.yml` (the gates on every PR, deploy on
+      `master`). Needs `FLY_API_TOKEN` and the secrets; the first deploy, on `*.fly.dev`
+- [ ] D3 The domain and the headers: helmet's CSP with the inline script's hash computed at start;
+      `PUBLIC_URL` and Google's production redirect. Needs the domain and its certificate
+- [ ] P1 Password reset, the API: `passwordResets` and its indexes, `POST /api/auth/forgot` and
+      `/reset`, their rate limits, every session ended; `email.ts` (Resend through `fetch`, a
+      fake in tests), the email in the account's language (design §16.7). Needs Resend and the domain verified
+- [ ] P2 Password reset, the pages: "Forgot password?" on Log in, `/forgot`, `/reset`; e2e of a
+      reset (the test writes its own token's hash, so no email is read)
+- [ ] O1 Monitoring and backups: the 80% warning, the worker's `HEARTBEAT_URL` ping,
+      `backup.yml` (nightly, `age`-encrypted)
+- [ ] End of milestone: e2e locally as always; UI review and observer (Lighthouse, axe) on the
+      production URL; a smoke test there (sign up, a real link, a reset email); demo

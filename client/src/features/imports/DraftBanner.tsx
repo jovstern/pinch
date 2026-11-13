@@ -22,7 +22,8 @@ export function DraftBanner({ input }: { input: Import["input"] }) {
           >
             Watch the video
             <span className="sr-only"> (opens in a new tab)</span>
-            <ExternalLink aria-hidden="true" className="size-3.5" />
+            {/* Its arrow leaves toward the end, so it mirrors in Hebrew (design §16.4). */}
+            <ExternalLink aria-hidden="true" className="size-3.5 rtl:-scale-x-100" />
           </a>
         )}
       </div>

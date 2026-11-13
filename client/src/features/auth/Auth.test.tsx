@@ -1,15 +1,16 @@
-import { screen, within } from "@testing-library/react";
+import { fireEvent, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, test, vi } from "vitest";
-import { loadPage } from "../../lib/loadPage.ts";
-import { renderApp, stubFetch, testUser } from "../../test-utils.tsx";
+import { loadPage, reloadPage } from "../../lib/loadPage.ts";
+import { renderApp, renderInHebrew, stubFetch, testUser } from "../../test-utils.tsx";
 
 // jsdom can't load a page: the tests see where the app would go.
-vi.mock("../../lib/loadPage.ts", () => ({ loadPage: vi.fn() }));
+vi.mock("../../lib/loadPage.ts", () => ({ loadPage: vi.fn(), reloadPage: vi.fn() }));
 
 afterEach(() => {
   vi.unstubAllGlobals();
   vi.mocked(loadPage).mockClear();
+  vi.mocked(reloadPage).mockClear();
 });
 
 const notFound = () => Promise.resolve(new Response(null, { status: 404 }));
@@ -223,7 +224,7 @@ test("with Google on, Continue with Google goes to the API, carrying next", asyn
   renderApp("/login?next=%2Frecipes%3Fq%3Degg", { me: null });
   expect(await screen.findByRole("link", { name: "Continue with Google" })).toHaveAttribute(
     "href",
-    "/api/auth/google?next=%2Frecipes%3Fq%3Degg",
+    "/api/auth/google?next=%2Frecipes%3Fq%3Degg&lang=en",
   );
 });
 
@@ -250,4 +251,153 @@ test("with Google off, Sign up offers no Google button", async () => {
     expect(fetch).toHaveBeenCalledWith("/api/auth/providers");
   });
   expect(screen.queryByRole("link", { name: "Continue with Google" })).not.toBeInTheDocument();
+});
+
+// The language (design §16.1).
+
+test("picking עברית in the avatar's menu saves it on the account, then reloads the page", async () => {
+  const user = userEvent.setup();
+  const fetch = vi.fn((path: string) =>
+    path === "/api/auth/me"
+      ? Promise.resolve(Response.json({ ...testUser, language: "he" }))
+      : notFound(),
+  );
+  stubFetch(fetch);
+  renderApp("/nope");
+  await user.click(screen.getByRole("button", { name: "Your account" }));
+  const languages = await screen.findByRole("group", { name: "Language" });
+  expect(within(languages).getByRole("menuitemradio", { name: "English" })).toBeChecked();
+  const hebrew = within(languages).getByRole("menuitemradio", { name: "עברית" });
+  expect(hebrew).toHaveAttribute("lang", "he");
+  await user.click(hebrew);
+  await vi.waitFor(() => {
+    expect(reloadPage).toHaveBeenCalled();
+  });
+  expect(fetch).toHaveBeenCalledWith("/api/auth/me", {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ language: "he" }),
+  });
+});
+
+test("while the language saves, the menu stays open and its choices are unavailable", async () => {
+  const user = userEvent.setup();
+  stubFetch((path) =>
+    path === "/api/auth/me" ? new Promise<Response>(() => undefined) : notFound(),
+  );
+  renderApp("/nope");
+  await user.click(screen.getByRole("button", { name: "Your account" }));
+  await user.click(await screen.findByRole("menuitemradio", { name: "עברית" }));
+  const languages = screen.getByRole("group", { name: "Language" });
+  expect(languages).toHaveAttribute("aria-busy", "true");
+  for (const name of ["English", "עברית"]) {
+    expect(within(languages).getByRole("menuitemradio", { name })).toHaveAttribute(
+      "aria-disabled",
+      "true",
+    );
+  }
+  expect(reloadPage).not.toHaveBeenCalled();
+});
+
+test("a language that couldn't be saved says so, with Try again, and doesn't reload", async () => {
+  const user = userEvent.setup();
+  let up = false;
+  stubFetch((path) => {
+    if (path !== "/api/auth/me") return notFound();
+    if (!up) return Promise.reject(new TypeError("Failed to fetch"));
+    return Promise.resolve(Response.json({ ...testUser, language: "he" }));
+  });
+  renderApp("/nope");
+  await user.click(screen.getByRole("button", { name: "Your account" }));
+  await user.click(await screen.findByRole("menuitemradio", { name: "עברית" }));
+  expect(await screen.findByText("Couldn't save")).toBeInTheDocument();
+  expect(reloadPage).not.toHaveBeenCalled();
+  up = true;
+  // fireEvent: userEvent's pointer down makes Sonner capture the pointer, which jsdom can't.
+  fireEvent.click(screen.getByRole("button", { name: "Try again" }));
+  await vi.waitFor(() => {
+    expect(reloadPage).toHaveBeenCalled();
+  });
+});
+
+test("signed out, the switch under Log in keeps עברית on this device and reloads", async () => {
+  stubFetch(notFound);
+  renderApp("/login", { me: null });
+  const hebrew = await screen.findByRole("button", { name: "עברית" });
+  expect(hebrew).toHaveAttribute("lang", "he");
+  await userEvent.setup().click(hebrew);
+  expect(document.cookie).toContain("pinch_lang=he");
+  expect(reloadPage).toHaveBeenCalled();
+  document.cookie = "pinch_lang=; Max-Age=0; Path=/";
+});
+
+test("Sign up sends the page's language, for the new account", async () => {
+  const fetch = vi.fn((path: string) =>
+    path === "/api/auth/signup" ? Promise.resolve(Response.json(testUser)) : notFound(),
+  );
+  stubFetch(fetch);
+  renderApp("/signup", { me: null });
+  await fillSignup();
+  await vi.waitFor(() => {
+    expect(loadPage).toHaveBeenCalledWith("/");
+  });
+  expect(fetch).toHaveBeenCalledWith("/api/auth/signup", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      email: "cook@example.com",
+      password: "a long password",
+      name: "Dana",
+      language: "en",
+    }),
+  });
+});
+
+test("in Hebrew, Log in is in Hebrew, its switch names English, and a wrong password says so", async () => {
+  const user = userEvent.setup();
+  stubFetch(() => Promise.resolve(new Response(null, { status: 401 })));
+  await renderInHebrew("/login", { me: null });
+  expect(await screen.findByRole("heading", { level: 1, name: "להתחבר" })).toBeInTheDocument();
+  expect(screen.getByRole("link", { name: "להירשם" })).toHaveAttribute("href", "/signup");
+  expect(screen.getByRole("button", { name: "English" })).toHaveAttribute("lang", "en");
+  await user.type(screen.getByLabelText("אימייל"), "cook@example.com");
+  await user.type(screen.getByLabelText("סיסמה"), "not it");
+  await user.click(screen.getByRole("button", { name: "להתחבר" }));
+  expect(await screen.findByRole("alert")).toHaveTextContent("האימייל והסיסמה לא תואמים.");
+});
+
+test("in Hebrew, Sign up is in Hebrew, with Log in's link", async () => {
+  stubFetch(notFound);
+  await renderInHebrew("/signup", { me: null });
+  expect(await screen.findByRole("heading", { level: 1, name: "להירשם" })).toBeInTheDocument();
+  expect(screen.getByLabelText("שם")).toBeInTheDocument();
+  expect(screen.getByText("8 תווים לפחות.")).toBeInTheDocument();
+  expect(screen.getByRole("link", { name: "להתחבר" })).toHaveAttribute("href", "/login");
+});
+
+test("in Hebrew, the session's error is in Hebrew", async () => {
+  stubFetch(() => Promise.resolve(new Response(null, { status: 500 })));
+  await renderInHebrew("/nope", { me: "ask" });
+  expect(
+    await screen.findByRole("heading", { level: 1, name: "אין חיבור ל-Pinch" }),
+  ).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "לנסות שוב" })).toBeInTheDocument();
+});
+
+test("in Hebrew, a language that couldn't be saved says so in an English toast, left to right", async () => {
+  const user = userEvent.setup();
+  stubFetch((path) =>
+    path === "/api/auth/me" ? Promise.reject(new TypeError("Failed to fetch")) : notFound(),
+  );
+  await renderInHebrew("/nope", { me: { ...testUser, language: "he" } });
+  await user.click(screen.getByRole("button", { name: "החשבון שלך" }));
+  await user.click(await screen.findByRole("menuitemradio", { name: "English" }));
+  // The toasts are English in both languages (design §16.8, D46), and read left to right.
+  const toast = (await screen.findByText("Couldn't save")).closest("li");
+  if (toast === null) throw new Error("Couldn't save isn't in a toast");
+  expect(toast).toHaveTextContent("Check your connection");
+  expect(within(toast).getByRole("button", { name: "Try again" })).toBeInTheDocument();
+  expect(toast.closest("ol")).toHaveAttribute("dir", "ltr");
+  expect(toast.closest("[lang]")).toHaveAttribute("lang", "en");
+  expect(reloadPage).not.toHaveBeenCalled();
 });

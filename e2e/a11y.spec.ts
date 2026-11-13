@@ -1,6 +1,6 @@
 import AxeBuilder from "@axe-core/playwright";
 import type { Page } from "@playwright/test";
-import { expect, test } from "./fixtures.ts";
+import { expect, newVisitor, test } from "./fixtures.ts";
 
 // Scans the page once nothing on it is moving: a toast fading in or out is drawn in half its
 // colours (a contrast failure that isn't one). Endless animations (a spinner) don't count. `include` scans one
@@ -129,7 +129,7 @@ test.describe("signed out", () => {
     test(`Log in and Sign up have no accessibility violations (${colorScheme})`, async ({
       page,
     }) => {
-      await page.context().clearCookies();
+      await newVisitor(page);
       await page.emulateMedia({ colorScheme });
       await page.goto("/login");
       await expect(page.getByRole("heading", { level: 1, name: "Log in" })).toBeVisible();

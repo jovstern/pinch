@@ -10,14 +10,14 @@ export function NativeSelect({ className, ...props }: ComponentProps<"select">) 
     <div className="relative">
       <select
         className={cn(
-          "h-11 w-full min-w-0 appearance-none rounded-control border border-input bg-card pr-9 pl-3 text-base disabled:cursor-not-allowed disabled:opacity-60",
+          "h-11 w-full min-w-0 appearance-none rounded-control border border-input bg-card ps-3 pe-9 text-base disabled:cursor-not-allowed disabled:opacity-60",
           className,
         )}
         {...props}
       />
       <ChevronDown
         aria-hidden="true"
-        className="pointer-events-none absolute top-1/2 right-3 size-4 -translate-y-1/2 text-muted-foreground"
+        className="pointer-events-none absolute end-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
       />
     </div>
   );

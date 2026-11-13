@@ -1,4 +1,4 @@
-import type { Me } from "@pinch/shared";
+import type { Language, Me } from "@pinch/shared";
 import { MongoServerError, ObjectId, type Db } from "mongodb";
 import { sessionsCollection } from "./sessions.ts";
 
@@ -11,6 +11,8 @@ export type UserDocument = {
   passwordHash?: string;
   // Google's "sub", set by a Google sign-in (A4).
   googleId?: string;
+  // The interface's language (§16.1, M10); an account from before M10 has none: English.
+  language?: Language;
   createdAt: Date;
 };
 
@@ -20,7 +22,12 @@ export function usersCollection(db: Db) {
 
 // What the API says about the signed-in user: never the hash.
 export function toMe(user: UserDocument): Me {
-  return { id: user._id.toHexString(), email: user.email, name: user.name };
+  return {
+    id: user._id.toHexString(),
+    email: user.email,
+    name: user.name,
+    language: user.language ?? "en",
+  };
 }
 
 // The account with this email, for the db: scripts (seed, adopt). None stops the script with a
@@ -36,7 +43,12 @@ export async function findAccount(db: Db, email: string) {
 // whose account is linked to another Google account can't sign in this way: "linked_elsewhere".
 export async function googleAccount(
   db: Db,
-  { googleId, email, name }: { googleId: string; email: string; name: string },
+  {
+    googleId,
+    email,
+    name,
+    language,
+  }: { googleId: string; email: string; name: string; language: Language },
 ) {
   const users = usersCollection(db);
   const returning = await users.findOne({ googleId });
@@ -53,7 +65,14 @@ export async function googleAccount(
     await sessionsCollection(db).deleteMany({ userId: linked._id });
     return linked;
   }
-  const user: UserDocument = { _id: new ObjectId(), email, name, googleId, createdAt: new Date() };
+  const user: UserDocument = {
+    _id: new ObjectId(),
+    email,
+    name,
+    googleId,
+    language,
+    createdAt: new Date(),
+  };
   try {
     await users.insertOne(user);
     return user;

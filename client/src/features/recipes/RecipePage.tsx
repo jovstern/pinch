@@ -88,7 +88,7 @@ export function RecipePage() {
             )}
           </div>
           {recipe.description && (
-            <p dir="auto" className="mt-3 max-w-prose text-pretty">
+            <p dir="auto" className="me-auto mt-3 max-w-prose text-pretty">
               {recipe.description}
             </p>
           )}
@@ -150,11 +150,11 @@ export function RecipePage() {
           </h2>
           {/* dir="auto" on the list (a recipe's steps are in one language): a Hebrew recipe's
               numbers sit on the right, with room for them (ps: padding on the side the text
-              starts). */}
+              starts), and me-auto keeps the list at its own start edge in either interface. */}
           <ol
             aria-labelledby="steps"
             dir="auto"
-            className="mt-3 grid max-w-prose list-decimal gap-3 ps-6 rtl:ml-auto"
+            className="me-auto mt-3 grid max-w-prose list-decimal gap-3 ps-6"
           >
             {recipe.steps.map((step, index) => (
               <li key={index} className="ps-1 text-pretty">

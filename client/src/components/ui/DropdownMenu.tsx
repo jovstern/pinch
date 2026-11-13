@@ -1,3 +1,4 @@
+import { Check } from "lucide-react";
 import type { ComponentProps } from "react";
 import { DropdownMenu as DropdownMenuPrimitive } from "radix-ui";
 import { cn } from "../../lib/cn.ts";
@@ -47,6 +48,30 @@ export function DropdownMenuItem({
       )}
       {...props}
     />
+  );
+}
+
+// One choice of several (the avatar's menu's languages): the chosen one has a check at its start.
+export const DropdownMenuRadioGroup = DropdownMenuPrimitive.RadioGroup;
+
+export function DropdownMenuRadioItem({
+  className,
+  children,
+  ...props
+}: ComponentProps<typeof DropdownMenuPrimitive.RadioItem>) {
+  return (
+    <DropdownMenuPrimitive.RadioItem
+      className={cn(
+        "relative flex min-h-11 cursor-default items-center rounded-control ps-9 pe-3 outline-none select-none data-disabled:opacity-60 data-highlighted:bg-secondary",
+        className,
+      )}
+      {...props}
+    >
+      <DropdownMenuPrimitive.ItemIndicator className="absolute start-3 flex">
+        <Check aria-hidden="true" className="size-4" />
+      </DropdownMenuPrimitive.ItemIndicator>
+      {children}
+    </DropdownMenuPrimitive.RadioItem>
   );
 }
 

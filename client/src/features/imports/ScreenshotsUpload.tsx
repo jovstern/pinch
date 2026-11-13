@@ -57,7 +57,7 @@ export function ScreenshotsUpload() {
           Button's ghost look: the file input inside it is hidden, so the label
           shows its focus (as TagPicker's chips), and relative keeps the input inside it. */}
       <Button asChild variant="ghost">
-        <label className="relative -ml-2 cursor-pointer px-2 text-sm font-medium text-muted-foreground has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-focus-visible:outline-ring">
+        <label className="relative -ms-2 cursor-pointer px-2 text-sm font-medium text-muted-foreground has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-focus-visible:outline-ring">
           <ImagePlus aria-hidden="true" className="size-4" />
           {upload.isPending ? "Sending…" : "Or add screenshots"}
           <input

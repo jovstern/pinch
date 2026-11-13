@@ -1,9 +1,11 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
+import { Direction } from "radix-ui";
 import { BrowserRouter } from "react-router";
 import { App } from "./App.tsx";
 import { queueKnown } from "./features/imports/importQueries.ts";
+import { loadHebrew, pageIsRtl, pageLanguage, startI18n } from "./i18n.ts";
 import { ApiError } from "./lib/api.ts";
 import { loadDisplayFont } from "./lib/displayFont.ts";
 import "./globals.css";
@@ -24,18 +26,31 @@ const queryClient = new QueryClient({
 });
 
 loadDisplayFont();
+// In the language index.html's script chose (design §16.2).
+const language = pageLanguage();
+startI18n(language);
 
+// Radix's menus and radio groups follow the page's direction (§16.4): a menu aligned to the end
+// opens toward the left in Hebrew, and the arrow keys follow.
 function render(root: HTMLElement) {
   createRoot(root).render(
     <StrictMode>
-      <QueryClientProvider client={queryClient}>
-        <BrowserRouter>
-          <App />
-        </BrowserRouter>
-      </QueryClientProvider>
+      <Direction.Provider dir={pageIsRtl() ? "rtl" : "ltr"}>
+        <QueryClientProvider client={queryClient}>
+          <BrowserRouter>
+            <App />
+          </BrowserRouter>
+        </QueryClientProvider>
+      </Direction.Provider>
     </StrictMode>,
   );
 }
+
+// What the first render waits for, so nothing is drawn twice: Hebrew's strings, and on / the
+// queue (below). Fetched side by side, so Hebrew adds no round trip of its own. If Hebrew can't
+// be fetched, the page shows in English, the fallback, rather than nothing.
+const waits: Promise<unknown>[] = [];
+if (language === "he") waits.push(loadHebrew().catch(() => undefined));
 
 // Add recipe centres its block by the queue's height, so it waits for the queue (ImportPage).
 // Opened there, the app renders once the queue is in, asked for by index.html's preload with the
@@ -45,9 +60,8 @@ function render(root: HTMLElement) {
 // preload (the pinch_signed_in hint, design §8.3): signed out, the queue is a 401 in the console,
 // and the page is Log in.
 if (location.pathname === "/" && /(^|; )pinch_signed_in=1/.test(document.cookie)) {
-  void queueKnown(queryClient).then(() => {
-    render(root);
-  });
-} else {
-  render(root);
+  waits.push(queueKnown(queryClient));
 }
+void Promise.all(waits).then(() => {
+  render(root);
+});

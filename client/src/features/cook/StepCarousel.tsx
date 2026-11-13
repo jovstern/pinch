@@ -2,8 +2,9 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import type { ReactNode, UIEvent } from "react";
 import { useEffect, useEffectEvent, useRef, useState } from "react";
 import { Button } from "../../components/ui/Button.tsx";
+import { pageIsRtl } from "../../i18n.ts";
 import { cn } from "../../lib/cn.ts";
-import { nearestStep } from "./nearestStep.ts";
+import { cardStart, nearestStep } from "./nearestStep.ts";
 
 type StepCarouselProps = {
   steps: string[];
@@ -20,7 +21,7 @@ type StepCarouselProps = {
 // and Next; past it the counter and the bar say where you are.
 const mostDots = 7;
 
-// Cook mode's steps as a row of cards, one in view, the next peeking 24 px at the right, swiped
+// Cook mode's steps as a row of cards, one in view, the next peeking 24 px at the end, swiped
 // sideways on a phone (design §14). Native scroll snap, not a carousel library (shadcn's is
 // Embla): the browser already snaps, flings and follows the finger, so all that's left is to
 // keep the step and the row together. Swiping can't be the only way (WCAG 2.5.7, a wet thumb):
@@ -34,6 +35,8 @@ export function StepCarousel({ steps, card, onDone, children, timers }: StepCaro
   const last = steps.length - 1;
   const current = Math.min(index, last);
   const label = (step: number) => `Step ${String(step + 1)} of ${String(steps.length)}`;
+  // Right to left in Hebrew: the row starts at the right and scrolls to negative (§16.4).
+  const rtl = pageIsRtl();
 
   // The step changes at once, so the counter answers the press, and the row scrolls to its card:
   // smoothly unless the system asks for less motion (motion-safe:scroll-smooth below).
@@ -41,7 +44,7 @@ export function StepCarousel({ steps, card, onDone, children, timers }: StepCaro
     setIndex(step);
     const list = row.current;
     const target = list?.querySelectorAll<HTMLElement>(":scope > li")[step];
-    if (list && target) list.scrollLeft = target.offsetLeft;
+    if (list && target) list.scrollLeft = (rtl ? -1 : 1) * cardStart(target, list, rtl);
   }
 
   // The step is set once the row has stopped for 100 ms, not on every scroll event: a press's own
@@ -52,20 +55,21 @@ export function StepCarousel({ steps, card, onDone, children, timers }: StepCaro
     clearTimeout(settling.current);
     settling.current = window.setTimeout(() => {
       const cards = list.querySelectorAll<HTMLElement>(":scope > li");
-      const starts = Array.from(cards, (each) => each.offsetLeft);
-      setIndex(nearestStep(list.scrollLeft, starts, list.scrollWidth - list.clientWidth));
+      setIndex(nearestStep(list, Array.from(cards), rtl));
     }, 100);
   }
 
   // The ← → keys, wherever the focus is, except where the arrows are someone else's: a field, a
-  // menu, a dialog. Not held down, nor with a modifier (Alt+← is the browser's Back).
+  // menu, a dialog. Not held down, nor with a modifier (Alt+← is the browser's Back). In Hebrew
+  // they swap, as the row does: → is back (§16.4).
   const onKeyDown = useEffectEvent((event: KeyboardEvent) => {
     if (event.repeat || event.defaultPrevented) return;
     if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
     const theirs = "input, textarea, select, [contenteditable], [role=menu], [role=dialog]";
     if (event.target instanceof Element && event.target.closest(theirs)) return;
-    if (event.key === "ArrowLeft" && current > 0) goTo(current - 1);
-    else if (event.key === "ArrowRight" && current < last) goTo(current + 1);
+    const [back, forward] = rtl ? ["ArrowRight", "ArrowLeft"] : ["ArrowLeft", "ArrowRight"];
+    if (event.key === back && current > 0) goTo(current - 1);
+    else if (event.key === forward && current < last) goTo(current + 1);
     else return;
     // Not also the browser's own scroll of the row, when the focus is in a card.
     event.preventDefault();
@@ -102,10 +106,11 @@ export function StepCarousel({ steps, card, onDone, children, timers }: StepCaro
         ))}
       </div>
 
-      {/* relative: the cards' offsetLeft is measured from the row. The cards out of view aren't
-          inert, on purpose: tabbing into one scrolls it in, and the step follows. items-start: each
-          card as tall as its step, while the row keeps the tallest's height, so Back and Next
-          don't move. From 768 px, where Back and Next are, a card takes the whole row: no peek. */}
+      {/* relative: the cards' offsetLeft is measured from the row (nearestStep.ts). The cards out
+          of view aren't inert, on purpose: tabbing into one scrolls it in, and the step follows.
+          items-start: each card as tall as its step, while the row keeps the tallest's height, so
+          Back and Next don't move. From 768 px, where Back and Next are, a card takes the whole
+          row: no peek. */}
       <ol
         ref={row}
         aria-label="Steps"
@@ -151,7 +156,8 @@ export function StepCarousel({ steps, card, onDone, children, timers }: StepCaro
               if (current > 0) goTo(current - 1);
             }}
           >
-            <ChevronLeft aria-hidden="true" className="size-5" />
+            {/* ‹ and › point the reading way, so they mirror in Hebrew (§16.4). */}
+            <ChevronLeft aria-hidden="true" className="size-5 rtl:-scale-x-100" />
             <span className="sr-only md:not-sr-only">Back</span>
           </Button>
           {/* A dot per step that jumps to it: 44 px tall, and 44 px wide where they fit. From 768
@@ -184,7 +190,9 @@ export function StepCarousel({ steps, card, onDone, children, timers }: StepCaro
             <span className={cn(current < last && "sr-only md:not-sr-only")}>
               {current < last ? "Next" : "Done"}
             </span>
-            {current < last && <ChevronRight aria-hidden="true" className="size-5" />}
+            {current < last && (
+              <ChevronRight aria-hidden="true" className="size-5 rtl:-scale-x-100" />
+            )}
           </Button>
           <p className="hidden text-sm whitespace-nowrap text-muted-foreground md:pointer-fine:block">
             or the ← → keys
