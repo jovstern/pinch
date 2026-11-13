@@ -1,5 +1,6 @@
 import { useId } from "react";
 import { FieldError } from "./FieldError.tsx";
+import { Combobox } from "./ui/Combobox.tsx";
 import { Input } from "./ui/Input.tsx";
 import { Textarea } from "./ui/Textarea.tsx";
 
@@ -29,6 +30,9 @@ type TextFieldProps = {
   // A draft's "thing to look at" (design §14): the id of its note, which the form shows under
   // the field's row. The box is dashed while it's marked, and read with the note.
   markId?: string;
+  // Suggestions under the box as you type (a combobox, design §16.12), and the list's name for
+  // a screen reader; anything else typed is kept.
+  suggestions?: { options: readonly string[]; label: string };
   className?: string;
 };
 
@@ -45,6 +49,7 @@ export function TextField({
   autoComplete,
   hint,
   markId,
+  suggestions,
   className = "",
 }: TextFieldProps) {
   const id = useId();
@@ -86,6 +91,14 @@ export function TextField({
           onChange={(event) => {
             field.handleChange(event.target.value);
           }}
+        />
+      ) : suggestions ? (
+        <Combobox
+          {...shared}
+          className={marked}
+          options={suggestions.options}
+          listLabel={suggestions.label}
+          onValueChange={field.handleChange}
         />
       ) : (
         <Input

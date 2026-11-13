@@ -319,6 +319,28 @@ export const en = {
     amount: "Amount",
     unit: "Unit",
     unitPlaceholder: "g",
+    // The unit's suggestions (design §16.12, D47), as recipes in English write them: weights and
+    // volumes, metric first (g, kg, ml, l); the spoons and the cup; then what's counted (a clove
+    // of garlic, a slice, a can, a piece, a bunch of herbs) and the cook's own measures (a pinch,
+    // a handful). One form each, short or singular: "cup" is a tap, and "cups" is two more keys.
+    units: [
+      "g",
+      "kg",
+      "ml",
+      "l",
+      "tsp",
+      "tbsp",
+      "cup",
+      "pinch",
+      "handful",
+      "clove",
+      "slice",
+      "can",
+      "piece",
+      "bunch",
+    ],
+    // The list's name, for a screen reader.
+    unitSuggestions: "Suggestions",
     ingredient: "Ingredient",
     ingredientPlaceholder: "e.g. flour",
     note: "Note",

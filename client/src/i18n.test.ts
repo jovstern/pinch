@@ -56,11 +56,12 @@ test("in Hebrew, the header, its menu and not found are in Hebrew, right to left
 
 // Each string's {{variables}}, sorted, by its key. A plural's single and dual forms (_one, _two)
 // may say their number in words ("מתכון אחד", "שעתיים"), so {{count}} is left out of theirs; their
-// other variables still count. Hebrew's dual has no English twin, so it isn't compared.
+// other variables still count. Hebrew's dual has no English twin, so it isn't compared. A list
+// (the units, §16.12) has no variables, and each language's is its own length.
 function placeholders(strings: object, prefix = ""): Record<string, string> {
   const found: Record<string, string> = {};
   for (const [key, value] of Object.entries(strings)) {
-    if (key.endsWith("_two")) continue;
+    if (key.endsWith("_two") || Array.isArray(value)) continue;
     if (typeof value === "string") {
       const words = /_(one|two)$/.test(key);
       const marks = (value.match(/{{\w+}}/g) ?? []).filter(

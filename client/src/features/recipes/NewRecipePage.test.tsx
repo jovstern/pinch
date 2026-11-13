@@ -354,7 +354,7 @@ test("in Hebrew, writing a recipe: its page, fields and buttons are in Hebrew", 
   expect(screen.getByRole("group", { name: "מצרכים" })).toBeInTheDocument();
   const row = within(screen.getByRole("group", { name: "מצרך 1" }));
   expect(row.getByLabelText("כמות")).toHaveAttribute("placeholder", "200");
-  // Unit stays free text (the combobox is I10, §16.12): only its label and example are Hebrew.
+  // The unit's label and example are Hebrew; its suggestions are tested below.
   expect(row.getByLabelText("יחידה")).toHaveAttribute("placeholder", "גרם");
   expect(row.getByLabelText("מצרך")).toHaveAttribute("placeholder", "למשל: קמח");
   expect(row.getByLabelText("הערה")).toHaveAttribute("placeholder", "הערה (לא חובה)");
@@ -445,4 +445,161 @@ test("in Hebrew, Cancel with changes asks first, in Hebrew", async () => {
   expect(within(dialog).getByRole("button", { name: "לצאת בלי לשמור" })).toBeInTheDocument();
   await userEvent.click(within(dialog).getByRole("button", { name: "להמשיך לערוך" }));
   expect(screen.getByLabelText("שם המתכון")).toHaveValue("Toast");
+});
+
+// The unit's combobox (design §16.12): suggestions as you type, any text kept.
+function shownOptions() {
+  return screen.queryAllByRole("option").map((option) => option.textContent);
+}
+
+// The ingredients the editor sent.
+function sentIngredients(fetch: ReturnType<typeof stubApi>) {
+  const body = fetch.mock.calls.find(([, init]) => init?.method === "POST")?.[1]?.body;
+  if (typeof body !== "string") throw new Error("Nothing was saved.");
+  return (JSON.parse(body) as { ingredients: unknown }).ingredients;
+}
+
+test("the unit suggests the common units that start with what's typed, ignoring case", async () => {
+  stubApi(() => Response.json(saved, { status: 201 }));
+  renderApp("/recipes/new");
+
+  const unit = await screen.findByRole("combobox", { name: "Unit" });
+  expect(unit).toHaveAttribute("aria-expanded", "false");
+  expect(unit).toHaveAttribute("aria-autocomplete", "list");
+  await userEvent.type(unit, "T");
+
+  expect(unit).toHaveAttribute("aria-expanded", "true");
+  const list = screen.getByRole("listbox", { name: "Suggestions" });
+  expect(unit).toHaveAttribute("aria-controls", list.id);
+  expect(shownOptions()).toEqual(["tsp", "tbsp"]);
+  // Nothing starts with it: no list, and what's typed stays.
+  await userEvent.type(unit, "x");
+  expect(unit).toHaveAttribute("aria-expanded", "false");
+  expect(shownOptions()).toEqual([]);
+  expect(unit).toHaveValue("Tx");
+});
+
+test("the arrow keys move through the units, wrapping, and Enter picks one without saving", async () => {
+  const fetch = stubApi(() => Response.json(saved, { status: 201 }));
+  renderApp("/recipes/new");
+
+  const unit = await screen.findByRole("combobox", { name: "Unit" });
+  await userEvent.click(screen.getByLabelText("Title"));
+  await userEvent.tab();
+  await userEvent.tab();
+  await userEvent.tab();
+  expect(unit).toHaveFocus();
+  expect(unit).toHaveAttribute("aria-expanded", "false");
+
+  await userEvent.keyboard("{ArrowDown}");
+  expect(unit).toHaveAttribute("aria-expanded", "true");
+  const active = () => document.getElementById(unit.getAttribute("aria-activedescendant") ?? "");
+  expect(active()).toHaveTextContent("g");
+  expect(active()).toHaveAttribute("aria-selected", "true");
+  await userEvent.keyboard("{ArrowDown}");
+  expect(active()).toHaveTextContent("kg");
+  await userEvent.keyboard("{ArrowUp}{ArrowUp}");
+  expect(active()).toHaveTextContent("bunch");
+  await userEvent.keyboard("{Enter}");
+
+  expect(unit).toHaveValue("bunch");
+  expect(unit).toHaveAttribute("aria-expanded", "false");
+  expect(unit).not.toHaveAttribute("aria-activedescendant");
+  expect(fetch.mock.calls.some(([, init]) => init?.method === "POST")).toBe(false);
+});
+
+test("Escape closes the units, and Tab leaves with what's typed", async () => {
+  stubApi(() => Response.json(saved, { status: 201 }));
+  renderApp("/recipes/new");
+
+  const unit = await screen.findByRole("combobox", { name: "Unit" });
+  await userEvent.type(unit, "c");
+  expect(shownOptions()).toEqual(["cup", "clove", "can"]);
+  await userEvent.keyboard("{ArrowDown}{Escape}");
+  expect(unit).toHaveAttribute("aria-expanded", "false");
+  expect(unit).toHaveValue("c");
+
+  await userEvent.type(unit, "u");
+  expect(shownOptions()).toEqual(["cup"]);
+  await userEvent.tab();
+  expect(screen.getByLabelText("Ingredient")).toHaveFocus();
+  expect(unit).toHaveValue("cu");
+  expect(shownOptions()).toEqual([]);
+});
+
+test("a picked unit, a unit of one's own and none are each saved as they are", async () => {
+  const fetch = stubApi(() => Response.json(saved, { status: 201 }));
+  renderApp("/recipes/new");
+
+  await userEvent.type(await screen.findByLabelText("Title"), "Toast");
+  // A tap picks: the list shows on a click, as a phone has no arrow keys.
+  await userEvent.type(ingredient(1).getByLabelText("Amount"), "2");
+  await userEvent.click(ingredient(1).getByRole("combobox", { name: "Unit" }));
+  expect(shownOptions()).toHaveLength(14);
+  await userEvent.click(screen.getByRole("option", { name: "slice" }));
+  await userEvent.type(ingredient(1).getByLabelText("Ingredient"), "bread");
+  await userEvent.click(screen.getByRole("button", { name: "Add ingredient" }));
+  await userEvent.type(ingredient(2).getByLabelText("Amount"), "1");
+  await userEvent.type(ingredient(2).getByLabelText("Unit"), "Knob");
+  await userEvent.type(ingredient(2).getByLabelText("Ingredient"), "butter");
+  await userEvent.click(screen.getByRole("button", { name: "Add ingredient" }));
+  await userEvent.type(ingredient(3).getByLabelText("Amount"), "3");
+  await userEvent.type(ingredient(3).getByLabelText("Ingredient"), "eggs");
+  await userEvent.type(screen.getByLabelText("Step 1"), "Toast the bread.");
+  await userEvent.click(screen.getByRole("button", { name: "Save recipe" }));
+
+  await screen.findByRole("heading", { level: 1, name: "Toast" });
+  expect(sentIngredients(fetch)).toEqual([
+    { name: "bread", quantity: "2", unit: "slice" },
+    { name: "butter", quantity: "1", unit: "Knob" },
+    { name: "eggs", quantity: "3" },
+  ]);
+});
+
+test("a row's examples go once its ingredient is named", async () => {
+  stubApi(() => Response.json(saved, { status: 201 }));
+  renderApp("/recipes/new");
+
+  await userEvent.click(await screen.findByRole("button", { name: "Add ingredient" }));
+  const unit = ingredient(2).getByLabelText("Unit");
+  expect(unit).toHaveAttribute("placeholder", "g");
+  expect(ingredient(2).getByLabelText("Amount")).toHaveAttribute("placeholder", "200");
+
+  await userEvent.type(ingredient(2).getByLabelText("Ingredient"), "salt");
+  expect(unit).not.toHaveAttribute("placeholder");
+  expect(ingredient(2).getByLabelText("Amount")).not.toHaveAttribute("placeholder");
+  // The first row, still unnamed, keeps its own.
+  expect(ingredient(1).getByLabelText("Unit")).toHaveAttribute("placeholder", "g");
+});
+
+test("in Hebrew, the unit suggests Hebrew's units, and the arrow keys and Enter pick one", async () => {
+  const fetch = stubApi(() => Response.json(saved, { status: 201 }));
+  await renderInHebrew("/recipes/new");
+
+  await userEvent.type(await screen.findByLabelText("שם המתכון"), "טוסט");
+  const unit = screen.getByRole("combobox", { name: "יחידה" });
+  await userEvent.type(unit, "כ");
+  expect(screen.getByRole("listbox", { name: "הצעות" })).toBeInTheDocument();
+  expect(shownOptions()).toEqual(["כפית", "כף", "כוס"]);
+  await userEvent.keyboard("{ArrowDown}{ArrowDown}");
+  expect(
+    document.getElementById(unit.getAttribute("aria-activedescendant") ?? ""),
+  ).toHaveTextContent("כף");
+  await userEvent.keyboard("{Enter}");
+  expect(unit).toHaveValue("כף");
+  expect(unit).toHaveAttribute("aria-expanded", "false");
+
+  // Escape closes; a unit not in the list is kept as typed.
+  await userEvent.clear(unit);
+  await userEvent.type(unit, "ק");
+  expect(shownOptions()).toEqual(["ק״ג", "קורט", "קופסה"]);
+  await userEvent.keyboard("{Escape}");
+  expect(unit).toHaveAttribute("aria-expanded", "false");
+  await userEvent.type(unit, "ערה");
+  await userEvent.type(screen.getByLabelText("מצרך"), "חמאה");
+  await userEvent.type(screen.getByLabelText("שלב 1"), "למרוח.");
+  await userEvent.click(screen.getByRole("button", { name: "לשמור מתכון" }));
+
+  await screen.findByRole("heading", { level: 1, name: "Toast" });
+  expect(sentIngredients(fetch)).toEqual([{ name: "חמאה", unit: "קערה" }]);
 });
