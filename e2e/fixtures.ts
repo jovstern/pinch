@@ -1,5 +1,11 @@
 import { randomInt, randomUUID } from "node:crypto";
-import { test as base, expect, type BrowserContext, type Cookie } from "@playwright/test";
+import {
+  test as base,
+  expect,
+  type BrowserContext,
+  type Cookie,
+  type Page,
+} from "@playwright/test";
 import { sampleRecipes } from "../server/src/db/seed.ts";
 
 // Each test file has a user of its own (design §8.3), so the files, which run side by side, never
@@ -44,5 +50,15 @@ export const test = base.extend<{ expectedConsoleErrors: RegExp[] }>({
     expect(errors).toEqual([]);
   },
 });
+
+// A new visitor: no cookies but the language's. Signed out, a page is in this device's language,
+// else the browser's, and Israel's time zone means Hebrew (design §16.1), which this machine's may
+// be. The tests are in English (§16.11), so this device has English, as the switch on Log in sets.
+export async function newVisitor(page: Page) {
+  await page.context().clearCookies();
+  await page
+    .context()
+    .addCookies([{ name: "pinch_lang", value: "en", domain: "localhost", path: "/" }]);
+}
 
 export { expect };

@@ -1,5 +1,5 @@
 import { randomInt, randomUUID } from "node:crypto";
-import { expect, test } from "./fixtures.ts";
+import { expect, newVisitor, test } from "./fixtures.ts";
 
 // M9's demo (pr-demo skill), at a desktop's width and a phone's: a new visitor signs up, pastes a
 // link and saves its draft; the same link pasted again points to the saved recipe (design §4.6);
@@ -15,7 +15,7 @@ for (const phone of [false, true]) {
     test("sign up, pinch a link, paste it again, log out and back in", async ({ page }) => {
       test.setTimeout(60_000);
       // A visitor of its own, from an address of its own (the sign-ups a minute per IP, §8.3).
-      await page.context().clearCookies();
+      await newVisitor(page);
       await page.setExtraHTTPHeaders({
         "X-Forwarded-For": `10.${String(randomInt(256))}.${String(randomInt(256))}.2`,
       });

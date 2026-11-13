@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { PenLine } from "lucide-react";
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Link, useLocation } from "react-router";
 import { LazyUserMenu } from "../features/auth/LazyUserMenu.tsx";
 import { meQuery } from "../features/auth/authQueries.ts";
@@ -31,6 +32,7 @@ const tabClass =
 // the row beside the avatar, and Write a recipe floats bottom right on the two tabs' own pages.
 // From 768 px: the wordmark and the tabs left, the rest right.
 export function Header({ onTabPage }: { onTabPage: boolean }) {
+  const { t } = useTranslation();
   const { pathname } = useLocation();
   const tab = tabOf(pathname);
   // The same query as the queue on Add recipe, so the count moves as it polls (§4.2).
@@ -55,7 +57,7 @@ export function Header({ onTabPage }: { onTabPage: boolean }) {
           outside Tailwind's layers). */}
       <Link
         to="/"
-        aria-label="Pinch, Add recipe"
+        aria-label={t("header.home")}
         className="group -mr-2 -ml-4 hidden min-h-11 w-11 shrink-0 items-center pl-4 focus-visible:outline-none! min-[22.5rem]:flex md:mx-0 md:w-auto md:pl-0"
       >
         <picture>
@@ -80,11 +82,11 @@ export function Header({ onTabPage }: { onTabPage: boolean }) {
       {/* Links in a nav, not Radix Tabs: each tab is its own page with its own address, and
           Radix Tabs is for panels that switch within one page. It only borrows their look. */}
       <nav
-        aria-label="Main"
+        aria-label={t("header.nav")}
         className="flex flex-1 rounded-control bg-muted p-1 md:w-88 md:flex-none"
       >
         <Link to="/" aria-current={tab === "new" ? "page" : undefined} className={tabClass}>
-          Add recipe
+          {t("header.addRecipe")}
           {/* A bare "2" says nothing to a screen reader: the hidden words say what it counts
               ("Add recipe 2 ready to review"). Not an aria-label: axe reads the visible text as
               "Add recipe2", which no label contains (label-content-name-mismatch). The spaces
@@ -93,7 +95,7 @@ export function Header({ onTabPage }: { onTabPage: boolean }) {
             <>
               {" "}
               <Badge className="min-w-6 px-1.5 py-0 text-xs font-semibold">{ready}</Badge>{" "}
-              <span className="sr-only">ready to review</span>
+              <span className="sr-only">{t("header.readyToReview")}</span>
             </>
           )}
         </Link>
@@ -102,14 +104,14 @@ export function Header({ onTabPage }: { onTabPage: boolean }) {
           aria-current={tab === "recipes" ? "page" : undefined}
           className={tabClass}
         >
-          My recipes
+          {t("header.myRecipes")}
           {/* How many there are, quiet: it informs, it doesn't ask for anything (the ready count
               does). Said as the ready count is, with hidden words: "My recipes 12 recipes". */}
           {recipeCount !== undefined && recipeCount > 0 && (
             <>
               {" "}
               <span className="text-sm text-muted-foreground tabular-nums">{recipeCount}</span>{" "}
-              <span className="sr-only">{recipeCount === 1 ? "recipe" : "recipes"}</span>
+              <span className="sr-only">{t("header.recipeCount", { count: recipeCount })}</span>
             </>
           )}
         </Link>
@@ -129,7 +131,7 @@ export function Header({ onTabPage }: { onTabPage: boolean }) {
       >
         <Link to="/recipes/new" aria-current={pathname === "/recipes/new" ? "page" : undefined}>
           <PenLine aria-hidden="true" className="size-4" />
-          Write a recipe
+          {t("header.writeRecipe")}
         </Link>
       </Button>
 

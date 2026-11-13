@@ -163,7 +163,9 @@ exactly as it is: each slice's English screens look the same before and after.
       Sonner's side, cook mode's row and arrow keys, the import card back to the interface's
       direction (reverses #113); checked with `dir="rtl"`, no Hebrew text yet
 - [ ] I4 Strings with Hebrew: the frame and accounts (header, Log in, Sign up, the session
-      gate, not found, the shared toasts); `renderInHebrew` and its first tests
+      gate, not found, the shared toasts: all of `lib/toasts.tsx` moves to i18n here, the
+      language picker's "Couldn't save" with Try again among them, English until then);
+      `renderInHebrew` and its first tests
 - [ ] I5 Strings with Hebrew: Add recipe and the queue (its heading's plurals, the failure
       reasons by their key)
 - [ ] I6 Strings with Hebrew: My recipes, Filters and the tag labels; a recipe's page

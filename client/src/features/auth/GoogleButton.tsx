@@ -1,12 +1,14 @@
 import { useQuery } from "@tanstack/react-query";
 import { useLocation } from "react-router";
 import { Button } from "../../components/ui/Button.tsx";
+import { pageLanguage } from "../../i18n.ts";
 import { providersQuery } from "./authQueries.ts";
 import { nextPage } from "./nextPage.ts";
 
 // "Continue with Google" (design §8.3), under Log in's and Sign up's button: a plain link, as the
 // sign-in is a trip to Google and back, page loads, not a fetch. It carries the page's ?next=, so
-// the user comes back where they were going. Hidden until the API says Google is on. A failed
+// the user comes back where they were going, and its language, for an account Google creates
+// (§16.1). Hidden until the API says Google is on. A failed
 // sign-in comes back to /login?error=google, and the message stands right above this button, under
 // a quiet "or", so it isn't read as the email form's.
 export function GoogleButton() {
@@ -28,7 +30,9 @@ export function GoogleButton() {
         </p>
       )}
       <Button variant="outline" asChild>
-        <a href={`/api/auth/google?next=${encodeURIComponent(nextPage(search))}`}>
+        <a
+          href={`/api/auth/google?next=${encodeURIComponent(nextPage(search))}&lang=${pageLanguage()}`}
+        >
           {/* Google's "G", in its own colours, as its brand rules ask of a sign-in button. */}
           <svg viewBox="0 0 48 48" aria-hidden="true" className="size-5 shrink-0">
             <path
