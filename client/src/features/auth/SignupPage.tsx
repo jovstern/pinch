@@ -50,7 +50,7 @@ export function SignupPage() {
 
   return (
     <AuthFrame
-      title={t("auth.signUp")}
+      title={t("auth.signUpTitle")}
       logo={<Wordmark />}
       languageSwitch={<LanguageSwitch />}
       footer={

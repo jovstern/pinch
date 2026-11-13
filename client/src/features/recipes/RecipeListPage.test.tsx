@@ -45,7 +45,8 @@ test("a recipe from a post shows its picture and its site in its card", async ()
     `/api/recipes/${omelette.id}/thumbnail`,
   );
   // Decorative: the link is named by the title first, then what it needs and where it's from.
-  expect(link).toHaveAccessibleName("Omelette 10 min · 2 ingredients Instagram");
+  // (A no-break space joins the number to its unit, design §16.9.)
+  expect(link).toHaveAccessibleName("Omelette 10\u00A0min · 2 ingredients Instagram");
 });
 
 test("one ingredient is counted in the singular", async () => {

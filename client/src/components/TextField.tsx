@@ -66,8 +66,15 @@ export function TextField({
     value: field.state.value,
     placeholder,
     // Hebrew reads right to left, English left to right: each box follows what's typed in it. An
-    // email is always left to right, in either language (D43, design §16.5).
-    dir: type === "email" ? "ltr" : "auto",
+    // email is always left to right, in either language (D43, design §16.5). An empty box, and a
+    // number's, take the page's direction: Chrome reads an empty dir="auto" as left to right, which
+    // put Hebrew's examples and caret at the left (§16.4).
+    dir:
+      type === "email"
+        ? "ltr"
+        : inputMode === "numeric" || field.state.value === ""
+          ? undefined
+          : "auto",
     onBlur: field.handleBlur,
     "aria-invalid": invalid,
     "aria-describedby": describedBy.length > 0 ? describedBy.join(" ") : undefined,

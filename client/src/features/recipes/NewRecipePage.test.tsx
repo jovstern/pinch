@@ -8,6 +8,10 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
+// jsdom has no scrollIntoView, which the unit's list calls to keep its option in sight (§16.12).
+const scrollIntoView = vi.fn();
+Element.prototype.scrollIntoView = scrollIntoView;
+
 const saved: Recipe = {
   id: "6650a1b2c3d4e5f600000001",
   title: "Toast",
@@ -61,7 +65,8 @@ test("saves a new recipe and shows it, its title focused", async () => {
 
   // Focus on the new page's title, not lost to the page (useHeadingFocus).
   expect(await screen.findByRole("heading", { level: 1, name: "Toast" })).toHaveFocus();
-  expect(screen.getByText("Saved to My recipes")).toBeInTheDocument();
+  // Sonner draws its toast on its own schedule, which a busy machine can put after the heading.
+  expect(await screen.findByText("Saved to My recipes")).toBeInTheDocument();
   // Blank optional fields aren't sent; the numbers are numbers. (Keys in the schema's order.)
   expect(fetch).toHaveBeenCalledWith("/api/recipes", {
     method: "POST",
@@ -349,7 +354,9 @@ test("in Hebrew, writing a recipe: its page, fields and buttons are in Hebrew", 
     "/",
   );
   expect(title).toHaveAttribute("placeholder", "למשל: מרק עדשים כתומות");
-  expect(title).toHaveAttribute("dir", "auto");
+  // Empty, the page's direction: its example on the right, as Chrome reads an empty "auto" as
+  // left to right. Once it holds text, the text's own (§16.5).
+  expect(title).not.toHaveAttribute("dir");
   expect(screen.getByLabelText("תיאור")).toBeInTheDocument();
   expect(screen.getByRole("group", { name: "מצרכים" })).toBeInTheDocument();
   const row = within(screen.getByRole("group", { name: "מצרך 1" }));
@@ -556,6 +563,44 @@ test("a picked unit, a unit of one's own and none are each saved as they are", a
   ]);
 });
 
+test("a tap on a filled unit shows the whole list, on the unit it holds", async () => {
+  stubApi(() => Response.json(saved, { status: 201 }));
+  renderApp("/recipes/new");
+
+  const unit = await screen.findByRole("combobox", { name: "Unit" });
+  await userEvent.type(unit, "TBSP");
+  expect(shownOptions()).toEqual(["tbsp"]);
+  await userEvent.tab();
+  scrollIntoView.mockClear();
+  await userEvent.click(unit);
+
+  expect(shownOptions()).toEqual([
+    "g",
+    "kg",
+    "ml",
+    "L",
+    "tsp",
+    "tbsp",
+    "cup",
+    "pinch",
+    "handful",
+    "clove",
+    "slice",
+    "can",
+    "piece",
+    "bunch",
+  ]);
+  const tbsp = screen.getByRole("option", { name: "tbsp" });
+  expect(tbsp).toHaveAttribute("aria-selected", "true");
+  expect(unit).toHaveAttribute("aria-activedescendant", tbsp.id);
+  expect(scrollIntoView.mock.contexts).toContain(tbsp);
+  // Typing filters again; ↓ from there moves in what's shown.
+  await userEvent.type(unit, "{Backspace}{Backspace}{Backspace}");
+  expect(shownOptions()).toEqual(["tsp", "tbsp"]);
+  await userEvent.keyboard("{ArrowDown}{ArrowDown}{Enter}");
+  expect(unit).toHaveValue("tbsp");
+});
+
 test("a row's examples go once its ingredient is named", async () => {
   stubApi(() => Response.json(saved, { status: 201 }));
   renderApp("/recipes/new");
@@ -602,4 +647,20 @@ test("in Hebrew, the unit suggests Hebrew's units, and the arrow keys and Enter 
 
   await screen.findByRole("heading", { level: 1, name: "Toast" });
   expect(sentIngredients(fetch)).toEqual([{ name: "חמאה", unit: "קערה" }]);
+});
+
+test("in Hebrew, an empty field takes the page's direction, and a filled one its text's", async () => {
+  stubApi(() => Response.json(saved, { status: 201 }));
+  await renderInHebrew("/recipes/new");
+
+  const title = await screen.findByLabelText("שם המתכון");
+  expect(title).not.toHaveAttribute("dir");
+  expect(screen.getByLabelText("שלב 1")).not.toHaveAttribute("dir");
+  await userEvent.type(title, "Toast");
+  expect(title).toHaveAttribute("dir", "auto");
+  await userEvent.type(screen.getByLabelText("שלב 1"), "Toast it.");
+  expect(screen.getByLabelText("שלב 1")).toHaveAttribute("dir", "auto");
+  // A number is the page's direction, empty or not (§16.4).
+  await userEvent.type(screen.getByLabelText("מנות"), "2");
+  expect(screen.getByLabelText("מנות")).not.toHaveAttribute("dir");
 });

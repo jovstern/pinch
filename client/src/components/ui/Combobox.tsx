@@ -12,11 +12,12 @@ type ComboboxProps = Omit<ComponentProps<"input">, "value" | "onChange"> & {
 };
 
 // A text field that suggests (design §16.12, D47): the APG's "editable combobox with list
-// autocomplete". The list shows the options that start with what's typed, ignoring case; ↑ ↓ move
-// through it (aria-activedescendant: focus stays in the box), Enter or a tap picks, Escape and
-// leaving the box close it, and what's typed stays. Written here, as Radix has no combobox and its
-// Popover would cost the editor's tight budget its positioning code (§16.10): the list is just
-// placed under the box, above the Save bar.
+// autocomplete". Typing shows the options that start with what's typed, ignoring case; a tap, a
+// click or ↓ ↑ show them all, on the one the box holds. ↑ ↓ move through the list
+// (aria-activedescendant: focus stays in the box), Enter or a tap picks, Escape and leaving the box
+// close it, and what's typed stays. Written here, as Radix has no combobox and its Popover would
+// cost the editor's tight budget its positioning code (§16.10): the list is just placed under the
+// box, above the Save bar.
 export function Combobox({
   id,
   value,
@@ -28,41 +29,70 @@ export function Combobox({
   ...props
 }: ComboboxProps) {
   const [open, setOpen] = useState(false);
-  // The option ↑ ↓ are on, in the filtered list; -1 for none, so Enter still sends the form.
+  // Typed since the list opened: the list is what starts with it. Opened by a tap or an arrow, the
+  // whole list, so a filled box (a recipe being edited) still offers the others.
+  const [filtering, setFiltering] = useState(false);
+  // The option ↑ ↓ are on, in the list shown; -1 for none, so Enter still sends the form.
   const [active, setActive] = useState(-1);
   const typed = value.trim().toLocaleLowerCase();
-  const shown = options.filter((option) => option.toLocaleLowerCase().startsWith(typed));
+  const shown = filtering
+    ? options.filter((option) => option.toLocaleLowerCase().startsWith(typed))
+    : options;
   const expanded = open && shown.length > 0;
   const listId = `${id}-list`;
   const optionId = (index: number) => `${id}-option-${String(index)}`;
+  const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLUListElement>(null);
 
-  // An effect: the list's scroll is the browser's. It keeps the option ↑ ↓ are on in sight, once
-  // the list is drawn (open, its options filtered).
+  // Effects: the page's scroll is the browser's. As the list opens, a box in the screen's lower
+  // half moves to its middle, so the list under it isn't cut by the screen's edge or the phone's
+  // Save bar (the form has room below its last field for this).
   useEffect(() => {
-    const list = listRef.current;
-    const option = list?.querySelector<HTMLElement>('[aria-selected="true"]');
-    if (!list || !option) return;
-    if (option.offsetTop < list.scrollTop) list.scrollTop = option.offsetTop;
-    const bottom = option.offsetTop + option.offsetHeight;
-    if (bottom > list.scrollTop + list.clientHeight) list.scrollTop = bottom - list.clientHeight;
-  }, [active, expanded]);
+    const input = inputRef.current;
+    if (!expanded || !input) return;
+    if (input.getBoundingClientRect().top > window.innerHeight / 2) {
+      input.scrollIntoView({ block: "center" });
+    }
+  }, [expanded]);
 
-  function pick(option: string) {
-    onValueChange(option);
+  // The option ↑ ↓ are on stays in sight, in a long list.
+  useEffect(() => {
+    if (!expanded || active === -1) return;
+    listRef.current?.children[active]?.scrollIntoView({ block: "nearest" });
+  }, [expanded, active]);
+
+  // The whole list, on the option the box holds, if it holds one.
+  function openAll(otherwise: number) {
+    const current = options.findIndex((option) => option.toLocaleLowerCase() === typed);
+    setOpen(true);
+    setFiltering(false);
+    setActive(current === -1 ? otherwise : current);
+  }
+
+  function close() {
     setOpen(false);
     setActive(-1);
   }
 
-  // ↓ opens the list on its first option, ↑ on its last; then each wraps around the ends.
+  function pick(option: string) {
+    onValueChange(option);
+    close();
+  }
+
+  // Closed, ↓ opens the list on its first option, ↑ on its last (or each on the box's own); open,
+  // each moves one and wraps around the ends.
   function move(step: 1 | -1) {
-    if (shown.length === 0) return;
-    const first = step === 1 ? 0 : shown.length - 1;
-    setOpen(true);
-    setActive(expanded && active !== -1 ? (active + step + shown.length) % shown.length : first);
+    if (!expanded) {
+      openAll(step === 1 ? 0 : options.length - 1);
+    } else {
+      const first = step === 1 ? 0 : shown.length - 1;
+      setActive(active === -1 ? first : (active + step + shown.length) % shown.length);
+    }
   }
 
   function onKeyDown(event: KeyboardEvent<HTMLInputElement>) {
+    // A word still being composed (an IME): its keys are the IME's.
+    if (event.nativeEvent.isComposing) return;
     if (event.key === "ArrowDown" || event.key === "ArrowUp") {
       event.preventDefault();
       move(event.key === "ArrowDown" ? 1 : -1);
@@ -71,14 +101,14 @@ export function Combobox({
       event.preventDefault();
       pick(shown[active] ?? value);
     } else if (event.key === "Escape" && expanded) {
-      setOpen(false);
-      setActive(-1);
+      close();
     }
   }
 
   return (
     <div className="relative">
       <Input
+        ref={inputRef}
         id={id}
         role="combobox"
         aria-autocomplete="list"
@@ -91,22 +121,23 @@ export function Combobox({
         onChange={(event) => {
           onValueChange(event.target.value);
           setOpen(true);
+          setFiltering(true);
           setActive(-1);
         }}
         // A tap or a click shows the whole list, as a phone has no ↓.
         onClick={() => {
-          setOpen(true);
+          openAll(-1);
         }}
         onKeyDown={onKeyDown}
         onBlur={(event) => {
-          setOpen(false);
-          setActive(-1);
+          close();
           onBlur?.(event);
         }}
         {...props}
       />
       {/* Always there, hidden when closed, so aria-controls names an element. Over the rows under
-          it and the Save bar (z-10); wider than a phone's narrow box, from its start edge. */}
+          it and the Save bar (z-10); wider than a phone's narrow box, from its start edge. Its own
+          scroll doesn't pass on to the page's at its ends. */}
       <ul
         ref={listRef}
         id={listId}
@@ -118,7 +149,7 @@ export function Combobox({
         onMouseDown={(event) => {
           event.preventDefault();
         }}
-        className="absolute start-0 top-full z-20 mt-1 max-h-60 w-max min-w-full overflow-y-auto rounded-control border border-border bg-popover p-1 text-popover-foreground shadow-sheet"
+        className="absolute start-0 top-full z-20 mt-1 max-h-60 w-max min-w-full overflow-y-auto overscroll-contain rounded-control border border-border bg-popover p-1 text-popover-foreground shadow-sheet"
       >
         {shown.map((option, index) => (
           <li

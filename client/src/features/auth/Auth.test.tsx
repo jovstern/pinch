@@ -357,7 +357,9 @@ test("in Hebrew, Log in is in Hebrew, its switch names English, and a wrong pass
   const user = userEvent.setup();
   stubFetch(() => Promise.resolve(new Response(null, { status: 401 })));
   await renderInHebrew("/login", { me: null });
-  expect(await screen.findByRole("heading", { level: 1, name: "להתחבר" })).toBeInTheDocument();
+  expect(await screen.findByRole("heading", { level: 1, name: "התחברות" })).toBeInTheDocument();
+  // The page is named by a noun; its button says the action.
+  expect(document.title).toBe("התחברות · Pinch");
   expect(screen.getByRole("link", { name: "להירשם" })).toHaveAttribute("href", "/signup");
   expect(screen.getByRole("button", { name: "English" })).toHaveAttribute("lang", "en");
   await user.type(screen.getByLabelText("אימייל"), "cook@example.com");
@@ -369,7 +371,9 @@ test("in Hebrew, Log in is in Hebrew, its switch names English, and a wrong pass
 test("in Hebrew, Sign up is in Hebrew, with Log in's link", async () => {
   stubFetch(notFound);
   await renderInHebrew("/signup", { me: null });
-  expect(await screen.findByRole("heading", { level: 1, name: "להירשם" })).toBeInTheDocument();
+  expect(await screen.findByRole("heading", { level: 1, name: "הרשמה" })).toBeInTheDocument();
+  expect(document.title).toBe("הרשמה · Pinch");
+  expect(screen.getByRole("button", { name: "להירשם" })).toBeInTheDocument();
   expect(screen.getByLabelText("שם")).toBeInTheDocument();
   expect(screen.getByText("8 תווים לפחות.")).toBeInTheDocument();
   expect(screen.getByRole("link", { name: "להתחבר" })).toHaveAttribute("href", "/login");

@@ -227,21 +227,21 @@ test("a time in the step starts a timer, which counts down and says when it's do
   stubApi({ ...omelette, steps: ["Cook the eggs for 2 min."] });
   renderApp(`/recipes/${omelette.id}/cook`);
 
-  await user.click(await screen.findByRole("button", { name: "Timer: 2 min" }));
+  await user.click(await screen.findByRole("button", { name: "Timer: 2\u00A0minutes" }));
   const timers = screen.getByRole("list", { name: "Timers" });
-  expect(timers).toHaveTextContent("2:00 left · 2 min timer");
+  expect(timers).toHaveTextContent("2:00 left of 2 minutes");
 
   act(() => {
     vi.advanceTimersByTime(60_000);
   });
-  expect(timers).toHaveTextContent("1:00 left · 2 min timer");
+  expect(timers).toHaveTextContent("1:00 left of 2 minutes");
 
   act(() => {
     vi.advanceTimersByTime(60_000);
   });
-  expect(within(timers).getByRole("alert")).toHaveTextContent("2 min timer: done");
+  expect(within(timers).getByRole("alert")).toHaveTextContent("Time's up: 2 minutes");
 
-  await user.click(screen.getByRole("button", { name: "Dismiss the 2 min timer" }));
+  await user.click(screen.getByRole("button", { name: "Dismiss the timer for 2\u00A0minutes" }));
   expect(screen.queryByRole("list", { name: "Timers" })).not.toBeInTheDocument();
 });
 
@@ -253,8 +253,8 @@ test("each timer rings once as it ends, and not again when one is dismissed", as
   stubApi({ ...omelette, steps: ["Cook 1 min, then 2 min."] });
   renderApp(`/recipes/${omelette.id}/cook`);
 
-  await user.click(await screen.findByRole("button", { name: "Timer: 1 min" }));
-  await user.click(screen.getByRole("button", { name: "Timer: 2 min" }));
+  await user.click(await screen.findByRole("button", { name: "Timer: 1\u00A0minute" }));
+  await user.click(screen.getByRole("button", { name: "Timer: 2\u00A0minutes" }));
   act(() => {
     vi.advanceTimersByTime(60_000);
   });
@@ -265,7 +265,7 @@ test("each timer rings once as it ends, and not again when one is dismissed", as
   });
   expect(vibrate).toHaveBeenCalledTimes(2);
 
-  await user.click(screen.getByRole("button", { name: "Dismiss the 1 min timer" }));
+  await user.click(screen.getByRole("button", { name: "Dismiss the timer for 1\u00A0minute" }));
   expect(vibrate).toHaveBeenCalledTimes(2);
 });
 
@@ -273,13 +273,13 @@ test("a timer pressed again while it runs isn't started twice, and shows it's ru
   stubApi({ ...omelette, steps: ["Cook the eggs for 2 min."] });
   renderApp(`/recipes/${omelette.id}/cook`);
 
-  const timer = await screen.findByRole("button", { name: "Timer: 2 min" });
+  const timer = await screen.findByRole("button", { name: "Timer: 2\u00A0minutes" });
   await userEvent.dblClick(timer);
 
   expect(
     within(screen.getByRole("list", { name: "Timers" })).getAllByRole("listitem"),
   ).toHaveLength(1);
-  expect(screen.getByRole("button", { name: "Running: 2 min" })).toHaveAttribute(
+  expect(screen.getByRole("button", { name: "Running: 2\u00A0minutes" })).toHaveAttribute(
     "aria-disabled",
     "true",
   );
@@ -305,7 +305,7 @@ test("below 1024 px the timers share one footer with Back and Next, pinned to th
   stubApi({ ...omelette, steps: ["Cook the eggs for 2 min."] });
   renderApp(`/recipes/${omelette.id}/cook`);
 
-  await userEvent.click(await screen.findByRole("button", { name: "Timer: 2 min" }));
+  await userEvent.click(await screen.findByRole("button", { name: "Timer: 2\u00A0minutes" }));
 
   // One footer, so a short phone can't hide the buttons under the timers (design §14).
   const footer = screen.getByRole("button", { name: "Done" }).closest("[data-cook-footer]");
@@ -352,24 +352,22 @@ test("in Hebrew, the counter says the same words for one step, two or many", asy
   expect(await screen.findByRole("status")).toHaveTextContent("שלב 1 מתוך 1: Beat the eggs.");
 });
 
-test("in Hebrew, a timer counts down and says when it's done, its time in its <bdi>", async () => {
+test("in Hebrew, a timer counts down and says when it's done, its time in Hebrew words", async () => {
   vi.useFakeTimers({ shouldAdvanceTime: true });
   const user = userEvent.setup({ advanceTimers: (ms) => vi.advanceTimersByTime(ms) });
   stubApi({ ...omelette, steps: ["לבשל את הביצים 2 דקות."] });
   await renderInHebrew(`/recipes/${omelette.id}/cook`);
 
-  const timer = await screen.findByRole("button", { name: "טיימר: 2 דקות" });
-  expect(within(timer).getByText("2 דקות").tagName).toBe("BDI");
+  const timer = await screen.findByRole("button", { name: "טיימר: 2\u00A0דקות" });
   await user.click(timer);
-  expect(screen.getByRole("button", { name: "טיימר פועל: 2 דקות" })).toHaveAttribute(
+  expect(screen.getByRole("button", { name: "טיימר פועל: 2\u00A0דקות" })).toHaveAttribute(
     "aria-disabled",
     "true",
   );
   const timers = screen.getByRole("list", { name: "טיימרים" });
   expect(timers).toHaveTextContent("נותרו 2:00 · טיימר של 2 דקות");
-  expect(within(timers).getByText("2 דקות").tagName).toBe("BDI");
   expect(
-    within(timers).getByRole("button", { name: "לעצור את הטיימר של 2 דקות" }),
+    within(timers).getByRole("button", { name: "לעצור את הטיימר של 2\u00A0דקות" }),
   ).toHaveTextContent("לעצור");
 
   act(() => {
@@ -377,7 +375,7 @@ test("in Hebrew, a timer counts down and says when it's done, its time in its <b
   });
   expect(within(timers).getByRole("alert")).toHaveTextContent("הטיימר של 2 דקות הסתיים");
 
-  await user.click(screen.getByRole("button", { name: "לסגור את הטיימר של 2 דקות" }));
+  await user.click(screen.getByRole("button", { name: "לסגור את הטיימר של 2\u00A0דקות" }));
   expect(screen.queryByRole("list", { name: "טיימרים" })).not.toBeInTheDocument();
 });
 
@@ -387,4 +385,12 @@ test("in Hebrew, cook mode says whether the screen stays on", async () => {
   await renderInHebrew(`/recipes/${omelette.id}/cook`);
 
   expect(await screen.findByText("המסך יישאר דלוק.", { exact: false })).toBeInTheDocument();
+});
+
+test("in Hebrew, an English step's timer says its time in Hebrew; the step stays as written", async () => {
+  stubApi({ ...omelette, steps: ["Rest the dough for 1 hour 30 minutes."] });
+  await renderInHebrew(`/recipes/${omelette.id}/cook`);
+
+  expect(await screen.findByRole("button", { name: "טיימר: שעה ו‑30 דקות" })).toBeInTheDocument();
+  expect(screen.getByText("Rest the dough for 1 hour 30 minutes.")).toBeInTheDocument();
 });

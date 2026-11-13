@@ -31,7 +31,7 @@ test("paste a recipe's text, review the draft, save it with its nutrition", asyn
   await expect(
     page.getByRole("heading", { level: 1, name: "Tomato pasta (from text)" }),
   ).toBeVisible();
-  await expect(page.getByText(/≈ 520 kcal · 18 g protein/)).toBeVisible();
+  await expect(page.getByText(/≈ 520\u00A0kcal · 18\u00A0g protein/)).toBeVisible();
   await page.waitForTimeout(2000);
   // The emoji came with it, and is its face in My recipes.
   await page

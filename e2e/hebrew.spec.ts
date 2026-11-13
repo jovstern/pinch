@@ -10,7 +10,7 @@ async function firstVisitIsHebrew(page: Page) {
   await page.goto("/login");
   await expect(page.locator("html")).toHaveAttribute("lang", "he");
   await expect(page.locator("html")).toHaveAttribute("dir", "rtl");
-  await expect(page.getByRole("heading", { level: 1, name: "להתחבר" })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: "התחברות" })).toBeVisible();
   await expect(page.getByRole("button", { name: "English" })).toHaveAttribute("lang", "en");
 }
 
@@ -38,7 +38,7 @@ test.describe("signed in, in Hebrew", () => {
     expect(saved.ok()).toBe(true);
   });
 
-  test("Add recipe with its queue, My recipes, a recipe and cook mode have no accessibility violations", async ({
+  test("Add recipe with its queue, a draft's review, My recipes, a recipe and cook mode have no accessibility violations", async ({
     page,
   }) => {
     await page.goto("/");
@@ -47,6 +47,12 @@ test.describe("signed in, in Hebrew", () => {
     await page.getByRole("button", { name: "Pinch", exact: true }).click();
     const item = page.getByRole("listitem").filter({ hasText: "e2e-he-a11y" });
     await expect(item.getByText("מוכן לבדיקה")).toBeVisible({ timeout: 15_000 });
+    expect((await scan(page)).violations).toEqual([]);
+
+    // The draft's review page, with its picture (as a11y.spec.ts's, in English).
+    await item.getByRole("link", { name: "לבדוק" }).click();
+    await expect(page.getByText("Pinch קרא את זה מ\u2011Instagram")).toBeVisible();
+    await expect(page.getByRole("presentation")).toBeVisible();
     expect((await scan(page)).violations).toEqual([]);
 
     await page.getByRole("link", { name: /^המתכונים שלי/ }).click();
@@ -81,7 +87,7 @@ test("Log in in Hebrew has no accessibility violations", async ({ page }) => {
     .context()
     .addCookies([{ name: "pinch_lang", value: "he", domain: "localhost", path: "/" }]);
   await page.goto("/login");
-  await expect(page.getByRole("heading", { level: 1, name: "להתחבר" })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: "התחברות" })).toBeVisible();
   expect((await scan(page)).violations).toEqual([]);
 });
 
@@ -122,7 +128,7 @@ test("switch to Hebrew from the avatar's menu: it stays after a reload and on Lo
   await page.getByRole("menuitem", { name: "להתנתק" }).click();
   await expect(page).toHaveURL(/\/login$/);
   await expect(html).toHaveAttribute("dir", "rtl");
-  await expect(page.getByRole("heading", { level: 1, name: "להתחבר" })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: "התחברות" })).toBeVisible();
 
   // This device in English, then signed in: the account's Hebrew comes back, and the menu sets
   // English on the account.

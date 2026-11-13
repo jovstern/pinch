@@ -68,7 +68,7 @@ export function LoginPage() {
 
   return (
     <AuthFrame
-      title={t("auth.logIn")}
+      title={t("auth.logInTitle")}
       logo={<Wordmark />}
       languageSwitch={<LanguageSwitch />}
       footer={

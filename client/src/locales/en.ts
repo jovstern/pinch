@@ -34,6 +34,9 @@ export const en = {
   // Log in, Sign up and the session's error (SessionError), with what a failed submit says
   // (submitError). A field's own messages are the shared schemas' (validation, design §16.7).
   auth: {
+    // The pages' headings and titles: a name, where the buttons say the action.
+    logInTitle: "Log in",
+    signUpTitle: "Sign up",
     logIn: "Log in",
     loggingIn: "Logging in…",
     newToPinch: "New to Pinch?",
@@ -149,7 +152,7 @@ export const en = {
     showMore: "Show more",
     loadingMore: "Loading…",
     // A card's line under its title: "10 min · 2 ingredients" (the numbers through Intl, §16.3).
-    minutes: "{{minutes}} min",
+    minutes: "{{minutes}}\u00A0min",
     ingredients_one: "1 ingredient",
     ingredients_other: "{{count}} ingredients",
   },
@@ -252,13 +255,13 @@ export const en = {
     // "Serves 4 · Prep 10 min · Cook 25 min" (the numbers through Intl, §16.3).
     serves_one: "Serves 1",
     serves_other: "Serves {{count}}",
-    prep: "Prep {{minutes}} min",
-    cookTime: "Cook {{minutes}} min",
+    prep: "Prep {{minutes}}\u00A0min",
+    cookTime: "Cook {{minutes}}\u00A0min",
     // "≈ 520 kcal · 18 g protein · 92 g carbs · 8 g fat per serving (estimate)": Gemini's guess.
-    calories: "≈ {{amount}} kcal",
-    protein: "{{amount}} g protein",
-    carbs: "{{amount}} g carbs",
-    fat: "{{amount}} g fat",
+    calories: "≈ {{amount}}\u00A0kcal",
+    protein: "{{amount}}\u00A0g protein",
+    carbs: "{{amount}}\u00A0g carbs",
+    fat: "{{amount}}\u00A0g fat",
     perServing: "per serving (estimate)",
     tags: "Tags",
     cook: "Cook",
@@ -320,14 +323,14 @@ export const en = {
     unit: "Unit",
     unitPlaceholder: "g",
     // The unit's suggestions (design §16.12, D47), as recipes in English write them: weights and
-    // volumes, metric first (g, kg, ml, l); the spoons and the cup; then what's counted (a clove
+    // volumes, metric first (g, kg, ml, L: a capital, as "l" reads as "1"); the spoons and the cup; then what's counted (a clove
     // of garlic, a slice, a can, a piece, a bunch of herbs) and the cook's own measures (a pinch,
     // a handful). One form each, short or singular: "cup" is a tap, and "cups" is two more keys.
     units: [
       "g",
       "kg",
       "ml",
-      "l",
+      "L",
       "tsp",
       "tbsp",
       "cup",
@@ -404,18 +407,29 @@ export const en = {
     next: "Next",
     done: "Done",
     keys: "or the ← → keys",
-    // A step's timer button, then the running timers.
+    // A step's timer button, then the running timers. {{time}} is in words, in the interface's
+    // language (timeInWords): "2 minutes", "1 hour 30 minutes".
     timer: "Timer: {{time}}",
     running: "Running: {{time}}",
     timers: "Timers",
-    // "19:58 left · 20 min timer": the time left first, the minutes not said twice.
-    left: "{{clock}} left · {{time}} timer",
-    timerDone: "{{time}} timer: done",
+    // "19:58 left of 20 minutes": the time left first.
+    left: "{{clock}} left of {{time}}",
+    timerDone: "Time's up: {{time}}",
     stop: "Stop",
     dismiss: "Dismiss",
     // Named for its timer: with two running, "Stop" alone wouldn't say which.
-    stopTimer: "Stop the {{time}} timer",
-    dismissTimer: "Dismiss the {{time}} timer",
+    stopTimer: "Stop the timer for {{time}}",
+    dismissTimer: "Dismiss the timer for {{time}}",
+    // A timer's time, its parts joined: the join's count is the second part's (Hebrew's "and"
+    // takes a hyphen before a number).
+    hours_one: "{{count}}\u00A0hour",
+    hours_other: "{{count}}\u00A0hours",
+    minutes_one: "{{count}}\u00A0minute",
+    minutes_other: "{{count}}\u00A0minutes",
+    seconds_one: "{{count}}\u00A0second",
+    seconds_other: "{{count}}\u00A0seconds",
+    and_one: "{{first}} {{second}}",
+    and_other: "{{first}} {{second}}",
   },
   // The shared components' own words (components/ui): a sheet's ✕, a breadcrumb's landmark.
   ui: {

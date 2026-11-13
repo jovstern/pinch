@@ -63,13 +63,19 @@ export function UserMenu({ me }: { me: Me }) {
       </DropdownMenuTrigger>
       {/* A fixed width, so a short name doesn't make a narrow menu; never wider than the screen.
           A long name or email is cut, and its title shows it whole. The name reads in its own
-          direction, the email left to right, so it's cut at its end in Hebrew too (D43). */}
+          direction, the email left to right, so it's cut at its end in Hebrew too (D43); each sits
+          at the menu's start all the same, as a column's item (a block would align by its own
+          direction, an English name to the left of a Hebrew menu). */}
       <DropdownMenuContent align="end" className="w-72 max-w-[calc(100vw-2rem)]">
-        <DropdownMenuLabel>
-          <span title={me.name} dir="auto" className="block truncate font-semibold">
+        <DropdownMenuLabel className="flex flex-col items-start">
+          <span title={me.name} dir="auto" className="block max-w-full truncate font-semibold">
             {me.name}
           </span>
-          <span title={me.email} dir="ltr" className="block truncate text-sm text-text-muted">
+          <span
+            title={me.email}
+            dir="ltr"
+            className="block max-w-full truncate text-sm text-text-muted"
+          >
             {me.email}
           </span>
         </DropdownMenuLabel>
