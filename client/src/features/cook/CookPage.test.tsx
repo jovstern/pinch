@@ -7,6 +7,7 @@ import { renderApp, stubFetch } from "../../test-utils.tsx";
 afterEach(() => {
   vi.unstubAllGlobals();
   vi.useRealTimers();
+  document.documentElement.removeAttribute("dir");
 });
 
 const omelette: Recipe = {
@@ -109,6 +110,19 @@ test("the arrow keys go through the steps, but not from a checkbox", async () =>
   expect(screen.getByText("Step 1 of 2")).toBeInTheDocument();
 
   screen.getAllByRole("checkbox", { name: "2 eggs" })[0]?.focus();
+  await userEvent.keyboard("{ArrowRight}");
+  expect(screen.getByText("Step 1 of 2")).toBeInTheDocument();
+});
+
+// Right to left (Hebrew, design §16.4), the row runs the other way, and so do the keys.
+test("right to left, ← goes forward and → goes back", async () => {
+  document.documentElement.dir = "rtl";
+  stubApi();
+  renderApp(`/recipes/${omelette.id}/cook`);
+  await screen.findByText("Step 1 of 2");
+
+  await userEvent.keyboard("{ArrowLeft}");
+  expect(screen.getByText("Step 2 of 2")).toBeInTheDocument();
   await userEvent.keyboard("{ArrowRight}");
   expect(screen.getByText("Step 1 of 2")).toBeInTheDocument();
 });

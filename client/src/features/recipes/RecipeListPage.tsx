@@ -167,7 +167,7 @@ export function RecipeListPage() {
                     shows beside it (on a phone the chips and the Filters badge say it). The ✕
                     keeps the badge's size; its after: gives it a 44 px touch area. */}
                 {applied.map(({ label, without }) => (
-                  <Badge key={label} variant="secondary" className="hidden gap-0 py-0 pr-0 lg:flex">
+                  <Badge key={label} variant="secondary" className="hidden gap-0 py-0 pe-0 lg:flex">
                     {label}
                     <Button
                       type="button"

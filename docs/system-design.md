@@ -1177,7 +1177,10 @@ change needs nothing else. `index.html`'s own `lang="en"` stays, for a browser w
   already follow `dir`.
 - **The test:** a Vitest file reads every `.ts` and `.tsx` in `client/src` and fails on a
   physical class (`ml-`, `mr-`, `pl-`, `pr-`, `left-`, `right-`, `text-left`, `text-right`,
-  `rounded-l`, `rounded-r`, `border-l`, `border-r`), naming the file and line.
+  `rounded-l`, `rounded-r`, `border-l`, `border-r`; also negative, with `!`, the corners
+  `rounded-tl`…, `scroll-ml`… and `float-`/`clear-left`), naming the file and line. It matches
+  classes, not words: margin, padding and inset need a value after them (a number, `px`, `auto`,
+  `full`, `[…]`), so prose ("the top left corner", "bottom-right") passes.
 - **Icons that mirror** (`rtl:-scale-x-100`): those that point the reading way. ChevronLeft and
   ChevronRight (cook mode's ‹ ›, a breadcrumb's separator), ExternalLink (its arrow leaves toward
   the end), LogOut (its arrow too), and any back, forward or send arrow added later. **Not

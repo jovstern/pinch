@@ -55,7 +55,7 @@ export function RecipeCard({ recipe, eager }: RecipeCardProps) {
         {platform && (
           <Badge
             variant="secondary"
-            className="absolute top-2 right-2 bg-background/90 px-2 py-0.5 text-xs font-medium"
+            className="absolute end-2 top-2 bg-background/90 px-2 py-0.5 text-xs font-medium"
           >
             {platformNames[platform]}
           </Badge>

@@ -137,7 +137,7 @@ export function ImportForm({ inputRef }: { inputRef: RefObject<HTMLInputElement 
               <div className="relative flex items-center rounded-control border border-input bg-card has-[[aria-invalid=true]]:border-destructive has-[input:focus-visible]:outline-2 has-[input:focus-visible]:outline-offset-2 has-[input:focus-visible]:outline-ring">
                 <Sparkles
                   aria-hidden="true"
-                  className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground"
+                  className="pointer-events-none absolute start-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
                 />
                 <Input
                   ref={inputRef}
@@ -152,7 +152,7 @@ export function ImportForm({ inputRef }: { inputRef: RefObject<HTMLInputElement 
                   enterKeyHint="send"
                   // The group shows focus and the edge. Important (!): the global focus ring is
                   // unlayered, so a plain utility can't remove it.
-                  className="flex-1 rounded-none border-0 bg-transparent pl-9 outline-none!"
+                  className="flex-1 rounded-none border-0 bg-transparent ps-9 outline-none!"
                   onChange={(event) => {
                     field.handleChange(event.target.value);
                   }}
@@ -188,7 +188,7 @@ export function ImportForm({ inputRef }: { inputRef: RefObject<HTMLInputElement 
                       aria-disabled={isSubmitting}
                       aria-busy={isSubmitting}
                       // Attached to the group's right edge.
-                      className="-my-px -mr-px shrink-0 self-stretch rounded-l-none"
+                      className="-my-px -me-px shrink-0 self-stretch rounded-s-none"
                     >
                       {isSubmitting ? "Sending…" : "Pinch it"}
                     </Button>

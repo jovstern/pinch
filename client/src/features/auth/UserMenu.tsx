@@ -99,7 +99,8 @@ export function UserMenu({ me }: { me: Me }) {
             logOutNow.mutate();
           }}
         >
-          <LogOut aria-hidden="true" />
+          {/* Its arrow points the reading way, so it mirrors in Hebrew (design §16.4). */}
+          <LogOut aria-hidden="true" className="rtl:-scale-x-100" />
           {t("header.logOut")}
         </DropdownMenuItem>
       </DropdownMenuContent>
