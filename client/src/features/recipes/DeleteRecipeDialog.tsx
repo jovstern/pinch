@@ -1,6 +1,8 @@
 import { RecipeSchema, type Recipe } from "@pinch/shared";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router";
+import { InSentence } from "../../components/InSentence.tsx";
 import {
   AlertDialog,
   AlertDialogCancel,
@@ -26,6 +28,7 @@ type DeleteRecipeDialogProps = {
 
 // It asks first (design §14), and the toast that follows has Undo (D27).
 export function DeleteRecipeDialog({ recipe, onClose, focusOnClose }: DeleteRecipeDialogProps) {
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const deletion = useMutation({
@@ -76,18 +79,23 @@ export function DeleteRecipeDialog({ recipe, onClose, focusOnClose }: DeleteReci
           focusOnClose();
         }}
       >
-        <AlertDialogTitle className="text-lg font-semibold">Delete this recipe?</AlertDialogTitle>
+        <AlertDialogTitle className="text-lg font-semibold">
+          {t("recipe.deleteQuestion")}
+        </AlertDialogTitle>
         <AlertDialogDescription className="mt-2 text-pretty text-text-muted">
-          “{recipe.title}” will be deleted from My recipes.
+          <InSentence
+            sentence={(title) => t("recipe.willBeDeleted", { title })}
+            text={recipe.title}
+          />
         </AlertDialogDescription>
         {deletion.isError && (
           <p role="alert" className="mt-3 text-danger">
-            It couldn't be deleted. Try again.
+            {t("recipe.couldntDelete")}
           </p>
         )}
         <AlertDialogFooter>
           <AlertDialogCancel asChild>
-            <Button variant="secondary">Keep it</Button>
+            <Button variant="secondary">{t("recipe.keepIt")}</Button>
           </AlertDialogCancel>
           {/* A plain button, not AlertDialog.Action: Action closes the dialog at once, and
                 this one stays open until the delete is done or shows its error. */}
@@ -100,7 +108,7 @@ export function DeleteRecipeDialog({ recipe, onClose, focusOnClose }: DeleteReci
             disabled={deletion.isPending}
             aria-busy={deletion.isPending}
           >
-            {deletion.isPending ? "Deleting…" : "Delete"}
+            {deletion.isPending ? t("recipe.deleting") : t("recipe.deleteIt")}
           </Button>
         </AlertDialogFooter>
       </AlertDialogContent>

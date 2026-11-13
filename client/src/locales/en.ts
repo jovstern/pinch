@@ -119,4 +119,171 @@ export const en = {
     retrying: "Retrying…",
     couldntRetry: "It couldn't be retried. Try again.",
   },
+  // My recipes, at /recipes (RecipeListPage, ListFilters, TagChips, RecipeCard). Its page title
+  // and heading are the header's My recipes.
+  recipes: {
+    skipFilters: "Skip the filters",
+    // The search box's name, for a screen reader, and what it shows while empty.
+    searchLabel: "Search your recipes",
+    searchPlaceholder: "Search recipes",
+    commonTags: "Common tags",
+    // An applied filter's ✕, beside the grid: "Remove vegetarian".
+    removeFilter: "Remove {{label}}",
+    clearAll: "Clear all",
+    loading: "Loading your recipes…",
+    couldntLoad: "We couldn't load your recipes",
+    // How many a search or the filters left (a page at a time; a search answers its best 50).
+    noneMatch: "No recipes match.",
+    moreThan: "More than {{count}} recipes match.",
+    bestMatches: "The {{count}} best matches.",
+    matches_one: "1 recipe matches.",
+    matches_other: "{{count}} recipes match.",
+    // Nothing matched: what to clear. {{q}} is what was searched, in its own <bdi> (§16.5).
+    noMatch: "No recipes match",
+    clearSearch: "Clear search",
+    clearFilters: "Clear filters",
+    searchAll: "Search all recipes for “{{q}}”",
+    // Before the first recipe.
+    noRecipesYet: "No recipes yet",
+    pinchOrWrite: "Pinch one from a reel, or write your own.",
+    pinchRecipe: "Pinch a recipe",
+    couldntLoadMore: "We couldn't load more recipes. Press Show more to try again.",
+    showMore: "Show more",
+    loadingMore: "Loading…",
+    // A card's line under its title: "10 min · 2 ingredients" (I8 formats the numbers, §16.3).
+    minutes: "{{minutes}} min",
+    ingredients_one: "1 ingredient",
+    ingredients_other: "{{count}} ingredients",
+  },
+  // My recipes' Filters: the panel from 1024 px, the sheet below, and Sort (FiltersPanel,
+  // FiltersSheet, FiltersButton, FilterChoices, filterLabels). The tags' names are tags'.
+  filters: {
+    filters: "Filters",
+    // After the Filters button's count, for a screen reader: "Filters 2 applied".
+    applied: "applied",
+    clear: "Clear",
+    sort: "Sort",
+    // Sort's choices: the API's own order first (Newest, or Best match while searching).
+    newest: "Newest",
+    quickest: "Quickest",
+    az: "A–Z",
+    bestMatch: "Best match",
+    time: "Time",
+    anyTime: "Any",
+    upTo15: "15 min or less",
+    upTo30: "30 min or less",
+    upTo60: "1 hour or less",
+    source: "Source",
+    writtenByMe: "Written by me",
+    byTags: "Filter by tags",
+    // The sheet's button, which closes it: how many are left, as the page's count says it.
+    showRecipes: "Show recipes",
+    showMore: "Show {{count}}+ recipes",
+    showBest: "Show the {{count}} best",
+    show_one: "Show 1 recipe",
+    show_other: "Show {{count}} recipes",
+  },
+  // The tags (design §7, D10): stored and in the address by their code ("cuisine:middle-eastern"),
+  // named on screen here, by facet and value (tagLabels). In English, the value in words.
+  tags: {
+    facets: {
+      cuisine: "Cuisine",
+      meal: "Meal",
+      diet: "Diet",
+      flavor: "Flavor",
+      fit: "Good for",
+    },
+    cuisine: {
+      italian: "italian",
+      asian: "asian",
+      "middle-eastern": "middle eastern",
+      mexican: "mexican",
+      american: "american",
+      french: "french",
+      indian: "indian",
+      mediterranean: "mediterranean",
+      other: "other",
+    },
+    meal: {
+      breakfast: "breakfast",
+      lunch: "lunch",
+      dinner: "dinner",
+      snack: "snack",
+      dessert: "dessert",
+      drink: "drink",
+    },
+    diet: {
+      vegetarian: "vegetarian",
+      vegan: "vegan",
+      "gluten-free": "gluten free",
+      "dairy-free": "dairy free",
+      "kosher-dairy": "kosher dairy",
+      "kosher-meat": "kosher meat",
+      parve: "parve",
+    },
+    flavor: {
+      sweet: "sweet",
+      savory: "savory",
+      spicy: "spicy",
+      sour: "sour",
+      smoky: "smoky",
+      fresh: "fresh",
+    },
+    fit: {
+      quick: "quick",
+      weeknight: "weeknight",
+      "meal-prep": "meal prep",
+      party: "party",
+      kids: "kids",
+      healthy: "healthy",
+      comfort: "comfort",
+    },
+  },
+  // A recipe's page, at /recipes/:id: its subtitle, sections, ⋯ menu, Delete's question, and
+  // while it loads or if it doesn't (RecipePage, RecipeSource, RecipeMenu, DeleteRecipeDialog,
+  // RecipeLoadError, RecipeSkeleton). Its title is the recipe's own.
+  recipe: {
+    loading: "Loading the recipe…",
+    notLoaded: "Recipe not loaded",
+    couldntLoad: "We couldn't load this recipe",
+    // Where it came from, first in the subtitle (also in cook mode). A post's site is its name.
+    writtenByYou: "Written by you",
+    fromText: "From pasted text",
+    fromScreenshots: "From screenshots",
+    opensInNewTab: "(opens in a new tab)",
+    // "Serves 4 · Prep 10 min · Cook 25 min" (I8 formats the numbers, §16.3).
+    serves_one: "Serves 1",
+    serves_other: "Serves {{count}}",
+    prep: "Prep {{minutes}} min",
+    cookTime: "Cook {{minutes}} min",
+    // "≈ 520 kcal · 18 g protein · 92 g carbs · 8 g fat per serving (estimate)": Gemini's guess.
+    calories: "≈ {{amount}} kcal",
+    protein: "{{amount}} g protein",
+    carbs: "{{amount}} g carbs",
+    fat: "{{amount}} g fat",
+    perServing: "per serving (estimate)",
+    tags: "Tags",
+    cook: "Cook",
+    ingredients: "Ingredients",
+    steps: "Steps",
+    comments: "Comments",
+    commentsSoon: "Coming soon: notes from whoever you share this recipe with.",
+    // ⋯ and its menu.
+    moreActions: "More actions",
+    edit: "Edit",
+    shareSoon: "Share · coming soon",
+    delete: "Delete…",
+    // Delete's question. {{title}} is the recipe's, in its own <bdi> (§16.5).
+    deleteQuestion: "Delete this recipe?",
+    willBeDeleted: "“{{title}}” will be deleted from My recipes.",
+    couldntDelete: "It couldn't be deleted. Try again.",
+    keepIt: "Keep it",
+    deleteIt: "Delete",
+    deleting: "Deleting…",
+  },
+  // The shared components' own words (components/ui): a sheet's ✕, a breadcrumb's landmark.
+  ui: {
+    close: "Close",
+    breadcrumb: "Breadcrumb",
+  },
 } as const;

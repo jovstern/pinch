@@ -2,7 +2,7 @@ import type { Recipe } from "@pinch/shared";
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, test, vi } from "vitest";
-import { renderApp, stubFetch } from "../../test-utils.tsx";
+import { renderApp, renderInHebrew, stubFetch } from "../../test-utils.tsx";
 
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -384,4 +384,119 @@ test("a tag, source, time or order in the address that isn't in the lists is lef
 
   expect(await screen.findByText("1 recipe matches.")).toHaveAttribute("role", "status");
   expect(fetch).toHaveBeenCalledWith("/api/recipes?tags=meal%3Abreakfast");
+});
+
+// In Hebrew (design §16.11): My recipes and its Filters say it in Hebrew; the tags' codes stay in
+// the address, and what the user typed or wrote keeps its own direction (§16.5).
+test("in Hebrew, My recipes names itself and each card says its time and ingredients", async () => {
+  const lemonade = { ...omelette, id: "6650a1b2c3d4e5f600000003", ingredients: [{ name: "x" }] };
+  stubFetch(
+    vi.fn().mockResolvedValue(Response.json({ items: [omelette, lemonade], nextCursor: null })),
+  );
+  await renderInHebrew("/recipes");
+
+  expect(
+    await screen.findByRole("heading", { level: 1, name: "המתכונים שלי" }),
+  ).toBeInTheDocument();
+  expect(document.title).toBe("המתכונים שלי · Pinch");
+  const [first, second] = await screen.findAllByRole("link", { name: /Omelette/ });
+  expect(first).toHaveTextContent("10 דק׳ · 2 מצרכים");
+  // One, in words.
+  expect(second).toHaveTextContent("10 דק׳ · מצרך אחד");
+  expect(screen.getByRole("searchbox", { name: "חיפוש במתכונים שלי" })).toHaveAttribute(
+    "placeholder",
+    "חיפוש מתכונים",
+  );
+  expect(screen.getByRole("button", { name: "לדלג על הסינון" })).toBeInTheDocument();
+  const chips = screen.getByRole("group", { name: "תגיות נפוצות" });
+  expect(within(chips).getByRole("button", { name: "ארוחת בוקר" })).toBeInTheDocument();
+});
+
+test("in Hebrew, a search says one match, two and many in their own forms", async () => {
+  const many = (n: number) =>
+    Array.from({ length: n }, (_, i) => ({
+      ...omelette,
+      id: `6650a1b2c3d4e5f6000000${String(i).padStart(2, "0")}`,
+    }));
+  const fetch = vi.fn((path: string) => {
+    const n = path.includes("one") ? 1 : path.includes("two") ? 2 : 7;
+    return Promise.resolve(Response.json({ items: many(n), nextCursor: null }));
+  });
+  stubFetch(fetch);
+  await renderInHebrew("/recipes?q=one");
+
+  expect(await screen.findByText("מתכון אחד מתאים.")).toHaveAttribute("role", "status");
+  const search = screen.getByRole("searchbox");
+  await userEvent.clear(search);
+  await userEvent.type(search, "two{Enter}");
+  expect(await screen.findByText("2 מתכונים מתאימים.")).toBeInTheDocument();
+  await userEvent.clear(search);
+  await userEvent.type(search, "seven{Enter}");
+  expect(await screen.findByText("7 מתכונים מתאימים.")).toBeInTheDocument();
+});
+
+test("in Hebrew, with no recipes, it offers to add the first one", async () => {
+  stubFetch(vi.fn().mockResolvedValue(Response.json({ items: [], nextCursor: null })));
+  await renderInHebrew("/recipes");
+
+  expect(await screen.findByRole("heading", { name: "עדיין אין מתכונים" })).toBeInTheDocument();
+  expect(screen.getByText("אפשר לשמור מתכון מסרטון או לכתוב אחד ידנית.")).toBeInTheDocument();
+  // As the header's tab says it, to the same page.
+  expect(
+    within(screen.getByRole("main")).getByRole("link", { name: "להוסיף מתכון" }),
+  ).toHaveAttribute("href", "/");
+});
+
+test("in Hebrew, when nothing matches, the search is in its own <bdi> inside the sentence", async () => {
+  stubFetch(vi.fn().mockResolvedValue(Response.json({ items: [], nextCursor: null })));
+  await renderInHebrew("/recipes?q=soup&tags=cuisine:italian");
+
+  expect(await screen.findByRole("heading", { name: "אין מתכונים מתאימים" })).toBeInTheDocument();
+  expect(screen.getByText("“soup”, איטלקי")).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "לנקות את הסינון" })).toBeInTheDocument();
+  const searchAll = screen.getByRole("button", { name: 'לחפש את "soup" בכל המתכונים' });
+  expect(within(searchAll).getByText("soup").tagName).toBe("BDI");
+});
+
+test("in Hebrew, the Filters sheet, its choices, its count and its close are in Hebrew", async () => {
+  const fetch = stubList();
+  await renderInHebrew("/recipes");
+
+  await userEvent.click(await screen.findByRole("button", { name: "סינון" }));
+  const sheet = await screen.findByRole("dialog", { name: "סינון" });
+  for (const legend of ["מיון", "זמן", "מקור", "מטבח", "ארוחה", "תזונה", "טעם", "מתאים ל…"]) {
+    expect(within(sheet).getByRole("group", { name: legend })).toBeInTheDocument();
+  }
+  expect(within(sheet).getByRole("radio", { name: "הכי חדשים" })).toBeChecked();
+  expect(within(sheet).getByRole("radio", { name: "הכול" })).toBeChecked();
+  // The sites keep their names (D46).
+  expect(within(sheet).getByRole("checkbox", { name: "Instagram" })).toBeInTheDocument();
+  expect(within(sheet).getByRole("checkbox", { name: "נכתבו ידנית" })).toBeInTheDocument();
+  await userEvent.click(within(sheet).getByRole("checkbox", { name: "ארוחת בוקר" }));
+  await userEvent.click(within(sheet).getByRole("radio", { name: "עד 30 דק׳" }));
+  await waitFor(() => {
+    expect(fetch).toHaveBeenLastCalledWith("/api/recipes?tags=meal%3Abreakfast&time=30");
+  });
+  expect(await within(sheet).findByRole("button", { name: "להציג מתכון אחד" })).toBeInTheDocument();
+
+  await userEvent.click(within(sheet).getByRole("button", { name: "לסגור" }));
+  expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "סינון 2 פעילים" })).toHaveFocus();
+});
+
+test("in Hebrew, the Filters panel and the filters beside the grid are in Hebrew", async () => {
+  const fetch = stubList();
+  await renderInHebrew("/recipes?tags=meal:breakfast&source=manual", { wide: true });
+
+  const panel = await screen.findByRole("complementary", { name: "סינון" });
+  expect(within(panel).getByRole("checkbox", { name: "ארוחת בוקר" })).toBeChecked();
+  expect(within(panel).getByRole("button", { name: "לנקות" })).toBeInTheDocument();
+  expect(screen.getByRole("combobox", { name: "מיון" })).toHaveDisplayValue("הכי חדשים");
+  expect(await screen.findByText("מתכון אחד מתאים.")).toBeInTheDocument();
+
+  await userEvent.click(screen.getByRole("button", { name: "להסיר את נכתבו ידנית" }));
+  await waitFor(() => {
+    expect(fetch).toHaveBeenLastCalledWith("/api/recipes?tags=meal%3Abreakfast");
+  });
+  expect(screen.getByRole("button", { name: "לנקות הכול" })).toBeInTheDocument();
 });

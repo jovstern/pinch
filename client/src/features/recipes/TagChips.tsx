@@ -1,4 +1,5 @@
 import { Check } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { Toggle } from "../../components/ui/Toggle.tsx";
 import { tagLabel } from "./tagLabels.ts";
 
@@ -23,10 +24,11 @@ type TagChipsProps = {
 // both together), so a cut-off chip shows there is more, and no scrollbar is needed. py-0.5: a
 // scrolling row clips what overflows it, so it makes room for the chips' 44 px touch areas.
 export function TagChips({ selected, onChange }: TagChipsProps) {
+  const { t } = useTranslation();
   return (
     <div
       role="group"
-      aria-label="Common tags"
+      aria-label={t("recipes.commonTags")}
       className="-mx-4 mt-3 flex [scrollbar-width:none] gap-2 overflow-x-auto px-4 py-0.5 sm:-mx-6 sm:px-6"
     >
       {commonTags.map((tag) => (

@@ -1,4 +1,6 @@
 import { useInfiniteQuery } from "@tanstack/react-query";
+import i18next from "i18next";
+import { useTranslation } from "react-i18next";
 import { Button } from "../../components/ui/Button.tsx";
 import { Sheet, SheetClose, SheetContent, SheetTitle } from "../../components/ui/Sheet.tsx";
 import { FilterChoices } from "./FilterChoices.tsx";
@@ -17,6 +19,7 @@ type FiltersSheetProps = {
 // it's picked, so the grid behind is already filtered when it closes: Show N recipes only closes
 // it, and says how many are left before it does.
 export function FiltersSheet({ filters, onChange, onClose, focusOnClose }: FiltersSheetProps) {
+  const { t } = useTranslation();
   // The page's own list, from the cache: no second request.
   const { data, hasNextPage, isPlaceholderData } = useInfiniteQuery(recipeListQuery(filters));
   const count = data?.pages.reduce((sum, page) => sum + page.items.length, 0);
@@ -36,7 +39,9 @@ export function FiltersSheet({ filters, onChange, onClose, focusOnClose }: Filte
           focusOnClose();
         }}
       >
-        <SheetTitle className="px-4 pt-5 pb-2 font-sans text-lg font-semibold">Filters</SheetTitle>
+        <SheetTitle className="px-4 pt-5 pb-2 font-sans text-lg font-semibold">
+          {t("filters.filters")}
+        </SheetTitle>
         <div className="overflow-y-auto px-4 pt-4 pb-4">
           <FilterChoices filters={filters} onChange={onChange} withSort look="chips" />
         </div>
@@ -50,12 +55,12 @@ export function FiltersSheet({ filters, onChange, onClose, focusOnClose }: Filte
               onChange(withoutFilters(filters));
             }}
           >
-            Clear
+            {t("filters.clear")}
           </Button>
           <SheetClose asChild>
             <Button className="flex-2">
               {count === undefined || isPlaceholderData
-                ? "Show recipes"
+                ? t("filters.showRecipes")
                 : showCount(count, hasNextPage, filters.q !== "")}
             </Button>
           </SheetClose>
@@ -69,7 +74,7 @@ export function FiltersSheet({ filters, onChange, onClose, focusOnClose }: Filte
 // "50+" rather than count them all; a search answers only its best 50 (design §7), so a full one
 // says that, as the page's count does.
 function showCount(count: number, more: boolean, searching: boolean) {
-  if (more) return `Show ${String(count)}+ recipes`;
-  if (searching && count === PAGE_SIZE) return `Show the ${String(PAGE_SIZE)} best`;
-  return count === 1 ? "Show 1 recipe" : `Show ${String(count)} recipes`;
+  if (more) return i18next.t("filters.showMore", { count });
+  if (searching && count === PAGE_SIZE) return i18next.t("filters.showBest", { count: PAGE_SIZE });
+  return i18next.t("filters.show", { count });
 }

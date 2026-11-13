@@ -1,6 +1,7 @@
 import type { Recipe } from "@pinch/shared";
 import { Ellipsis } from "lucide-react";
 import { lazy, Suspense, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Button } from "../../components/ui/Button.tsx";
 
 // The menu (Radix's, with its positioning library, ~19.6 kB) is its own chunk, fetched when ⋯ is
@@ -31,12 +32,13 @@ const RecipeMenu = lazy(async () => ({
 }));
 
 export function LazyRecipeMenu({ recipe }: { recipe: Recipe }) {
+  const { t } = useTranslation();
   const [pressed, setPressed] = useState(false);
   const standIn = (
     <Button
       type="button"
       variant="outline"
-      aria-label="More actions"
+      aria-label={t("recipe.moreActions")}
       aria-haspopup="menu"
       aria-expanded={false}
       aria-busy={pressed && !menuLoaded}

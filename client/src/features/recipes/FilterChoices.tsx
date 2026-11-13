@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { ChoiceGroup } from "./ChoiceGroup.tsx";
 import { choicesOf, sortChoices, sourceNames, timeNames } from "./filterLabels.ts";
 import type { RecipeFilters } from "./recipeQueries.ts";
@@ -14,12 +15,13 @@ type FilterChoicesProps = {
 // The Filters' groups (design §14): Sort, Time and Source, then the tag facets. Each applies as
 // it's picked, so the grid behind is already filtered.
 export function FilterChoices({ filters, onChange, withSort, look }: FilterChoicesProps) {
+  const { t } = useTranslation();
   const { sources } = filters;
   return (
     <div className="grid gap-4">
       {withSort && (
         <ChoiceGroup
-          legend="Sort"
+          legend={t("filters.sort")}
           type="radio"
           choices={sortChoices(filters.q !== "")}
           selected={[filters.sort]}
@@ -30,9 +32,9 @@ export function FilterChoices({ filters, onChange, withSort, look }: FilterChoic
         />
       )}
       <ChoiceGroup
-        legend="Time"
+        legend={t("filters.time")}
         type="radio"
-        choices={[{ value: "", label: "Any" }, ...choicesOf(timeNames)]}
+        choices={[{ value: "", label: t("filters.anyTime") }, ...choicesOf(timeNames())]}
         selected={[filters.time]}
         onChange={(time) => {
           onChange({ ...filters, time });
@@ -40,9 +42,9 @@ export function FilterChoices({ filters, onChange, withSort, look }: FilterChoic
         look={look}
       />
       <ChoiceGroup
-        legend="Source"
+        legend={t("filters.source")}
         type="checkbox"
-        choices={choicesOf(sourceNames)}
+        choices={choicesOf(sourceNames())}
         selected={sources}
         onChange={(source, on) => {
           onChange({
@@ -53,7 +55,7 @@ export function FilterChoices({ filters, onChange, withSort, look }: FilterChoic
         look={look}
       />
       <TagPicker
-        legend="Filter by tags"
+        legend={t("filters.byTags")}
         selected={filters.tags}
         onChange={(tags) => {
           onChange({ ...filters, tags });
