@@ -41,12 +41,13 @@ test("in Hebrew, the not-found page is in Hebrew", async () => {
   );
 });
 
-test("the header has the logo, the two tabs, Write a recipe and the avatar", () => {
+test("the header has the logo, the three tabs, Write a recipe and the avatar", () => {
   stubNotFound();
   renderApp("/nope");
   expect(screen.getByRole("link", { name: "Pinch, Add recipe" })).toHaveAttribute("href", "/");
   expect(tab("Add recipe")).toHaveAttribute("href", "/");
   expect(tab("My recipes")).toHaveAttribute("href", "/recipes");
+  expect(tab("All recipes")).toHaveAttribute("href", "/explore");
   expect(screen.getByRole("link", { name: "Write a recipe" })).toHaveAttribute(
     "href",
     "/recipes/new",
@@ -67,12 +68,52 @@ test.each([
   ["/recipes/6650a1b2c3d4e5f600000001", "My recipes"],
   ["/recipes/6650a1b2c3d4e5f600000001/cook", "My recipes"],
   ["/recipes/6650a1b2c3d4e5f600000001/edit", "My recipes"],
+  ["/explore", "All recipes"],
 ])("at %s, %s is the selected tab", (path, selected) => {
   stubNotFound();
   renderApp(path);
-  const other = selected === "Add recipe" ? "My recipes" : "Add recipe";
-  expect(tab(selected)).toHaveAttribute("aria-current", "page");
-  expect(tab(other)).not.toHaveAttribute("aria-current");
+  for (const name of ["Add recipe", "My recipes", "All recipes"]) {
+    if (name === selected) expect(tab(name)).toHaveAttribute("aria-current", "page");
+    else expect(tab(name)).not.toHaveAttribute("aria-current");
+  }
+});
+
+test("in Hebrew, the header has the logo, the three tabs in Hebrew and the selected one", async () => {
+  stubNotFound();
+  await renderInHebrew("/recipes");
+  // The logo's name keeps Pinch, the brand (design §16.8).
+  expect(screen.getByRole("link", { name: "Pinch, להוסיף מתכון" })).toHaveAttribute("href", "/");
+  const nav = screen.getByRole("navigation", { name: "ראשי" });
+  expect(within(nav).getByRole("link", { name: "להוסיף מתכון" })).toHaveAttribute("href", "/");
+  expect(within(nav).getByRole("link", { name: "המתכונים שלי" })).toHaveAttribute(
+    "aria-current",
+    "page",
+  );
+  expect(within(nav).getByRole("link", { name: "כל המתכונים" })).toHaveAttribute(
+    "href",
+    "/explore",
+  );
+});
+
+test("All recipes is a Coming soon page, until there are recipes to share", async () => {
+  stubNotFound();
+  renderApp("/explore");
+  // Its own chunk (App), so it shows once loaded.
+  const heading = await screen.findByRole("heading", { level: 1, name: "Coming soon" });
+  expect(
+    screen.getByText("Recipes saved across Pinch, ranked, to copy into My recipes."),
+  ).toBeInTheDocument();
+  expect(document.title).toBe("All recipes · Pinch");
+  expect(heading.closest("[data-empty-state]")?.parentElement).toBe(screen.getByRole("main"));
+});
+
+test("in Hebrew, All recipes' Coming soon page is in Hebrew", async () => {
+  stubNotFound();
+  await renderInHebrew("/explore");
+  expect(await screen.findByRole("heading", { level: 1, name: "בקרוב" })).toBeInTheDocument();
+  expect(
+    screen.getByText("מתכונים שנשמרו ב\u2011Pinch, מדורגים, להעתקה אל המתכונים שלי."),
+  ).toBeInTheDocument();
 });
 
 test("on Write a recipe, its link says it's the current page", () => {
@@ -84,11 +125,12 @@ test("on Write a recipe, its link says it's the current page", () => {
   );
 });
 
-test("a page of neither tab selects none", () => {
+test("a page of no tab selects none", () => {
   stubNotFound();
   renderApp("/nope");
   expect(tab("Add recipe")).not.toHaveAttribute("aria-current");
   expect(tab("My recipes")).not.toHaveAttribute("aria-current");
+  expect(tab("All recipes")).not.toHaveAttribute("aria-current");
 });
 
 // The imports GET /api/imports answers; anything else is 404. fetch is stubbed directly:

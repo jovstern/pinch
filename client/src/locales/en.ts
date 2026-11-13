@@ -17,6 +17,7 @@ export const en = {
     // After My recipes' count, for a screen reader: "My recipes 12 recipes".
     recipeCount_one: "recipe",
     recipeCount_other: "recipes",
+    allRecipes: "All recipes",
     writeRecipe: "Write a recipe",
     account: "Your account",
     language: "Language",
@@ -31,6 +32,11 @@ export const en = {
     didntLoad: "This page didn't load",
     checkAndReload: "Check your connection, then reload the page.",
     reload: "Reload",
+  },
+  // All recipes' page (ExplorePage): the shared recipes to copy, ranked, after v1 (design §14.1).
+  explore: {
+    comingSoon: "Coming soon",
+    willBe: "Recipes saved across Pinch, ranked, to copy into My recipes.",
   },
   // Log in, Sign up and the session's error (SessionError), with what a failed submit says
   // (submitError). A field's own messages are the shared schemas' (validation, design §16.7).

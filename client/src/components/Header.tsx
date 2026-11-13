@@ -12,25 +12,30 @@ import { Badge } from "./ui/Badge.tsx";
 import { Button } from "./ui/Button.tsx";
 
 // The tab that owns each page (design §14, D24): an inner page keeps its tab selected. A page
-// of neither (not found) selects none.
+// of none (not found) selects none.
 function tabOf(pathname: string) {
   if (pathname === "/" || pathname === "/recipes/new" || pathname.startsWith("/imports/")) {
     return "new";
   }
   if (pathname === "/recipes" || pathname.startsWith("/recipes/")) return "recipes";
+  if (pathname === "/explore") return "all";
   return null;
 }
 
-// shadcn's TabsTrigger look; the selected one is lifted out of the row. Tighter on a phone, and
-// smaller under 360 px, so both tabs with their counts ("Add recipe 13", "My recipes 120") fit
-// beside the avatar on a 320 px screen.
+// shadcn's TabsTrigger look; the selected one is lifted out of the row. On a phone the three
+// share the row's width, tighter and a size smaller, so they fit with their counts ("Add recipe
+// 13", "My recipes 120") at 360 px, and smaller again under it, for 320 px.
 const tabClass =
-  "inline-flex min-h-11 flex-1 items-center justify-center gap-1 rounded-control px-2 font-medium whitespace-nowrap max-[22.5rem]:text-sm sm:gap-1.5 sm:px-3 text-muted-foreground aria-[current=page]:bg-background aria-[current=page]:text-foreground aria-[current=page]:shadow-sm";
+  "inline-flex min-h-11 flex-1 items-center justify-center gap-1 rounded-control px-1.5 text-sm font-medium whitespace-nowrap text-muted-foreground aria-[current=page]:bg-background aria-[current=page]:text-foreground aria-[current=page]:shadow-sm max-[22.5rem]:px-1 max-[22.5rem]:text-[0.8125rem] sm:gap-1.5 sm:px-3 sm:text-base";
 
-// The app's frame, on every page (design §14, D24): the logo, the two tabs, Write a recipe and
-// the avatar, and the imports read for the tab's count. Phone: the P mark, then the tabs fill
-// the row beside the avatar, and Write a recipe floats bottom right on the two tabs' own pages.
-// From 768 px: the wordmark and the tabs left, the rest right.
+// The app's frame, on every page (design §14, D24): the logo, the three tabs, Write a recipe and
+// the avatar, and the imports read for the tab's count. Two rows: the logo and the avatar, then
+// the tabs (the row's width on a phone; from 768 px as wide as they need, under the logo).
+// Write a recipe floats bottom right on a phone (on Add recipe and My recipes), and is by the
+// avatar from 768 px. One row from 1024 px: the logo and the tabs at the start, the rest at the
+// end. In Hebrew the logo is in the middle of the header's width at every width (§16.4: the one
+// thing not mirrored), the tabs under it, and one row only from 1440 px, the first width where
+// the tabs, Write a recipe and the avatar fit in the half beside the logo.
 export function Header({ onTabPage }: { onTabPage: boolean }) {
   const { t } = useTranslation();
   const { pathname } = useLocation();
@@ -44,38 +49,30 @@ export function Header({ onTabPage }: { onTabPage: boolean }) {
   const me = useQuery(meQuery).data;
 
   return (
-    <header className="flex items-center gap-2 px-4 pt-3 md:gap-4 md:border-b md:border-border md:px-6 md:py-3">
-      {/* The logo (D24), as files in public/: inlined, its paths would cost the bundle, which
-          is at its budget (docs/metrics). The P mark on a phone, the wordmark from 768 px, each
-          in the dark accent in the dark theme. Its height is set and the files give its width,
-          so nothing moves as it loads; asked for at low priority, so it waits behind what the
-          page's content needs (LCP). On a phone the 44 px target reaches into the gutter
-          (-ms-4 ps-4, and -me-2 for the gap), so the mark lines up with the page's edge and
-          takes 28 px from the tabs; under 360 px they need the whole row ("Add recipe 13",
-          "My recipes 120"), so there is no mark there. The focus ring is the mark's: the
-          target's would be cut off at the screen's edge (! over the global ring, which is
-          outside Tailwind's layers). */}
+    // A grid of named areas, so each width and direction places the same three parts, kept in
+    // the tab order: the logo, the tabs, then Write a recipe and the avatar. Its two outer
+    // columns share what's left equally, so the middle one is the header's true centre (where
+    // the Hebrew logo goes). In Hebrew's one row the tabs share the end's cell, at its start.
+    <header className="grid grid-cols-[1fr_auto_1fr] items-center gap-x-4 gap-y-2 px-4 pt-3 [grid-template-areas:'logo_._end'_'nav_nav_nav'] md:border-b md:border-border md:px-6 md:py-3 lg:ltr:grid-cols-[auto_auto_1fr] lg:ltr:[grid-template-areas:'logo_nav_end'] rtl:[grid-template-areas:'._logo_end'_'nav_nav_nav'] min-[90rem]:rtl:[grid-template-areas:'._logo_end']">
+      {/* The logo (D24), the "Pinch" wordmark, as files in public/: inlined, its paths would
+          cost the bundle (docs/metrics). In the dark accent in the dark theme. Its height is
+          set and the file gives its width, so nothing moves as it loads; asked for at low
+          priority, so it waits behind what the page's content needs (LCP). The focus ring is
+          the logo's (! over the global ring, which is outside Tailwind's layers). */}
       <Link
         to="/"
         aria-label={t("header.home")}
-        className="group -ms-4 -me-2 hidden min-h-11 w-11 shrink-0 items-center ps-4 focus-visible:outline-none! min-[22.5rem]:flex md:mx-0 md:w-auto md:ps-0"
+        className="group flex min-h-11 items-center justify-self-start [grid-area:logo] focus-visible:outline-none!"
       >
         <picture>
-          <source
-            media="(min-width: 48rem) and (prefers-color-scheme: dark)"
-            srcSet="/logo-dark.svg"
+          <source media="(prefers-color-scheme: dark)" srcSet="/logo-dark.svg" />
+          <img
+            src="/logo.svg"
+            alt="Pinch"
             width={79}
             height={32}
-          />
-          <source media="(min-width: 48rem)" srcSet="/logo.svg" width={79} height={32} />
-          <source media="(prefers-color-scheme: dark)" srcSet="/logo-mark-dark.svg" />
-          <img
-            src="/logo-mark.svg"
-            alt="Pinch"
-            width={21}
-            height={28}
             fetchPriority="low"
-            className="h-7 w-auto rounded-sm group-focus-visible:outline-2 group-focus-visible:outline-offset-2 group-focus-visible:outline-ring md:h-8"
+            className="h-8 w-auto rounded-sm group-focus-visible:outline-2 group-focus-visible:outline-offset-2 group-focus-visible:outline-ring"
           />
         </picture>
       </Link>
@@ -83,7 +80,7 @@ export function Header({ onTabPage }: { onTabPage: boolean }) {
           Radix Tabs is for panels that switch within one page. It only borrows their look. */}
       <nav
         aria-label={t("header.nav")}
-        className="flex flex-1 rounded-control bg-muted p-1 md:w-88 md:flex-none"
+        className="flex rounded-control bg-muted p-1 [grid-area:nav] md:justify-self-start rtl:md:justify-self-center min-[90rem]:rtl:justify-self-start min-[90rem]:rtl:[grid-area:end]"
       >
         <Link to="/" aria-current={tab === "new" ? "page" : undefined} className={tabClass}>
           {t("header.addRecipe")}
@@ -115,29 +112,37 @@ export function Header({ onTabPage }: { onTabPage: boolean }) {
             </>
           )}
         </Link>
+        {/* The recipes saved across Pinch: a Coming soon page for now (§14.1). Last: the tabs
+            go from the user's own work outward. */}
+        <Link to="/explore" aria-current={tab === "all" ? "page" : undefined} className={tabClass}>
+          {t("header.allRecipes")}
+        </Link>
       </nav>
 
-      {/* One link, placed by width: floating on a phone (in thumb reach, on the tabs' pages
-          only), in the header from 768 px on every page. On a phone it comes after the tabs
-          in the tab order though it shows at the bottom: fine for the header's one action.
-          z-10: over My recipes' cards, which are positioned (the site's label on the picture). */}
-      <Button
-        asChild
-        variant="outline"
-        className={cn(
-          "md:static md:ms-auto md:inline-flex md:rounded-control md:shadow-none",
-          onTabPage ? "fixed end-4 bottom-5 z-10 rounded-full shadow-sheet" : "hidden",
-        )}
-      >
-        <Link to="/recipes/new" aria-current={pathname === "/recipes/new" ? "page" : undefined}>
-          <PenLine aria-hidden="true" className="size-4" />
-          {t("header.writeRecipe")}
-        </Link>
-      </Button>
+      <div className="flex items-center gap-4 justify-self-end [grid-area:end]">
+        {/* One link, placed by width: floating on a phone (in thumb reach, on Add recipe and My
+            recipes only), in the header from 768 px on every page. On a phone it comes after
+            the tabs in the tab order though it shows at the bottom: fine for the header's one
+            action. z-10: over My recipes' cards, which are positioned (the site's label on the
+            picture). */}
+        <Button
+          asChild
+          variant="outline"
+          className={cn(
+            "md:static md:inline-flex md:rounded-control md:shadow-none",
+            onTabPage ? "fixed end-4 bottom-5 z-10 rounded-full shadow-sheet" : "hidden",
+          )}
+        >
+          <Link to="/recipes/new" aria-current={pathname === "/recipes/new" ? "page" : undefined}>
+            <PenLine aria-hidden="true" className="size-4" />
+            {t("header.writeRecipe")}
+          </Link>
+        </Button>
 
-      {/* The avatar opens the user's menu: their name, and Log out (design §14). SessionGate
-          only shows the page once me is known, so it's here; the check is for TypeScript. */}
-      {me && <LazyUserMenu me={me} />}
+        {/* The avatar opens the user's menu: their name, and Log out (design §14). SessionGate
+            only shows the page once me is known, so it's here; the check is for TypeScript. */}
+        {me && <LazyUserMenu me={me} />}
+      </div>
     </header>
   );
 }

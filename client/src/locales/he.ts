@@ -14,6 +14,7 @@ export const he: Translation<typeof en> = {
     myRecipes: "המתכונים שלי",
     recipeCount_one: "מתכון",
     recipeCount_other: "מתכונים",
+    allRecipes: "כל המתכונים",
     writeRecipe: "לכתוב מתכון",
     account: "החשבון שלך",
     language: "שפה",
@@ -26,6 +27,10 @@ export const he: Translation<typeof en> = {
     didntLoad: "הדף לא נטען",
     checkAndReload: "כדאי לבדוק את החיבור ולטעון את הדף מחדש.",
     reload: "לטעון מחדש",
+  },
+  explore: {
+    comingSoon: "בקרוב",
+    willBe: "מתכונים שנשמרו ב\u2011Pinch, מדורגים, להעתקה אל המתכונים שלי.",
   },
   auth: {
     logInTitle: "התחברות",

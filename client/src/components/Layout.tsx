@@ -16,13 +16,14 @@ const Toaster = lazy<ComponentType<{ alwaysTop: boolean }>>(() =>
   ),
 );
 
-// Every screen sits in this frame: the header with the two tabs (design §14, D24), and the
+// Every screen sits in this frame: the header with the three tabs (design §14, D24), and the
 // toasts, so an import that becomes ready or fails says so on any page.
 export function Layout() {
   const { pathname } = useLocation();
   useImportToasts();
   const toastSent = useToastSent();
-  // The two tabs' own pages, where Write a recipe floats on a phone.
+  // Add recipe's and My recipes' own pages, where Write a recipe floats on a phone (not All
+  // recipes': a page of others' recipes, Coming soon for now).
   const onTabPage = pathname === "/" || pathname === "/recipes";
   // A recipe's own page, /recipes/<id>, and its cook mode: not /recipes/new, nor its edit page.
   const onRecipe = /^\/recipes\/[^/]+(\/cook)?$/.test(pathname) && pathname !== "/recipes/new";
