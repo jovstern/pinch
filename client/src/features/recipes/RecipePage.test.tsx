@@ -123,17 +123,19 @@ test("Undo on Delete's toast restores the recipe, and View opens it", async () =
   expect(await screen.findByRole("heading", { level: 1, name: "Omelette" })).toBeInTheDocument();
 });
 
-test("in Hebrew, Delete's toast names the recipe after the verb, in its <bdi>", async () => {
+test("in Hebrew, Delete's toast is in English, left to right, the title in its <bdi>", async () => {
   stubApi();
   await renderInHebrew(`/recipes/${omelette.id}`);
   // The recipe's page and its dialog are still English until I6.
   await chooseDelete();
   const dialog = await screen.findByRole("alertdialog", { name: "Delete this recipe?" });
   await userEvent.click(within(dialog).getByRole("button", { name: "Delete" }));
-  const undo = await toastButton("נמחק: Omelette", "לבטל");
+  // The toasts are English in both languages (design §16.8, D46).
+  const undo = await toastButton("Deleted Omelette", "Undo");
   const toast = undo.closest("li");
-  if (toast === null) throw new Error("לבטל isn't in a toast");
+  if (toast === null) throw new Error("Undo isn't in a toast");
   expect(within(toast).getByText("Omelette").tagName).toBe("BDI");
+  expect(toast.closest("ol")).toHaveAttribute("dir", "ltr");
 });
 
 // A button on the toast with this title (Sonner's list item).

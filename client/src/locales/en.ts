@@ -19,7 +19,6 @@ export const en = {
     account: "Your account",
     language: "Language",
     logOut: "Log out",
-    couldntLogOut: "Couldn't log out",
   },
   // The frame's own pages: an address with nothing at it, and a page that failed to render
   // (NotFoundPage, ErrorBoundary).
@@ -58,35 +57,5 @@ export const en = {
     checkAndTryAgain: "Check your connection, then try again.",
     tryAgain: "Try again",
     trying: "Trying…",
-  },
-  // Every toast (lib/toasts.tsx). A {{title}} is a recipe's, drawn in a <bdi>, in its own
-  // direction (§16.5).
-  toasts: {
-    undo: "Undo",
-    cantUndo: "Can't undo",
-    alreadyGone: "It's already gone",
-    couldntUndo: "Couldn't undo",
-    pinching: "Pinching it",
-    underAMinute: "Usually under a minute",
-    cancelled: "Cancelled",
-    ready: "{{title}} is ready to review",
-    review: "Review",
-    retry: "Retry",
-    alreadySaved: "Already in My recipes",
-    view: "View",
-    alreadyPinching: "Already pinching it",
-    inYourQueue: "It's in your queue",
-    saved: "Saved to My recipes",
-    changesSaved: "Changes saved",
-    deleted: "Deleted {{title}}",
-    restored: "Back in My recipes",
-    discarded: "Discarded",
-    dismissed: "Dismissed",
-    couldntSave: "Couldn't save",
-    checkConnection: "Check your connection",
-    tryAgain: "Try again",
-    // Sonner's: its region (followed by its shortcut, "alt+T") and a toast's ✕.
-    region: "Notifications",
-    close: "Close toast",
   },
 } as const;

@@ -1,13 +1,12 @@
-import i18next from "i18next";
 import { LoaderCircle } from "lucide-react";
 import { useSyncExternalStore, type ReactNode } from "react";
 import type { ExternalToast } from "sonner";
 import { ApiError } from "./api.ts";
 
 // Every toast in the app, by name, with how long it stays (design §14; the table in the
-// wireframe home.html). Their words are in the locales (toasts), in the page's language: i18next's
-// own t, as these are called from outside React. A recipe's title is in a <bdi>, in its own
-// direction (design §16.5).
+// wireframe home.html). In English in both languages (the user's call, design §16.8, D46), so
+// written here, not in the locales; the Toaster lays them out left to right. A recipe's title is
+// in a <bdi>, in its own direction (design §16.5).
 const seconds = (n: number) => n * 1000;
 const short = seconds(3);
 const normal = seconds(5);
@@ -30,21 +29,6 @@ export function useToastSent() {
       return () => listeners.delete(listener);
     },
     () => toastSent,
-  );
-}
-
-// A sentence with a recipe's title in it, the title in its <bdi>, wherever the language puts it
-// (first or last). Split here, not by react-i18next's Trans: its HTML parser would cost the entry
-// (where the toasts are) 4.2 kB gzip, and these sentences hold nothing but the title, which each
-// says once (a second {{title}} would be dropped).
-function withTitle(key: "toasts.ready" | "toasts.deleted", title: string) {
-  const [before, after] = i18next.t(key, { title: "\0" }).split("\0");
-  return (
-    <>
-      {before}
-      <bdi>{title}</bdi>
-      {after}
-    </>
   );
 }
 
@@ -94,16 +78,16 @@ function undoAction(undo: () => Promise<void>) {
   const run = () => {
     undo().catch((error: unknown) => {
       if (error instanceof ApiError && error.status === 404) {
-        showToast("error", i18next.t("toasts.cantUndo"), {
-          description: i18next.t("toasts.alreadyGone"),
+        showToast("error", "Can't undo", {
+          description: "It's already gone",
           duration: normal,
         });
       } else {
-        toastCouldntSave(run, i18next.t("toasts.couldntUndo"));
+        toastCouldntSave(run, "Couldn't undo");
       }
     });
   };
-  return { label: i18next.t("toasts.undo"), onClick: run };
+  return { label: "Undo", onClick: run };
 }
 
 // Green, for a step that finished while the user was elsewhere: a draft ready, a recipe saved or
@@ -115,8 +99,8 @@ const finished = {
 
 // Sent: the queue takes it from here. Undo cancels it.
 export function toastPinching(undo: () => Promise<void>) {
-  showToast("message", i18next.t("toasts.pinching"), {
-    description: i18next.t("toasts.underAMinute"),
+  showToast("message", "Pinching it", {
+    description: "Usually under a minute",
     icon: <LoaderCircle className="size-4 motion-safe:animate-spin" />,
     duration: normal,
     action: undoAction(undo),
@@ -125,20 +109,26 @@ export function toastPinching(undo: () => Promise<void>) {
 
 // Pinch it undone: the queue drops it too.
 export function toastCancelled() {
-  showToast("success", i18next.t("toasts.cancelled"), { duration: short });
+  showToast("success", "Cancelled", { duration: short });
 }
 
 // The import's id is the toast's: a ready one takes the place of its failure, and the failure
 // can be closed once it's retried or gone (importToasts.ts).
 // lookAt: what the draft asks the user to check ("3 things to look at"), when it asks anything.
 export function toastReady(id: string, title: string, review: () => void, lookAt?: string) {
-  showToast("success", withTitle("toasts.ready", title), {
-    ...finished,
-    id,
-    description: lookAt,
-    duration: long,
-    action: { label: i18next.t("toasts.review"), onClick: review },
-  });
+  showToast(
+    "success",
+    <>
+      <bdi>{title}</bdi> is ready to review
+    </>,
+    {
+      ...finished,
+      id,
+      description: lookAt,
+      duration: long,
+      action: { label: "Review", onClick: review },
+    },
+  );
 }
 
 // retry is left out when no retry can fix it (D23).
@@ -153,7 +143,7 @@ export function toastImportFailed(
     description: reason,
     duration: untilClosed,
     closeButton: true,
-    action: retry && { label: i18next.t("toasts.retry"), onClick: retry },
+    action: retry && { label: "Retry", onClick: retry },
   });
 }
 
@@ -161,17 +151,17 @@ export function toastImportFailed(
 // draft of it that's ready has the queue's own toast (toastReady); these two are neutral, as
 // nothing has just finished.
 export function toastAlreadySaved(title: string, view: () => void) {
-  showToast("message", i18next.t("toasts.alreadySaved"), {
+  showToast("message", "Already in My recipes", {
     description: <bdi>{title}</bdi>,
     duration: normal,
-    action: { label: i18next.t("toasts.view"), onClick: view },
+    action: { label: "View", onClick: view },
   });
 }
 
 // A link the worker already has: it says where it is, as there's nothing to open yet.
 export function toastAlreadyPinching() {
-  showToast("message", i18next.t("toasts.alreadyPinching"), {
-    description: i18next.t("toasts.inYourQueue"),
+  showToast("message", "Already pinching it", {
+    description: "It's in your queue",
     duration: normal,
   });
 }
@@ -185,7 +175,7 @@ export function toastLimit(message: string) {
 // A new recipe in My recipes, from Review or written by hand. Without the wireframe's View:
 // saving already opens the recipe.
 export function toastSaved(title: string) {
-  showToast("success", i18next.t("toasts.saved"), {
+  showToast("success", "Saved to My recipes", {
     ...finished,
     description: <bdi>{title}</bdi>,
     duration: normal,
@@ -193,30 +183,36 @@ export function toastSaved(title: string) {
 }
 
 export function toastChangesSaved() {
-  showToast("success", i18next.t("toasts.changesSaved"), { duration: short });
+  showToast("success", "Changes saved", { duration: short });
 }
 
 export function toastDeleted(title: string, undo: () => Promise<void>) {
-  showToast("success", withTitle("toasts.deleted", title), {
-    duration: long,
-    action: undoAction(undo),
-  });
+  showToast(
+    "success",
+    <>
+      Deleted <bdi>{title}</bdi>
+    </>,
+    {
+      duration: long,
+      action: undoAction(undo),
+    },
+  );
 }
 
 // A deleted recipe undone. The user has left its page (Delete goes to My recipes), so View.
 export function toastRestored(title: string, view: () => void) {
-  showToast("success", i18next.t("toasts.restored"), {
+  showToast("success", "Back in My recipes", {
     ...finished,
     description: <bdi>{title}</bdi>,
     duration: normal,
-    action: { label: i18next.t("toasts.view"), onClick: view },
+    action: { label: "View", onClick: view },
   });
 }
 
 // An undone discard or dismiss needs no toast of its own: the import is back in the queue, and
 // the queue's toast says it is ready to review, or failed (useImportToasts).
 export function toastDiscarded(title: string | undefined, undo: () => Promise<void>) {
-  showToast("success", i18next.t("toasts.discarded"), {
+  showToast("success", "Discarded", {
     description: title === undefined ? undefined : <bdi>{title}</bdi>,
     duration: long,
     action: undoAction(undo),
@@ -224,16 +220,16 @@ export function toastDiscarded(title: string | undefined, undo: () => Promise<vo
 }
 
 export function toastDismissed(undo: () => Promise<void>) {
-  showToast("success", i18next.t("toasts.dismissed"), { duration: long, action: undoAction(undo) });
+  showToast("success", "Dismissed", { duration: long, action: undoAction(undo) });
 }
 
 // A change that couldn't reach the server, with Try again. Only for one-click actions, which can
 // simply be sent again; a form keeps its error by its fields.
-export function toastCouldntSave(tryAgain: () => void, title?: string) {
-  showToast("error", title ?? i18next.t("toasts.couldntSave"), {
-    description: i18next.t("toasts.checkConnection"),
+export function toastCouldntSave(tryAgain: () => void, title = "Couldn't save") {
+  showToast("error", title, {
+    description: "Check your connection",
     duration: untilClosed,
     closeButton: true,
-    action: { label: i18next.t("toasts.tryAgain"), onClick: tryAgain },
+    action: { label: "Try again", onClick: tryAgain },
   });
 }

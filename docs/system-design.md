@@ -802,7 +802,7 @@ the browser's console). Another user's recipe or import is a 404, as before. The
 | D43 | **User content keeps its own direction:** `dir="auto"` on everything a user or a post wrote (titles, ingredients, steps, notes, pasted text, names), `dir="ltr"` on links and emails; the import card follows the interface, reversing #113's `ltr` (§16.5) | A Hebrew recipe reads right to left in English, and an English one left to right in Hebrew; a link is always left to right | The interface's direction on content too (an English recipe would read backwards in Hebrew); `<bdi>` around each piece (`dir="auto"` on the element does the same, and is already used) |
 | D44 | **Server messages are translated in the client.** The API's errors already carry a `code`, and the client already words them itself. The other texts the server sends (the schemas' field messages, the import's failure reasons) are named in one `messages` object in `shared/`; the client finds a known English text's key and translates it, and shows an unknown one as it came (§16.7) | Nothing on the server or in the database changes, so old imports read as before and the server's tests stay; one list is the English source for both sides | The server translating by the user's language (the worker and every route would need it, and the strings live twice); an `errorCode` field on imports (a schema change, and old imports still need the fallback) |
 | D45 | **Fonts:** Fraunces has no Hebrew, so Hebrew display text gets **Frank Ruhl Libre** (OFL), a Hebrew-only subset, weights 500–700, self-hosted, declared with a Hebrew `unicode-range` beside Fraunces and added at the same moment after load, so it's fetched only when Hebrew display text is on the page; the body stays the system sans, which has Hebrew everywhere (§16.6) | Fraunces' warmth in Hebrew, where the system serif (Times New Roman) looks like a form; no bytes for English pages, and none before the LCP | Heebo or Assistant for the body (a download on every Hebrew page for text the system already draws well, and English's body is the system's too); the system serif only (today's); Noto Serif Hebrew (plainer) |
-| D46 | **Some words stay in English** in Hebrew: Pinch, the platforms' and Google's names, links, emails, and the codes in the address (§16.8) | They're names and addresses, not words: they are what the user sees on the logo, the site, the button they'll press and the URL bar | Transliterating them ("פינץ'", "יוטיוב": a second name to recognise) |
+| D46 | **Some words stay in English** in Hebrew: Pinch, the platforms' and Google's names, links, emails, the codes in the address, and the toasts (the user, 2026-11-13) (§16.8) | They're names and addresses, not words: they are what the user sees on the logo, the site, the button they'll press and the URL bar | Transliterating them ("פינץ'", "יוטיוב": a second name to recognise) |
 | D47 | **The unit is a combobox** in the editor: a text field that suggests the common units in the interface's language as you type (English: g, kg, ml, l, tsp, tbsp, cup, clove, can, pinch, handful; Hebrew: גרם, ק"ג, מ"ל, ליטר, כפית, כף, כוס, שן, קופסה, קמצוץ, חופן), and still takes any text or none; the stored unit stays free text, as written (§16.12) | The user wants units consistent and quicker to enter, mostly on a phone, when writing or editing; picking a suggestion makes new recipes consistent by itself; no change to the data, the API, Gemini or the links cache, since imports already read units well | A select box (no "2 cloves", "1 ball", or no unit for "3 eggs" without an "Other" field beside it); units stored as codes and translated for display, with a migration and a prompt change (worth it only for scaling and conversion, which the user ruled out in docs/ux/plan.md §9); the native `<datalist>` (no code, but it looks different in every browser: the user chose the combobox) |
 
 ## 11. Risks
@@ -1099,7 +1099,7 @@ as it is today.
   items, each named in its own language (with `lang` on each, so a screen reader says it right).
   Picking the other one sends `PATCH /api/auth/me { language }` (JSON only, as D29's mutations;
   any other field is a 400), which saves it and sets `pinch_lang`; then `location.reload()`. A
-  failure is the "Couldn't save" toast with Try again, in the current language.
+  failure is the "Couldn't save" toast with Try again, in English as every toast (§16.8).
 - **Signed out** (Log in, Sign up, Forgot password): the cookie if this device has one, else
   the browser: Hebrew if any of its languages (`navigator.languages`) starts with `he` or the old
   `iw`, or if its time zone is Israel's (`Asia/Jerusalem`, or the old `Asia/Tel_Aviv`), otherwise
@@ -1143,9 +1143,10 @@ change needs nothing else. `index.html`'s own `lang="en"` stays, for a browser w
 - `client/src/i18n.ts` sets up i18next with `lng` from `<html lang>`, `fallbackLng: "en"`,
   React's escaping (`escapeValue: false`), and the English resources in the bundle
   (`client/src/locales/en.ts`, one object, keys grouped by area: `header`, `auth`, `imports`,
-  `recipes`, `editor`, `cook`, `toasts`, `validation`). In Hebrew, `main.tsx` waits for
-  `import("./locales/he.ts")` before the first render, alongside the queue's wait it already
-  has (§8.3), so the chunk adds no round trip of its own on `/`, and no English is ever drawn.
+  `recipes`, `editor`, `cook`, `validation`; not the toasts, which stay English, §16.8). In
+  Hebrew, `main.tsx` waits for `import("./locales/he.ts")` before the first render, alongside
+  the queue's wait it already has (§8.3), so the chunk adds no round trip of its own on `/`, and
+  no English is ever drawn (but the toasts').
 - **Typed keys:** i18next's `CustomTypeOptions` reads the type of `en`, so `t("a.missing")`
   fails `tsc`. `he` is declared as `Translation<typeof en>`: the same keys, each a string, and an
   optional `_two` beside a plural (Hebrew's dual, "שעתיים"). A missing or extra Hebrew key fails
@@ -1192,9 +1193,11 @@ change needs nothing else. `index.html`'s own `lang="en"` stays, for a browser w
   `radix-ui`) around the app, set from `<html dir>`: the dropdowns' `align="end"` then opens
   toward the left in Hebrew, and the radio groups' arrow keys follow. Sheets open from the
   bottom (or in the middle from 768 px), so they don't flip; their ✕ moves with `end-`.
-- **Sonner** gets `dir`, and its wide position becomes `bottom-left` in Hebrew (`top-center`
-  stays); the close button's `right-1.5! left-auto!` and the room kept for it (`pr-8!`) become
-  `end-1.5! start-auto!` and `pe-8!`.
+- **Sonner**'s wide position becomes `bottom-left` in Hebrew (`top-center` stays); the close
+  button's `right-1.5! left-auto!` and the room kept for it (`pr-8!`) become `end-1.5! start-auto!`
+  and `pe-8!`. Its toasts are English in both languages (§16.8), so the Toaster is `dir="ltr"`
+  inside a `lang="en"` wrapper: each toast reads left to right, its button and ✕ on the right, in
+  the page's corner.
 - **Cook mode's row** scrolls the other way: in RTL `scrollLeft` runs from 0 to negative, and
   the cards' `offsetLeft` from the right. `StepCarousel` and `nearestStep` measure each card's
   distance from the row's start edge, so one rule serves both; ← and → swap meaning (→ is back
@@ -1219,10 +1222,10 @@ change needs nothing else. `index.html`'s own `lang="en"` stays, for a browser w
   reverses #113 on purpose; the card's comment says why.
 - Interpolated user text inside a translated sentence ("Discard {{title}}?") goes in `<bdi>`,
   so a Hebrew title in an English sentence, or the reverse, keeps the punctuation where it
-  belongs. The sentence is split around the title by hand (`withTitle` in `lib/toasts.tsx`), not
-  by react-i18next's `Trans`: its HTML parser cost the entry 4.2 kB gzip (measured in I4), and
-  these sentences hold nothing but the title. A title shown alone (a toast's description) is in
-  a `<bdi>` too.
+  belongs. The sentence is split around the title by hand, not by react-i18next's `Trans`: its
+  HTML parser cost the entry 4.2 kB gzip (measured in I4), and these sentences hold nothing but
+  the title. The toasts (English, §16.8) put a recipe's title in a `<bdi>` too, in their sentence
+  ("Deleted {{title}}") and alone as a description.
 
 ### 16.6 Fonts (D45)
 
@@ -1268,6 +1271,7 @@ What the server says that the user reads, found by grep on 2026-11-12:
 | Word | Why |
 |---|---|
 | **Pinch**, wherever it's shown: the wordmark, the page titles ("· Pinch"), and inside Hebrew sentences ("Pinch קורא סרטונים של עד 5 דקות") | The brand, as on the logo; a transliteration would be a second name |
+| **Every toast**, its words, buttons (Undo, Retry, Review, View, Try again) and Sonner's own labels ("Notifications", "Close toast"), the queue's and the language picker's "Couldn't save" among them. Written in `lib/toasts.tsx` (and the callers' titles, as "Couldn't read that video"), not in the locales; laid out left to right with `lang="en"` | The user's call, 2026-11-13: short, passing notices, kept as they are; the page around them is Hebrew. A recipe's title in one keeps its own direction (`<bdi>`) |
 | The **Pinch it** button | "Pinch" alone in Hebrew (the user, 2026-11-12): the brand as the action, as "it" has no place in a Hebrew sentence |
 | **Instagram, Facebook, YouTube** (source chips, the card's "on Instagram", Filters' Source) | Their own names, as on their apps and their Hebrew sites |
 | **Google** ("להמשיך עם Google") | Its name and "G" mark as Google's sign-in rules ask; what the user will see on Google's page |

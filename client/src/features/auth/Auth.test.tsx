@@ -384,7 +384,7 @@ test("in Hebrew, the session's error is in Hebrew", async () => {
   expect(screen.getByRole("button", { name: "לנסות שוב" })).toBeInTheDocument();
 });
 
-test("in Hebrew, a language that couldn't be saved says so in a Hebrew toast, right to left", async () => {
+test("in Hebrew, a language that couldn't be saved says so in an English toast, left to right", async () => {
   const user = userEvent.setup();
   stubFetch((path) =>
     path === "/api/auth/me" ? Promise.reject(new TypeError("Failed to fetch")) : notFound(),
@@ -392,11 +392,12 @@ test("in Hebrew, a language that couldn't be saved says so in a Hebrew toast, ri
   await renderInHebrew("/nope", { me: { ...testUser, language: "he" } });
   await user.click(screen.getByRole("button", { name: "החשבון שלך" }));
   await user.click(await screen.findByRole("menuitemradio", { name: "English" }));
-  const toast = (await screen.findByText("השמירה נכשלה")).closest("li");
-  if (toast === null) throw new Error("השמירה נכשלה isn't in a toast");
-  expect(toast).toHaveTextContent("כדאי לבדוק את החיבור");
-  expect(within(toast).getByRole("button", { name: "לנסות שוב" })).toBeInTheDocument();
-  // Sonner's list, in the page's direction (design §16.4).
-  expect(toast.closest("ol")).toHaveAttribute("dir", "rtl");
+  // The toasts are English in both languages (design §16.8, D46), and read left to right.
+  const toast = (await screen.findByText("Couldn't save")).closest("li");
+  if (toast === null) throw new Error("Couldn't save isn't in a toast");
+  expect(toast).toHaveTextContent("Check your connection");
+  expect(within(toast).getByRole("button", { name: "Try again" })).toBeInTheDocument();
+  expect(toast.closest("ol")).toHaveAttribute("dir", "ltr");
+  expect(toast.closest("[lang]")).toHaveAttribute("lang", "en");
   expect(reloadPage).not.toHaveBeenCalled();
 });
