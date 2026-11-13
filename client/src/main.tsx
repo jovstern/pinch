@@ -5,7 +5,7 @@ import { Direction } from "radix-ui";
 import { BrowserRouter } from "react-router";
 import { App } from "./App.tsx";
 import { queueKnown } from "./features/imports/importQueries.ts";
-import { loadHebrew, pageLanguage, startI18n } from "./i18n.ts";
+import { loadHebrew, pageIsRtl, pageLanguage, startI18n } from "./i18n.ts";
 import { ApiError } from "./lib/api.ts";
 import { loadDisplayFont } from "./lib/displayFont.ts";
 import "./globals.css";
@@ -35,7 +35,7 @@ startI18n(language);
 function render(root: HTMLElement) {
   createRoot(root).render(
     <StrictMode>
-      <Direction.Provider dir={document.documentElement.dir === "rtl" ? "rtl" : "ltr"}>
+      <Direction.Provider dir={pageIsRtl() ? "rtl" : "ltr"}>
         <QueryClientProvider client={queryClient}>
           <BrowserRouter>
             <App />

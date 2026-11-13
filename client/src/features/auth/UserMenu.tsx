@@ -62,13 +62,14 @@ export function UserMenu({ me }: { me: Me }) {
         <Avatar me={me} />
       </DropdownMenuTrigger>
       {/* A fixed width, so a short name doesn't make a narrow menu; never wider than the screen.
-          A long name or email is cut, and its title shows it whole. */}
+          A long name or email is cut, and its title shows it whole. The name reads in its own
+          direction, the email left to right, so it's cut at its end in Hebrew too (D43). */}
       <DropdownMenuContent align="end" className="w-72 max-w-[calc(100vw-2rem)]">
         <DropdownMenuLabel>
-          <span title={me.name} className="block truncate font-semibold">
+          <span title={me.name} dir="auto" className="block truncate font-semibold">
             {me.name}
           </span>
-          <span title={me.email} className="block truncate text-sm text-text-muted">
+          <span title={me.email} dir="ltr" className="block truncate text-sm text-text-muted">
             {me.email}
           </span>
         </DropdownMenuLabel>
@@ -99,7 +100,8 @@ export function UserMenu({ me }: { me: Me }) {
             logOutNow.mutate();
           }}
         >
-          <LogOut aria-hidden="true" />
+          {/* Its arrow points the reading way, so it mirrors in Hebrew (design §16.4). */}
+          <LogOut aria-hidden="true" className="rtl:-scale-x-100" />
           {t("header.logOut")}
         </DropdownMenuItem>
       </DropdownMenuContent>

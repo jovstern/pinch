@@ -72,22 +72,21 @@ export function ImportList({ focusPasteBox }: { focusPasteBox: () => void }) {
                     don't wait to be found near the screen, as My recipes' first row
                     (docs/metrics/m08.md). */}
                 <Picture job={job} eager={index < 2} />
-                {/* Phone: the action under the words. From 768 px: on the right. */}
+                {/* Phone: the action under the words. From 768 px: at the end. */}
                 <div className="min-w-0 flex-1 md:flex md:items-center md:gap-4">
                   <div className="min-w-0 flex-1">
                     {/* Names the card's buttons and link too (aria-describedby), so a screen
-                        reader's list of them says which import each is for. dir="ltr", as the
-                        line under it: the card's lines start on the left in every language
-                        until the app is localised (user, 2026-11-12). */}
-                    <p dir="ltr" id={`import-${job.id}`} className="font-semibold break-words">
+                        reader's list of them says which import each is for. The card is laid
+                        out by the interface's direction, which reverses #113's dir="ltr" (kept
+                        until the app was localised); the title and a pasted text keep their own
+                        (dir="auto"), and a link reads left to right (design §16.5, D43). */}
+                    <p dir="auto" id={`import-${job.id}`} className="font-semibold break-words">
                       {title(job)}
                     </p>
                     {/* One line: shared links carry long tracking codes, and a pasted text is
-                        long. A link whole on hover; a text, up to 10,000 characters, isn't.
-                        dir="ltr": a link, or a Hebrew text, starts on the left like the rest
-                        of the card (a Hebrew text is then cut at its start). */}
+                        long. A link whole on hover; a text, up to 10,000 characters, isn't. */}
                     <p
-                      dir="ltr"
+                      dir={job.input.type === "link" ? "ltr" : "auto"}
                       title={job.input.type === "link" ? job.input.url : undefined}
                       className="truncate text-sm text-muted-foreground"
                     >

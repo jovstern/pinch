@@ -19,9 +19,9 @@ export function LazyImportForm(props: ComponentProps<typeof ImportForm>) {
       fallback={
         <div
           aria-hidden="true"
-          className="relative flex h-11.5 items-center overflow-hidden rounded-control border border-input bg-card pl-9 whitespace-nowrap text-muted-foreground"
+          className="relative flex h-11.5 items-center overflow-hidden rounded-control border border-input bg-card ps-9 whitespace-nowrap text-muted-foreground"
         >
-          <Sparkles className="absolute top-1/2 left-3 size-4 -translate-y-1/2" />
+          <Sparkles className="absolute start-3 top-1/2 size-4 -translate-y-1/2" />
           {pastePlaceholder}
         </div>
       }
