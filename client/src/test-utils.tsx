@@ -8,7 +8,8 @@ import { toast } from "sonner";
 import { onTestFinished, vi } from "vitest";
 import { App } from "./App.tsx";
 import { meQuery } from "./features/auth/authQueries.ts";
-import { loadHebrew, pageIsRtl } from "./i18n.ts";
+import { pageIsRtl } from "./i18n.ts";
+import { he } from "./locales/he.ts";
 
 // The user every test is signed in as, unless it passes { me: null } (signed out) or
 // { me: "ask" } (the app asks GET /api/auth/me, through the test's fetch).
@@ -60,7 +61,8 @@ export async function inHebrew() {
   });
   document.documentElement.lang = "he";
   document.documentElement.dir = "rtl";
-  await loadHebrew();
+  i18next.addResourceBundle("he", "translation", he);
+  await i18next.changeLanguage("he");
 }
 
 // renderApp in Hebrew.

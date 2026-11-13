@@ -4,8 +4,9 @@ import { createRoot } from "react-dom/client";
 import { Direction } from "radix-ui";
 import { BrowserRouter } from "react-router";
 import { App } from "./App.tsx";
+import { AppDidntLoad } from "./components/AppDidntLoad.tsx";
 import { queueKnown } from "./features/imports/importQueries.ts";
-import { loadHebrew, pageIsRtl, pageLanguage, startI18n } from "./i18n.ts";
+import { pageIsRtl, pageLanguage, startI18n } from "./i18n.ts";
 import { ApiError } from "./lib/api.ts";
 import { loadDisplayFont } from "./lib/displayFont.ts";
 import "./globals.css";
@@ -26,13 +27,10 @@ const queryClient = new QueryClient({
 });
 
 loadDisplayFont();
-// In the language index.html's script chose (design §16.2).
-const language = pageLanguage();
-startI18n(language);
 
 // Radix's menus and radio groups follow the page's direction (§16.4): a menu aligned to the end
 // opens toward the left in Hebrew, and the arrow keys follow.
-function render(root: HTMLElement) {
+function renderApp(root: HTMLElement) {
   createRoot(root).render(
     <StrictMode>
       <Direction.Provider dir={pageIsRtl() ? "rtl" : "ltr"}>
@@ -46,11 +44,11 @@ function render(root: HTMLElement) {
   );
 }
 
-// What the first render waits for, so nothing is drawn twice: Hebrew's strings, and on / the
-// queue (below). Fetched side by side, so Hebrew adds no round trip of its own. If Hebrew can't
-// be fetched, the page shows in English, the fallback, rather than nothing.
-const waits: Promise<unknown>[] = [];
-if (language === "he") waits.push(loadHebrew().catch(() => undefined));
+// What the first render waits for, so nothing is drawn twice: the strings of the language
+// index.html's script chose (design §16.2), and on / the queue (below). Fetched side by side.
+// Without its strings the app can't say anything, so a page whose strings didn't come says so in
+// both languages, with a Reload button (AppDidntLoad, §16.3).
+const waits: Promise<unknown>[] = [startI18n(pageLanguage())];
 
 // Add recipe centres its block by the queue's height, so it waits for the queue (ImportPage).
 // Opened there, the app renders once the queue is in, asked for by index.html's preload with the
@@ -62,6 +60,11 @@ if (language === "he") waits.push(loadHebrew().catch(() => undefined));
 if (location.pathname === "/" && /(^|; )pinch_signed_in=1/.test(document.cookie)) {
   waits.push(queueKnown(queryClient));
 }
-void Promise.all(waits).then(() => {
-  render(root);
-});
+void Promise.all(waits).then(
+  () => {
+    renderApp(root);
+  },
+  () => {
+    createRoot(root).render(<AppDidntLoad />);
+  },
+);
