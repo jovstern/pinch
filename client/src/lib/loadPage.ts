@@ -5,3 +5,8 @@
 export function loadPage(address: string) {
   window.location.replace(address);
 }
+
+// The same page again: a change of language redraws everything in the new one (design §16.1, D40).
+export function reloadPage() {
+  window.location.reload();
+}

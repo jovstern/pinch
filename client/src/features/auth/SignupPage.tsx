@@ -3,10 +3,12 @@ import { revalidateLogic, useForm } from "@tanstack/react-form";
 import { useRef } from "react";
 import { Link, useLocation } from "react-router";
 import { TextField } from "../../components/TextField.tsx";
+import { pageLanguage } from "../../i18n.ts";
 import { loadPage } from "../../lib/loadPage.ts";
 import { Button } from "../../components/ui/Button.tsx";
 import { AuthFrame } from "./AuthFrame.tsx";
 import { GoogleButton } from "./GoogleButton.tsx";
+import { LanguageSwitch } from "./LanguageSwitch.tsx";
 import { signUp } from "./authQueries.ts";
 import { nextPage } from "./nextPage.ts";
 import { SubmitAlert } from "./SubmitAlert.tsx";
@@ -27,7 +29,8 @@ export function SignupPage() {
       },
       onSubmitAsync: async ({ value }) => {
         try {
-          await signUp(SignupInputSchema.parse(value));
+          // The new account keeps the language the page is in (§16.1).
+          await signUp({ ...SignupInputSchema.parse(value), language: pageLanguage() });
           // Signed in: a new page, the one they asked for (design §8.3).
           loadPage(nextPage(search));
           return null;
@@ -47,6 +50,7 @@ export function SignupPage() {
     <AuthFrame
       title="Sign up"
       logo={<Wordmark />}
+      languageSwitch={<LanguageSwitch />}
       footer={
         <>
           Already have an account?{" "}

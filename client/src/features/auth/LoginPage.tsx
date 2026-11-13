@@ -7,6 +7,7 @@ import { loadPage } from "../../lib/loadPage.ts";
 import { Button } from "../../components/ui/Button.tsx";
 import { AuthFrame } from "./AuthFrame.tsx";
 import { GoogleButton } from "./GoogleButton.tsx";
+import { LanguageSwitch } from "./LanguageSwitch.tsx";
 import { logIn } from "./authQueries.ts";
 import { nextPage } from "./nextPage.ts";
 import { SubmitAlert } from "./SubmitAlert.tsx";
@@ -67,6 +68,7 @@ export function LoginPage() {
     <AuthFrame
       title="Log in"
       logo={<Wordmark />}
+      languageSwitch={<LanguageSwitch />}
       footer={
         <>
           New to Pinch?{" "}

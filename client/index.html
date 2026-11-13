@@ -8,13 +8,27 @@
     <meta name="theme-color" content="#fbf8f2" media="(prefers-color-scheme: light)" />
     <meta name="theme-color" content="#17130f" media="(prefers-color-scheme: dark)" />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
-    <!-- The queue, asked for with the page, not after its JS has run: every page's header counts
+    <!-- First, the page's language and direction, before any CSS or JS, so the first frame has
+         them (design §16.2, D41): the pinch_lang cookie the API sets from the account (or the
+         switch on Log in), else the browser's: Hebrew if one of its languages is (iw is its old
+         code) or its time zone is Israel's, else English. main.tsx then reads <html lang>.
+         Then the queue, asked for with the page, not after its JS has run: every page's header counts
          it, and Add recipe shows nothing until it's known (ImportPage), so it is that page's
          LCP. fetch() picks this answer up (same address, mode and credentials). Only when the
          browser is signed in, which the pinch_signed_in hint cookie says (design §8.3): signed
          out it would be a 401, an error in the console, and never used. A script, as a <link>
          can't look at a cookie; inline, so it runs before anything else is asked for. -->
     <script>
+      const saved = /(?:^|; )pinch_lang=(en|he)(?=;|$)/.exec(document.cookie)?.[1];
+      const zone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+      const hebrew =
+        navigator.languages.some((l) => /^(he|iw)\b/i.test(l)) ||
+        zone === "Asia/Jerusalem" ||
+        zone === "Asia/Tel_Aviv";
+      const lang = saved ?? (hebrew ? "he" : "en");
+      document.documentElement.lang = lang;
+      document.documentElement.dir = lang === "he" ? "rtl" : "ltr";
+
       if (/(^|; )pinch_signed_in=1/.test(document.cookie)) {
         const queue = document.createElement("link");
         queue.rel = "preload";

@@ -1122,7 +1122,7 @@ as it is today.
 The inline script in `index.html` (§8.3) grows by a few lines, before the queue's preload:
 
 ```js
-const saved = /(?:^|; )pinch_lang=(en|he)/.exec(document.cookie)?.[1];
+const saved = /(?:^|; )pinch_lang=(en|he)(?=;|$)/.exec(document.cookie)?.[1];
 const zone = Intl.DateTimeFormat().resolvedOptions().timeZone;
 const hebrew =
   navigator.languages.some((l) => /^(he|iw)\b/i.test(l)) ||
@@ -1300,9 +1300,11 @@ that adds a string:
   (cook), `/` about 196, the editor about 201, Log in about 200.
 - **Budgets** (the metrics skill's row, raised by the user for M10): 185 → **195** kB on the app's
   routes, 190 → **205** kB on routes that add their own chunk. The user accepted about 10 kB;
-  the measured library is 18, which the second row needs: the editor would be at about 201. I1
-  records the app's own figure, and the observer checks LCP in Hebrew too (the lazy chunk and
-  the reload of a new device).
+  the measured library is 18, which the second row needs: the editor would be at about 201. I2,
+  which adds the libraries, measured the app's own: **+18.0 kB** on every route (app routes
+  157.1 → 175.1, `/` 175.8 → 193.9, the editor 181.3 → 199.4, cook 164.1 → 182.1, Log in
+  180.1 → 198.3; the Hebrew chunk 0.3 kB with only the header's strings), and the observer
+  checks LCP in Hebrew too (the lazy chunk and the reload of a new device).
 
 ### 16.11 Tests
 
