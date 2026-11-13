@@ -2,7 +2,6 @@ import {
   ImportSchema,
   MAX_SCREENSHOT_BYTES,
   MAX_SCREENSHOTS,
-  messages,
   SCREENSHOT_TYPES,
 } from "@pinch/shared";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -100,7 +99,7 @@ export function ScreenshotsUpload() {
 // files, the day's cap (the user's or everyone's), or a plain retry. The files' message is
 // shared's, said in the page's language (design §16.7).
 function errorMessage(refused: boolean, error: Error | null): ReactNode {
-  if (refused) return serverMessage(messages.screenshots);
+  if (refused) return i18next.t("validation.screenshots");
   if (!error) return undefined;
   if (error instanceof ApiError && error.fields.images) return serverMessage(error.fields.images);
   return limitNote(error) ?? i18next.t("imports.couldntSendThese");

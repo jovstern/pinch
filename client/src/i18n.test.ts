@@ -77,3 +77,21 @@ function placeholders(strings: object, prefix = ""): Record<string, string> {
 test("each Hebrew string has its English one's variables (design §16.11)", () => {
   expect(placeholders(he)).toEqual(placeholders(en));
 });
+
+// The server's messages (design §16.7) say their limits in words the client can't check against
+// the schemas: each Hebrew one names the same numbers as its English one ("2000" or "2,000").
+function numbers(text: string) {
+  return [...new Set((text.match(/\d[\d,]*/g) ?? []).map((n) => n.replaceAll(",", "")))].sort();
+}
+
+test("each Hebrew server message has its English one's numbers", () => {
+  for (const [key, text] of Object.entries(en.validation)) {
+    expect(numbers(he.validation[key as keyof typeof en.validation]), key).toEqual(numbers(text));
+  }
+});
+
+// The client finds a message's name by its English text (lib/serverMessage), so each is once.
+test("each server message's English is its own", () => {
+  const texts = Object.values(en.validation);
+  expect(new Set(texts).size).toBe(texts.length);
+});

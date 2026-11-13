@@ -6,6 +6,8 @@ import {
   ImportListSchema,
   ImportSchema,
   linkKey,
+  MAX_SCREENSHOT_BYTES,
+  MAX_SCREENSHOTS,
   messages,
   RecipeSchema,
   type RecipeInput,
@@ -637,6 +639,12 @@ test("POST /api/imports/screenshots keeps them as small JPEGs and answers how ma
     (await api.post(`/api/imports/${sent.id}/approve`).send(draft)).body,
   );
   expect(recipe.source).toEqual({ type: "image" });
+});
+
+// The message writes the limits out (shared/src/messages.ts): they must be the API's own.
+test("the screenshots' message says the API's own limits", () => {
+  expect(messages.screenshots).toContain(`1 to ${String(MAX_SCREENSHOTS)} screenshots`);
+  expect(messages.screenshots).toContain(`${String(MAX_SCREENSHOT_BYTES / 1_000_000)} MB`);
 });
 
 test("screenshots are refused when there are none, more than 4, or one isn't an image", async () => {

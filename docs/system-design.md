@@ -1156,8 +1156,9 @@ change needs nothing else. `index.html`'s own `lang="en"` stays, for a browser w
   heading, "N images", "N recipes match.", "Show N recipes", "N things to fix", "N things to look
   at", the header's hidden "recipe(s)" and the card's "N ingredients".
 - **Numbers and times by `Intl`** with the page's language (`pageLanguage()`), never by hand:
-  `formatNumber` (`lib/formatNumber.ts`, `Intl.NumberFormat`) for minutes, nutrition and the
-  cook page's counts and step counter. The unit stays in the string ("{{minutes}} min",
+  `formatNumber` (`lib/formatNumber.ts`, `Intl.NumberFormat`) for minutes and nutrition, the
+  numbers that can pass 1000; smaller counts (a step's number, how many ingredients) are said as
+  they are. The unit stays in the string ("{{minutes}} min",
   "{{minutes}} דק׳"), which is word for word what Intl's `style: "unit"` says in both languages
   (checked in I8). Intl changes only numbers from 1000 up ("1,440 min", "≈ 1,250 kcal", in
   English too); Hebrew's digits are Western. A plural's `{{count}}` is i18next's, which picks
@@ -1255,7 +1256,7 @@ What the server says that the user reads, found by grep on 2026-11-12:
 | Where | How many | In M10 |
 |---|---|---|
 | `HttpError`s in the routes and `errors.ts` (`signed_out`, `too_many_tries`, `email_taken`, `daily_limit`, `link_pinched_before`, `not_found`…) | 18 | Already shown by `code` and status in the client's own words (`submitError`, `limitNote`, the toasts): those words are translated, except the toasts', which stay English (§16.8); the server's English stays for logs and tests |
-| The shared schemas' field messages (`shared/src/recipe.ts`, `auth.ts`, `import.ts`, `tags.ts`), shown under fields from the client's own check and from the API's 400 `fields` (a few only for a hand-made address: Sort, Time, Source) | 37 | Named in `shared/src/messages.ts` (`titleRequired: "Give the recipe a title."`), which the schemas use; the client turns a message back into its key and shows `t("validation.<key>")` |
+| The shared schemas' field messages (`shared/src/recipe.ts`, `auth.ts`, `import.ts`, `tags.ts`), shown under fields from the client's own check and from the API's 400 `fields` (Sort, Time and Source only in the API's 400 to a direct call; the page drops a bad value) | 37 | Named in `shared/src/messages.ts` (`titleRequired: "Give the recipe a title."`), which the schemas use; the client turns a message back into its key and shows `t("validation.<key>")` |
 | The limit notes (`dailyLimitMessage`, `globalLimitMessage`) | 2 | Already chosen by the 429's code in the client: `limitMessage` stays English for the Retry toast (D46); `limitNote` says it on the page: `t("imports.dailyLimit", { cap: DAILY_IMPORT_CAP })` or `t("imports.globalLimit")` |
 | The worker's failure reasons, stored on the import's `error` (`messages.notARecipe`, `tooLong`, `couldntTurn`; M11's "Instagram wouldn't let Pinch read this post" will be the fourth) | 3 | The same list: the worker stores the English as now; the queue card shows `t()` of its key |
 
@@ -1298,7 +1299,7 @@ that adds a string:
 - **A one-letter prefix joined to Latin or a number** ("ב‑Pinch", "מ‑Instagram", "מ‑5") takes the
   non-breaking hyphen (U+2011, written `\u2011` in `he.ts` so it can be seen): an ASCII hyphen and
   the maqaf both let a line break after them, and "ו-" ended a line at 360 px (I7).
-- **Numbers and times** through `Intl` with `he-IL` (§16.3): Western digits, as Hebrew uses.
+- **Numbers and times** through `Intl` with `he` (§16.3): Western digits, as Hebrew uses.
 - **Plurals** through i18next: `_one`, `_two` where Hebrew has a dual ("שעתיים"), `_other`; each
   form a whole phrase ("מתכון אחד", "2 מתכונים").
 - **Who writes them:** Claude drafts every Hebrew string with its English one; the user, a

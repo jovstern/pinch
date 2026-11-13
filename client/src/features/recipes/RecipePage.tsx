@@ -183,10 +183,12 @@ export function RecipePage() {
 function details(recipe: Recipe) {
   const parts: string[] = [];
   if (recipe.servings) parts.push(i18next.t("recipe.serves", { count: recipe.servings }));
-  if (recipe.prepMinutes)
+  if (recipe.prepMinutes) {
     parts.push(i18next.t("recipe.prep", { minutes: formatNumber(recipe.prepMinutes) }));
-  if (recipe.cookMinutes)
+  }
+  if (recipe.cookMinutes) {
     parts.push(i18next.t("recipe.cookTime", { minutes: formatNumber(recipe.cookMinutes) }));
+  }
   return parts.join(" · ");
 }
 

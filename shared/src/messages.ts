@@ -35,12 +35,14 @@ export const messages = {
   cookRange: "Cook time must be between 0 and 1440 minutes.",
   tooManyTags: "A recipe can have up to 20 tags.",
   tag: "Pick a tag from the list.",
-  // My recipes' address, written by hand (recipe.ts).
+  // My recipes' address (recipe.ts): only in the API's 400 to a direct call; the page drops a
+  // bad value.
   sort: "Sort by newest, quickest or az.",
   time: "Pick a time of 15, 30 or 60.",
   source: "Pick a source from the list.",
-  // Add recipe (import.ts). Screenshots' limits are MAX_SCREENSHOTS and MAX_SCREENSHOT_BYTES,
-  // written out, as the Hebrew writes them.
+  // Add recipe (import.ts). Screenshots' limits are written out, not from MAX_SCREENSHOTS:
+  // import.ts reads this object as it loads (a cycle), and the client finds a message by its
+  // fixed text. A test ties them.
   link: "Paste a link to an Instagram, Facebook or YouTube post.",
   linkOrText: "Paste a link or the recipe's text.",
   linkTooLong: "Keep the link under 2000 characters.",

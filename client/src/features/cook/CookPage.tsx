@@ -3,7 +3,6 @@ import { useId, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useParams } from "react-router";
 import { Breadcrumb } from "../../components/ui/Breadcrumb.tsx";
-import { formatNumber } from "../../lib/formatNumber.ts";
 import { isolate } from "../../lib/isolate.ts";
 import { useMediaQuery } from "../../lib/useMediaQuery.ts";
 import { RecipeLoadError } from "../recipes/RecipeLoadError.tsx";
@@ -98,7 +97,7 @@ export function CookPage() {
         {wide && (
           <section className="rounded-card border border-border p-5">
             <h2 id={allId} className="text-xl font-semibold">
-              {t("cook.allIngredients", { number: formatNumber(recipe.ingredients.length) })}
+              {t("cook.allIngredients", { number: recipe.ingredients.length })}
             </h2>
             <div className="mt-3">{checklist}</div>
           </section>
@@ -125,7 +124,7 @@ export function CookPage() {
           {!wide && (
             <details className="mt-4">
               <summary id={allId} className="cursor-pointer py-2.5 font-semibold">
-                {t("cook.allIngredients", { number: formatNumber(recipe.ingredients.length) })}
+                {t("cook.allIngredients", { number: recipe.ingredients.length })}
               </summary>
               {checklist}
             </details>

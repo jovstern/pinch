@@ -5,8 +5,8 @@ import type { ReactNode } from "react";
 type MessageKey = keyof typeof messages;
 
 // Each of shared's messages' names, by its English text.
-const keys = new Map(
-  Object.entries(messages).map(([key, text]) => [text as string, key as MessageKey]),
+const keys = new Map<string, MessageKey>(
+  Object.entries(messages).map(([key, text]) => [text, key as MessageKey]),
 );
 
 // A message the server wrote, in English (design §16.7, D44): a field's, from the shared schemas
