@@ -50,7 +50,7 @@ export function Header({ onTabPage }: { onTabPage: boolean }) {
           in the dark accent in the dark theme. Its height is set and the files give its width,
           so nothing moves as it loads; asked for at low priority, so it waits behind what the
           page's content needs (LCP). On a phone the 44 px target reaches into the gutter
-          (-ml-4 pl-4, and -mr-2 for the gap), so the mark lines up with the page's edge and
+          (-ms-4 ps-4, and -me-2 for the gap), so the mark lines up with the page's edge and
           takes 28 px from the tabs; under 360 px they need the whole row ("Add recipe 13",
           "My recipes 120"), so there is no mark there. The focus ring is the mark's: the
           target's would be cut off at the screen's edge (! over the global ring, which is
@@ -58,7 +58,7 @@ export function Header({ onTabPage }: { onTabPage: boolean }) {
       <Link
         to="/"
         aria-label={t("header.home")}
-        className="group -mr-2 -ml-4 hidden min-h-11 w-11 shrink-0 items-center pl-4 focus-visible:outline-none! min-[22.5rem]:flex md:mx-0 md:w-auto md:pl-0"
+        className="group -ms-4 -me-2 hidden min-h-11 w-11 shrink-0 items-center ps-4 focus-visible:outline-none! min-[22.5rem]:flex md:mx-0 md:w-auto md:ps-0"
       >
         <picture>
           <source
@@ -125,8 +125,8 @@ export function Header({ onTabPage }: { onTabPage: boolean }) {
         asChild
         variant="outline"
         className={cn(
-          "md:static md:ml-auto md:inline-flex md:rounded-control md:shadow-none",
-          onTabPage ? "fixed right-4 bottom-5 z-10 rounded-full shadow-sheet" : "hidden",
+          "md:static md:ms-auto md:inline-flex md:rounded-control md:shadow-none",
+          onTabPage ? "fixed end-4 bottom-5 z-10 rounded-full shadow-sheet" : "hidden",
         )}
       >
         <Link to="/recipes/new" aria-current={pathname === "/recipes/new" ? "page" : undefined}>

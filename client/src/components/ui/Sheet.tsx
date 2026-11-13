@@ -32,7 +32,7 @@ export function SheetContent({
       >
         {children}
         <SheetPrimitive.Close asChild>
-          <Button variant="ghost" aria-label="Close" className="absolute top-2 right-2 px-3">
+          <Button variant="ghost" aria-label="Close" className="absolute end-2 top-2 px-3">
             <X aria-hidden="true" className="size-5" />
           </Button>
         </SheetPrimitive.Close>

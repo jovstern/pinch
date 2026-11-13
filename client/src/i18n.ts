@@ -11,6 +11,12 @@ export function pageLanguage(): Language {
   return document.documentElement.lang === "he" ? "he" : "en";
 }
 
+// The interface's direction, which index.html's script set with the language: right to left in
+// Hebrew (design §16.4). Read where CSS can't follow dir by itself: Radix, Sonner, cook mode's row.
+export function pageIsRtl() {
+  return document.documentElement.dir === "rtl";
+}
+
 // t()'s keys are en's, so a key that isn't there fails tsc (§16.3).
 declare module "i18next" {
   interface CustomTypeOptions {

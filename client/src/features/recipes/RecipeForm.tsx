@@ -621,7 +621,7 @@ function AddButton({ ref, onClick, children }: AddButtonProps) {
       type="button"
       variant="ghost"
       onClick={onClick}
-      className="-ml-3 justify-self-start"
+      className="-ms-3 justify-self-start"
     >
       <Plus aria-hidden="true" className="size-4" />
       {children}

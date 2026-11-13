@@ -1177,7 +1177,10 @@ change needs nothing else. `index.html`'s own `lang="en"` stays, for a browser w
   already follow `dir`.
 - **The test:** a Vitest file reads every `.ts` and `.tsx` in `client/src` and fails on a
   physical class (`ml-`, `mr-`, `pl-`, `pr-`, `left-`, `right-`, `text-left`, `text-right`,
-  `rounded-l`, `rounded-r`, `border-l`, `border-r`), naming the file and line.
+  `rounded-l`, `rounded-r`, `border-l`, `border-r`; also negative, with `!`, the corners
+  `rounded-tl`…, `scroll-ml`… and `float-`/`clear-left`), naming the file and line. It matches
+  classes, not words: margin, padding and inset need a value after them (a number, `px`, `auto`,
+  `full`, `[…]`), so prose ("the top left corner", "bottom-right") passes.
 - **Icons that mirror** (`rtl:-scale-x-100`): those that point the reading way. ChevronLeft and
   ChevronRight (cook mode's ‹ ›, a breadcrumb's separator), ExternalLink (its arrow leaves toward
   the end), LogOut (its arrow too), and any back, forward or send arrow added later. **Not
@@ -1208,8 +1211,8 @@ change needs nothing else. `index.html`'s own `lang="en"` stays, for a browser w
   have it since M5 and U11); the queue card's title and pasted text; a draft's "things to look
   at" reasons (in the recipe's language already, §9); the user's name in the menu; the breadcrumb's
   title. A list (ingredients, steps) takes it once, on the list: a recipe is in one language.
-- `dir="ltr"` on links and emails, wherever shown: the queue card's link, the source link's
-  text, the email in the menu and in Forgot password's answer, the email fields.
+- `dir="ltr"` on links and emails, wherever shown: the queue card's link, the email in the menu
+  and in Forgot password's answer, the email fields (TextField gives `type="email"` it).
 - **The import card** follows the interface again: today its lines are `dir="ltr"` "until the
   app is localised" (#113, the user's call on 2026-11-12). In M10 the card is laid out by the
   interface's direction, its title and pasted text `dir="auto"`, and a link `dir="ltr"`. This

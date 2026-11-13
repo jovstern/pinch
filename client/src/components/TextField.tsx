@@ -60,8 +60,9 @@ export function TextField({
     name: field.name,
     value: field.state.value,
     placeholder,
-    // Hebrew reads right to left, English left to right: each box follows what's typed in it.
-    dir: "auto",
+    // Hebrew reads right to left, English left to right: each box follows what's typed in it. An
+    // email is always left to right, in either language (D43, design §16.5).
+    dir: type === "email" ? "ltr" : "auto",
     onBlur: field.handleBlur,
     "aria-invalid": invalid,
     "aria-describedby": describedBy.length > 0 ? describedBy.join(" ") : undefined,

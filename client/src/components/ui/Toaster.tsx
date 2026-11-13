@@ -1,9 +1,11 @@
 import { CircleCheck, TriangleAlert } from "lucide-react";
 import type { CSSProperties } from "react";
 import { Toaster as Sonner } from "sonner";
+import { pageIsRtl } from "../../i18n.ts";
 import { useMediaQuery } from "../../lib/useMediaQuery.ts";
 
-// md: Tailwind's 768 px, where the toasts move from the top to the bottom right (design §14).
+// md: Tailwind's 768 px, where the toasts move from the top to the bottom corner on the end side:
+// the right, or the left in Hebrew (design §14, §16.4).
 const wide = "(min-width: 48rem)";
 // On a phone, under the header (its tabs, 64 px), so a toast never covers them.
 const belowHeader = { top: "4.5rem" };
@@ -18,9 +20,11 @@ const focusRing =
 // alwaysTop keeps them at the top on every width (the page says why: Layout).
 export function Toaster({ alwaysTop }: { alwaysTop: boolean }) {
   const atBottom = useMediaQuery(wide) && !alwaysTop;
+  const rtl = pageIsRtl();
   return (
     <Sonner
-      position={atBottom ? "bottom-right" : "top-center"}
+      dir={rtl ? "rtl" : "ltr"}
+      position={atBottom ? (rtl ? "bottom-left" : "bottom-right") : "top-center"}
       // Both: Sonner's phone rule (mobileOffset) stops at 600 px, the header's at 768.
       offset={atBottom ? undefined : belowHeader}
       mobileOffset={belowHeader}
@@ -43,15 +47,16 @@ export function Toaster({ alwaysTop }: { alwaysTop: boolean }) {
         // Important (!): Sonner's own rules are more specific than a utility. The action is a
         // link-like button, as in the wireframe, 44 px tall for a thumb (ui-craft); the close
         // button stays a small mark but takes 44 px of touch (the after: around it), inside the
-        // top right corner rather than astride the top left one, with room kept for it (pr-8).
+        // top corner on the end side rather than astride the start one, with room kept for it
+        // (pe-8). Logical (end, start, pe), so Hebrew mirrors it (design §16.4).
         // On a phone a description keeps to one line, so a toast covers less of the page (the
         // card says the rest).
         classNames: {
-          toast: `shadow-sheet! text-sm! has-[[data-close-button]]:pr-8! ${focusRing}`,
+          toast: `shadow-sheet! text-sm! has-[[data-close-button]]:pe-8! ${focusRing}`,
           title: "font-semibold!",
           description: "text-muted-foreground! max-md:line-clamp-1!",
           actionButton: `h-11! bg-transparent! px-3! text-sm! font-semibold! text-primary! underline! underline-offset-4 ${focusRing}`,
-          closeButton: `top-1.5! right-1.5! left-auto! transform-none! after:absolute after:-inset-3.5 after:content-[''] ${focusRing}`,
+          closeButton: `start-auto! end-1.5! top-1.5! transform-none! after:absolute after:-inset-3.5 after:content-[''] ${focusRing}`,
         },
       }}
     />
