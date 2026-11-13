@@ -241,6 +241,8 @@ test("a picture that isn't https on Google's image host is ignored, and the sign
     "https://example.com/photo.jpg",
     "https://googleusercontent.com.example.com/photo.jpg",
     "javascript:alert(1)",
+    // A user name before the @: the host is evil.com.
+    "https://x.googleusercontent.com@evil.com/p",
     42,
   ]) {
     const response = await callBack(await start("/recipes"), { ...googleUser(), picture });
@@ -250,6 +252,17 @@ test("a picture that isn't https on Google's image host is ignored, and the sign
     expect(me.body).toMatchObject({ name: "Dana" });
     expect(me.body).not.toHaveProperty("picture");
   }
+});
+
+test("a picture's address is kept as a browser reads it, not as written", async () => {
+  // Without "//", which a browser would read as a path on our own site.
+  const response = await callBack(await start(), {
+    ...googleUser(),
+    picture: "https:lh3.googleusercontent.com/p",
+  });
+
+  const me = await request(app).get("/api/auth/me").set("Cookie", sessionCookie(response));
+  expect(me.body).toMatchObject({ picture: "https://lh3.googleusercontent.com/p" });
 });
 
 test("a password account linked by Google gets the picture", async () => {

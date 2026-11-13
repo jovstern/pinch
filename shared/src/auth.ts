@@ -50,7 +50,9 @@ export const MeSchema = z.object({
   name: z.string(),
   language: LanguageSchema,
   // Google's profile picture, for the avatar; none for an account that never signed in with Google.
-  picture: z.url().optional(),
+  // A plain string: the server checks it at sign-in (§8.3), and the avatar's onError covers an
+  // address that doesn't load; a stricter parse here would fail me, and with it the whole app.
+  picture: z.string().optional(),
 });
 export type Me = z.infer<typeof MeSchema>;
 

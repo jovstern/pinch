@@ -642,7 +642,9 @@ the browser's console). Another user's recipe or import is a 404, as before. The
   **The picture (the user, 2026-11-13):** the ID token's `picture` claim (it comes with the
   `profile` scope) is the avatar's (§14). It's kept as `picture` on the account only when it is an
   `https` address whose host ends `.googleusercontent.com`, Google's image host (Zod's `z.url`
-  with a protocol and a hostname pattern, which reads the host as a browser does); anything else
+  with a protocol and a hostname pattern, which reads the host as a browser does, and
+  `normalize`, so it's stored as the parser writes it: `https:lh3…` becomes `https://lh3…`, not
+  a relative address); anything else
   is as none and doesn't stop the sign-in, so the page never loads a picture from another origin.
   Every Google sign-in sets it again, or removes it when the claim is missing: Google's addresses
   change, and a picture the user removed on Google goes here too. All three ways in get it (a
@@ -879,7 +881,7 @@ recipe** (its badge counts drafts ready to review) and **My recipes**, then the 
 user's Google picture (§8.3), else the first letter of their name, in a 44 px circle (the
 picture: `alt=""`, as the button is named "Your account"; `referrerPolicy="no-referrer"`, as
 Google's image host can answer 403 to a request with a referrer; a fixed 44 × 44 box, so nothing
-moves as it loads; Google's `=s96-c` size suffix asked as `=s132-c`, the circle on a 3× screen;
+moves as it loads; Google's size suffix (`=s96-c` or `=s96`) asked as `=s132-c`, the circle on a 3× screen;
 one that fails to load gives way to the letter, as a recipe's thumbnail does, never a broken
 image), which opens a menu (not modal, loaded on its first
 press as ⋯ is), 288 px wide, with the name and email (a long one cut, whole in its title), then Language, its two choices

@@ -225,6 +225,16 @@ test("the avatar shows the user's Google picture, at the avatar's size, sent wit
   expect(avatar).not.toHaveTextContent("D");
 });
 
+test("a picture whose address ends with a size but no crop is asked at the avatar's size too", () => {
+  stubFetch(notFound);
+  renderApp("/nope", { me: { ...testUser, picture: "https://lh3.googleusercontent.com/a/p=s96" } });
+  const avatar = screen.getByRole("button", { name: "Your account" });
+  expect(within(avatar).getByRole("presentation")).toHaveAttribute(
+    "src",
+    "https://lh3.googleusercontent.com/a/p=s132-c",
+  );
+});
+
 test("without a picture, the avatar shows the name's first letter", () => {
   stubFetch(notFound);
   renderApp("/nope");

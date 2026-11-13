@@ -17,14 +17,14 @@ export function Avatar({ me, ...props }: { me: Me } & ComponentProps<"button">) 
       variant="secondary"
       aria-label={t("header.account")}
       aria-haspopup="menu"
-      className="size-11 shrink-0 rounded-full px-0 text-lg"
+      className="group size-11 shrink-0 rounded-full px-0 text-lg"
       {...props}
     >
       {picture ? (
         <img
-          // Google's address ends with its size, "=s96-c" (96 px, cropped square): 132 is the 44 px
-          // circle on a 3× screen. An address without it is used as it is.
-          src={picture.replace(/=s\d+-c$/, "=s132-c")}
+          // Google's address ends with its size, "=s96-c" (96 px, cropped square) or "=s96": 132,
+          // cropped, is the 44 px circle on a 3× screen. An address without it is used as it is.
+          src={picture.replace(/=s\d+(-c)?$/, "=s132-c")}
           // The button has the name; the picture adds nothing to it.
           alt=""
           // Google's image host can refuse a request that names the page it's on (a 403).
@@ -35,7 +35,8 @@ export function Avatar({ me, ...props }: { me: Me } & ComponentProps<"button">) 
           onError={() => {
             setFailedPicture(picture);
           }}
-          className="size-full rounded-full object-cover"
+          // The button's hover and press, which its background can't show under the picture.
+          className="size-full rounded-full object-cover group-hover:opacity-90 group-active:opacity-80"
         />
       ) : (
         <span aria-hidden="true">{me.name.charAt(0).toUpperCase()}</span>
