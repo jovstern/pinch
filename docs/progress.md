@@ -181,7 +181,7 @@ exactly as it is: each slice's English screens look the same before and after.
       interface's language, any text still allowed; the ARIA combobox pattern; tests. Also the
       Unit's example ("g") that stays once a row has its name: `form.Field mode="array"` only
       draws again on add or remove, so `example` is stale; read the name through `form.Subscribe`
-- [ ] End of milestone: UI review in both languages (each screen at 360 and 1440 px in Hebrew),
+- [x] End of milestone: UI review in both languages (each screen at 360 and 1440 px in Hebrew),
       observer (budgets, LCP in Hebrew too), e2e with axe in Hebrew and the switch flow, demo
 
 After M10 (found by M10's UI review, not M10's to fix):
@@ -190,6 +190,8 @@ After M10 (found by M10's UI review, not M10's to fix):
 - [ ] An English title's alignment on a Hebrew recipe page at desktop width (the review's S6)
 - [ ] The quick-tag chips at 40 px, under the 44 px touch target (the review's S7)
 - [ ] The top toast covers the paste field on a phone (the review's S8)
+- [ ] Move the English strings out of the entry (about 6.5 kB gzip that Hebrew users never use):
+      frees room on every route and cook's LCP (2.46 of 2.5 s); changes §16.3
 
 ## M11 — Pinch online (design §15, §8.3, D31–D38)
 
