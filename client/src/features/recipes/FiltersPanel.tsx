@@ -1,4 +1,5 @@
 import { useId } from "react";
+import { useTranslation } from "react-i18next";
 import { Button } from "../../components/ui/Button.tsx";
 import { FilterChoices } from "./FilterChoices.tsx";
 import type { RecipeFilters } from "./recipeQueries.ts";
@@ -15,6 +16,7 @@ type FiltersPanelProps = {
 // Sort, which sits beside the search, as radios and checkboxes (design §14). The grid updates as
 // they're picked.
 export function FiltersPanel({ filters, onChange, filtered, onClear }: FiltersPanelProps) {
+  const { t } = useTranslation();
   const headingId = useId();
   return (
     // Its own column, held in view as the grid scrolls (sticky), and no taller than the screen
@@ -27,7 +29,7 @@ export function FiltersPanel({ filters, onChange, filtered, onClear }: FiltersPa
     >
       <div className="mb-4 flex min-h-11 items-center justify-between">
         <h2 id={headingId} className="font-sans text-lg font-semibold">
-          Filters
+          {t("filters.filters")}
         </h2>
         {filtered && (
           <Button
@@ -36,7 +38,7 @@ export function FiltersPanel({ filters, onChange, filtered, onClear }: FiltersPa
             className="px-2 text-sm underline underline-offset-4"
             onClick={onClear}
           >
-            Clear
+            {t("filters.clear")}
           </Button>
         )}
       </div>

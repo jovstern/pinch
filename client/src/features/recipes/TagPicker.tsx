@@ -1,6 +1,6 @@
 import { tagFacets } from "@pinch/shared";
 import { ChoiceGroup } from "./ChoiceGroup.tsx";
-import { facetNames, facets, tagLabel } from "./tagLabels.ts";
+import { facetName, facets, tagLabel } from "./tagLabels.ts";
 
 type TagPickerProps = {
   // Read, not shown: where it's used, a heading or title above already names the tags.
@@ -24,7 +24,7 @@ export function TagPicker({ legend, selected, onChange, look = "chips" }: TagPic
       {facets.map((facet) => (
         <ChoiceGroup
           key={facet}
-          legend={facetNames[facet]}
+          legend={facetName(facet)}
           type="checkbox"
           choices={tagFacets[facet].map((value) => {
             const tag = `${facet}:${value}`;

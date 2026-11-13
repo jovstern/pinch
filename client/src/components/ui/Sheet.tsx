@@ -1,6 +1,7 @@
 import type { ComponentProps } from "react";
 import { X } from "lucide-react";
 import { Dialog as SheetPrimitive } from "radix-ui";
+import { useTranslation } from "react-i18next";
 import { cn } from "../../lib/cn.ts";
 import { Button } from "./Button.tsx";
 
@@ -20,6 +21,7 @@ export function SheetContent({
   children,
   ...props
 }: ComponentProps<typeof SheetPrimitive.Content>) {
+  const { t } = useTranslation();
   return (
     <SheetPrimitive.Portal>
       <SheetPrimitive.Overlay className="fixed inset-0 z-50 bg-scrim/50" />
@@ -32,7 +34,7 @@ export function SheetContent({
       >
         {children}
         <SheetPrimitive.Close asChild>
-          <Button variant="ghost" aria-label="Close" className="absolute end-2 top-2 px-3">
+          <Button variant="ghost" aria-label={t("ui.close")} className="absolute end-2 top-2 px-3">
             <X aria-hidden="true" className="size-5" />
           </Button>
         </SheetPrimitive.Close>

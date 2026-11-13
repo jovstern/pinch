@@ -1,5 +1,6 @@
 import { ChevronRight } from "lucide-react";
 import { Fragment } from "react";
+import { useTranslation } from "react-i18next";
 import { Link } from "react-router";
 
 type BreadcrumbProps = {
@@ -16,8 +17,9 @@ type BreadcrumbProps = {
 // ellipsis, never the first crumb (the way back), and at 28 characters on every width, so a long
 // title never pushes "Cook" or "Edit" to the far side of a wide screen.
 export function Breadcrumb({ links, page }: BreadcrumbProps) {
+  const { t } = useTranslation();
   return (
-    <nav aria-label="Breadcrumb">
+    <nav aria-label={t("ui.breadcrumb")}>
       <ol className="-mx-1 flex items-center gap-1 text-sm text-muted-foreground">
         {links.map((link, index) => (
           <Fragment key={link.to}>

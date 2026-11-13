@@ -1,4 +1,5 @@
 import { PlatformSchema, type Recipe } from "@pinch/shared";
+import i18next from "i18next";
 import { Link } from "react-router";
 import { RecipeFace } from "../../components/RecipeFace.tsx";
 import { Thumbnail } from "../../components/Thumbnail.tsx";
@@ -68,7 +69,8 @@ export function RecipeCard({ recipe, eager }: RecipeCardProps) {
 // "10 min · 2 ingredients", as the wireframe; no time when the recipe has none.
 function summary(recipe: Recipe) {
   const minutes = (recipe.prepMinutes ?? 0) + (recipe.cookMinutes ?? 0);
-  const count = recipe.ingredients.length;
-  const ingredients = count === 1 ? "1 ingredient" : `${String(count)} ingredients`;
-  return minutes > 0 ? `${String(minutes)} min · ${ingredients}` : ingredients;
+  const ingredients = i18next.t("recipes.ingredients", { count: recipe.ingredients.length });
+  return minutes > 0
+    ? `${i18next.t("recipes.minutes", { minutes })} · ${ingredients}`
+    : ingredients;
 }

@@ -126,10 +126,9 @@ test("Undo on Delete's toast restores the recipe, and View opens it", async () =
 test("in Hebrew, Delete's toast is in English, left to right, the title in its <bdi>", async () => {
   stubApi();
   await renderInHebrew(`/recipes/${omelette.id}`);
-  // The recipe's page and its dialog are still English until I6.
-  await chooseDelete();
-  const dialog = await screen.findByRole("alertdialog", { name: "Delete this recipe?" });
-  await userEvent.click(within(dialog).getByRole("button", { name: "Delete" }));
+  await chooseDelete(hebrewMenu);
+  const dialog = await screen.findByRole("alertdialog", { name: "למחוק את המתכון?" });
+  await userEvent.click(within(dialog).getByRole("button", { name: "למחוק" }));
   // The toasts are English in both languages (design §16.8, D46).
   const undo = await toastButton("Deleted Omelette", "Undo");
   const toast = undo.closest("li");
@@ -150,7 +149,9 @@ test("Keep it closes the question without deleting", async () => {
   renderApp(`/recipes/${omelette.id}`);
 
   await chooseDelete();
-  await userEvent.click(await screen.findByRole("button", { name: "Keep it" }));
+  const dialog = await screen.findByRole("alertdialog", { name: "Delete this recipe?" });
+  expect(dialog).toHaveAccessibleDescription("“Omelette” will be deleted from My recipes.");
+  await userEvent.click(within(dialog).getByRole("button", { name: "Keep it" }));
 
   expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
   // Focus goes back to ⋯, for a keyboard to carry on from there (a tick later: Radix's way).
@@ -255,10 +256,12 @@ test("a recipe from a link names its site and links to the post, in a new tab", 
   expect(screen.queryByText(/Written by you/)).not.toBeInTheDocument();
 });
 
-// Delete is in the ⋯ menu.
-async function chooseDelete() {
-  await userEvent.click(await screen.findByRole("button", { name: "More actions" }));
-  await userEvent.click(await screen.findByRole("menuitem", { name: "Delete…" }));
+// Delete is in the ⋯ menu, named in the page's language.
+const englishMenu = { more: "More actions", delete: "Delete…" };
+const hebrewMenu = { more: "פעולות נוספות", delete: "למחוק…" };
+async function chooseDelete(names = englishMenu) {
+  await userEvent.click(await screen.findByRole("button", { name: names.more }));
+  await userEvent.click(await screen.findByRole("menuitem", { name: names.delete }));
 }
 
 test("a recipe opened from My recipes shows at once, from the list, while it loads", async () => {
@@ -276,4 +279,91 @@ test("a recipe opened from My recipes shows at once, from the list, while it loa
 
   expect(screen.getByRole("heading", { level: 1, name: "Omelette" })).toBeInTheDocument();
   expect(screen.queryByText("Loading the recipe…")).not.toBeInTheDocument();
+});
+
+// In Hebrew (design §16.11): the page's own words are Hebrew; the recipe keeps its own (§16.5).
+test("in Hebrew, a recipe's page says its details, sections and tags in Hebrew", async () => {
+  stubFetch(() =>
+    Promise.resolve(
+      Response.json({ ...omelette, servings: 4, cookMinutes: 10, source: { type: "text" } }),
+    ),
+  );
+  await renderInHebrew(`/recipes/${omelette.id}`);
+
+  expect(await screen.findByRole("heading", { level: 1, name: "Omelette" })).toHaveAttribute(
+    "dir",
+    "auto",
+  );
+  expect(document.title).toBe("Omelette · Pinch");
+  expect(screen.getByText(/הכנה 5 דק׳/)).toHaveTextContent(
+    "מטקסט מודבק · 4 מנות · הכנה 5 דק׳ · בישול 10 דק׳",
+  );
+  expect(screen.getByText(/קק״ל/)).toHaveTextContent(
+    "≈ 251 קק״ל · 13 גרם חלבון · 1 גרם פחמימות · 22 גרם שומן למנה (הערכה)",
+  );
+  const tags = screen.getByRole("list", { name: "תגיות" });
+  expect(
+    within(tags)
+      .getAllByRole("listitem")
+      .map((item) => item.textContent),
+  ).toEqual(["ארוחת בוקר", "מזרח תיכוני"]);
+  // The tag's code stays in the address (D46).
+  expect(within(tags).getByRole("link", { name: "ארוחת בוקר" })).toHaveAttribute(
+    "href",
+    "/recipes?tags=meal%3Abreakfast",
+  );
+  expect(screen.getByRole("list", { name: "מצרכים" })).toBeInTheDocument();
+  expect(screen.getByRole("list", { name: "אופן ההכנה" })).toBeInTheDocument();
+  expect(screen.getByRole("link", { name: "לבשל" })).toHaveAttribute(
+    "href",
+    `/recipes/${omelette.id}/cook`,
+  );
+  expect(screen.getByRole("heading", { level: 2, name: "תגובות" })).toBeInTheDocument();
+  const breadcrumb = screen.getByRole("navigation", { name: "נתיב ניווט" });
+  expect(within(breadcrumb).getByRole("link", { name: "המתכונים שלי" })).toHaveAttribute(
+    "href",
+    "/recipes",
+  );
+  // Its separator points the reading way, so it mirrors (design §16.4).
+  expect(breadcrumb.querySelector("svg")).toHaveClass("rtl:-scale-x-100");
+});
+
+test("in Hebrew, one serving is said in words, and a post's link opens in a new tab", async () => {
+  const url = "https://www.instagram.com/reel/abc123/";
+  stubFetch(() =>
+    Promise.resolve(Response.json({ ...omelette, source: { type: "instagram", url } })),
+  );
+  await renderInHebrew(`/recipes/${omelette.id}`);
+
+  // The site's name stays as it is (D46).
+  expect(
+    await screen.findByRole("link", { name: /^Instagram.*נפתח בכרטיסייה חדשה/ }),
+  ).toHaveAttribute("href", url);
+  expect(screen.getByText(/מנה אחת/)).toHaveTextContent(
+    "Instagram (נפתח בכרטיסייה חדשה) · מנה אחת · הכנה 5 דק׳",
+  );
+});
+
+test("in Hebrew, ⋯ holds Edit, Share and Delete, and Delete's question holds the title in its <bdi>", async () => {
+  stubApi();
+  await renderInHebrew(`/recipes/${omelette.id}`);
+
+  await userEvent.click(await screen.findByRole("button", { name: "פעולות נוספות" }));
+  const menu = await screen.findByRole("menu");
+  expect(within(menu).getByRole("menuitem", { name: "לערוך" })).toHaveAttribute(
+    "href",
+    `/recipes/${omelette.id}/edit`,
+  );
+  expect(within(menu).getByRole("menuitem", { name: "לשתף · בקרוב" })).toHaveAttribute(
+    "aria-disabled",
+    "true",
+  );
+  await userEvent.click(within(menu).getByRole("menuitem", { name: "למחוק…" }));
+
+  const dialog = await screen.findByRole("alertdialog", { name: "למחוק את המתכון?" });
+  // An English title in a Hebrew sentence keeps its own direction (design §16.5).
+  expect(dialog).toHaveAccessibleDescription('המתכון "Omelette" יימחק מהמתכונים שלי.');
+  expect(within(dialog).getByText("Omelette").tagName).toBe("BDI");
+  await userEvent.click(within(dialog).getByRole("button", { name: "להשאיר" }));
+  expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
 });

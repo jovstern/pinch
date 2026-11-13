@@ -1,5 +1,6 @@
 import { SlidersHorizontal } from "lucide-react";
 import { lazy, Suspense, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { ErrorBoundary } from "../../components/ErrorBoundary.tsx";
 import { Badge } from "../../components/ui/Badge.tsx";
 import { Button } from "../../components/ui/Button.tsx";
@@ -23,6 +24,7 @@ type FiltersButtonProps = {
 
 // The Filters button, on a phone (design §14), and the sheet it opens.
 export function FiltersButton({ filters, onChange }: FiltersButtonProps) {
+  const { t } = useTranslation();
   // Open while it's on the page: closing takes it away.
   const [open, setOpen] = useState(false);
   const buttonRef = useRef<HTMLButtonElement>(null);
@@ -42,13 +44,13 @@ export function FiltersButton({ filters, onChange }: FiltersButtonProps) {
         }}
       >
         <SlidersHorizontal aria-hidden="true" className="size-4" />
-        Filters
+        {t("filters.filters")}
         {/* "Filters 2 applied" to a screen reader (as the Add recipe tab's count). */}
         {count > 0 && (
           <>
             {" "}
             <Badge className="min-w-6 px-1.5 py-0 text-xs font-semibold">{count}</Badge>{" "}
-            <span className="sr-only">applied</span>
+            <span className="sr-only">{t("filters.applied")}</span>
           </>
         )}
       </Button>

@@ -1,7 +1,10 @@
 import { useInfiniteQuery } from "@tanstack/react-query";
+import i18next from "i18next";
 import { useEffect, useRef } from "react";
+import { useTranslation } from "react-i18next";
 import { Link, useSearchParams } from "react-router";
 import { ShoppingBasket, X } from "lucide-react";
+import { InSentence } from "../../components/InSentence.tsx";
 import { Badge } from "../../components/ui/Badge.tsx";
 import { Button } from "../../components/ui/Button.tsx";
 import { Skeleton } from "../../components/ui/Skeleton.tsx";
@@ -24,6 +27,7 @@ import {
 
 // The My recipes tab, at /recipes (design §14, D24).
 export function RecipeListPage() {
+  const { t } = useTranslation();
   // The filters live in the address, so a reload, Back or a shared link keeps them (ui-craft).
   const [searchParams, setSearchParams] = useSearchParams();
   const filters = readFilters(searchParams);
@@ -95,19 +99,16 @@ export function RecipeListPage() {
   // By the data, not the status: a failed next page or refetch turns the status to "error" and
   // keeps the list.
   const noMatch = filtering && !isPlaceholderData && recipes?.length === 0;
-  // What narrowed it, as typed and picked: “soup”, 30 min or less, italian.
-  const asked = applied.map(({ label }) => label);
-  if (filters.q !== "") asked.unshift(`“${filters.q}”`);
   // Not before the first recipe: there's nothing to search yet. Known only once a list without
   // filters has loaded, so the search box stays while one loads (it keeps its focus).
   const noRecipesYet = !filtering && !isPlaceholderData && recipes?.length === 0;
 
   return (
     <>
-      <title>My recipes · Pinch</title>
+      <title>{`${t("header.myRecipes")} · Pinch`}</title>
       {/* The selected tab names the page on screen; the heading names it for screen readers. */}
       <h1 ref={headingRef} tabIndex={-1} className="sr-only">
-        My recipes
+        {t("header.myRecipes")}
       </h1>
 
       {/* From 1024 px the panel's ~35 checkboxes come first, on screen and to the keyboard
@@ -122,7 +123,7 @@ export function RecipeListPage() {
             searchRef.current?.focus();
           }}
         >
-          Skip the filters
+          {t("recipes.skipFilters")}
         </Button>
       )}
 
@@ -172,7 +173,7 @@ export function RecipeListPage() {
                     <Button
                       type="button"
                       variant="ghost"
-                      aria-label={`Remove ${label}`}
+                      aria-label={t("recipes.removeFilter", { label })}
                       className="relative min-h-8 rounded-full px-2 after:absolute after:-inset-x-1.5 after:-inset-y-1.5 after:content-['']"
                       onClick={() => {
                         clearFilters(without);
@@ -191,7 +192,7 @@ export function RecipeListPage() {
                       clearFilters({ ...noFilters, sort: filters.sort });
                     }}
                   >
-                    Clear all
+                    {t("recipes.clearAll")}
                   </Button>
                 )}
               </div>
@@ -200,7 +201,7 @@ export function RecipeListPage() {
 
           {status === "pending" && (
             <>
-              <p className="sr-only">Loading your recipes…</p>
+              <p className="sr-only">{t("recipes.loading")}</p>
               {/* Placeholders in the cards' shape, so nothing jumps when they arrive. */}
               <ul aria-hidden="true" className={gridClasses}>
                 {[1, 2, 3, 4].map((n) => (
@@ -218,7 +219,7 @@ export function RecipeListPage() {
           {/* Centred, as the empty states. */}
           {isLoadingError && (
             <div role="alert" className="mt-10 text-center">
-              <h2 className="text-xl font-semibold">We couldn't load your recipes</h2>
+              <h2 className="text-xl font-semibold">{t("recipes.couldntLoad")}</h2>
               {/* The status stays "error" while it retries, so the button shows the wait. */}
               <Button
                 type="button"
@@ -228,16 +229,22 @@ export function RecipeListPage() {
                 aria-busy={isFetching}
                 className="mt-4"
               >
-                {isFetching ? "Trying…" : "Try again"}
+                {isFetching ? t("auth.trying") : t("auth.tryAgain")}
               </Button>
             </div>
           )}
 
           {noMatch && (
             <div className="mt-10 text-center">
-              <h2 className="text-xl font-semibold">No recipes match</h2>
-              <p dir="auto" className="mt-2 text-pretty text-muted-foreground">
-                {asked.join(", ")}
+              <h2 className="text-xl font-semibold">{t("recipes.noMatch")}</h2>
+              {/* What narrowed it, as typed and picked: “soup”, 30 min or less, italian. In the
+                  page's direction, the search in its own <bdi> (design §16.5). */}
+              <p className="mt-2 text-pretty text-muted-foreground">
+                {filters.q !== "" && (
+                  <InSentence sentence={(q) => t("recipes.searched", { q })} text={filters.q} />
+                )}
+                {filters.q !== "" && applied.length > 0 && ", "}
+                {applied.map(({ label }) => label).join(", ")}
               </p>
               <Button
                 type="button"
@@ -248,7 +255,7 @@ export function RecipeListPage() {
                 }}
               >
                 {/* Named for what it clears: only a search is on, or filters too. */}
-                {applied.length === 0 ? "Clear search" : "Clear filters"}
+                {applied.length === 0 ? t("recipes.clearSearch") : t("recipes.clearFilters")}
               </Button>
               {/* The words may be there without the filters. */}
               {filters.q !== "" && applied.length > 0 && (
@@ -260,7 +267,7 @@ export function RecipeListPage() {
                     clearFilters(withoutFilters(filters));
                   }}
                 >
-                  Search all recipes for “{filters.q}”
+                  <InSentence sentence={(q) => t("recipes.searchAll", { q })} text={filters.q} />
                 </Button>
               )}
             </div>
@@ -272,13 +279,11 @@ export function RecipeListPage() {
               <div className="flex justify-center text-muted-foreground">
                 <ShoppingBasket className="size-[5em]" strokeWidth={1.5} />
               </div>
-              <h2 className="mt-1 text-xl font-semibold">No recipes yet</h2>
-              <p className="mt-2 text-pretty text-muted-foreground">
-                Pinch one from a reel, or write your own.
-              </p>
+              <h2 className="mt-1 text-xl font-semibold">{t("recipes.noRecipesYet")}</h2>
+              <p className="mt-2 text-pretty text-muted-foreground">{t("recipes.pinchOrWrite")}</p>
               {/* Write a recipe is already on the page (Header). */}
               <Button asChild className="mt-4">
-                <Link to="/">Pinch a recipe</Link>
+                <Link to="/">{t("recipes.pinchRecipe")}</Link>
               </Button>
             </div>
           )}
@@ -301,7 +306,7 @@ export function RecipeListPage() {
 
           {isFetchNextPageError && (
             <p role="alert" className="mt-6 text-danger">
-              We couldn't load more recipes. Press Show more to try again.
+              {t("recipes.couldntLoadMore")}
             </p>
           )}
           {/* Not under a list that's about to be replaced. */}
@@ -314,7 +319,7 @@ export function RecipeListPage() {
               aria-busy={isFetchingNextPage}
               className="mt-6"
             >
-              {isFetchingNextPage ? "Loading…" : "Show more"}
+              {isFetchingNextPage ? t("recipes.loadingMore") : t("recipes.showMore")}
             </Button>
           )}
         </div>
@@ -330,8 +335,8 @@ const gridClasses =
 // "3 recipes match". A page with more after it says so rather than count them all; a search
 // answers only its best 50 (design §7), so a full one says that.
 function matches(count: number, more: boolean, searching: boolean) {
-  if (count === 0) return "No recipes match.";
-  if (more) return `More than ${String(count)} recipes match.`;
-  if (searching && count === PAGE_SIZE) return `The ${String(PAGE_SIZE)} best matches.`;
-  return count === 1 ? "1 recipe matches." : `${String(count)} recipes match.`;
+  if (count === 0) return i18next.t("recipes.noneMatch");
+  if (more) return i18next.t("recipes.moreThan", { count });
+  if (searching && count === PAGE_SIZE) return i18next.t("recipes.bestMatches", { count });
+  return i18next.t("recipes.matches", { count });
 }

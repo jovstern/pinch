@@ -1,5 +1,7 @@
 import { PlatformSchema, type Nutrition, type Recipe } from "@pinch/shared";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import i18next from "i18next";
+import { useTranslation } from "react-i18next";
 import { Link, useParams } from "react-router";
 import { Badge } from "../../components/ui/Badge.tsx";
 import { Breadcrumb } from "../../components/ui/Breadcrumb.tsx";
@@ -17,6 +19,7 @@ import { filterParams, listedRecipe, noFilters, recipeQuery } from "./recipeQuer
 import { tagLabel } from "./tagLabels.ts";
 
 export function RecipePage() {
+  const { t } = useTranslation();
   // The route is "recipes/:id", so the id is always there.
   const { id = "" } = useParams();
   const queryClient = useQueryClient();
@@ -46,7 +49,7 @@ export function RecipePage() {
   return (
     <article>
       <title>{`${recipe.title} · Pinch`}</title>
-      <Breadcrumb links={[{ label: "My recipes", to: "/recipes" }]} page={recipe.title} />
+      <Breadcrumb links={[{ label: t("header.myRecipes"), to: "/recipes" }]} page={recipe.title} />
       {/* The picture above the title on a phone, beside it from 1024 px (design §14). */}
       <div className="mt-2 lg:flex lg:items-start lg:gap-12">
         {recipe.thumbnail ? (
@@ -83,7 +86,7 @@ export function RecipePage() {
               // Kept together, so a phone wraps between the amounts, not inside "per serving".
               <p className="tabular-nums">
                 {nutritionLine(recipe.nutritionPerServing)}{" "}
-                <span className="whitespace-nowrap">per serving (estimate)</span>
+                <span className="whitespace-nowrap">{t("recipe.perServing")}</span>
               </p>
             )}
           </div>
@@ -96,7 +99,7 @@ export function RecipePage() {
             // No heading above it, so it's named here (screen readers, tests). Each tag opens My
             // recipes filtered by it; 32 px tall, with a 44 px touch area (the after:, and
             // min-w-11 for a short tag), which the rows' gap leaves room for.
-            <ul aria-label="Tags" className="mt-3 flex flex-wrap gap-x-2 gap-y-3">
+            <ul aria-label={t("recipe.tags")} className="mt-3 flex flex-wrap gap-x-2 gap-y-3">
               {recipe.tags.map((tag) => (
                 <li key={tag}>
                   <Badge
@@ -116,7 +119,7 @@ export function RecipePage() {
           {/* Cook is the page's one main action (docs/ux/plan.md U2); the rest is under ⋯. */}
           <div className="mt-5 flex gap-2">
             <Button asChild className="flex-1 sm:w-48 sm:flex-none">
-              <Link to={`/recipes/${recipe.id}/cook`}>Cook</Link>
+              <Link to={`/recipes/${recipe.id}/cook`}>{t("recipe.cook")}</Link>
             </Button>
             <LazyRecipeMenu recipe={recipe} />
           </div>
@@ -129,7 +132,7 @@ export function RecipePage() {
         <section className="lg:rounded-card lg:border lg:border-border lg:p-5">
           {/* Each list is named by its heading, for screen readers (and the tests). */}
           <h2 id="ingredients" className="text-xl font-semibold">
-            Ingredients
+            {t("recipe.ingredients")}
           </h2>
           <ul aria-labelledby="ingredients" dir="auto" className="mt-3 grid gap-2">
             {recipe.ingredients.map((ingredient, index) => (
@@ -146,7 +149,7 @@ export function RecipePage() {
 
         <section className="mt-8 lg:mt-0">
           <h2 id="steps" className="text-xl font-semibold">
-            Steps
+            {t("recipe.steps")}
           </h2>
           {/* dir="auto" on the list (a recipe's steps are in one language): a Hebrew recipe's
               numbers sit on the right, with room for them (ps: padding on the side the text
@@ -167,10 +170,8 @@ export function RecipePage() {
 
       {/* A placeholder (design §1). When built: its own collection, never an array in the
           recipe, as comments grow without limit. */}
-      <h2 className="mt-8 text-xl font-semibold">Comments</h2>
-      <p className="mt-3 text-muted-foreground">
-        Coming soon: notes from whoever you share this recipe with.
-      </p>
+      <h2 className="mt-8 text-xl font-semibold">{t("recipe.comments")}</h2>
+      <p className="mt-3 text-muted-foreground">{t("recipe.commentsSoon")}</p>
     </article>
   );
 }
@@ -178,9 +179,9 @@ export function RecipePage() {
 // "Serves 4 · Prep 10 min · Cook 25 min", leaving out what the recipe doesn't say.
 function details(recipe: Recipe) {
   const parts: string[] = [];
-  if (recipe.servings) parts.push(`Serves ${String(recipe.servings)}`);
-  if (recipe.prepMinutes) parts.push(`Prep ${String(recipe.prepMinutes)} min`);
-  if (recipe.cookMinutes) parts.push(`Cook ${String(recipe.cookMinutes)} min`);
+  if (recipe.servings) parts.push(i18next.t("recipe.serves", { count: recipe.servings }));
+  if (recipe.prepMinutes) parts.push(i18next.t("recipe.prep", { minutes: recipe.prepMinutes }));
+  if (recipe.cookMinutes) parts.push(i18next.t("recipe.cookTime", { minutes: recipe.cookMinutes }));
   return parts.join(" · ");
 }
 
@@ -189,10 +190,10 @@ function details(recipe: Recipe) {
 function nutritionLine({ calories, proteinG, carbsG, fatG }: Nutrition) {
   const round = (amount: number) => String(Math.round(amount));
   const amounts = [
-    `≈ ${round(calories)} kcal`,
-    `${round(proteinG)} g protein`,
-    `${round(carbsG)} g carbs`,
-    `${round(fatG)} g fat`,
+    i18next.t("recipe.calories", { amount: round(calories) }),
+    i18next.t("recipe.protein", { amount: round(proteinG) }),
+    i18next.t("recipe.carbs", { amount: round(carbsG) }),
+    i18next.t("recipe.fat", { amount: round(fatG) }),
   ];
   return amounts.join(" · ");
 }

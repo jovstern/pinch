@@ -1315,6 +1315,12 @@ that adds a string:
   157.1 → 175.1, `/` 175.8 → 193.9, the editor 181.3 → 199.4, cook 164.1 → 182.1, Log in
   180.1 → 198.3; the Hebrew chunk 0.3 kB with only the header's strings), and the observer
   checks LCP in Hebrew too (the lazy chunk and the reload of a new device).
+- **Raised again** (the user, 2026-11-13, after I6): 195 → **200** kB on the app's routes, 205 →
+  **210** kB on routes that add their own chunk. The English strings are in the entry (§16.3), so
+  each slice's strings cost every route: I6 (My recipes, Filters, the tags, a recipe's page) added
+  +2.2 kB everywhere, the editor 201.5 → 203.7 of 205, with I7's editor and cook strings still to
+  come. Kept over per-chunk English (`addResourceBundle`) or lazy pages, which change §16.3 or
+  the LCP.
 
 ### 16.11 Tests
 

@@ -1,6 +1,7 @@
 import type { Recipe } from "@pinch/shared";
 import { Ellipsis, Pencil, Share2, Trash2 } from "lucide-react";
 import { lazy, Suspense, useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Link } from "react-router";
 import { Button } from "../../components/ui/Button.tsx";
 import {
@@ -22,6 +23,7 @@ const DeleteRecipeDialog = lazy(async () => ({
 
 // ⋯ beside Cook (design §14): what a recipe page does less often than cooking.
 export function RecipeMenu({ recipe }: { recipe: Recipe }) {
+  const { t } = useTranslation();
   // Open while it's on the page: closing takes it away, and a failed attempt with it.
   const [deleting, setDeleting] = useState(false);
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -45,7 +47,7 @@ export function RecipeMenu({ recipe }: { recipe: Recipe }) {
             ref={triggerRef}
             type="button"
             variant="outline"
-            aria-label="More actions"
+            aria-label={t("recipe.moreActions")}
             // While the dialog is on its way (a slow link): the button says it's working. Once
             // the dialog is open it covers the button anyway.
             aria-busy={deleting}
@@ -58,7 +60,7 @@ export function RecipeMenu({ recipe }: { recipe: Recipe }) {
           <DropdownMenuItem asChild>
             <Link to={`/recipes/${recipe.id}/edit`}>
               <Pencil aria-hidden="true" />
-              Edit
+              {t("recipe.edit")}
             </Link>
           </DropdownMenuItem>
           {/* A placeholder (design §1): sharing comes after auth. Unavailable, not hidden, so
@@ -66,7 +68,7 @@ export function RecipeMenu({ recipe }: { recipe: Recipe }) {
               still in the menu, and read as unavailable. */}
           <DropdownMenuItem disabled>
             <Share2 aria-hidden="true" />
-            Share · coming soon
+            {t("recipe.shareSoon")}
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem
@@ -76,7 +78,7 @@ export function RecipeMenu({ recipe }: { recipe: Recipe }) {
             }}
           >
             <Trash2 aria-hidden="true" />
-            Delete…
+            {t("recipe.delete")}
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>

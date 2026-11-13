@@ -1,5 +1,6 @@
 import { Search } from "lucide-react";
 import { useId, useState, type RefObject } from "react";
+import { useTranslation } from "react-i18next";
 import { Input } from "../../components/ui/Input.tsx";
 import { NativeSelect } from "../../components/ui/NativeSelect.tsx";
 import { sortChoices } from "./filterLabels.ts";
@@ -20,6 +21,7 @@ type ListFiltersProps = {
 // type: one request per search rather than one per pause, and no timer. A tag applies as it's
 // ticked.
 export function ListFilters({ filters, onChange, onChangeTags, searchRef }: ListFiltersProps) {
+  const { t } = useTranslation();
   const searchId = useId();
   const sorts = sortChoices(filters.q !== "");
   // What's typed. When the address's search changes from elsewhere (Clear all, the Pinch link),
@@ -43,7 +45,7 @@ export function ListFilters({ filters, onChange, onChangeTags, searchRef }: List
           className="relative flex-1"
         >
           <label htmlFor={searchId} className="sr-only">
-            Search your recipes
+            {t("recipes.searchLabel")}
           </label>
           <Search
             aria-hidden="true"
@@ -61,7 +63,7 @@ export function ListFilters({ filters, onChange, onChangeTags, searchRef }: List
               // an Enter, so the box and the address never disagree.
               if (event.target.value === "" && filters.q !== "") onChange({ ...filters, q: "" });
             }}
-            placeholder="Search recipes"
+            placeholder={t("recipes.searchPlaceholder")}
             // No native ✕: the browser's own, unlike the rest of Pinch (Escape still empties it).
             className="ps-9 [&::-webkit-search-cancel-button]:appearance-none"
           />
@@ -76,7 +78,7 @@ export function ListFilters({ filters, onChange, onChangeTags, searchRef }: List
             Quickest, A–Z); the name is for screen readers. */}
         <div className="max-lg:hidden">
           <NativeSelect
-            aria-label="Sort"
+            aria-label={t("filters.sort")}
             value={filters.sort}
             onChange={(event) => {
               const picked = sorts.find(({ value }) => value === event.target.value);
