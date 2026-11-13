@@ -26,13 +26,10 @@ export {
   ImportListSchema,
   ImportSchema,
   ImportStepSchema,
-  linkMessage,
   MAX_SCREENSHOT_BYTES,
   MAX_SCREENSHOTS,
   PlatformSchema,
   SCREENSHOT_TYPES,
-  screenshotsMessage,
-  textMessage,
   type DuplicateLink,
   type Import,
   type ImportInput,
@@ -41,6 +38,7 @@ export {
   type Platform,
 } from "./import.ts";
 export { linkKey } from "./linkKey.ts";
+export { messages } from "./messages.ts";
 export {
   EmojiSchema,
   IngredientSchema,

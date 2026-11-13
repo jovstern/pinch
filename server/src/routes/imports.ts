@@ -6,9 +6,9 @@ import {
   linkKey,
   MAX_SCREENSHOT_BYTES,
   MAX_SCREENSHOTS,
+  messages,
   RecipeDraftSchema,
   RecipeInputSchema,
-  screenshotsMessage,
   type DuplicateLink,
   type ImportList,
   type Platform,
@@ -345,6 +345,6 @@ const receiveScreenshots: RequestHandler = (req, res, next) => {
 
 function invalidScreenshots() {
   return new HttpError(400, "invalid_input", "Some fields are not valid.", {
-    fields: { images: screenshotsMessage },
+    fields: { images: messages.screenshots },
   });
 }

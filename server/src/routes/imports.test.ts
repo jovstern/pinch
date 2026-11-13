@@ -4,12 +4,10 @@ import {
   DuplicateLinkSchema,
   globalLimitMessage,
   ImportListSchema,
-  linkKey,
   ImportSchema,
-  linkMessage,
+  linkKey,
+  messages,
   RecipeSchema,
-  screenshotsMessage,
-  textMessage,
   type RecipeInput,
 } from "@pinch/shared";
 import { Binary, ObjectId } from "mongodb";
@@ -107,7 +105,7 @@ test("POST /api/imports accepts a post's pasted text", async () => {
 });
 
 test.each([
-  ["too short to be a recipe", "eggs", textMessage],
+  ["too short to be a recipe", "eggs", messages.text],
   ["too long", "a".repeat(10_001), "Keep the text under 10,000 characters."],
 ])("POST /api/imports refuses a text %s, under its field", async (_, text, message) => {
   const response = await api.post("/api/imports").send({ type: "text", text });
@@ -137,7 +135,7 @@ test.each([
 
   expect(response.status).toBe(400);
   expect(response.body).toMatchObject({
-    error: { code: "invalid_input", fields: { url: linkMessage } },
+    error: { code: "invalid_input", fields: { url: messages.link } },
   });
 });
 
@@ -646,7 +644,7 @@ test("screenshots are refused when there are none, more than 4, or one isn't an 
     error: {
       code: "invalid_input",
       message: "Some fields are not valid.",
-      fields: { images: screenshotsMessage },
+      fields: { images: messages.screenshots },
     },
   };
   const none = await api.post("/api/imports/screenshots").field("note", "x");

@@ -8,6 +8,7 @@ import { Breadcrumb } from "../../components/ui/Breadcrumb.tsx";
 import { Button } from "../../components/ui/Button.tsx";
 import { RecipeFace } from "../../components/RecipeFace.tsx";
 import { Thumbnail } from "../../components/Thumbnail.tsx";
+import { formatNumber } from "../../lib/formatNumber.ts";
 import { isolate } from "../../lib/isolate.ts";
 import { useHeadingFocus } from "../../lib/useHeadingFocus.ts";
 import { ingredientLine } from "./ingredientLine.ts";
@@ -182,15 +183,17 @@ export function RecipePage() {
 function details(recipe: Recipe) {
   const parts: string[] = [];
   if (recipe.servings) parts.push(i18next.t("recipe.serves", { count: recipe.servings }));
-  if (recipe.prepMinutes) parts.push(i18next.t("recipe.prep", { minutes: recipe.prepMinutes }));
-  if (recipe.cookMinutes) parts.push(i18next.t("recipe.cookTime", { minutes: recipe.cookMinutes }));
+  if (recipe.prepMinutes)
+    parts.push(i18next.t("recipe.prep", { minutes: formatNumber(recipe.prepMinutes) }));
+  if (recipe.cookMinutes)
+    parts.push(i18next.t("recipe.cookTime", { minutes: formatNumber(recipe.cookMinutes) }));
   return parts.join(" · ");
 }
 
 // "≈ 520 kcal · 18 g protein · 92 g carbs · 8 g fat", per serving: Gemini's guess from
 // the ingredients (design D14), so said to be one, and rounded: a decimal would look exact.
 function nutritionLine({ calories, proteinG, carbsG, fatG }: Nutrition) {
-  const round = (amount: number) => String(Math.round(amount));
+  const round = (amount: number) => formatNumber(Math.round(amount));
   const amounts = [
     i18next.t("recipe.calories", { amount: round(calories) }),
     i18next.t("recipe.protein", { amount: round(proteinG) }),

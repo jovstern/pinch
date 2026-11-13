@@ -1,4 +1,4 @@
-import type { RecipeInput } from "@pinch/shared";
+import { messages, type RecipeInput } from "@pinch/shared";
 import { Binary, ObjectId } from "mongodb";
 import { pino } from "pino";
 import { beforeEach, expect, onTestFinished, test, vi } from "vitest";
@@ -12,14 +12,7 @@ import {
 import { createIndexes } from "../db/indexes.ts";
 import { linksCollection, type LinkDocument } from "../db/links.ts";
 import { createTestDb } from "../testDb.ts";
-import {
-  FAILED_MESSAGE,
-  NoRetryError,
-  runImport,
-  workLoop,
-  type Extract,
-  type LinkCache,
-} from "./workLoop.ts";
+import { NoRetryError, runImport, workLoop, type Extract, type LinkCache } from "./workLoop.ts";
 
 const db = createTestDb();
 await createIndexes(db);
@@ -325,7 +318,7 @@ test("a failed attempt is tried again after 10 s, then 60 s, then the import is 
   expect(await imports.findOne({ _id })).toMatchObject({
     status: "failed",
     attempts: 3,
-    error: FAILED_MESSAGE,
+    error: messages.couldntTurn,
     noRetry: false,
   });
   expect(await imports.findOne({ _id })).not.toHaveProperty("step");

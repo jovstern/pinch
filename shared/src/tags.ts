@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { messages } from "./messages.ts";
 
 // The facets and their values (design §7): fixed lists, so filters stay clean and the model
 // must pick from them. A tag is "facet:value", one flat array on the recipe (D10).
@@ -40,4 +41,4 @@ export function isTag(tag: string) {
 
 // An enum, not a check on a string: the JSON schema made from it lists every tag, so Gemini
 // can only pick from them (design §9).
-export const TagSchema = z.enum(allTags, "Pick a tag from the list.");
+export const TagSchema = z.enum(allTags, messages.tag);

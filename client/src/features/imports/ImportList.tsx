@@ -9,8 +9,8 @@ import { RecipeFace } from "../../components/RecipeFace.tsx";
 import { Thumbnail } from "../../components/Thumbnail.tsx";
 import { Button } from "../../components/ui/Button.tsx";
 import { platformNames } from "../../lib/platformNames.ts";
+import { serverMessage } from "../../lib/serverMessage.tsx";
 import { countToLookAt } from "../../lib/thingsToLookAt.ts";
-import { en } from "../../locales/en.ts";
 import { importListQuery } from "./importQueries.ts";
 
 // A failed card's Retry and Dismiss load on their own, after the queue: in the entry they put the
@@ -231,23 +231,10 @@ function statusText(job: Import): ReactNode {
   }
 }
 
-// The worker keeps its reason in English (design §16.7); the card says it by its key, found by
-// that English. One it doesn't know (worded before a change, or new) is shown as it came, in
-// English: marked so, so a Hebrew page reads it in English and keeps its period at its end.
+// Why it failed: the worker's reason, kept in English, said in the page's language (design §16.7).
 function failureReason(error: string | undefined): ReactNode {
   if (error === undefined) return i18next.t("imports.didntWork");
-  const reasons = en.imports.reasons;
-  const key = (Object.keys(reasons) as (keyof typeof reasons)[]).find(
-    (key) => reasons[key] === error,
-  );
-  if (key === undefined) {
-    return (
-      <span lang="en" dir="ltr">
-        {error}
-      </span>
-    );
-  }
-  return i18next.t(`imports.reasons.${key}`);
+  return serverMessage(error);
 }
 
 // "Ready to review · ◆ 3 things to look at" (design §14): the ◆ is the editor's mark, in its

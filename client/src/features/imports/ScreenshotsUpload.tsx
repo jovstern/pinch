@@ -2,16 +2,17 @@ import {
   ImportSchema,
   MAX_SCREENSHOT_BYTES,
   MAX_SCREENSHOTS,
+  messages,
   SCREENSHOT_TYPES,
-  screenshotsMessage,
 } from "@pinch/shared";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import i18next from "i18next";
 import { ImagePlus } from "lucide-react";
-import { useId, useState } from "react";
+import { useId, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "../../components/ui/Button.tsx";
 import { ApiError, sendForm } from "../../lib/api.ts";
+import { serverMessage } from "../../lib/serverMessage.tsx";
 import { toastPinching } from "../../lib/toasts.tsx";
 import { cancelImport, importListQuery, limitNote } from "./importQueries.ts";
 
@@ -96,11 +97,11 @@ export function ScreenshotsUpload() {
 }
 
 // The pick refused here, or as the paste box says a failed send: the API's message for the
-// files, the day's cap (the user's or everyone's), or a plain retry. The files' messages are the
-// shared schema's, in English until the server's messages are translated (design §16.7).
-function errorMessage(refused: boolean, error: Error | null) {
-  if (refused) return screenshotsMessage;
+// files, the day's cap (the user's or everyone's), or a plain retry. The files' message is
+// shared's, said in the page's language (design §16.7).
+function errorMessage(refused: boolean, error: Error | null): ReactNode {
+  if (refused) return serverMessage(messages.screenshots);
   if (!error) return undefined;
-  if (error instanceof ApiError && error.fields.images) return error.fields.images;
+  if (error instanceof ApiError && error.fields.images) return serverMessage(error.fields.images);
   return limitNote(error) ?? i18next.t("imports.couldntSendThese");
 }

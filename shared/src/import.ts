@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { messages } from "./messages.ts";
 import { RecipeDraftSchema, ThumbnailSchema } from "./recipe.ts";
 
 export const PlatformSchema = z.enum(["instagram", "facebook", "youtube", "text"]);
@@ -8,8 +9,6 @@ export type Platform = z.infer<typeof PlatformSchema>;
 export const ImportStepSchema = z.enum(["fetching", "analyzing"]);
 export type ImportStep = z.infer<typeof ImportStepSchema>;
 
-export const linkMessage = "Paste a link to an Instagram, Facebook or YouTube post.";
-
 // Imports (links or texts) a user may send (or retry) a day: each costs Gemini calls (design §1).
 // The API answers 429 with this message past it, and the client shows it.
 export const DAILY_IMPORT_CAP = 20;
@@ -17,14 +16,11 @@ export const dailyLimitMessage = `You've sent ${String(DAILY_IMPORT_CAP)} import
 // Past the global cap (design D30): everyone's imports, together, for the day.
 export const globalLimitMessage = "Pinch has read all it can for today. Try again tomorrow.";
 
-export const textMessage = "Paste more of the recipe: a line or two at least.";
-
 // Screenshots of a post, sent when neither its link nor its text will do (design §1): a few
 // pictures of the recipe, sent as a form (POST /api/imports/screenshots), not JSON.
 export const MAX_SCREENSHOTS = 4;
 export const MAX_SCREENSHOT_BYTES = 10_000_000;
 export const SCREENSHOT_TYPES = ["image/png", "image/jpeg", "image/webp"];
-export const screenshotsMessage = `Add 1 to ${String(MAX_SCREENSHOTS)} screenshots: PNG, JPEG or WebP, up to 10 MB each.`;
 
 // The body of POST /api/imports (design §4.1, §8): a link to a post on one of the platforms, by
 // its host ("www." and "m." are the same site), or the post's text, pasted when its link can't
@@ -36,30 +32,26 @@ export const ImportInputSchema = z.discriminatedUnion(
     z.object({
       type: z.literal("link"),
       url: z
-        .string(linkMessage)
+        .string(messages.link)
         .trim()
         // An empty box is one word, so a link: but it may have been for either.
-        .min(1, "Paste a link or the recipe's text.")
-        .max(2000, "Keep the link under 2000 characters.")
+        .min(1, messages.linkOrText)
+        .max(2000, messages.linkTooLong)
         .pipe(
           z.url({
             protocol: /^https?$/,
             hostname:
               /^((www\.|m\.)?(instagram\.com|facebook\.com|youtube\.com)|youtu\.be|fb\.watch)$/,
-            error: linkMessage,
+            error: messages.link,
           }),
         ),
     }),
     z.object({
       type: z.literal("text"),
-      text: z
-        .string(textMessage)
-        .trim()
-        .min(20, textMessage)
-        .max(10_000, "Keep the text under 10,000 characters."),
+      text: z.string(messages.text).trim().min(20, messages.text).max(10_000, messages.textTooLong),
     }),
   ],
-  { error: "Send a link or a text." },
+  { error: messages.linkOrTextType },
 );
 
 // An import as the API sends it (design §4.2, §6). The worker's own fields (the lease, when to

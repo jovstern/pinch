@@ -5,6 +5,7 @@ import { useTranslation } from "react-i18next";
 import { Button } from "../../components/ui/Button.tsx";
 import { pageIsRtl } from "../../i18n.ts";
 import { cn } from "../../lib/cn.ts";
+import { formatNumber } from "../../lib/formatNumber.ts";
 import { cardStart, nearestStep } from "./nearestStep.ts";
 
 type StepCarouselProps = {
@@ -36,7 +37,11 @@ export function StepCarousel({ steps, card, onDone, children, timers }: StepCaro
   // An edit elsewhere may have removed steps since: never past the last one.
   const last = steps.length - 1;
   const current = Math.min(index, last);
-  const label = (step: number) => t("cook.stepOf", { position: step + 1, total: steps.length });
+  const label = (step: number) =>
+    t("cook.stepOf", {
+      position: formatNumber(step + 1),
+      total: formatNumber(steps.length),
+    });
   // Right to left in Hebrew: the row starts at the right and scrolls to negative (§16.4).
   const rtl = pageIsRtl();
 
@@ -170,7 +175,7 @@ export function StepCarousel({ steps, card, onDone, children, timers }: StepCaro
                 <button
                   key={step}
                   type="button"
-                  aria-label={t("editor.step", { position: step + 1 })}
+                  aria-label={t("editor.step", { position: formatNumber(step + 1) })}
                   aria-current={step === current ? "step" : undefined}
                   className="group flex h-11 max-w-11 min-w-0 flex-1 items-center justify-center rounded-control"
                   onClick={() => {

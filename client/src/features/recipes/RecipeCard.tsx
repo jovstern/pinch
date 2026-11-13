@@ -4,6 +4,7 @@ import { Link } from "react-router";
 import { RecipeFace } from "../../components/RecipeFace.tsx";
 import { Thumbnail } from "../../components/Thumbnail.tsx";
 import { Badge } from "../../components/ui/Badge.tsx";
+import { formatNumber } from "../../lib/formatNumber.ts";
 import { platformNames } from "../../lib/platformNames.ts";
 
 // A recipe in My recipes' grid (design §14): its picture, where it came from, its title, and the
@@ -71,6 +72,6 @@ function summary(recipe: Recipe) {
   const minutes = (recipe.prepMinutes ?? 0) + (recipe.cookMinutes ?? 0);
   const ingredients = i18next.t("recipes.ingredients", { count: recipe.ingredients.length });
   return minutes > 0
-    ? `${i18next.t("recipes.minutes", { minutes })} · ${ingredients}`
+    ? `${i18next.t("recipes.minutes", { minutes: formatNumber(minutes) })} · ${ingredients}`
     : ingredients;
 }
