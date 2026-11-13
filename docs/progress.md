@@ -183,8 +183,6 @@ exactly as it is: each slice's English screens look the same before and after.
       draws again on add or remove, so `example` is stale; read the name through `form.Subscribe`
 - [ ] End of milestone: UI review in both languages (each screen at 360 and 1440 px in Hebrew),
       observer (budgets, LCP in Hebrew too), e2e with axe in Hebrew and the switch flow, demo
-      (to decide then: the English messages' "2000" and "1440" without a comma, where Intl writes
-      "2,000" and "1,440" on the page; changing them changes the API's messages, I8)
 
 ## M11 — Pinch online (design §15, §8.3, D31–D38)
 

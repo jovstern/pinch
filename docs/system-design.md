@@ -1270,6 +1270,9 @@ What the server says that the user reads, found by grep on 2026-11-12:
   `FieldError`, the screenshots' message and the queue card): in English, and only until the
   import's 7-day TTL. No migration and no new field.
 - `validation` in `en.ts` is `messages` itself, imported from `shared/`: one English source.
+- The messages' numbers are written as the pages show them (Intl, §16.3): "2,000" and "1,440"
+  with a comma, in English as in Hebrew (the user's choice, 2026-11-13); the API's 400s say them
+  so too.
 - The draft is still in the post's language (D16), whatever the interface's, and so are the
   model's "things to look at" reasons (§9). Tag labels (D10) are translated in the client; the
   codes stay.
