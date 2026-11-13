@@ -1,9 +1,10 @@
 import type { Import } from "@pinch/shared";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 import { Button } from "../../components/ui/Button.tsx";
 import { deleteResource } from "../../lib/api.ts";
 import { toastCouldntSave, toastDismissed } from "../../lib/toasts.tsx";
-import { importListQuery, limitMessage, restoreImport, retryImport } from "./importQueries.ts";
+import { importListQuery, limitNote, restoreImport, retryImport } from "./importQueries.ts";
 
 // What a failed import offers (design §4.2): Retry puts it back in the queue for three more
 // tries; Dismiss deletes it, and its toast's Undo brings it back (D27). A stalled one (no worker
@@ -12,6 +13,7 @@ import { importListQuery, limitMessage, restoreImport, retryImport } from "./imp
 // Once it's done the buttons are gone, so focus moves to the paste box (focusPasteBox) rather
 // than falling to the page.
 export function ImportActions({ job, focusPasteBox }: { job: Import; focusPasteBox: () => void }) {
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
   // Also after a failure: the import may have changed or gone since the list loaded (another tab),
   // and the list then shows it as it is. Awaited, so "Retrying…" lasts until the list is fresh
@@ -42,7 +44,7 @@ export function ImportActions({ job, focusPasteBox }: { job: Import; focusPasteB
   });
   // Not disabled while busy: a disabled button drops focus to the page (as Show more).
   const busy = retry.isPending || dismiss.isPending;
-  const limit = limitMessage(retry.error);
+  const limit = limitNote(retry.error);
 
   return (
     // One box, so an error below the buttons stays under them in the card's row from 768 px.
@@ -60,7 +62,7 @@ export function ImportActions({ job, focusPasteBox }: { job: Import; focusPasteB
           aria-busy={dismiss.isPending}
           aria-describedby={`import-${job.id}`}
         >
-          {dismiss.isPending ? "Dismissing…" : "Dismiss"}
+          {dismiss.isPending ? t("imports.dismissing") : t("imports.dismiss")}
         </Button>
         {job.status === "failed" && !job.noRetry && (
           <Button
@@ -73,7 +75,7 @@ export function ImportActions({ job, focusPasteBox }: { job: Import; focusPasteB
             aria-busy={retry.isPending}
             aria-describedby={`import-${job.id}`}
           >
-            {retry.isPending ? "Retrying…" : "Retry"}
+            {retry.isPending ? t("imports.retrying") : t("imports.retry")}
           </Button>
         )}
       </div>
@@ -84,7 +86,7 @@ export function ImportActions({ job, focusPasteBox }: { job: Import; focusPasteB
       </p>
       {retry.isError && !limit && (
         <p role="alert" className="mt-1 text-end text-sm text-destructive">
-          It couldn&apos;t be retried. Try again.
+          {t("imports.couldntRetry")}
         </p>
       )}
     </div>

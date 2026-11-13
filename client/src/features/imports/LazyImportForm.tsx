@@ -1,6 +1,6 @@
 import { Sparkles } from "lucide-react";
 import { lazy, Suspense, type ComponentProps } from "react";
-import { pastePlaceholder } from "./pastePlaceholder.ts";
+import { useTranslation } from "react-i18next";
 
 // The paste box is its own chunk, with TanStack Form: in the entry it put the editor and cook
 // mode over their first-load budget (docs/metrics/m08.md, Method note). The rest of Add recipe
@@ -10,6 +10,7 @@ const ImportForm = lazy(async () => ({
 }));
 
 export function LazyImportForm(props: ComponentProps<typeof ImportForm>) {
+  const { t } = useTranslation();
   return (
     // The field's own box (46 px, as measured), so nothing moves when it arrives, with its
     // sparkles and placeholder where the field puts them: with an empty queue those words
@@ -22,7 +23,7 @@ export function LazyImportForm(props: ComponentProps<typeof ImportForm>) {
           className="relative flex h-11.5 items-center overflow-hidden rounded-control border border-input bg-card ps-9 whitespace-nowrap text-muted-foreground"
         >
           <Sparkles className="absolute start-3 top-1/2 size-4 -translate-y-1/2" />
-          {pastePlaceholder}
+          {t("imports.pastePlaceholder")}
         </div>
       }
     >

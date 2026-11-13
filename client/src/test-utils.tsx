@@ -48,10 +48,10 @@ export function renderApp(
   );
 }
 
-// renderApp in Hebrew (design §16.11): <html lang="he" dir="rtl">, as index.html's script sets
+// The page in Hebrew (design §16.11): <html lang="he" dir="rtl">, as index.html's script sets
 // it, and Hebrew's strings, as main.tsx loads them. Back to English once the test is done, the
-// other tests' language (test-setup.ts).
-export async function renderInHebrew(path: string, options?: Parameters<typeof renderApp>[1]) {
+// other tests' language (test-setup.ts). For a part rendered alone; a page is renderInHebrew.
+export async function inHebrew() {
   // First, so a failure below still puts English back.
   onTestFinished(async () => {
     document.documentElement.removeAttribute("lang");
@@ -61,6 +61,11 @@ export async function renderInHebrew(path: string, options?: Parameters<typeof r
   document.documentElement.lang = "he";
   document.documentElement.dir = "rtl";
   await loadHebrew();
+}
+
+// renderApp in Hebrew.
+export async function renderInHebrew(path: string, options?: Parameters<typeof renderApp>[1]) {
+  await inHebrew();
   renderApp(path, options);
 }
 
