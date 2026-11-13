@@ -64,7 +64,11 @@ export const GEMINI_VERSION = createHash("sha256")
   .digest("hex")
   .slice(0, 12);
 
+// The queue card finds its translation by this exact text (client en.ts imports.reasons;
+// design §16.7).
 export const NOT_A_RECIPE = "This doesn't look like a recipe.";
+// The queue card finds its translation by this exact text (client en.ts imports.reasons;
+// design §16.7).
 export const TOO_LONG = "This video is over 5 minutes. Pinch reads shorter ones.";
 
 // The one place that knows about Gemini (§9): the worker hands it an import's input and gets a

@@ -1,13 +1,16 @@
 import type { Import } from "@pinch/shared";
 import { useQuery } from "@tanstack/react-query";
+import i18next from "i18next";
 import { LoaderCircle, TriangleAlert } from "lucide-react";
 import { lazy, Suspense, type ReactNode } from "react";
+import { useTranslation } from "react-i18next";
 import { Link } from "react-router";
 import { RecipeFace } from "../../components/RecipeFace.tsx";
 import { Thumbnail } from "../../components/Thumbnail.tsx";
 import { Button } from "../../components/ui/Button.tsx";
 import { platformNames } from "../../lib/platformNames.ts";
-import { countToLookAt, thingsToLookAt } from "../../lib/thingsToLookAt.ts";
+import { countToLookAt } from "../../lib/thingsToLookAt.ts";
+import { en } from "../../locales/en.ts";
 import { importListQuery } from "./importQueries.ts";
 
 // A failed card's Retry and Dismiss load on their own, after the queue: in the entry they put the
@@ -21,6 +24,7 @@ const ImportActions = lazy(async () => ({
 // into a recipe, as a card with how far it has got and what can be done with it.
 // After Retry or Dismiss, focusPasteBox moves focus to the paste box (the buttons are gone).
 export function ImportList({ focusPasteBox }: { focusPasteBox: () => void }) {
+  const { t } = useTranslation();
   const { data, isLoadingError, refetch, isFetching } = useQuery(importListQuery);
   const imports = data?.items ?? [];
 
@@ -31,7 +35,7 @@ export function ImportList({ focusPasteBox }: { focusPasteBox: () => void }) {
       {/* Centred, as the empty queue. */}
       {isLoadingError && (
         <div role="alert" className="mt-12 text-center">
-          <h2 className="text-xl font-semibold">We couldn't load your imports</h2>
+          <h2 className="text-xl font-semibold">{t("imports.couldntLoad")}</h2>
           {/* The status stays "error" while it retries, so the button shows the wait. */}
           <Button
             type="button"
@@ -41,7 +45,7 @@ export function ImportList({ focusPasteBox }: { focusPasteBox: () => void }) {
             aria-busy={isFetching}
             className="mt-4"
           >
-            {isFetching ? "Trying…" : "Try again"}
+            {isFetching ? t("auth.trying") : t("auth.tryAgain")}
           </Button>
         </div>
       )}
@@ -139,6 +143,7 @@ function Picture({ job, eager }: { job: Import; eager: boolean }) {
 // One action in one place (pass-02 §13): while it cooks, a disabled "Cooking…" stands where
 // Review will be, so the place is learned before it can be used.
 function Action({ job, focusPasteBox }: { job: Import; focusPasteBox: () => void }) {
+  const { t } = useTranslation();
   if (job.status === "failed" || job.stalled) {
     return (
       <Suspense fallback={<div className="mt-2 h-11 md:mt-0" />}>
@@ -151,30 +156,31 @@ function Action({ job, focusPasteBox }: { job: Import; focusPasteBox: () => void
       {job.status === "ready" ? (
         <Button asChild variant="outline">
           <Link to={`/imports/${job.id}`} aria-describedby={`import-${job.id}`}>
-            Review
+            {t("imports.review")}
           </Link>
         </Button>
       ) : (
         // Disabled, so out of the tab order: the status line says what's happening.
         <Button type="button" variant="outline" disabled aria-describedby={`import-${job.id}`}>
           <LoaderCircle aria-hidden="true" className="size-4 motion-safe:animate-spin" />
-          Cooking…
+          {t("imports.cooking")}
         </Button>
       )}
     </div>
   );
 }
 
-// "2 ready · 1 in progress · 1 failed" (design §14), leaving out what's none. In progress is
-// waiting or being worked on; a stalled one is counted as failed, as its card says it is stuck.
+// "2 ready · 1 in progress · 1 failed" (design §14), leaving out what's none, each by its plural
+// (§16.3). In progress is waiting or being worked on; a stalled one is counted as failed, as its
+// card says it is stuck.
 function queueSummary(imports: Import[]) {
   const failed = imports.filter((job) => job.status === "failed" || job.stalled).length;
   const ready = imports.filter((job) => job.status === "ready").length;
   const inProgress = imports.length - failed - ready;
   return [
-    ready > 0 && `${String(ready)} ready`,
-    inProgress > 0 && `${String(inProgress)} in progress`,
-    failed > 0 && `${String(failed)} failed`,
+    ready > 0 && i18next.t("imports.ready", { count: ready }),
+    inProgress > 0 && i18next.t("imports.inProgress", { count: inProgress }),
+    failed > 0 && i18next.t("imports.failed", { count: failed }),
   ]
     .filter(Boolean)
     .join(" · ");
@@ -191,50 +197,72 @@ function statusColor(job: Import) {
 function title(job: Import) {
   if (job.draft) return job.draft.title;
   const input = job.input;
-  if (input.type === "link") return `${platformNames[input.platform]} link`;
-  if (input.type === "text") return "Pasted text";
-  return "Screenshots";
+  if (input.type === "link") {
+    return i18next.t("imports.platformLink", { platform: platformNames[input.platform] });
+  }
+  if (input.type === "text") return i18next.t("imports.pastedText");
+  return i18next.t("imports.screenshots");
 }
 
 function inputText(input: Import["input"]) {
   if (input.type === "link") return input.url;
   if (input.type === "text") return input.text;
-  return input.count === 1 ? "1 image" : `${String(input.count)} images`;
+  return i18next.t("imports.images", { count: input.count });
 }
 
 // waiting → fetching → analyzing → ready to review, or why it failed (design §1).
 function statusText(job: Import): ReactNode {
   // Not "working on it" forever when nothing is (§4.3).
   if (job.stalled) {
-    return "Stuck: nothing has worked on this for a while. Dismiss it and paste it again later.";
+    return i18next.t("imports.stuck");
   }
   switch (job.status) {
     case "pending":
       // Back in the queue after a failed try (§4.3).
-      return job.attempts === 0 ? "Waiting to start…" : "That didn't work. Trying again soon…";
+      return job.attempts === 0 ? i18next.t("imports.waiting") : i18next.t("imports.retryingSoon");
     case "processing":
-      if (job.step === "fetching") return "Fetching the video…";
-      if (job.step === "analyzing") return "Reading the recipe…";
-      return "Working on it…";
+      if (job.step === "fetching") return i18next.t("imports.fetching");
+      if (job.step === "analyzing") return i18next.t("imports.analyzing");
+      return i18next.t("imports.working");
     case "ready":
       return <ReadyText count={countToLookAt(job)} />;
     case "failed":
-      return job.error ?? "That didn't work.";
+      return failureReason(job.error);
   }
+}
+
+// The worker keeps its reason in English (design §16.7); the card says it by its key, found by
+// that English. One it doesn't know (worded before a change, or new) is shown as it came, in
+// English: marked so, so a Hebrew page reads it in English and keeps its period at its end.
+function failureReason(error: string | undefined): ReactNode {
+  if (error === undefined) return i18next.t("imports.didntWork");
+  const reasons = en.imports.reasons;
+  const key = (Object.keys(reasons) as (keyof typeof reasons)[]).find(
+    (key) => reasons[key] === error,
+  );
+  if (key === undefined) {
+    return (
+      <span lang="en" dir="ltr">
+        {error}
+      </span>
+    );
+  }
+  return i18next.t(`imports.reasons.${key}`);
 }
 
 // "Ready to review · ◆ 3 things to look at" (design §14): the ◆ is the editor's mark, in its
 // colour; the words say it without either.
 function ReadyText({ count }: { count: number }) {
-  if (count === 0) return "Ready to review";
+  const { t } = useTranslation();
+  if (count === 0) return t("imports.readyToReview");
   return (
     <>
-      Ready to review ·{" "}
+      {t("imports.readyToReview")} ·{" "}
       <span className="font-normal text-muted-foreground">
         <span aria-hidden="true" className="text-check-mark">
           ◆
         </span>{" "}
-        {thingsToLookAt(count)}
+        {t("imports.thingsToLookAt", { count })}
       </span>
     </>
   );

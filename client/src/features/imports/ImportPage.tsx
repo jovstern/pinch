@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { PenLine } from "lucide-react";
 import { useRef } from "react";
+import { useTranslation } from "react-i18next";
 import { Link } from "react-router";
 import { Button } from "../../components/ui/Button.tsx";
 import { cn } from "../../lib/cn.ts";
@@ -12,6 +13,7 @@ import { LazyImportForm } from "./LazyImportForm.tsx";
 // The Add recipe tab, at / (design §14, D24): paste a link or a post's text, and the queue of
 // what's being turned into recipes.
 export function ImportPage() {
+  const { t } = useTranslation();
   // The paste box, where focus goes after an import is retried or dismissed.
   const pasteBoxRef = useRef<HTMLInputElement>(null);
   const headingRef = useHeadingFocus();
@@ -20,10 +22,11 @@ export function ImportPage() {
   const { isPending } = useQuery(importListQuery);
   return (
     <>
-      <title>Add recipe · Pinch</title>
+      {/* The page is named by its tab (design §16.3: "· Pinch" is kept). */}
+      <title>{`${t("header.addRecipe")} · Pinch`}</title>
       {/* The selected tab names the page on screen; the heading names it for screen readers. */}
       <h1 ref={headingRef} tabIndex={-1} className="sr-only">
-        Add recipe
+        {t("header.addRecipe")}
       </h1>
       {/* In the middle of the height the header leaves (main is a column here: Layout). As the
           queue grows the block grows, and once it no longer fits my-auto is 0: the field is at
@@ -37,7 +40,7 @@ export function ImportPage() {
         <Button asChild variant="link" className="mt-1 px-0 text-sm">
           <Link to="/recipes/new">
             <PenLine aria-hidden="true" className="size-4" />
-            Or write it yourself
+            {t("imports.writeItYourself")}
           </Link>
         </Button>
         <ImportList focusPasteBox={() => pasteBoxRef.current?.focus()} />

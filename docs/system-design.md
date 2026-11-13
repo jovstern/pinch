@@ -1251,9 +1251,9 @@ What the server says that the user reads, found by grep on 2026-11-12:
 
 | Where | How many | In M10 |
 |---|---|---|
-| `HttpError`s in the routes and `errors.ts` (`signed_out`, `too_many_tries`, `email_taken`, `daily_limit`, `link_pinched_before`, `not_found`…) | 18 | Already shown by `code` and status in the client's own words (`submitError`, `limitMessage`, the toasts): those words are translated; the server's English stays for logs and tests |
+| `HttpError`s in the routes and `errors.ts` (`signed_out`, `too_many_tries`, `email_taken`, `daily_limit`, `link_pinched_before`, `not_found`…) | 18 | Already shown by `code` and status in the client's own words (`submitError`, `limitNote`, the toasts): those words are translated, except the toasts', which stay English (§16.8); the server's English stays for logs and tests |
 | The shared schemas' field messages (`shared/src/recipe.ts`, `auth.ts`, `import.ts`, `tags.ts`), shown under fields from the client's own check and from the API's 400 `fields` (a few only for a hand-made address: Sort, Time, Source) | 36 | Named in `shared/src/messages.ts` (`titleRequired: "Give the recipe a title."`), which the schemas use; the client turns a message back into its key and shows `t("validation.<key>")` |
-| The limit notes (`dailyLimitMessage`, `globalLimitMessage`) | 2 | Already chosen by the 429's code in the client (`limitMessage`): it returns `t("imports.dailyLimit", { count: 20 })` or `t("imports.globalLimit")` instead |
+| The limit notes (`dailyLimitMessage`, `globalLimitMessage`) | 2 | Already chosen by the 429's code in the client: `limitMessage` stays English for the Retry toast (D46); `limitNote` says it on the page: `t("imports.dailyLimit", { cap: DAILY_IMPORT_CAP })` or `t("imports.globalLimit")` |
 | The worker's failure reasons, stored on the import's `error` (`NOT_A_RECIPE`, `TOO_LONG`, `FAILED_MESSAGE`; M11's "Instagram wouldn't let Pinch read this post" will be the fourth) | 3 | The same list: the worker stores the English as now; the queue card shows `t()` of its key |
 
 - A message the client doesn't know (an import failed before its wording changed, as `TOO_LONG`

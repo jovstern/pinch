@@ -2,19 +2,16 @@ import { screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import i18next from "i18next";
 import { afterEach, expect, test, vi } from "vitest";
-import { loadHebrew, needsReloadFor } from "./i18n.ts";
+import { needsReloadFor } from "./i18n.ts";
 import { en } from "./locales/en.ts";
 import { he } from "./locales/he.ts";
-import { renderInHebrew, stubFetch, testUser } from "./test-utils.tsx";
+import { inHebrew, renderInHebrew, stubFetch, testUser } from "./test-utils.tsx";
 
-// A new device (design §16.1): the page is in English (jsdom's <html> has no lang).
-afterEach(async () => {
+// A new device (design §16.1): the page is in English (jsdom's <html> has no lang). The Hebrew
+// tests put English back themselves (inHebrew).
+afterEach(() => {
   document.cookie = "pinch_lang=; Max-Age=0; Path=/";
-  // Back to English, the other tests' language (test-setup.ts).
   vi.unstubAllGlobals();
-  document.documentElement.removeAttribute("lang");
-  document.documentElement.removeAttribute("dir");
-  await i18next.changeLanguage("en");
 });
 
 test("an account in another language reloads the page once me has set the cookie", () => {
@@ -33,13 +30,6 @@ test("an account in the page's language, or nobody signed in, doesn't reload", (
 });
 
 // A page in Hebrew (design §16.2): index.html has set <html lang dir>, main.tsx loads Hebrew.
-async function inHebrew() {
-  document.documentElement.lang = "he";
-  document.documentElement.dir = "rtl";
-  await i18next.changeLanguage("he");
-  await loadHebrew();
-}
-
 test("once Hebrew is loaded, i18next says the page is in Hebrew, right to left", async () => {
   await inHebrew();
   expect(i18next.resolvedLanguage).toBe("he");

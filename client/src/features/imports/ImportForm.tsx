@@ -8,6 +8,7 @@ import { revalidateLogic, useForm } from "@tanstack/react-form";
 import { useQueryClient } from "@tanstack/react-query";
 import { Sparkles } from "lucide-react";
 import { useId, useRef, type RefObject } from "react";
+import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router";
 import { FieldError } from "../../components/FieldError.tsx";
 import { Button } from "../../components/ui/Button.tsx";
@@ -20,16 +21,14 @@ import {
   toastPinching,
   toastReady,
 } from "../../lib/toasts.tsx";
-import { cancelImport, importListQuery, limitMessage } from "./importQueries.ts";
-import { pastePlaceholder } from "./pastePlaceholder.ts";
-
-const hint = "Paste a YouTube short, a Facebook or Instagram reel, or a recipe as text";
+import { cancelImport, importListQuery, limitNote } from "./importQueries.ts";
 
 // The main action on / (design §14): paste a link, or a post's text when its link can't be read
 // (§1), and the worker turns it into a draft (§4.1). One line: the field, then Pinch it. Checked
 // as the recipe form is (RecipeForm.tsx): on the first send, then on every change, with the API's
 // own schema.
 export function ImportForm({ inputRef }: { inputRef: RefObject<HTMLInputElement | null> }) {
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const formRef = useRef<HTMLFormElement>(null);
@@ -68,10 +67,10 @@ export function ImportForm({ inputRef }: { inputRef: RefObject<HTMLInputElement 
             if (message) return { fields: { pasted: message } };
             // Past the day's cap, the user's or everyone's (D22, D30): what was pasted is fine, so
             // not on the field, and kept for tomorrow; a note, not an error (below).
-            const limit = limitMessage(error);
+            const limit = limitNote(error);
             if (limit) return { note: limit };
           }
-          return "We couldn't send this. Try again.";
+          return t("imports.couldntSend");
         }
       },
     },
@@ -127,10 +126,10 @@ export function ImportForm({ inputRef }: { inputRef: RefObject<HTMLInputElement 
               {/* The placeholder is short and isn't read, so the label names the field and the
                   hint says what goes in it. */}
               <label htmlFor={id} className="sr-only">
-                Pinch a recipe from a reel
+                {t("imports.pasteLabel")}
               </label>
               <p id={hintId} className="sr-only">
-                {hint}
+                {t("imports.pasteHint")}
               </p>
               {/* shadcn's input group: the group draws the field's edge and focus ring, the
                   input inside has none. The sparkles are Pinch's mark, not a control. The room
@@ -147,7 +146,7 @@ export function ImportForm({ inputRef }: { inputRef: RefObject<HTMLInputElement 
                   id={id}
                   name={field.name}
                   value={field.state.value}
-                  placeholder={pastePlaceholder}
+                  placeholder={t("imports.pastePlaceholder")}
                   // Hebrew reads right to left: the field follows what's typed in it.
                   dir="auto"
                   aria-invalid={invalid}
@@ -193,7 +192,7 @@ export function ImportForm({ inputRef }: { inputRef: RefObject<HTMLInputElement 
                       // Attached to the group's end edge.
                       className="-my-px -me-px shrink-0 self-stretch rounded-s-none"
                     >
-                      {isSubmitting ? "Sending…" : "Pinch it"}
+                      {isSubmitting ? t("imports.sending") : t("imports.pinchIt")}
                     </Button>
                   )}
                 </form.Subscribe>

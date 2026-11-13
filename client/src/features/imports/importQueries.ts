@@ -1,4 +1,5 @@
 import {
+  DAILY_IMPORT_CAP,
   dailyLimitMessage,
   globalLimitMessage,
   GlobalLimitSchema,
@@ -7,14 +8,26 @@ import {
   type ImportList,
 } from "@pinch/shared";
 import { queryOptions, type QueryClient } from "@tanstack/react-query";
+import i18next from "i18next";
 import { ApiError, deleteResource, getJson, sendJson } from "../../lib/api.ts";
 import { dismissToast, toastCancelled } from "../../lib/toasts.tsx";
 
 // What a 429 from sending or retrying an import says (none for any other error): the user's day's
-// cap (D22), or everyone's (D30), which the API names by its code.
+// cap (D22), or everyone's (D30), which the API names by its code. In English, for its toast, as
+// every toast (D46).
 export function limitMessage(error: Error | null) {
   if (!(error instanceof ApiError && error.status === 429)) return undefined;
   return GlobalLimitSchema.safeParse(error.body).success ? globalLimitMessage : dailyLimitMessage;
+}
+
+// The same on the page, in its language (design §16.7): under the paste box, the screenshots and
+// a failed card's Retry.
+export function limitNote(error: Error | null) {
+  const message = limitMessage(error);
+  if (message === undefined) return undefined;
+  return message === globalLimitMessage
+    ? i18next.t("imports.globalLimit")
+    : i18next.t("imports.dailyLimit", { cap: DAILY_IMPORT_CAP });
 }
 
 // My imports, newest first: few, as done ones are deleted (design §4.1). One request for all of

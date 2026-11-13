@@ -12,7 +12,7 @@ import { fireEvent, render, screen, waitFor, within } from "@testing-library/rea
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, test, vi } from "vitest";
 import { MemoryRouter } from "react-router";
-import { renderApp, toastTitled } from "../../test-utils.tsx";
+import { inHebrew, renderApp, renderInHebrew, toastTitled } from "../../test-utils.tsx";
 import { ImportList } from "./ImportList.tsx";
 import { pollInterval } from "./importQueries.ts";
 import { ScreenshotsUpload } from "./ScreenshotsUpload.tsx";
@@ -881,4 +881,151 @@ test("screenshots past the global cap say so", async () => {
 
   // A quiet note, not an error (design §14), in a region that was already there.
   expect(regions).toContain(await screen.findByText(globalLimitMessage));
+});
+
+// In Hebrew (design §16.11): Add recipe and the queue say it in Hebrew; the toasts stay English
+// (D46), and what a user pasted keeps its own direction (§16.5).
+test("in Hebrew, Add recipe's box, its button and the way to write a recipe are in Hebrew", async () => {
+  stubApi([[]]);
+  await renderInHebrew("/");
+
+  const box = await screen.findByRole("textbox", { name: "לשמור מתכון מסרטון" });
+  expect(box).toHaveAttribute("placeholder", "להדביק סרטון או מתכון");
+  expect(box).toHaveAccessibleDescription(
+    "אפשר להדביק סרטון קצר מ-YouTube, ריל מ-Facebook או מ-Instagram, או מתכון כטקסט",
+  );
+  // "Pinch it" is "Pinch" alone in Hebrew: the brand as the action (D46).
+  expect(screen.getByRole("button", { name: "Pinch" })).toBeInTheDocument();
+  expect(screen.getByRole("heading", { level: 1, name: "להוסיף מתכון" })).toBeInTheDocument();
+  expect(screen.getByRole("link", { name: "או לכתוב מתכון ידנית" })).toHaveAttribute(
+    "href",
+    "/recipes/new",
+  );
+  await waitFor(() => {
+    expect(document.title).toBe("להוסיף מתכון · Pinch");
+  });
+});
+
+test("in Hebrew, the queue's heading says one, two and many in their own forms", async () => {
+  const ready = (n: number) =>
+    importOf({ id: `6650a1b2c3d4e5f60000001${String(n)}`, status: "ready", draft });
+  stubApi([
+    [
+      ready(1),
+      ready(2),
+      ready(3),
+      importOf({ id: "6650a1b2c3d4e5f600000002" }),
+      importOf({ id: "6650a1b2c3d4e5f600000003", status: "failed" }),
+      importOf({ id: "6650a1b2c3d4e5f600000004", stalled: true }),
+    ],
+  ]);
+  await renderInHebrew("/");
+
+  expect(
+    await screen.findByRole("heading", { name: "3 מוכנים · 1 בתהליך · 2 נכשלו" }),
+  ).toBeInTheDocument();
+});
+
+test("in Hebrew, one ready, two in progress and one failed", async () => {
+  stubApi([
+    [
+      importOf({ status: "ready", draft }),
+      importOf({ id: "6650a1b2c3d4e5f600000002" }),
+      importOf({ id: "6650a1b2c3d4e5f600000003", status: "processing", step: "analyzing" }),
+      importOf({ id: "6650a1b2c3d4e5f600000004", status: "failed" }),
+    ],
+  ]);
+  await renderInHebrew("/");
+
+  expect(
+    await screen.findByRole("heading", { name: "1 מוכן · 2 בתהליך · 1 נכשל" }),
+  ).toBeInTheDocument();
+  expect(screen.getByText("קריאת המתכון…")).toBeInTheDocument();
+  expect(screen.getByText("בהמתנה…")).toBeInTheDocument();
+  expect(screen.getByRole("link", { name: "לבדוק" })).toHaveAccessibleDescription("Tomato pasta");
+  expect(screen.getAllByRole("button", { name: "בהכנה…" })[0]).toBeDisabled();
+  // A link's card: named by its site, which stays in English; the link reads left to right.
+  expect(screen.getAllByText("קישור מ-Instagram")[0]).toHaveAttribute("dir", "auto");
+  expect(screen.getAllByText(reel)[0]).toHaveAttribute("dir", "ltr");
+});
+
+test("in Hebrew, a ready one counts its things to look at", async () => {
+  const uncertain = [
+    { path: "title", reason: "Not said." },
+    { path: "servings", reason: "Not said." },
+  ];
+  stubApi([[importOf({ status: "ready", draft: { ...draft, uncertain } })]]);
+  await renderInHebrew("/");
+
+  expect(await screen.findByText(/מוכן לבדיקה/)).toHaveTextContent("מוכן לבדיקה · ◆ 2 דברים לבדוק");
+});
+
+test("in Hebrew, a failure is said by its reason's key, and one it doesn't know as it came", async () => {
+  stubApi([
+    [
+      importOf({ status: "failed", noRetry: true, error: "This doesn't look like a recipe." }),
+      importOf({
+        id: "6650a1b2c3d4e5f600000002",
+        status: "failed",
+        input: { type: "text", text: "2 eggs, 1 onion, chopped, fried in butter" },
+        error: "It may be private.",
+      }),
+    ],
+  ]);
+  await renderInHebrew("/");
+
+  expect(await screen.findByText("זה לא נראה כמו מתכון.")).toBeInTheDocument();
+  // In English, marked so: read in English, its period at its end.
+  expect(screen.getByText("It may be private.")).toHaveAttribute("lang", "en");
+  expect(screen.getByText("It may be private.")).toHaveAttribute("dir", "ltr");
+  expect(screen.getByText("טקסט מודבק")).toBeInTheDocument();
+  // No retry can fix the first (D23): only the second offers one.
+  expect(await screen.findAllByRole("button", { name: "להסיר" })).toHaveLength(2);
+  expect(screen.getAllByRole("button", { name: "לנסות שוב" })).toHaveLength(1);
+});
+
+test("in Hebrew, past the daily cap, Retry's note is in Hebrew", async () => {
+  stubApi([[importOf({ status: "failed", attempts: 3, error: "No." })]], () =>
+    Response.json({ error: { code: "daily_limit", message: dailyLimitMessage } }, { status: 429 }),
+  );
+  await renderInHebrew("/");
+
+  await userEvent.click(await screen.findByRole("button", { name: "לנסות שוב" }));
+
+  expect(
+    await screen.findByText("המכסה היומית של 20 מתכונים כבר נוצלה. אפשר לנסות שוב מחר."),
+  ).toBeInTheDocument();
+});
+
+test("in Hebrew, the queue's toasts stay English", async () => {
+  vi.useFakeTimers({ shouldAdvanceTime: true });
+  stubApi([
+    [importOf({ status: "processing" })],
+    [importOf({ status: "failed", noRetry: true, error: "This doesn't look like a recipe." })],
+  ]);
+  await renderInHebrew("/");
+
+  expect(await screen.findByText("בעיבוד…")).toBeInTheDocument();
+  await vi.advanceTimersByTimeAsync(2000);
+
+  // The card in Hebrew, its toast in English, with the reason as the worker kept it (D46).
+  expect(await screen.findByText("זה לא נראה כמו מתכון.")).toBeInTheDocument();
+  const failure = await findToast("Couldn't read that video");
+  expect(within(failure).getByText("This doesn't look like a recipe.")).toBeInTheDocument();
+});
+
+test("in Hebrew, the screenshots' picker, its hint and its card are in Hebrew", async () => {
+  const shots = importOf({ input: { type: "images", count: 2 } });
+  stubApi([[], [shots]], () => Response.json(shots, { status: 202 }));
+  await inHebrew();
+  renderScreenshots();
+
+  expect(screen.getByText("עד 4 צילומי מסך של המתכון, כשהקישור והטקסט לא מספיקים.")).toBeVisible();
+  await userEvent.upload(screen.getByLabelText("או להוסיף צילומי מסך"), [
+    screenshot("one.png"),
+    screenshot("two.png"),
+  ]);
+
+  expect(await screen.findByText("צילומי מסך")).toBeInTheDocument();
+  expect(screen.getByText("2 תמונות")).toBeInTheDocument();
 });
