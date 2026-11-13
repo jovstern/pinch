@@ -47,6 +47,13 @@ the budgets before its PR opens.
    --output-path=.metrics/lh-<route>-<form>.json --form-factor=<mobile|desktop>`
    (add `--screenEmulation.disabled --preset=desktop` for desktop). Read scores, LCP, CLS,
    TBT, and the top opportunities.
+   **The language trap.** Signed-in runs pass the session with `--extra-headers` Cookie. That
+   header never reaches the cookie jar, so `document.cookie` has no `pinch_lang`, and
+   `index.html`'s script picks the language from the browser and the time zone
+   (`Asia/Jerusalem` here → Hebrew). Run English with a non-Israel `TZ` (e.g. `TZ=UTC npx …`),
+   and confirm in `network-requests` that an English run has no `he-*.js` chunk. Check there
+   too that an English page never fetches `frank-ruhl-libre.woff2` and a Hebrew page does
+   (design §16.6).
 4. **Accessibility:** `@axe-core/playwright` over each route (install it as a dev dependency
    the first time, in `e2e/a11y.spec.ts`, so it becomes a permanent test).
 5. **Runtime:** run `npm run e2e` with console and page-error listeners (the shared fixture in
