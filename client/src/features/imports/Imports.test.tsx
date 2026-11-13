@@ -12,7 +12,7 @@ import { fireEvent, render, screen, waitFor, within } from "@testing-library/rea
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, test, vi } from "vitest";
 import { MemoryRouter } from "react-router";
-import { renderApp } from "../../test-utils.tsx";
+import { renderApp, toastTitled } from "../../test-utils.tsx";
 import { ImportList } from "./ImportList.tsx";
 import { pollInterval } from "./importQueries.ts";
 import { ScreenshotsUpload } from "./ScreenshotsUpload.tsx";
@@ -537,13 +537,13 @@ test("Undo of Pinch it, when the import is already gone, is as good as cancelled
 });
 
 async function findToast(text: string) {
-  await screen.findByText(text);
+  await screen.findByText(toastTitled(text));
   return toastOf(text);
 }
 
-// The toast a text is in (Sonner's list item), to find its buttons.
+// The toast with this title (Sonner's list item), to find its buttons.
 function toastOf(text: string) {
-  const toast = screen.getByText(text).closest("li");
+  const toast = screen.getByText(toastTitled(text)).closest("li");
   if (toast === null) throw new Error(`"${text}" isn't in a toast`);
   return toast;
 }
@@ -572,10 +572,16 @@ test("an import that becomes ready or fails says so once in a toast, with its ne
   await vi.advanceTimersByTimeAsync(2000);
 
   // The third list: the failure was seen twice, and said once.
-  expect(await screen.findByText("Tomato pasta is ready to review")).toBeInTheDocument();
+  expect(
+    await screen.findByText(toastTitled("Tomato pasta is ready to review")),
+  ).toBeInTheDocument();
   expect(
     within(toastOf("Tomato pasta is ready to review")).getByRole("button", { name: "Review" }),
   ).toBeVisible();
+  // The title in its own direction (design §16.5).
+  expect(within(toastOf("Tomato pasta is ready to review")).getByText("Tomato pasta").tagName).toBe(
+    "BDI",
+  );
   // With what the draft asks the user to check.
   expect(
     within(toastOf("Tomato pasta is ready to review")).getByText("1 thing to look at"),
@@ -612,7 +618,9 @@ test("what the first list shows isn't a toast", async () => {
   renderApp("/");
 
   expect(await screen.findByText("Ready to review")).toBeInTheDocument();
-  expect(screen.queryByText("Tomato pasta is ready to review")).not.toBeInTheDocument();
+  expect(
+    screen.queryByText(toastTitled("Tomato pasta is ready to review")),
+  ).not.toBeInTheDocument();
 });
 
 test("a stalled link says nothing is working on it, and offers Dismiss, not Retry", async () => {

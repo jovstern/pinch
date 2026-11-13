@@ -19,6 +19,43 @@ export const en = {
     account: "Your account",
     language: "Language",
     logOut: "Log out",
-    couldntLogOut: "Couldn't log out",
+  },
+  // The frame's own pages: an address with nothing at it, and a page that failed to render
+  // (NotFoundPage, ErrorBoundary).
+  frame: {
+    notFound: "Page not found",
+    nothingHere: "There is nothing at this address.",
+    backToRecipes: "Back to My recipes",
+    didntLoad: "This page didn't load",
+    checkAndReload: "Check your connection, then reload the page.",
+  },
+  // Log in, Sign up and the session's error (SessionError), with what a failed submit says
+  // (submitError). A field's own messages are the shared schemas' (validation, design §16.7).
+  auth: {
+    logIn: "Log in",
+    loggingIn: "Logging in…",
+    newToPinch: "New to Pinch?",
+    signUp: "Sign up",
+    signingUp: "Signing up…",
+    haveAccount: "Already have an account?",
+    name: "Name",
+    email: "Email",
+    password: "Password",
+    passwordHint: "At least 8 characters.",
+    // Between the form's button and Google's.
+    or: "or",
+    continueWithGoogle: "Continue with Google",
+    googleFailed: "Couldn't sign in with Google. Try again.",
+    noMatch: "That email and password don't match.",
+    // Followed by a link, Log in.
+    emailTaken: "An account already uses this email.",
+    tooManyTries: "Too many tries. Wait a minute and try again.",
+    unreachable: "We couldn't reach Pinch. Try again.",
+    somethingWrong: "Something went wrong. Try again.",
+    // SessionGate's page, when who's signed in can't be asked.
+    cantReach: "We couldn't reach Pinch",
+    checkAndTryAgain: "Check your connection, then try again.",
+    tryAgain: "Try again",
+    trying: "Trying…",
   },
 } as const;

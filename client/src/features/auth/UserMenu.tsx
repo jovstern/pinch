@@ -39,7 +39,7 @@ export function UserMenu({ me }: { me: Me }) {
     onError: () => {
       toastCouldntSave(() => {
         logOutNow.mutate();
-      }, t("header.couldntLogOut"));
+      }, "Couldn't log out");
     },
   });
   // Saved on the account, then the same page again, all of it in the new language (§16.1, D40).

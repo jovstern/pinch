@@ -1,11 +1,14 @@
 import type { Me } from "@pinch/shared";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render } from "@testing-library/react";
+import i18next from "i18next";
+import { Direction } from "radix-ui";
 import { MemoryRouter } from "react-router";
 import { toast } from "sonner";
-import { vi } from "vitest";
+import { onTestFinished, vi } from "vitest";
 import { App } from "./App.tsx";
 import { meQuery } from "./features/auth/authQueries.ts";
+import { loadHebrew, pageIsRtl } from "./i18n.ts";
 
 // The user every test is signed in as, unless it passes { me: null } (signed out) or
 // { me: "ask" } (the app asks GET /api/auth/me, through the test's fetch).
@@ -35,12 +38,37 @@ export function renderApp(
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   if (me !== "ask") queryClient.setQueryData(meQuery.queryKey, me);
   render(
-    <QueryClientProvider client={queryClient}>
-      <MemoryRouter initialEntries={[path]}>
-        <App />
-      </MemoryRouter>
-    </QueryClientProvider>,
+    <Direction.Provider dir={pageIsRtl() ? "rtl" : "ltr"}>
+      <QueryClientProvider client={queryClient}>
+        <MemoryRouter initialEntries={[path]}>
+          <App />
+        </MemoryRouter>
+      </QueryClientProvider>
+    </Direction.Provider>,
   );
+}
+
+// renderApp in Hebrew (design §16.11): <html lang="he" dir="rtl">, as index.html's script sets
+// it, and Hebrew's strings, as main.tsx loads them. Back to English once the test is done, the
+// other tests' language (test-setup.ts).
+export async function renderInHebrew(path: string, options?: Parameters<typeof renderApp>[1]) {
+  // First, so a failure below still puts English back.
+  onTestFinished(async () => {
+    document.documentElement.removeAttribute("lang");
+    document.documentElement.removeAttribute("dir");
+    await i18next.changeLanguage("en");
+  });
+  document.documentElement.lang = "he";
+  document.documentElement.dir = "rtl";
+  await loadHebrew();
+  renderApp(path, options);
+}
+
+// A toast's title, whole, for getByText and its kin: a recipe's title in it is in its own <bdi>
+// (design §16.5), and a plain string only matches an element's own text, not across one.
+export function toastTitled(title: string) {
+  return (_: string, element: Element | null) =>
+    element?.hasAttribute("data-title") === true && element.textContent === title;
 }
 
 // Stubs fetch with this one, except GET /api/imports and /api/recipes/count, which answer none:

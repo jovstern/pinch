@@ -3,12 +3,13 @@ import { expect, test } from "./fixtures.ts";
 
 // A first visit (design §16.1, §16.2): no cookie, so the browser decides, before the first paint.
 // Israel's time zone means Hebrew even with an English browser; a Hebrew browser does anywhere.
-// The page's strings are still English until M10's I4; the switch names English in itself.
+// The page says Log in in Hebrew; the switch names English in itself.
 async function firstVisitIsHebrew(page: Page) {
   await page.context().clearCookies();
   await page.goto("/login");
   await expect(page.locator("html")).toHaveAttribute("lang", "he");
   await expect(page.locator("html")).toHaveAttribute("dir", "rtl");
+  await expect(page.getByRole("heading", { level: 1, name: "להתחבר" })).toBeVisible();
   await expect(page.getByRole("button", { name: "English" })).toHaveAttribute("lang", "en");
 }
 

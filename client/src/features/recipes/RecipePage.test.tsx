@@ -2,7 +2,7 @@ import type { Recipe } from "@pinch/shared";
 import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, test, vi } from "vitest";
-import { renderApp, stubFetch } from "../../test-utils.tsx";
+import { renderApp, renderInHebrew, stubFetch, toastTitled } from "../../test-utils.tsx";
 
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -123,9 +123,24 @@ test("Undo on Delete's toast restores the recipe, and View opens it", async () =
   expect(await screen.findByRole("heading", { level: 1, name: "Omelette" })).toBeInTheDocument();
 });
 
-// A button on the toast that says this (Sonner's list item).
+test("in Hebrew, Delete's toast is in English, left to right, the title in its <bdi>", async () => {
+  stubApi();
+  await renderInHebrew(`/recipes/${omelette.id}`);
+  // The recipe's page and its dialog are still English until I6.
+  await chooseDelete();
+  const dialog = await screen.findByRole("alertdialog", { name: "Delete this recipe?" });
+  await userEvent.click(within(dialog).getByRole("button", { name: "Delete" }));
+  // The toasts are English in both languages (design §16.8, D46).
+  const undo = await toastButton("Deleted Omelette", "Undo");
+  const toast = undo.closest("li");
+  if (toast === null) throw new Error("Undo isn't in a toast");
+  expect(within(toast).getByText("Omelette").tagName).toBe("BDI");
+  expect(toast.closest("ol")).toHaveAttribute("dir", "ltr");
+});
+
+// A button on the toast with this title (Sonner's list item).
 async function toastButton(text: string, name: string) {
-  const toast = (await screen.findByText(text)).closest("li");
+  const toast = (await screen.findByText(toastTitled(text))).closest("li");
   if (toast === null) throw new Error(`"${text}" isn't in a toast`);
   return within(toast).getByRole("button", { name });
 }

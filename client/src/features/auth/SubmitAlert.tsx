@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { Link, useLocation } from "react-router";
 import type { SubmitError } from "./submitError.ts";
 
@@ -6,6 +7,7 @@ import type { SubmitError } from "./submitError.ts";
 // to Log in keeps the page the user was going to (?next=), and Sign up's email, which Log in fills
 // in: router state, kept out of the address (and so out of URL history, logs and Referer).
 export function SubmitAlert({ error, email }: { error: unknown; email?: string }) {
+  const { t } = useTranslation();
   const { search } = useLocation();
   if (!isSubmitError(error)) return null;
   return (
@@ -20,7 +22,7 @@ export function SubmitAlert({ error, email }: { error: unknown; email?: string }
             state={{ email }}
             className="font-semibold whitespace-nowrap underline"
           >
-            Log in
+            {t("auth.logIn")}
           </Link>
         </>
       )}
