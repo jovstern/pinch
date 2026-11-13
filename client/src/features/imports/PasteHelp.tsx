@@ -5,16 +5,17 @@ import { pageIsRtl } from "../../i18n.ts";
 import { PasteHelpButton } from "./PasteHelpButton.tsx";
 
 // Where to find the link (design §14): one line per app, by the names their share menus use, then
-// the other thing the box takes, a recipe's text. Loaded on the (i)'s first press (LazyPasteHelp),
+// the other thing the box takes, a recipe's text. The apps' names and their menus' words stay in
+// English in Hebrew too (D46, the user's call): each step reads left to right, its → intact. Loaded on the (i)'s first press (LazyPasteHelp),
 // and open as it appears.
 export function PasteHelp() {
   const { t } = useTranslation();
   const titleId = useId();
-  // The apps' names stay in English (D46).
+  // "Copy link" with a no-break space, so it's never split over two lines.
   const apps = [
-    ["Instagram", t("imports.pasteHelp.instagram")],
-    ["Facebook", t("imports.pasteHelp.facebook")],
-    ["YouTube", t("imports.pasteHelp.youtube")],
+    ["Instagram", t("imports.pasteHelp.instagram"), "Share (the paper plane) → Copy\u00A0link"],
+    ["Facebook", t("imports.pasteHelp.facebook"), "Share → Copy\u00A0link"],
+    ["YouTube", t("imports.pasteHelp.youtube"), "Share → Copy\u00A0link"],
   ];
   return (
     <Popover defaultOpen>
@@ -31,14 +32,20 @@ export function PasteHelp() {
         className="w-80 max-w-[calc(100vw-2rem)]"
       >
         <div dir={pageIsRtl() ? "rtl" : "ltr"}>
-          <p id={titleId} className="font-semibold">
+          {/* In the body's face, as the Filters panel's heading: a small title, not a page's. */}
+          <h2 id={titleId} className="font-sans font-semibold">
             {t("imports.pasteHelp.label")}
-          </p>
+          </h2>
           <dl className="mt-3 space-y-2 text-sm">
-            {apps.map(([app, where]) => (
+            {apps.map(([app, where, steps]) => (
               <div key={app}>
                 <dt className="font-semibold">{app}</dt>
-                <dd className="text-text-muted">{where}</dd>
+                <dd className="text-muted-foreground">
+                  {where}{" "}
+                  <span dir="ltr" lang="en">
+                    {steps}
+                  </span>
+                </dd>
               </div>
             ))}
           </dl>

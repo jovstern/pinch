@@ -4,6 +4,7 @@ import { useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router";
 import { Button } from "../../components/ui/Button.tsx";
+import { pageIsRtl } from "../../i18n.ts";
 import { cn } from "../../lib/cn.ts";
 import { useHeadingFocus } from "../../lib/useHeadingFocus.ts";
 import { ImportList } from "./ImportList.tsx";
@@ -39,10 +40,11 @@ export function ImportPage() {
         {/* The other way in, quiet: the paste is the main one (design §14). Write a recipe's
             pen, as in the header. Then, under Pinch it, the (i): where to find a post's link.
             Left to right in Hebrew too, as the box above (§16.4): the link on the left, the (i)
-            on the right. */}
+            on the right. The link's own words, and its pen, in the page's direction: in Hebrew the
+            pen is at their right, as on the header's Write a recipe. */}
         <div dir="ltr" className="mt-1 flex items-center justify-between gap-2">
           <Button asChild variant="link" className="px-0 text-sm">
-            <Link to="/recipes/new">
+            <Link to="/recipes/new" dir={pageIsRtl() ? "rtl" : "ltr"}>
               <PenLine aria-hidden="true" className="size-4" />
               {t("imports.writeItYourself")}
             </Link>

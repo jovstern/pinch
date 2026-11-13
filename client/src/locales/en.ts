@@ -71,7 +71,7 @@ export const en = {
     pasteLabel: "Pinch a recipe from a reel",
     pasteHint: "Paste a YouTube short, a Facebook or Instagram reel, or a recipe as text",
     // Short: it's the page's LCP with an empty queue (LazyImportForm draws it before the box).
-    pastePlaceholder: "Paste a reel link or recipe",
+    pastePlaceholder: "Paste a video or a recipe",
     pinchIt: "Pinch it",
     sending: "Sending…",
     couldntSend: "We couldn't send this. Try again.",
@@ -83,14 +83,14 @@ export const en = {
     screenshotsHint: "Up to {{max}} screenshots of the recipe, when its link and text won't do.",
     couldntSendThese: "We couldn't send these. Try again.",
     writeItYourself: "Or write it yourself",
-    // The (i) under Pinch it (PasteHelp): its name, then where each app keeps a post's link, by
-    // the names their share menus use (Copy link kept on one line), and the other thing the box
-    // takes.
+    // The (i) under Pinch it (PasteHelp): its name, then where on each app the share menu is (its
+    // steps, "Share → Copy link", are English in both languages, in PasteHelp: D46), and the
+    // other thing the box takes.
     pasteHelp: {
       label: "Where to find the link",
-      instagram: "On a reel: Share (the paper plane) → Copy\u00A0link",
-      facebook: "On a video or reel: Share → Copy\u00A0link",
-      youtube: "On a Short or video: Share → Copy\u00A0link",
+      instagram: "On a reel:",
+      facebook: "On a video or reel:",
+      youtube: "On a Short or video:",
       text: "Or paste the recipe's text, from a post's caption or a website.",
     },
     couldntLoad: "We couldn't load your imports",

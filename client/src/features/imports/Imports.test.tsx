@@ -342,9 +342,10 @@ test("the (i) under Pinch it says where each app keeps a post's link", async () 
   // A popover, not a tooltip: a tap opens it (design §14). "Copy link" has a no-break space,
   // which Testing Library reads as a space.
   const popover = await screen.findByRole("dialog", { name: "Where to find the link" });
-  expect(within(popover).getByText("On a reel: Share (the paper plane) → Copy link")).toBeVisible();
-  expect(within(popover).getByText("On a video or reel: Share → Copy link")).toBeVisible();
-  expect(within(popover).getByText("On a Short or video: Share → Copy link")).toBeVisible();
+  const [instagram, facebook, youtube] = within(popover).getAllByRole("definition");
+  expect(instagram).toHaveTextContent("On a reel: Share (the paper plane) → Copy link");
+  expect(facebook).toHaveTextContent("On a video or reel: Share → Copy link");
+  expect(youtube).toHaveTextContent("On a Short or video: Share → Copy link");
   expect(
     within(popover).getByText("Or paste the recipe's text, from a post's caption or a website."),
   ).toBeVisible();
@@ -369,7 +370,7 @@ test("the paste box's placeholder and an empty box read left to right", async ()
   renderApp("/");
 
   const box = await screen.findByRole("textbox", { name: "Pinch a recipe from a reel" });
-  expect(box).toHaveAttribute("placeholder", "Paste a reel link or recipe");
+  expect(box).toHaveAttribute("placeholder", "Paste a video or a recipe");
   expect(box).toHaveAttribute("dir", "ltr");
 });
 
@@ -929,7 +930,7 @@ test("in Hebrew, Add recipe's box, its button and the way to write a recipe are 
   await renderInHebrew("/");
 
   const box = await screen.findByRole("textbox", { name: "לשמור מתכון מסרטון" });
-  expect(box).toHaveAttribute("placeholder", "להדביק קישור לריל או מתכון");
+  expect(box).toHaveAttribute("placeholder", "להדביק סרטון או מתכון");
   expect(box).toHaveAccessibleDescription(
     "אפשר להדביק סרטון קצר מ\u2011YouTube, ריל מ\u2011Facebook או מ\u2011Instagram, או מתכון כטקסט",
   );
@@ -978,9 +979,14 @@ test("in Hebrew, the (i) is named in Hebrew, says it in Hebrew, and Escape puts 
     "rtl",
   );
   expect(within(popover).getByText("Instagram")).toBeVisible();
-  expect(within(popover).getByText("בריל: שיתוף (מטוס הנייר) ← העתקת קישור")).toBeVisible();
-  expect(within(popover).getByText("בסרטון או בריל: שיתוף ← העתקת קישור")).toBeVisible();
-  expect(within(popover).getByText("בסרטון או ב\u2011Short: שיתוף ← העתקת קישור")).toBeVisible();
+  // The share menus' words stay in English (D46, the user's call), reading left to right.
+  const [instagram, facebook, youtube] = within(popover).getAllByRole("definition");
+  expect(instagram).toHaveTextContent("בריל: Share (the paper plane) → Copy link");
+  expect(facebook).toHaveTextContent("בסרטון או בריל: Share → Copy link");
+  expect(youtube).toHaveTextContent("בסרטון או ב\u2011Short: Share → Copy link");
+  const steps = within(popover).getByText("Share (the paper plane) → Copy link");
+  expect(steps).toHaveAttribute("dir", "ltr");
+  expect(steps).toHaveAttribute("lang", "en");
   expect(
     within(popover).getByText("או להדביק את הטקסט של המתכון, מהכיתוב של פוסט או מאתר."),
   ).toBeVisible();
@@ -989,6 +995,28 @@ test("in Hebrew, the (i) is named in Hebrew, says it in Hebrew, and Escape puts 
 
   expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   expect(screen.getByRole("button", { name: "איפה מוצאים את הקישור" })).toHaveFocus();
+});
+
+test("in Hebrew, the link to write a recipe reads right to left inside its ltr row", async () => {
+  stubApi([[]]);
+  await renderInHebrew("/");
+
+  // Its pen at its words' right, as on the header's Write a recipe (design §16.4).
+  expect(await screen.findByRole("link", { name: "או לכתוב מתכון ידנית" })).toHaveAttribute(
+    "dir",
+    "rtl",
+  );
+});
+
+test("in Hebrew, a refused paste's message is outside the ltr row, in the page's direction", async () => {
+  stubApi([[]]);
+  await renderInHebrew("/");
+
+  const box = await screen.findByRole("textbox", { name: "לשמור מתכון מסרטון" });
+  await userEvent.type(box, "https://www.tiktok.com/@chef/video/1");
+  await userEvent.click(screen.getByRole("button", { name: "Pinch" }));
+
+  expect((await screen.findByRole("alert")).closest('[dir="ltr"]')).toBeNull();
 });
 
 test("in Hebrew, a link from another site is refused in Hebrew", async () => {

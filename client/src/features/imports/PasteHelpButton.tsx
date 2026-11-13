@@ -13,7 +13,7 @@ export function PasteHelpButton(props: ComponentProps<"button">) {
       variant="ghost"
       aria-label={t("imports.pasteHelp.label")}
       aria-haspopup="dialog"
-      className="size-11 shrink-0 px-0 text-text-muted"
+      className="size-11 shrink-0 px-0 text-muted-foreground"
       {...props}
     >
       <Info aria-hidden="true" className="size-5" />

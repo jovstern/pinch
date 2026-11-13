@@ -14,12 +14,14 @@ export function PopoverContent({
   ...props
 }: ComponentProps<typeof PopoverPrimitive.Content>) {
   // No Portal, as DropdownMenuContent: it stays inside the page's landmarks (axe's "region"), and
-  // Radix places it with position: fixed, so the boxes around it don't clip it.
+  // Radix places it with position: fixed, so the boxes around it don't clip it. Focus goes to the
+  // popover itself when it opens; its edge and shadow already show it, so no ring around it all
+  // (important: the global focus ring is unlayered).
   return (
     <PopoverPrimitive.Content
       sideOffset={sideOffset}
       className={cn(
-        "z-50 rounded-control border border-border bg-popover p-4 text-popover-foreground shadow-sheet",
+        "z-50 rounded-control border border-border bg-popover p-4 text-popover-foreground shadow-sheet outline-none!",
         className,
       )}
       {...props}
