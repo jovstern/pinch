@@ -1,4 +1,5 @@
 import { randomInt, randomUUID } from "node:crypto";
+import AxeBuilder from "@axe-core/playwright";
 import {
   test as base,
   expect,
@@ -59,6 +60,23 @@ export async function newVisitor(page: Page) {
   await page
     .context()
     .addCookies([{ name: "pinch_lang", value: "en", domain: "localhost", path: "/" }]);
+}
+
+// axe (e2e/a11y.spec.ts, and Hebrew's pages in e2e/hebrew.spec.ts). Scans the page once nothing
+// on it is moving: a toast fading in or out is drawn in half its colours (a contrast failure that
+// isn't one). Endless animations (a spinner) don't count. `include` scans one part of the page only.
+export async function scan(page: Page, include?: string) {
+  await page.waitForFunction(() =>
+    document
+      .getAnimations()
+      .every(
+        (animation) =>
+          animation.playState !== "running" ||
+          animation.effect?.getComputedTiming().iterations === Infinity,
+      ),
+  );
+  const axe = new AxeBuilder({ page });
+  return (include ? axe.include(include) : axe).analyze();
 }
 
 export { expect };

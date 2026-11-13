@@ -1,23 +1,4 @@
-import AxeBuilder from "@axe-core/playwright";
-import type { Page } from "@playwright/test";
-import { expect, newVisitor, test } from "./fixtures.ts";
-
-// Scans the page once nothing on it is moving: a toast fading in or out is drawn in half its
-// colours (a contrast failure that isn't one). Endless animations (a spinner) don't count. `include` scans one
-// part of the page only.
-async function scan(page: Page, include?: string) {
-  await page.waitForFunction(() =>
-    document
-      .getAnimations()
-      .every(
-        (animation) =>
-          animation.playState !== "running" ||
-          animation.effect?.getComputedTiming().iterations === Infinity,
-      ),
-  );
-  const axe = new AxeBuilder({ page });
-  return (include ? axe.include(include) : axe).analyze();
-}
+import { expect, newVisitor, scan, test } from "./fixtures.ts";
 
 test("My recipes has no accessibility violations", async ({ page }) => {
   await page.goto("/recipes");
