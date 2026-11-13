@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { messages } from "./messages.ts";
 import { TagSchema } from "./tags.ts";
 
 // An optional text field. Forms send "" for a blank input and models often answer "", so an
@@ -13,48 +14,38 @@ function optionalText(max: number, tooLong: string) {
 }
 
 function optionalWholeNumber(min: number, max: number, outOfRange: string) {
-  return z.int("Enter a whole number.").min(min, outOfRange).max(max, outOfRange).optional();
+  return z.int(messages.wholeNumber).min(min, outOfRange).max(max, outOfRange).optional();
 }
 
 export const IngredientSchema = z.object({
-  name: z.string().trim().min(1, "Name the ingredient.").max(200, "Keep it under 200 characters."),
+  name: z.string().trim().min(1, messages.ingredientNameRequired).max(200, messages.under200),
   // Text, not a number: recipes say "1/2", "2-3" or "a pinch".
-  quantity: optionalText(50, "Keep it under 50 characters."),
-  unit: optionalText(50, "Keep it under 50 characters."),
-  note: optionalText(200, "Keep it under 200 characters."),
+  quantity: optionalText(50, messages.under50),
+  unit: optionalText(50, messages.under50),
+  note: optionalText(200, messages.under200),
 });
 
 // What the user writes: the body of POST /api/recipes (design §6). Every limit has a message
 // the form can show (§8.1).
 export const RecipeInputSchema = z.object({
-  title: z
-    .string()
-    .trim()
-    .min(1, "Give the recipe a title.")
-    .max(200, "Keep the title under 200 characters."),
-  description: optionalText(2000, "Keep the description under 2000 characters."),
+  title: z.string().trim().min(1, messages.titleRequired).max(200, messages.titleTooLong),
+  description: optionalText(2000, messages.descriptionTooLong),
   ingredients: z
     .array(IngredientSchema)
-    .min(1, "Add at least one ingredient.")
-    .max(100, "A recipe can have up to 100 ingredients."),
+    .min(1, messages.ingredientsRequired)
+    .max(100, messages.tooManyIngredients),
   steps: z
-    .array(
-      z
-        .string()
-        .trim()
-        .min(1, "A step can't be empty.")
-        .max(2000, "Keep each step under 2000 characters."),
-    )
-    .min(1, "Add at least one step.")
-    .max(100, "A recipe can have up to 100 steps."),
-  servings: optionalWholeNumber(1, 100, "Servings must be between 1 and 100."),
-  prepMinutes: optionalWholeNumber(0, 1440, "Prep time must be between 0 and 1440 minutes."),
-  cookMinutes: optionalWholeNumber(0, 1440, "Cook time must be between 0 and 1440 minutes."),
+    .array(z.string().trim().min(1, messages.stepEmpty).max(2000, messages.stepTooLong))
+    .min(1, messages.stepsRequired)
+    .max(100, messages.tooManySteps),
+  servings: optionalWholeNumber(1, 100, messages.servingsRange),
+  prepMinutes: optionalWholeNumber(0, 1440, messages.prepRange),
+  cookMinutes: optionalWholeNumber(0, 1440, messages.cookRange),
   // Left out means none: toRecipe parses stored recipes with this schema, so ones saved before
   // tags existed read as []. Each tag once (the default comes first, so it's deduped too).
   tags: z
     .array(TagSchema)
-    .max(20, "A recipe can have up to 20 tags.")
+    .max(20, messages.tooManyTags)
     .default([])
     .transform((tags) => [...new Set(tags)]),
 });
@@ -171,17 +162,14 @@ export const RecipeSchema = RecipeInputSchema.extend({
 
 // My recipes' Sort and Filters (design §7), as GET /api/recipes and the page's address take them.
 // The order: newest first (the default), the least total time first, or by title.
-export const RecipeSortSchema = z.enum(
-  ["newest", "quickest", "az"],
-  "Sort by newest, quickest or az.",
-);
+export const RecipeSortSchema = z.enum(["newest", "quickest", "az"], messages.sort);
 // The most minutes a recipe takes, prep and cook together ("30 min or less").
-export const TimeLimitSchema = z.enum(["15", "30", "60"], "Pick a time of 15, 30 or 60.");
+export const TimeLimitSchema = z.enum(["15", "30", "60"], messages.time);
 // Where a recipe came from: the three sites, or written by hand ("manual"). Pasted text and
 // screenshots aren't among them (the design's Filters have no place for them).
 export const ListSourceSchema = SourceSchema.shape.type.extract(
   ["instagram", "youtube", "facebook", "manual"],
-  "Pick a source from the list.",
+  messages.source,
 );
 
 // GET /api/recipes, a page at a time. nextCursor asks for the next page, and is null on the last

@@ -1,13 +1,14 @@
 import { z } from "zod";
+import { messages } from "./messages.ts";
 
 // Accounts (design §8.3). Emails are kept lowercase, so one address is one account whatever the
 // case it's typed in.
 const EmailSchema = z
-  .string("Enter your email.")
+  .string(messages.emailRequired)
   .trim()
   .toLowerCase()
-  .min(1, "Enter your email.")
-  .pipe(z.email("Enter a valid email.").max(254, "Keep the email under 254 characters."));
+  .min(1, messages.emailRequired)
+  .pipe(z.email(messages.emailInvalid).max(254, messages.emailTooLong));
 
 // The interface's language (design §16.1, D40): on the account, in me, and in the pinch_lang cookie.
 export const LanguageSchema = z.enum(["en", "he"]);
@@ -18,14 +19,14 @@ export type Language = z.infer<typeof LanguageSchema>;
 export const SignupInputSchema = z.object({
   email: EmailSchema,
   password: z
-    .string("Choose a password.")
-    .min(8, "Use at least 8 characters.")
-    .max(200, "Keep the password under 200 characters."),
+    .string(messages.passwordChoose)
+    .min(8, messages.passwordTooShort)
+    .max(200, messages.passwordTooLong),
   name: z
-    .string("Enter your name.")
+    .string(messages.nameRequired)
     .trim()
-    .min(1, "Enter your name.")
-    .max(100, "Keep the name under 100 characters."),
+    .min(1, messages.nameRequired)
+    .max(100, messages.nameTooLong),
   // The language the page was in: the new account keeps it (§16.1). None is English.
   language: LanguageSchema.optional(),
 });
@@ -36,9 +37,9 @@ export type SignupInput = z.infer<typeof SignupInputSchema>;
 export const LoginInputSchema = z.object({
   email: EmailSchema,
   password: z
-    .string("Enter your password.")
-    .min(1, "Enter your password.")
-    .max(200, "Keep the password under 200 characters."),
+    .string(messages.passwordRequired)
+    .min(1, messages.passwordRequired)
+    .max(200, messages.passwordTooLong),
 });
 export type LoginInput = z.infer<typeof LoginInputSchema>;
 

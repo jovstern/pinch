@@ -1,3 +1,5 @@
+import { messages } from "@pinch/shared";
+
 // Every word the interface says, in English (design §16.3, D39): one object, keys grouped by
 // area. In the entry: English is the default and the fallback. Hebrew (he.ts) has the same keys,
 // which tsc checks. A plural is written whole in each form (_one, _other), and i18next picks one
@@ -102,14 +104,8 @@ export const en = {
     readyToReview: "Ready to review",
     thingsToLookAt_one: "1 thing to look at",
     thingsToLookAt_other: "{{count}} things to look at",
+    // Without a reason; the worker's reasons are shared's (validation).
     didntWork: "That didn't work.",
-    // The worker's reasons, by their English (server/src/worker: NOT_A_RECIPE, TOO_LONG,
-    // FAILED_MESSAGE), which the import keeps; one it doesn't know is shown as it came (§16.7).
-    reasons: {
-      notARecipe: "This doesn't look like a recipe.",
-      tooLong: "This video is over 5 minutes. Pinch reads shorter ones.",
-      couldntTurn: "We couldn't turn this into a recipe.",
-    },
     // A card's actions.
     review: "Review",
     cooking: "Cooking…",
@@ -152,7 +148,7 @@ export const en = {
     couldntLoadMore: "We couldn't load more recipes. Press Show more to try again.",
     showMore: "Show more",
     loadingMore: "Loading…",
-    // A card's line under its title: "10 min · 2 ingredients" (I8 formats the numbers, §16.3).
+    // A card's line under its title: "10 min · 2 ingredients" (the numbers through Intl, §16.3).
     minutes: "{{minutes}} min",
     ingredients_one: "1 ingredient",
     ingredients_other: "{{count}} ingredients",
@@ -253,7 +249,7 @@ export const en = {
     fromText: "From pasted text",
     fromScreenshots: "From screenshots",
     opensInNewTab: "(opens in a new tab)",
-    // "Serves 4 · Prep 10 min · Cook 25 min" (I8 formats the numbers, §16.3).
+    // "Serves 4 · Prep 10 min · Cook 25 min" (the numbers through Intl, §16.3).
     serves_one: "Serves 1",
     serves_other: "Serves {{count}}",
     prep: "Prep {{minutes}} min",
@@ -286,7 +282,7 @@ export const en = {
   // The editor: writing a recipe, editing one, reviewing a draft (NewRecipePage, EditRecipePage,
   // ReviewImportPage, DraftBanner, RecipeForm, RecipeTags, TagsSheet, LeaveDialog). Its sections'
   // names are the recipe's (recipe.ingredients, recipe.steps, recipe.tags); its toasts stay
-  // English (D46). A field's own messages are the shared schemas' (validation, I8).
+  // English (D46). A field's own messages are the shared schemas' (validation).
   editor: {
     // Write a recipe's page: its title, breadcrumb and heading are the header's Write a recipe.
     gotText: "Got the recipe as text?",
@@ -404,4 +400,8 @@ export const en = {
     close: "Close",
     breadcrumb: "Breadcrumb",
   },
+  // What the server says that the user reads: the fields' messages and why an import failed
+  // (shared/src/messages.ts, design §16.7). shared's object itself, one English source; the
+  // client finds a message's name by its text (lib/serverMessage).
+  validation: messages,
 } as const;

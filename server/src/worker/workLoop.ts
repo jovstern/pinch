@@ -1,4 +1,4 @@
-import { RecipeDraftSchema, type ImportStep, type RecipeDraft } from "@pinch/shared";
+import { messages, RecipeDraftSchema, type ImportStep, type RecipeDraft } from "@pinch/shared";
 import type { Collection, UpdateFilter } from "mongodb";
 import { setTimeout } from "node:timers/promises";
 import type { Logger } from "pino";
@@ -34,11 +34,6 @@ const ATTEMPT_DEADLINE_MS = LEASE_MS - 30_000;
 // Three tries, then the import is failed (§4.2). The wait before the second is 10 s, before
 // the third 60 s.
 const MAX_ATTEMPTS = 3;
-
-// What the user reads on a failed import. The cause is in the worker's log.
-// The queue card finds its translation by this exact text (client en.ts imports.reasons;
-// design §16.7).
-export const FAILED_MESSAGE = "We couldn't turn this into a recipe.";
 
 // A failure no retry can fix (not a recipe, too long): the import fails at once, and the
 // message is what the user reads (design §4.2, D23). Any other error is tried again.
@@ -222,8 +217,12 @@ function readyUpdate(
 }
 
 // The update that fails an import, with the message the user reads (§4.2), and whether a retry
-// could ever fix it (D23).
-function failedUpdate(message = FAILED_MESSAGE, noRetry = false): UpdateFilter<ImportDocument> {
+// could ever fix it (D23). By default the plain one, couldntTurn: the cause is in the worker's
+// log. The message is one of shared's, which the queue card says in the page's language (§16.7).
+function failedUpdate(
+  message: string = messages.couldntTurn,
+  noRetry = false,
+): UpdateFilter<ImportDocument> {
   return {
     $set: { status: "failed", error: message, noRetry, updatedAt: new Date() },
     $unset: { leaseUntil: "", step: "" },

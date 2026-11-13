@@ -1,5 +1,5 @@
 import { FileState, GoogleGenAI, type File, type PartUnion } from "@google/genai";
-import { MAX_UNCERTAIN, RecipeDraftSchema } from "@pinch/shared";
+import { MAX_UNCERTAIN, messages, RecipeDraftSchema } from "@pinch/shared";
 import { createHash } from "node:crypto";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -64,13 +64,6 @@ export const GEMINI_VERSION = createHash("sha256")
   .digest("hex")
   .slice(0, 12);
 
-// The queue card finds its translation by this exact text (client en.ts imports.reasons;
-// design §16.7).
-export const NOT_A_RECIPE = "This doesn't look like a recipe.";
-// The queue card finds its translation by this exact text (client en.ts imports.reasons;
-// design §16.7).
-export const TOO_LONG = "This video is over 5 minutes. Pinch reads shorter ones.";
-
 // The one place that knows about Gemini (§9): the worker hands it an import's input and gets a
 // draft back, which it checks with Zod as it would any other.
 export function geminiExtract(ai: GoogleGenAI): Extract {
@@ -111,7 +104,9 @@ export function geminiExtract(ai: GoogleGenAI): Extract {
       return fromDownload(ai, input.url, signal, attempt);
     }
     const { seconds, caption, thumbnailUrl } = await readVideoInfo(input.url, signal);
-    if (seconds !== undefined && seconds > MAX_VIDEO_SECONDS) throw new NoRetryError(TOO_LONG);
+    if (seconds !== undefined && seconds > MAX_VIDEO_SECONDS) {
+      throw new NoRetryError(messages.tooLong);
+    }
     await keepThumbnail(thumbnailUrl, signal, setThumbnail);
     // Gemini watches a public YouTube video from its link (§4.1), with its caption (D15).
     await setStep("analyzing");
@@ -145,7 +140,7 @@ async function fromDownload(
     // Instagram doesn't say a post's length: it's measured once the video is here. (Facebook
     // does, but the one call has downloaded a long one by then: 100 MB at most.)
     const seconds = told ?? (await measureSeconds(path, signal));
-    if (seconds > MAX_VIDEO_SECONDS) throw new NoRetryError(TOO_LONG);
+    if (seconds > MAX_VIDEO_SECONDS) throw new NoRetryError(messages.tooLong);
     await setStep("analyzing");
     // The SDK passes no signal to an upload: the client's timeout (worker.ts) bounds each
     // request of it. Its name is kept at once, so finally deletes it even if the wait fails.
@@ -235,6 +230,6 @@ async function askGemini(ai: GoogleGenAI, log: Logger, contents: PartUnion[], si
   // Unknown until runImport checks it with Zod; only isRecipe is read here.
   const answer = JSON.parse(response.text) as unknown;
   const { isRecipe } = IsRecipeSchema.parse(answer);
-  if (!isRecipe) throw new NoRetryError(NOT_A_RECIPE);
+  if (!isRecipe) throw new NoRetryError(messages.notARecipe);
   return answer;
 }

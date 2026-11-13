@@ -381,6 +381,18 @@ test("in Hebrew, writing a recipe: its page, fields and buttons are in Hebrew", 
   expect(await screen.findByText("5 דברים לתקן לפני השמירה")).toBeInTheDocument();
 });
 
+test("in Hebrew, the form's own check says what to fix in Hebrew", async () => {
+  stubApi(() => Response.json(saved, { status: 201 }));
+  await renderInHebrew("/recipes/new");
+
+  await userEvent.click(await screen.findByRole("button", { name: "לשמור מתכון" }));
+
+  // shared's messages, by their names (design §16.7).
+  expect(await screen.findByText("צריך לתת למתכון שם.")).toHaveAttribute("role", "alert");
+  expect(screen.getByLabelText("שם המתכון")).toHaveAccessibleDescription("צריך לתת למתכון שם.");
+  expect(screen.getByText("צריך לכתוב את שם המצרך.")).toBeInTheDocument();
+});
+
 test("in Hebrew, one thing to fix is said in words", async () => {
   stubApi(() => Response.json(saved, { status: 201 }));
   await renderInHebrew("/recipes/new");

@@ -375,6 +375,34 @@ test("in Hebrew, Sign up is in Hebrew, with Log in's link", async () => {
   expect(screen.getByRole("link", { name: "להתחבר" })).toHaveAttribute("href", "/login");
 });
 
+test("in Hebrew, the API's field errors are in Hebrew, and one it doesn't know in English", async () => {
+  const user = userEvent.setup();
+  stubFetch(() =>
+    Promise.resolve(
+      Response.json(
+        {
+          error: {
+            code: "invalid_input",
+            fields: { email: "Enter a valid email.", password: "Use another password." },
+          },
+        },
+        { status: 400 },
+      ),
+    ),
+  );
+  await renderInHebrew("/signup", { me: null });
+  await user.type(await screen.findByLabelText("שם"), "Dana");
+  await user.type(screen.getByLabelText("אימייל"), "cook@example.com");
+  await user.type(screen.getByLabelText("סיסמה"), "a long password");
+  await user.click(screen.getByRole("button", { name: "להירשם" }));
+
+  expect(await screen.findByText("צריך להזין אימייל תקין.")).toHaveAttribute("role", "alert");
+  // A message the client doesn't know is shown as it came: in English, marked so (§16.7).
+  const unknown = screen.getByText("Use another password.");
+  expect(unknown).toHaveAttribute("lang", "en");
+  expect(unknown).toHaveAttribute("dir", "ltr");
+});
+
 test("in Hebrew, the session's error is in Hebrew", async () => {
   stubFetch(() => Promise.resolve(new Response(null, { status: 500 })));
   await renderInHebrew("/nope", { me: "ask" });

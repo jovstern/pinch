@@ -1,4 +1,5 @@
 import { FileState, GenerateContentResponse, GoogleGenAI } from "@google/genai";
+import { messages } from "@pinch/shared";
 import { Binary } from "mongodb";
 import { pino } from "pino";
 import { existsSync, writeFileSync } from "node:fs";
@@ -6,7 +7,7 @@ import { join } from "node:path";
 import sharp from "sharp";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import type { ImportDocument } from "../db/imports.ts";
-import { GEMINI_MODEL, geminiExtract, NOT_A_RECIPE, TOO_LONG } from "./geminiExtract.ts";
+import { GEMINI_MODEL, geminiExtract } from "./geminiExtract.ts";
 import { makeThumbnail } from "./thumbnail.ts";
 import { downloadVideo, measureSeconds, readVideoInfo } from "./videoInfo.ts";
 import { NoRetryError } from "./workLoop.ts";
@@ -157,7 +158,9 @@ test("a video over 5 minutes isn't sent, and isn't tried again", async () => {
   vi.mocked(readVideoInfo).mockResolvedValue({ seconds: 301, caption: "" });
   const generate = vi.spyOn(ai.models, "generateContent");
 
-  await expect(extract(youtube, noDeadline, quiet)).rejects.toThrow(new NoRetryError(TOO_LONG));
+  await expect(extract(youtube, noDeadline, quiet)).rejects.toThrow(
+    new NoRetryError(messages.tooLong),
+  );
   expect(generate).not.toHaveBeenCalled();
 });
 
@@ -177,7 +180,9 @@ test("a video that isn't a recipe isn't tried again", async () => {
     answer(JSON.stringify({ ...recipe, isRecipe: false })),
   );
 
-  await expect(extract(youtube, noDeadline, quiet)).rejects.toThrow(new NoRetryError(NOT_A_RECIPE));
+  await expect(extract(youtube, noDeadline, quiet)).rejects.toThrow(
+    new NoRetryError(messages.notARecipe),
+  );
 });
 
 test("an empty answer is a failed attempt", async () => {
@@ -278,7 +283,9 @@ test("a reel over 5 minutes, measured once it's here, isn't uploaded, and isn't 
   vi.mocked(measureSeconds).mockResolvedValue(320);
   const { upload } = filesApi();
 
-  await expect(extract(reel, noDeadline, quiet)).rejects.toThrow(new NoRetryError(TOO_LONG));
+  await expect(extract(reel, noDeadline, quiet)).rejects.toThrow(
+    new NoRetryError(messages.tooLong),
+  );
 
   expect(upload).not.toHaveBeenCalled();
   expect(existsSync(folder.path)).toBe(false);

@@ -123,6 +123,22 @@ test("Undo on Delete's toast restores the recipe, and View opens it", async () =
   expect(await screen.findByRole("heading", { level: 1, name: "Omelette" })).toBeInTheDocument();
 });
 
+test("in Hebrew, the numbers are Intl's: Western digits, grouped by thousands", async () => {
+  stubFetch(() =>
+    Promise.resolve(
+      Response.json({
+        ...omelette,
+        prepMinutes: 1440,
+        nutritionPerServing: { ...omelette.nutritionPerServing, calories: 1250.2 },
+      }),
+    ),
+  );
+  await renderInHebrew(`/recipes/${omelette.id}`);
+
+  expect(await screen.findByText(/דק׳/)).toHaveTextContent("הכנה 1,440 דק׳");
+  expect(screen.getByText(/קק״ל/)).toHaveTextContent("≈ 1,250 קק״ל");
+});
+
 test("in Hebrew, Delete's toast is in English, left to right, the title in its <bdi>", async () => {
   stubApi();
   await renderInHebrew(`/recipes/${omelette.id}`);

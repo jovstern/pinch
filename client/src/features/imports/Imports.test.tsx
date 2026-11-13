@@ -1,10 +1,8 @@
 import {
   dailyLimitMessage,
   globalLimitMessage,
-  linkMessage,
+  messages,
   type DuplicateLink,
-  screenshotsMessage,
-  textMessage,
   type Import,
 } from "@pinch/shared";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -161,7 +159,7 @@ test("a text too short to be a recipe is refused before it's sent", async () => 
   );
   await userEvent.click(screen.getByRole("button", { name: "Pinch it" }));
 
-  expect(await screen.findByRole("alert")).toHaveTextContent(textMessage);
+  expect(await screen.findByRole("alert")).toHaveTextContent(messages.text);
   expect(fetch).not.toHaveBeenCalledWith("/api/imports", expect.anything());
 });
 
@@ -183,10 +181,10 @@ test("a link from another site is refused before it's sent, until it's fixed", a
   await userEvent.type(box, "https://www.tiktok.com/@chef/video/1");
   await userEvent.click(screen.getByRole("button", { name: "Pinch it" }));
 
-  expect(await screen.findByRole("alert")).toHaveTextContent(linkMessage);
+  expect(await screen.findByRole("alert")).toHaveTextContent(messages.link);
   // The hint, then the error.
   expect(box).toHaveAccessibleDescription(
-    `Paste a YouTube short, a Facebook or Instagram reel, or a recipe as text ${linkMessage}`,
+    `Paste a YouTube short, a Facebook or Instagram reel, or a recipe as text ${messages.link}`,
   );
   expect(fetch).not.toHaveBeenCalledWith("/api/imports", expect.anything());
 
@@ -821,12 +819,12 @@ test("more than 4 screenshots, or one too big, are refused before anything is se
     picker,
     ["1", "2", "3", "4", "5"].map((n) => screenshot(`${n}.png`)),
   );
-  expect(await screen.findByRole("alert")).toHaveTextContent(screenshotsMessage);
+  expect(await screen.findByRole("alert")).toHaveTextContent(messages.screenshots);
 
   const big = screenshot("big.png");
   Object.defineProperty(big, "size", { value: 11_000_000 });
   await userEvent.upload(picker, [big]);
-  expect(screen.getByRole("alert")).toHaveTextContent(screenshotsMessage);
+  expect(screen.getByRole("alert")).toHaveTextContent(messages.screenshots);
   expect(fetch).not.toHaveBeenCalledWith("/api/imports/screenshots", expect.anything());
 });
 
@@ -906,6 +904,20 @@ test("in Hebrew, Add recipe's box, its button and the way to write a recipe are 
   });
 });
 
+test("in Hebrew, a link from another site is refused in Hebrew", async () => {
+  stubApi([[]]);
+  await renderInHebrew("/");
+
+  const box = await screen.findByRole("textbox", { name: "לשמור מתכון מסרטון" });
+  await userEvent.type(box, "https://www.tiktok.com/@chef/video/1");
+  await userEvent.click(screen.getByRole("button", { name: "Pinch" }));
+
+  // shared's message, by its name (design §16.7).
+  expect(await screen.findByRole("alert")).toHaveTextContent(
+    "צריך להדביק קישור לפוסט מ\u2011Instagram, מ\u2011Facebook או מ\u2011YouTube.",
+  );
+});
+
 test("in Hebrew, the queue's heading says one, two and many in their own forms", async () => {
   const ready = (n: number) =>
     importOf({ id: `6650a1b2c3d4e5f60000001${String(n)}`, status: "ready", draft });
@@ -963,7 +975,7 @@ test("in Hebrew, a ready one counts its things to look at", async () => {
 test("in Hebrew, a failure is said by its reason's key, and one it doesn't know as it came", async () => {
   stubApi([
     [
-      importOf({ status: "failed", noRetry: true, error: "This doesn't look like a recipe." }),
+      importOf({ status: "failed", noRetry: true, error: messages.notARecipe }),
       importOf({
         id: "6650a1b2c3d4e5f600000002",
         status: "failed",
