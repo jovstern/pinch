@@ -1,6 +1,7 @@
 import babel from "@rolldown/plugin-babel";
 import tailwindcss from "@tailwindcss/vite";
 import react, { reactCompilerPreset } from "@vitejs/plugin-react";
+import { LanguageSchema } from "@pinch/shared";
 import type { Plugin } from "vite";
 import { defineConfig } from "vitest/config";
 
@@ -9,20 +10,24 @@ import { defineConfig } from "vitest/config";
 // puts the chunks' names in its place. A path not found fails the build rather than preload
 // nothing.
 function stringsChunks(): Plugin {
+  let base = "/";
   return {
     name: "strings-chunks",
     apply: "build",
+    configResolved(config) {
+      base = config.base;
+    },
     transformIndexHtml: {
       order: "post",
       handler(html, { bundle = {} }) {
         let out = html;
-        for (const language of ["en", "he"]) {
+        for (const language of LanguageSchema.options) {
           const source = `/src/locales/${language}.ts`;
           const chunk = Object.values(bundle).find(
             (file) => file.type === "chunk" && file.facadeModuleId?.endsWith(source),
           );
           if (!chunk || !out.includes(`"${source}"`)) throw new Error(`No chunk for ${source}`);
-          out = out.replace(`"${source}"`, `"/${chunk.fileName}"`);
+          out = out.replace(`"${source}"`, `"${base}${chunk.fileName}"`);
         }
         return out;
       },

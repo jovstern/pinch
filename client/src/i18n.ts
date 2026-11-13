@@ -44,10 +44,10 @@ const strings = {
 };
 
 // Started before the first render (main.tsx), so t() has its strings on the first frame. If they
-// can't be fetched, the page still renders, its words as keys, rather than nothing; a reload
-// fetches them again. React escapes what it draws, so i18next doesn't.
+// can't be fetched it fails, and main.tsx shows AppDidntLoad instead of the app. React escapes
+// what it draws, so i18next doesn't.
 export async function startI18n(language: Language) {
-  const translation = await strings[language]().catch(() => ({}));
+  const translation = await strings[language]();
   await i18next.use(initReactI18next).init({
     lng: language,
     fallbackLng: false,

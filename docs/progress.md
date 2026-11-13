@@ -190,8 +190,8 @@ After M10 (found by M10's UI review, not M10's to fix):
 - [ ] An English title's alignment on a Hebrew recipe page at desktop width (the review's S6)
 - [ ] The quick-tag chips at 40 px, under the 44 px touch target (the review's S7)
 - [ ] The top toast covers the paste field on a phone (the review's S8)
-- [x] Move the English strings out of the entry (about 6.5 kB gzip that Hebrew users never use):
-      frees room on every route and cook's LCP (2.46 of 2.5 s); changes §16.3
+- [x] Move the English strings out of the entry (about 6.5 kB gzip that Hebrew users never use;
+      measured 3.5, §16.10): frees room on every route and cook's LCP (2.46 of 2.5 s); changes §16.3
 
 ## M11 — Pinch online (design §15, §8.3, D31–D38)
 

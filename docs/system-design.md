@@ -1155,8 +1155,10 @@ file it serves at start (D36, §15.4).
   queue's wait it already has (§8.3), and `index.html`'s script preloads it (§16.2), so it adds no
   round trip of its own and nothing is drawn before its strings (but the toasts'). No fallback
   language (`fallbackLng: false`): `tsc` makes `he` complete, and a fallback to English would
-  fetch it for Hebrew too. If the chunk can't be fetched, the page still renders, its words as
-  keys, rather than nothing. `validation` is shared's `messages`, which the schemas already put in
+  fetch it for Hebrew too. If the chunk can't be fetched (offline mid-load, or a deploy that
+  replaced it), `main.tsx` renders `AppDidntLoad` instead of the app: fixed text, no i18n, in both
+  languages ("Pinch didn't load. Check your connection, then reload." / "Pinch לא נטען. כדאי
+  לבדוק את החיבור ולטעון מחדש."), with a Reload button. `e2e/strings.spec.ts` blocks the chunk. `validation` is shared's `messages`, which the schemas already put in
   the entry: `en`'s chunk refers to it there, not a copy.
 - **Changed by the user on 2026-11-13** (after M10; docs/metrics/m10.md, Worth doing 1 and 2):
   English was in the entry, as the default and the fallback, so a Hebrew page downloaded it and
@@ -1349,7 +1351,7 @@ that adds a string:
   180.1 → 198.3; the Hebrew chunk 0.3 kB with only the header's strings), and the observer
   checks LCP in Hebrew too (the lazy chunk and the reload of a new device).
 - **Raised again** (the user, 2026-11-13, after I6): 195 → **200** kB on the app's routes, 205 →
-  **210** kB on routes that add their own chunk. The English strings are in the entry (§16.3), so
+  **210** kB on routes that add their own chunk. The English strings were in the entry (§16.3), so
   each slice's strings cost every route: I6 (My recipes, Filters, the tags, a recipe's page) added
   +2.2 kB everywhere, the editor 201.5 → 203.7 of 205, with I7's editor and cook strings still to
   come. Kept over per-chunk English (`addResourceBundle`) or lazy pages, which change §16.3 or
