@@ -2,7 +2,7 @@ import type { Import, Recipe, RecipeInput } from "@pinch/shared";
 import { screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, test, vi } from "vitest";
-import { renderApp } from "../../test-utils.tsx";
+import { renderApp, renderInHebrew } from "../../test-utils.tsx";
 
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -80,10 +80,10 @@ test("the draft sits under Add recipe, says where Pinch read it and links to the
 
   const breadcrumb = await screen.findByRole("navigation", { name: "Breadcrumb" });
   expect(within(breadcrumb).getByRole("link", { name: "Add recipe" })).toHaveAttribute("href", "/");
-  expect(within(breadcrumb).getByText("Review: Tomato pasta")).toHaveAttribute(
-    "aria-current",
-    "page",
-  );
+  // The title in its own <bdi> (design §16.5).
+  const page = within(breadcrumb).getByText("Tomato pasta");
+  expect(page.tagName).toBe("BDI");
+  expect(page.closest("[aria-current=page]")).toHaveTextContent("Review: Tomato pasta");
   expect(screen.getByText("Pinch read this from Instagram")).toBeInTheDocument();
   expect(screen.getByRole("link", { name: /Watch the video/ })).toHaveAttribute("href", reel);
 });
@@ -272,4 +272,96 @@ test("changing a marked number clears its mark", async () => {
   await userEvent.type(serves, "4");
   expect(serves).not.toHaveAccessibleDescription();
   expect(screen.queryByText("Not said.")).not.toBeInTheDocument();
+});
+
+// In Hebrew (design §16.11): the page's own words are Hebrew; the draft and the model's reasons
+// stay in the recipe's language (§16.7), the title in its own <bdi> or isolates (§16.5).
+test("in Hebrew, a draft's page, banner and things to look at are in Hebrew", async () => {
+  const marked: Import = {
+    ...ready,
+    draft: {
+      ...draft,
+      ingredients: [{ name: "spaghetti" }, { name: "tomatoes" }],
+      uncertain: [
+        { path: "ingredients.1.quantity", reason: "The video says “a can”." },
+        { path: "steps.0", reason: "Too fast to follow." },
+      ],
+    },
+  };
+  stubApi(marked);
+  await renderInHebrew(`/imports/${ready.id}`);
+
+  expect(await screen.findByLabelText("שם המתכון")).toHaveValue("Tomato pasta");
+  expect(document.title).toBe("בדיקה: \u2068Tomato pasta\u2069 · Pinch");
+  const heading = screen.getByRole("heading", { level: 1, name: "בדיקה: Tomato pasta" });
+  expect(within(heading).getByText("Tomato pasta").tagName).toBe("BDI");
+  const breadcrumb = screen.getByRole("navigation", { name: "נתיב ניווט" });
+  expect(within(breadcrumb).getByRole("link", { name: "להוסיף מתכון" })).toHaveAttribute(
+    "href",
+    "/",
+  );
+  const page = within(breadcrumb).getByText("Tomato pasta");
+  expect(page.tagName).toBe("BDI");
+  expect(page.closest("[aria-current=page]")).toHaveTextContent("בדיקה: Tomato pasta");
+
+  // The banner: the platform's name stays as it is (D46); the link's arrow mirrors (§16.4).
+  expect(screen.getByText("Pinch קרא את זה מ-Instagram")).toBeInTheDocument();
+  expect(screen.getByText("כדאי לבדוק ואז לשמור.")).toBeInTheDocument();
+  const watch = screen.getByRole("link", { name: /^לצפות בסרטון.*נפתח בכרטיסייה חדשה/ });
+  expect(watch).toHaveAttribute("href", reel);
+  expect(watch.querySelector("svg")).toHaveClass("rtl:-scale-x-100");
+
+  expect(screen.getByText(/2 דברים לבדוק, מסומנים למטה/)).toBeInTheDocument();
+  const amounts = screen.getAllByLabelText("כמות");
+  expect(amounts[1]).toHaveAccessibleDescription("לבדוק: The video says “a can”.");
+  await userEvent.click(screen.getByRole("button", { name: "לעבור לראשון" }));
+  expect(amounts[1]).toHaveFocus();
+  await userEvent.type(amounts[1] as HTMLElement, "400");
+  expect(screen.getByText(/דבר אחד לבדוק, מסומן למטה/)).toBeInTheDocument();
+
+  expect(screen.getByRole("button", { name: "לשמור במתכונים שלי" })).toBeInTheDocument();
+});
+
+test("in Hebrew, a draft from screenshots says so", async () => {
+  stubApi({ ...ready, input: { type: "images", count: 2 } });
+  await renderInHebrew(`/imports/${ready.id}`);
+
+  expect(await screen.findByText("Pinch קרא את זה מצילומי המסך")).toBeInTheDocument();
+  expect(screen.queryByRole("link", { name: /לצפות בסרטון/ })).not.toBeInTheDocument();
+});
+
+test("in Hebrew, Discard asks first, the draft's title in its <bdi>", async () => {
+  stubApi();
+  await renderInHebrew(`/imports/${ready.id}`);
+
+  await userEvent.click(await screen.findByRole("button", { name: "למחוק" }));
+
+  const dialog = await screen.findByRole("alertdialog", { name: "למחוק את הטיוטה?" });
+  // An English title in a Hebrew sentence keeps its own direction (design §16.5).
+  expect(dialog).toHaveAccessibleDescription('המתכון "Tomato pasta" לא יישמר.');
+  expect(within(dialog).getByText("Tomato pasta").tagName).toBe("BDI");
+  expect(within(dialog).getByRole("button", { name: "למחוק את הטיוטה" })).toBeInTheDocument();
+  await userEvent.click(within(dialog).getByRole("button", { name: "להמשיך לבדוק" }));
+  expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
+});
+
+test("in Hebrew, Discard with no title asks without one", async () => {
+  stubApi();
+  await renderInHebrew(`/imports/${ready.id}`);
+
+  await userEvent.clear(await screen.findByLabelText("שם המתכון"));
+  await userEvent.click(screen.getByRole("button", { name: "למחוק" }));
+
+  expect(await screen.findByRole("alertdialog")).toHaveAccessibleDescription("הטיוטה לא תישמר.");
+});
+
+test("in Hebrew, an import with no draft yet says so", async () => {
+  stubApi({ ...ready, status: "processing", draft: undefined });
+  await renderInHebrew(`/imports/${ready.id}`);
+
+  expect(
+    await screen.findByRole("heading", { level: 1, name: "עדיין אין טיוטה" }),
+  ).toBeInTheDocument();
+  expect(document.title).toBe("עדיין אין טיוטה · Pinch");
+  expect(screen.getByRole("link", { name: "לחזור להוספת מתכון" })).toHaveAttribute("href", "/");
 });

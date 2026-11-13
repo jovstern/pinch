@@ -294,7 +294,8 @@ test("in Hebrew, a recipe's page says its details, sections and tags in Hebrew",
     "dir",
     "auto",
   );
-  expect(document.title).toBe("Omelette · Pinch");
+  // The recipe's title in Unicode's isolates (design §16.5).
+  expect(document.title).toBe("\u2068Omelette\u2069 · Pinch");
   expect(screen.getByText(/הכנה 5 דק׳/)).toHaveTextContent(
     "מטקסט מודבק · 4 מנות · הכנה 5 דק׳ · בישול 10 דק׳",
   );

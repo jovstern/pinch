@@ -2,7 +2,7 @@ import type { Recipe } from "@pinch/shared";
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, test, vi } from "vitest";
-import { renderApp, stubFetch } from "../../test-utils.tsx";
+import { renderApp, renderInHebrew, stubFetch } from "../../test-utils.tsx";
 
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -142,4 +142,36 @@ test("a failed refetch keeps the form and what was typed", async () => {
     expect(fetch).toHaveBeenCalledTimes(2);
   });
   expect(screen.getByLabelText("Title")).toHaveValue("Omelette with herbs");
+});
+
+// In Hebrew (design §16.11): the page's words are Hebrew, the recipe's title its own (§16.5).
+test("in Hebrew, editing a recipe: its title in isolates, its breadcrumbs and buttons in Hebrew", async () => {
+  stubApi();
+  await renderInHebrew(`/recipes/${omelette.id}/edit`);
+
+  expect(await screen.findByLabelText("שם המתכון")).toHaveValue("Omelette");
+  expect(document.title).toBe("עריכה: \u2068Omelette\u2069 · Pinch");
+  const heading = screen.getByRole("heading", { level: 1, name: "עריכה: Omelette" });
+  expect(within(heading).getByText("Omelette").tagName).toBe("BDI");
+  const breadcrumb = screen.getByRole("navigation", { name: "נתיב ניווט" });
+  expect(within(breadcrumb).getByRole("link", { name: "המתכונים שלי" })).toHaveAttribute(
+    "href",
+    "/recipes",
+  );
+  expect(within(breadcrumb).getByRole("link", { name: "Omelette" })).toHaveAttribute("dir", "auto");
+  expect(within(breadcrumb).getByText("עריכה")).toHaveAttribute("aria-current", "page");
+  // Its tag, in Hebrew, with its ✕.
+  expect(screen.getByRole("button", { name: "להסיר: ארוחת בוקר" })).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "לשמור שינויים" })).toBeInTheDocument();
+  expect(screen.getByRole("link", { name: "לבטל" })).toHaveAttribute(
+    "href",
+    `/recipes/${omelette.id}`,
+  );
+});
+
+test("in Hebrew, while the recipe loads, it says so in Hebrew", async () => {
+  stubFetch(() => new Promise(() => undefined));
+  await renderInHebrew(`/recipes/${omelette.id}/edit`);
+
+  expect(screen.getByText("טעינת המתכון…")).toBeInTheDocument();
 });

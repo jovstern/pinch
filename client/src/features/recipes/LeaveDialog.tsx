@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -11,7 +12,8 @@ import { Button } from "../../components/ui/Button.tsx";
 
 type LeaveDialogProps = {
   title: string;
-  description: string;
+  // A sentence, which may hold the draft's title in its own <bdi> (InSentence, design §16.5).
+  description: ReactNode;
   confirmLabel: string;
   keepLabel: string;
   onConfirm: () => void;
@@ -46,7 +48,7 @@ export function LeaveDialog({
         }}
       >
         <AlertDialogTitle className="text-lg font-semibold">{title}</AlertDialogTitle>
-        <AlertDialogDescription dir="auto" className="mt-2 text-pretty text-text-muted">
+        <AlertDialogDescription className="mt-2 text-pretty text-text-muted">
           {description}
         </AlertDialogDescription>
         <AlertDialogFooter>

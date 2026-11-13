@@ -1,5 +1,6 @@
 import { Plus, X } from "lucide-react";
 import { lazy, Suspense, useId, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { ErrorBoundary } from "../../components/ErrorBoundary.tsx";
 import { FieldError } from "../../components/FieldError.tsx";
 import { Button } from "../../components/ui/Button.tsx";
@@ -21,6 +22,7 @@ type RecipeTagsProps = {
 // A recipe's tags in the editor (design §14): the chosen ones as chips with ✕, and Add tag,
 // which opens every tag by facet in a sheet (as My recipes' Filters), so the column stays short.
 export function RecipeTags({ selected, onChange, errors }: RecipeTagsProps) {
+  const { t } = useTranslation();
   // As in TextField: Add tag is marked invalid and points to the error (over 20 tags), so the
   // form's focus after a failed Save lands on it, just above the message. A button marked
   // invalid is unusual, but it's the one control on the page the tags are changed with.
@@ -33,7 +35,7 @@ export function RecipeTags({ selected, onChange, errors }: RecipeTagsProps) {
 
   return (
     <fieldset>
-      <legend className="mb-2 text-sm font-semibold">Tags</legend>
+      <legend className="mb-2 text-sm font-semibold">{t("recipe.tags")}</legend>
       <ul className="flex flex-wrap gap-2">
         {selected.map((tag) => (
           <li
@@ -44,7 +46,7 @@ export function RecipeTags({ selected, onChange, errors }: RecipeTagsProps) {
             <Button
               type="button"
               variant="ghost"
-              aria-label={`Remove ${tagLabel(tag)}`}
+              aria-label={t("editor.removeTag", { tag: tagLabel(tag) })}
               onClick={() => {
                 onChange(selected.filter((other) => other !== tag));
                 addTagRef.current?.focus();
@@ -70,7 +72,7 @@ export function RecipeTags({ selected, onChange, errors }: RecipeTagsProps) {
             }}
           >
             <Plus aria-hidden="true" className="size-4" />
-            Add tag
+            {t("editor.addTag")}
           </Button>
           {/* A sheet that won't load (offline, a new deploy) just doesn't open: caught here, not
               by the page's ErrorBoundary, which would replace the form and what's typed in it. */}

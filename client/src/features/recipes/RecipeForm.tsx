@@ -17,13 +17,14 @@ import {
   type ReactNode,
   type Ref,
 } from "react";
+import { useTranslation } from "react-i18next";
 import { Link, useNavigate } from "react-router";
 import { Button } from "../../components/ui/Button.tsx";
 import { ErrorBoundary } from "../../components/ErrorBoundary.tsx";
+import { InSentence } from "../../components/InSentence.tsx";
 import { FieldError } from "../../components/FieldError.tsx";
 import { TextField } from "../../components/TextField.tsx";
 import { ApiError } from "../../lib/api.ts";
-import { thingsToLookAt } from "../../lib/thingsToLookAt.ts";
 import { emptyIngredient, toInput, type RecipeFormValues } from "./recipeFormValues.ts";
 import { RecipeSource } from "./RecipeSource.tsx";
 import { RecipeTags } from "./RecipeTags.tsx";
@@ -67,6 +68,7 @@ export function RecipeForm({
   leave,
   save,
 }: RecipeFormProps) {
+  const { t } = useTranslation();
   // The marks still to look at, by field name, each with its reason. Changing a field clears
   // its mark (the form's listener below); removing a row moves the marks of the rows under it.
   const [marks, setMarks] = useState(() =>
@@ -90,7 +92,7 @@ export function RecipeForm({
           <span aria-hidden="true" className="text-check-mark">
             ◆
           </span>
-          <span className="sr-only">To look at:</span> <span dir="auto">{reason}</span>
+          <span className="sr-only">{t("editor.toLookAt")}</span> <span dir="auto">{reason}</span>
         </p>
       );
     });
@@ -130,7 +132,7 @@ export function RecipeForm({
             return { fields: toFieldNames(error.fields) };
           }
           // A plain message is an error for the whole form, not one field.
-          return "It couldn't be saved. Try again.";
+          return t("editor.couldntSave");
         }
       },
     },
@@ -186,7 +188,7 @@ export function RecipeForm({
                   <span aria-hidden="true" className="text-check-mark">
                     ◆
                   </span>{" "}
-                  {thingsToLookAt(lookAtCount)}, marked below
+                  {t("editor.lookAt", { count: lookAtCount })}
                 </span>
                 {/* As a link looks: it moves focus, as a skip link does. */}
                 <button
@@ -196,7 +198,7 @@ export function RecipeForm({
                     formRef.current?.querySelector<HTMLElement>("[data-marked]")?.focus();
                   }}
                 >
-                  Go to the first
+                  {t("editor.goToFirst")}
                 </button>
               </p>
             )}
@@ -207,8 +209,8 @@ export function RecipeForm({
             {(field) => (
               <TextField
                 field={field}
-                label="Title"
-                placeholder="e.g. Red lentil soup"
+                label={t("editor.title")}
+                placeholder={t("editor.titlePlaceholder")}
                 markId={markId("title")}
               />
             )}
@@ -216,22 +218,24 @@ export function RecipeForm({
           {markNotes(["title"])}
         </div>
         <form.Field name="description">
-          {(field) => <TextField field={field} label="Description" multiline />}
+          {(field) => <TextField field={field} label={t("editor.description")} multiline />}
         </form.Field>
 
         <form.Field name="ingredients" mode="array">
           {(list) => (
             // More space between rows than inside one, where a row takes two lines (a phone).
             <fieldset className="grid gap-3 sm:gap-2">
-              <legend className="mb-3 font-display text-xl font-semibold">Ingredients</legend>
+              <legend className="mb-3 font-display text-xl font-semibold">
+                {t("recipe.ingredients")}
+              </legend>
               <FieldError errors={list.state.meta.errors} />
               {/* The columns' names, once over the rows (each box is named for screen readers
                   too). The note has its own line on a phone, named by its placeholder. */}
               <div aria-hidden="true" className={`${ingredientColumns} text-sm font-semibold`}>
-                <span>Amount</span>
-                <span>Unit</span>
-                <span>Ingredient</span>
-                <span className="hidden sm:block">Note</span>
+                <span>{t("editor.amount")}</span>
+                <span>{t("editor.unit")}</span>
+                <span>{t("editor.ingredient")}</span>
+                <span className="hidden sm:block">{t("editor.note")}</span>
               </div>
               {list.state.value.map((ingredient, index) => {
                 const position = String(index + 1);
@@ -246,12 +250,12 @@ export function RecipeForm({
                   // Rows have no id; the index is the row (TanStack Form names fields by it too).
                   // The recipe's own shape (design §6): amount · unit · name, and a note.
                   <fieldset key={index} className={ingredientColumns}>
-                    <legend className="sr-only">Ingredient {position}</legend>
+                    <legend className="sr-only">{t("editor.ingredientRow", { position })}</legend>
                     <form.Field name={`${row}.quantity`}>
                       {(field) => (
                         <TextField
                           field={field}
-                          label="Amount"
+                          label={t("editor.amount")}
                           hideLabel
                           placeholder={example ? "200" : undefined}
                           markId={markId(field.name)}
@@ -262,9 +266,9 @@ export function RecipeForm({
                       {(field) => (
                         <TextField
                           field={field}
-                          label="Unit"
+                          label={t("editor.unit")}
                           hideLabel
-                          placeholder={example ? "g" : undefined}
+                          placeholder={example ? t("editor.unitPlaceholder") : undefined}
                           markId={markId(field.name)}
                         />
                       )}
@@ -273,9 +277,9 @@ export function RecipeForm({
                       {(field) => (
                         <TextField
                           field={field}
-                          label="Ingredient"
+                          label={t("editor.ingredient")}
                           hideLabel
-                          placeholder={example ? "e.g. flour" : undefined}
+                          placeholder={example ? t("editor.ingredientPlaceholder") : undefined}
                           markId={markId(field.name)}
                         />
                       )}
@@ -284,16 +288,16 @@ export function RecipeForm({
                       {(field) => (
                         <TextField
                           field={field}
-                          label="Note"
+                          label={t("editor.note")}
                           hideLabel
-                          placeholder="Note (optional)"
+                          placeholder={t("editor.notePlaceholder")}
                           className="col-span-3 col-start-1 row-start-2 sm:col-span-1 sm:col-start-auto sm:row-start-auto"
                         />
                       )}
                     </form.Field>
                     {/* A recipe needs an ingredient (§6), so the last row stays. */}
                     <RemoveButton
-                      label={`Remove ingredient ${position}`}
+                      label={t("editor.removeIngredient", { position })}
                       disabled={list.state.value.length === 1}
                       onClick={() => {
                         const last = index === list.state.value.length - 1;
@@ -313,7 +317,7 @@ export function RecipeForm({
                   list.pushValue(emptyIngredient);
                 }}
               >
-                Add ingredient
+                {t("editor.addIngredient")}
               </AddButton>
             </fieldset>
           )}
@@ -322,7 +326,9 @@ export function RecipeForm({
         <form.Field name="steps" mode="array">
           {(list) => (
             <fieldset className="grid gap-3">
-              <legend className="mb-3 font-display text-xl font-semibold">Steps</legend>
+              <legend className="mb-3 font-display text-xl font-semibold">
+                {t("recipe.steps")}
+              </legend>
               <FieldError errors={list.state.meta.errors} />
               {list.state.value.map((_, index) => {
                 const position = String(index + 1);
@@ -342,19 +348,17 @@ export function RecipeForm({
                       {(field) => (
                         <TextField
                           field={field}
-                          label={`Step ${position}`}
+                          label={t("editor.step", { position })}
                           hideLabel
                           multiline
                           markId={markId(field.name)}
-                          placeholder={
-                            index === 0 ? "e.g. Rinse the lentils and soften the onion." : ""
-                          }
+                          placeholder={index === 0 ? t("editor.stepPlaceholder") : ""}
                         />
                       )}
                     </form.Field>
                     {/* As for ingredients. */}
                     <RemoveButton
-                      label={`Remove step ${position}`}
+                      label={t("editor.removeStep", { position })}
                       disabled={list.state.value.length === 1}
                       onClick={() => {
                         const last = index === list.state.value.length - 1;
@@ -373,7 +377,7 @@ export function RecipeForm({
                   list.pushValue("");
                 }}
               >
-                Add step
+                {t("editor.addStep")}
               </AddButton>
             </fieldset>
           )}
@@ -385,14 +389,14 @@ export function RecipeForm({
       <div className="grid gap-6 lg:sticky lg:top-4 lg:max-h-[calc(100dvh-2rem)] lg:overflow-y-auto lg:rounded-card lg:border lg:border-border lg:p-5">
         {picture && <div className="hidden lg:block">{picture}</div>}
         <p className="text-sm text-muted-foreground">
-          Source: <RecipeSource source={source} />
+          {t("editor.source")} <RecipeSource source={source} />
         </p>
         <div className="grid grid-cols-3 gap-3">
           <form.Field name="servings">
             {(field) => (
               <TextField
                 field={field}
-                label="Serves"
+                label={t("editor.serves")}
                 inputMode="numeric"
                 markId={markId("servings")}
               />
@@ -402,7 +406,7 @@ export function RecipeForm({
             {(field) => (
               <TextField
                 field={field}
-                label="Prep (min)"
+                label={t("editor.prepMinutes")}
                 inputMode="numeric"
                 markId={markId("prepMinutes")}
               />
@@ -412,7 +416,7 @@ export function RecipeForm({
             {(field) => (
               <TextField
                 field={field}
-                label="Cook (min)"
+                label={t("editor.cookMinutes")}
                 inputMode="numeric"
                 markId={markId("cookMinutes")}
               />
@@ -451,11 +455,7 @@ export function RecipeForm({
                 up the page. Each one is announced under its field, so this line isn't. */}
             <form.Subscribe selector={(state) => countErrors(state.fieldMeta)}>
               {(count) =>
-                count > 0 && (
-                  <p className="text-sm text-danger">
-                    {count === 1 ? "1 thing" : `${String(count)} things`} to fix before saving
-                  </p>
-                )
+                count > 0 && <p className="text-sm text-danger">{t("editor.toFix", { count })}</p>
               }
             </form.Subscribe>
             <form.Subscribe
@@ -482,7 +482,7 @@ export function RecipeForm({
                       aria-busy={isSubmitting}
                       className="flex-1"
                     >
-                      {isSubmitting ? "Saving…" : submitLabel}
+                      {isSubmitting ? t("editor.saving") : submitLabel}
                     </Button>
                   </div>
                 );
@@ -506,6 +506,7 @@ type LeaveButtonProps = {
 };
 
 function LeaveButton({ leave, busy, title, changed }: LeaveButtonProps) {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   // The question is open while it's on the page: closing takes it away.
   const [asking, setAsking] = useState(false);
@@ -516,7 +517,7 @@ function LeaveButton({ leave, busy, title, changed }: LeaveButtonProps) {
       <Button asChild variant="outline" className="w-28">
         {/* replace, as after a save: Back never returns to the form. */}
         <Link to={leave.to} replace>
-          Cancel
+          {t("editor.cancel")}
         </Link>
       </Button>
     );
@@ -525,21 +526,29 @@ function LeaveButton({ leave, busy, title, changed }: LeaveButtonProps) {
   const { button, ...question } =
     leave.kind === "cancel"
       ? {
-          button: "Cancel",
-          title: "Discard your changes?",
-          description: "What you've changed here won't be saved.",
-          confirmLabel: "Discard changes",
-          keepLabel: "Keep editing",
+          button: t("editor.cancel"),
+          title: t("editor.discardChangesQuestion"),
+          description: t("editor.changesWontBeSaved"),
+          confirmLabel: t("editor.discardChanges"),
+          keepLabel: t("editor.keepEditing"),
           onConfirm: () => {
             void navigate(leave.to, { replace: true });
           },
         }
       : {
-          button: leave.discarding ? "Discarding…" : "Discard",
-          title: "Discard this draft?",
-          description: title.trim() ? `“${title.trim()}” won't be saved.` : "It won't be saved.",
-          confirmLabel: "Discard draft",
-          keepLabel: "Keep reviewing",
+          button: leave.discarding ? t("editor.discarding") : t("editor.discard"),
+          title: t("editor.discardDraftQuestion"),
+          // The title in its own <bdi> (design §16.5).
+          description: title.trim() ? (
+            <InSentence
+              sentence={(text) => t("editor.titleWontBeSaved", { title: text })}
+              text={title.trim()}
+            />
+          ) : (
+            t("editor.wontBeSaved")
+          ),
+          confirmLabel: t("editor.discardDraft"),
+          keepLabel: t("editor.keepReviewing"),
           onConfirm: leave.discard,
         };
   return (

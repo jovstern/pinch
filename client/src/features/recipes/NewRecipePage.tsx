@@ -1,5 +1,6 @@
 import { RecipeSchema, type RecipeInput } from "@pinch/shared";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 import { Link, useNavigate } from "react-router";
 import { Breadcrumb } from "../../components/ui/Breadcrumb.tsx";
 import { sendJson } from "../../lib/api.ts";
@@ -10,6 +11,7 @@ import { emptyRecipe } from "./recipeFormValues.ts";
 import { recipeQuery, refetchRecipeLists } from "./recipeQueries.ts";
 
 export function NewRecipePage() {
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const creation = useMutation({
@@ -29,25 +31,28 @@ export function NewRecipePage() {
 
   return (
     <>
-      <title>Write a recipe · Pinch</title>
+      <title>{`${t("header.writeRecipe")} · Pinch`}</title>
       {/* Under Add recipe, as a draft is (design §14): the breadcrumbs name the page, so its
           heading is for screen readers. */}
-      <Breadcrumb links={[{ label: "Add recipe", to: "/" }]} page="Write a recipe" />
-      <h1 className="sr-only">Write a recipe</h1>
+      <Breadcrumb
+        links={[{ label: t("header.addRecipe"), to: "/" }]}
+        page={t("header.writeRecipe")}
+      />
+      <h1 className="sr-only">{t("header.writeRecipe")}</h1>
       {/* The faster way, for a recipe that's already written down somewhere. Above the form,
           not its intro: it's the page's largest text, and inside the form it waited for the
           form's chunk to paint (LCP 2.6 s, docs/metrics/m08.md). */}
       <p className="mt-4 rounded-card bg-muted p-3 text-sm text-pretty">
-        Got the recipe as text?{" "}
+        {t("editor.gotText")}{" "}
         <Link to="/" className="font-semibold underline underline-offset-4">
-          Paste it on Add recipe
+          {t("editor.pasteIt")}
         </Link>{" "}
-        and Pinch fills this in.
+        {t("editor.fillsIn")}
       </p>
       <LazyRecipeForm
         defaultValues={emptyRecipe}
         source={{ type: "manual" }}
-        submitLabel="Save recipe"
+        submitLabel={t("editor.saveRecipe")}
         leave={{ kind: "cancel", to: "/" }}
         save={creation.mutateAsync}
       />

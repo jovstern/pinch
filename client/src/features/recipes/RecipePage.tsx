@@ -8,6 +8,7 @@ import { Breadcrumb } from "../../components/ui/Breadcrumb.tsx";
 import { Button } from "../../components/ui/Button.tsx";
 import { RecipeFace } from "../../components/RecipeFace.tsx";
 import { Thumbnail } from "../../components/Thumbnail.tsx";
+import { isolate } from "../../lib/isolate.ts";
 import { useHeadingFocus } from "../../lib/useHeadingFocus.ts";
 import { ingredientLine } from "./ingredientLine.ts";
 import { keepRangesTogether } from "./ranges.ts";
@@ -48,7 +49,8 @@ export function RecipePage() {
   const recipeDetails = details(recipe);
   return (
     <article>
-      <title>{`${recipe.title} · Pinch`}</title>
+      {/* The title in isolates, as a <title> can't hold <bdi> (design §16.5). */}
+      <title>{`${isolate(recipe.title)} · Pinch`}</title>
       <Breadcrumb links={[{ label: t("header.myRecipes"), to: "/recipes" }]} page={recipe.title} />
       {/* The picture above the title on a phone, beside it from 1024 px (design §14). */}
       <div className="mt-2 lg:flex lg:items-start lg:gap-12">

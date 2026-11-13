@@ -1,6 +1,7 @@
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import type { ReactNode, UIEvent } from "react";
 import { useEffect, useEffectEvent, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Button } from "../../components/ui/Button.tsx";
 import { pageIsRtl } from "../../i18n.ts";
 import { cn } from "../../lib/cn.ts";
@@ -28,13 +29,14 @@ const mostDots = 7;
 // ‹ › and the dots on a phone, Back and Next from 768 px, the ← → keys and a tap on the peeking
 // card move it too.
 export function StepCarousel({ steps, card, onDone, children, timers }: StepCarouselProps) {
+  const { t } = useTranslation();
   const [index, setIndex] = useState(0);
   const row = useRef<HTMLOListElement>(null);
   const settling = useRef<number | undefined>(undefined);
   // An edit elsewhere may have removed steps since: never past the last one.
   const last = steps.length - 1;
   const current = Math.min(index, last);
-  const label = (step: number) => `Step ${String(step + 1)} of ${String(steps.length)}`;
+  const label = (step: number) => t("cook.stepOf", { position: step + 1, total: steps.length });
   // Right to left in Hebrew: the row starts at the right and scrolls to negative (§16.4).
   const rtl = pageIsRtl();
 
@@ -113,7 +115,7 @@ export function StepCarousel({ steps, card, onDone, children, timers }: StepCaro
           row: no peek. */}
       <ol
         ref={row}
-        aria-label="Steps"
+        aria-label={t("recipe.steps")}
         onScroll={settle}
         className="relative mt-4 grid snap-x snap-mandatory [scrollbar-width:none] auto-cols-[calc(100%-2rem)] grid-flow-col items-start gap-2 overflow-x-auto overscroll-x-contain motion-safe:scroll-smooth md:auto-cols-[100%]"
       >
@@ -158,7 +160,7 @@ export function StepCarousel({ steps, card, onDone, children, timers }: StepCaro
           >
             {/* ‹ and › point the reading way, so they mirror in Hebrew (§16.4). */}
             <ChevronLeft aria-hidden="true" className="size-5 rtl:-scale-x-100" />
-            <span className="sr-only md:not-sr-only">Back</span>
+            <span className="sr-only md:not-sr-only">{t("cook.back")}</span>
           </Button>
           {/* A dot per step that jumps to it: 44 px tall, and 44 px wide where they fit. From 768
             px, Back, Next and the keys are enough. */}
@@ -168,7 +170,7 @@ export function StepCarousel({ steps, card, onDone, children, timers }: StepCaro
                 <button
                   key={step}
                   type="button"
-                  aria-label={`Step ${String(step + 1)}`}
+                  aria-label={t("editor.step", { position: step + 1 })}
                   aria-current={step === current ? "step" : undefined}
                   className="group flex h-11 max-w-11 min-w-0 flex-1 items-center justify-center rounded-control"
                   onClick={() => {
@@ -188,14 +190,14 @@ export function StepCarousel({ steps, card, onDone, children, timers }: StepCaro
             }}
           >
             <span className={cn(current < last && "sr-only md:not-sr-only")}>
-              {current < last ? "Next" : "Done"}
+              {current < last ? t("cook.next") : t("cook.done")}
             </span>
             {current < last && (
               <ChevronRight aria-hidden="true" className="size-5 rtl:-scale-x-100" />
             )}
           </Button>
           <p className="hidden text-sm whitespace-nowrap text-muted-foreground md:pointer-fine:block">
-            or the ← → keys
+            {t("cook.keys")}
           </p>
         </div>
         {timers}

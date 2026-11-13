@@ -1,5 +1,7 @@
 import type { Ingredient } from "@pinch/shared";
 import { useId } from "react";
+import { useTranslation } from "react-i18next";
+import { InSentence } from "../../components/InSentence.tsx";
 import { Button } from "../../components/ui/Button.tsx";
 import { keepRangesTogether } from "../recipes/ranges.ts";
 import { stepDurations, type Duration } from "./durations.ts";
@@ -25,6 +27,7 @@ export function StepCard({
   isRunning,
   onStart,
 }: StepCardProps) {
+  const { t } = useTranslation();
   const forThisStepId = useId();
   const forThisStep = stepIngredients(step, ingredients);
   const durations = stepDurations(step);
@@ -58,11 +61,12 @@ export function StepCard({
                   onStart(key, duration);
                 }}
               >
-                {/* One span: a flex item's trailing space would be lost ("Timer:20 min"). */}
-                <span>
-                  {running ? "Running: " : "Timer: "}
-                  <bdi>{duration.label}</bdi>
-                </span>
+                {/* The step's own words in their <bdi> (design §16.5); one span, so a flex
+                    item's trailing space isn't lost ("Timer:20 min"). */}
+                <InSentence
+                  sentence={(time) => t(running ? "cook.running" : "cook.timer", { time })}
+                  text={duration.label}
+                />
               </Button>
             );
           })}
@@ -73,7 +77,7 @@ export function StepCard({
         <div className="mt-6">
           {/* A label like "Step 2 of 6", not a section title. */}
           <p id={forThisStepId} className="text-sm font-semibold text-muted-foreground">
-            For this step
+            {t("cook.forThisStep")}
           </p>
           <IngredientChecklist
             labelledBy={forThisStepId}
