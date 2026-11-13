@@ -1,7 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
 import { useId, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useNavigate, useParams } from "react-router";
 import { Breadcrumb } from "../../components/ui/Breadcrumb.tsx";
+import { isolate } from "../../lib/isolate.ts";
 import { useMediaQuery } from "../../lib/useMediaQuery.ts";
 import { RecipeLoadError } from "../recipes/RecipeLoadError.tsx";
 import { RecipeSource } from "../recipes/RecipeSource.tsx";
@@ -17,6 +19,7 @@ import { useWakeLock } from "./useWakeLock.ts";
 // Cook mode (docs/ux/plan.md U2, design §14): one step at a time, in big type, with the screen
 // kept on, for a cook standing at the stove with wet hands. The steps are StepCarousel's.
 export function CookPage() {
+  const { t } = useTranslation();
   // The route is "recipes/:id/cook", so the id is always there.
   const { id = "" } = useParams();
   const {
@@ -67,15 +70,16 @@ export function CookPage() {
 
   return (
     <article>
-      <title>{`Cooking ${recipe.title} · Pinch`}</title>
+      {/* The title in isolates, as a <title> can't hold <bdi> (design §16.3, §16.5). */}
+      <title>{`${t("cook.pageTitle", { title: isolate(recipe.title) })} · Pinch`}</title>
       {/* The way out (no Exit): the recipe's crumb, a link that pushes like every crumb. Only Done
           replaces, as it ends the cooking. */}
       <Breadcrumb
         links={[
-          { label: "My recipes", to: "/recipes" },
+          { label: t("header.myRecipes"), to: "/recipes" },
           { label: recipe.title, to: recipePath },
         ]}
-        page="Cook"
+        page={t("cook.cook")}
       />
       <h1 dir="auto" className="mt-2 text-3xl font-bold tracking-tight text-balance">
         {recipe.title}
@@ -83,8 +87,8 @@ export function CookPage() {
       <p className="mt-2 text-sm text-muted-foreground">
         <RecipeSource source={recipe.source} />
         {/* Nothing while the browser is still asked, so it doesn't flicker from one to the other. */}
-        {wakeLock === "on" && " · The screen stays on."}
-        {wakeLock === "off" && " · This browser may let the screen lock."}
+        {wakeLock === "on" && ` · ${t("cook.screenOn")}`}
+        {wakeLock === "off" && ` · ${t("cook.mayLock")}`}
       </p>
 
       {/* As on the recipe's page: from 1024 px the checklist sits on the left, beside the steps;
@@ -93,7 +97,7 @@ export function CookPage() {
         {wide && (
           <section className="rounded-card border border-border p-5">
             <h2 id={allId} className="text-xl font-semibold">
-              All ingredients ({recipe.ingredients.length})
+              {t("cook.allIngredients", { number: recipe.ingredients.length })}
             </h2>
             <div className="mt-3">{checklist}</div>
           </section>
@@ -120,7 +124,7 @@ export function CookPage() {
           {!wide && (
             <details className="mt-4">
               <summary id={allId} className="cursor-pointer py-2.5 font-semibold">
-                All ingredients ({recipe.ingredients.length})
+                {t("cook.allIngredients", { number: recipe.ingredients.length })}
               </summary>
               {checklist}
             </details>

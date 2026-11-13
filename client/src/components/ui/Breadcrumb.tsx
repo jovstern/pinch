@@ -1,13 +1,14 @@
 import { ChevronRight } from "lucide-react";
-import { Fragment } from "react";
+import { Fragment, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router";
 
 type BreadcrumbProps = {
   // The pages above this one, from the top: "My recipes", then (in the editor) the recipe.
   links: { label: string; to: string }[];
-  // This page: plain text, not a link.
-  page: string;
+  // This page: plain text, not a link; a translated sentence around a title (Review: …) is an
+  // InSentence, the title in its own <bdi> (design §16.5).
+  page: ReactNode;
 };
 
 // shadcn/ui's Breadcrumb markup (D26), on Pinch's tokens, as one component: every inner page
@@ -41,10 +42,12 @@ export function Breadcrumb({ links, page }: BreadcrumbProps) {
         {/* The title is the page itself (My recipes › title) or the link before it (My recipes ›
             title › Cook): only the title gives way, so "Cook" or "Edit" stays whole. */}
         <li className={links.length > 1 ? "shrink-0" : "max-w-[28ch] min-w-0"}>
+          {/* A sentence around a title (Review: …): only the title gives way, cut at its own end,
+              as a <bdi> takes its own direction. A plain string is cut as before. */}
           <span
             aria-current="page"
             dir="auto"
-            className="block truncate px-1 font-medium text-foreground"
+            className="block truncate px-1 font-medium text-foreground [&_bdi]:min-w-0 [&_bdi]:truncate [&>span]:flex [&>span]:whitespace-pre"
           >
             {page}
           </span>

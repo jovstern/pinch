@@ -1,4 +1,5 @@
 import { lazy, Suspense, useEffect, type ComponentProps } from "react";
+import { useTranslation } from "react-i18next";
 
 // The form and its library load only when a form opens, while the page's heading shows at once:
 // in the first load they'd put the JS over its 150 kB budget (docs/metrics/m02.md). New, Edit
@@ -18,8 +19,9 @@ export function usePreloadRecipeForm() {
 }
 
 export function LazyRecipeForm(props: ComponentProps<typeof RecipeForm>) {
+  const { t } = useTranslation();
   return (
-    <Suspense fallback={<p className="mt-6 text-text-muted">Loading the form…</p>}>
+    <Suspense fallback={<p className="mt-6 text-text-muted">{t("editor.loadingForm")}</p>}>
       <RecipeForm {...props} />
     </Suspense>
   );

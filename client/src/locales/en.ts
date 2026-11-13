@@ -283,6 +283,122 @@ export const en = {
     deleteIt: "Delete",
     deleting: "Deleting…",
   },
+  // The editor: writing a recipe, editing one, reviewing a draft (NewRecipePage, EditRecipePage,
+  // ReviewImportPage, DraftBanner, RecipeForm, RecipeTags, TagsSheet, LeaveDialog). Its sections'
+  // names are the recipe's (recipe.ingredients, recipe.steps, recipe.tags); its toasts stay
+  // English (D46). A field's own messages are the shared schemas' (validation, I8).
+  editor: {
+    // Write a recipe's page: its title, breadcrumb and heading are the header's Write a recipe.
+    gotText: "Got the recipe as text?",
+    pasteIt: "Paste it on Add recipe",
+    fillsIn: "and Pinch fills this in.",
+    loadingForm: "Loading the form…",
+    // Edit's page. {{title}} is the recipe's, in isolates in the page's title and in its own
+    // <bdi> in the heading (§16.5).
+    edit: "Edit",
+    editTitle: "Edit {{title}}",
+    // Review's page: a draft, or an address with none.
+    reviewTitle: "Review {{title}}",
+    reviewCrumb: "Review: {{title}}",
+    noDraft: "No draft yet",
+    noDraftWhy: "This import has no recipe to review: it's still cooking, it failed, or it's gone.",
+    backToAdd: "Back to Add recipe",
+    // A draft's banner: where Pinch read it (a platform's name stays as it is, D46).
+    readFromPlatform: "Pinch read this from {{platform}}",
+    readFromText: "Pinch read this from the text you pasted",
+    readFromScreenshots: "Pinch read this from your screenshots",
+    checkThenSave: "Check it, then save.",
+    watchVideo: "Watch the video",
+    // A draft's things to look at (design §14), counted under the banner and noted under each
+    // field; the reasons are the model's, in the recipe's language (§16.7).
+    lookAt_one: "1 thing to look at, marked below",
+    lookAt_other: "{{count}} things to look at, marked below",
+    goToFirst: "Go to the first",
+    // Before a field's note, for a screen reader.
+    toLookAt: "To look at:",
+    // The fields. Amount's example is a number, the same in both languages.
+    title: "Title",
+    titlePlaceholder: "e.g. Red lentil soup",
+    description: "Description",
+    amount: "Amount",
+    unit: "Unit",
+    unitPlaceholder: "g",
+    ingredient: "Ingredient",
+    ingredientPlaceholder: "e.g. flour",
+    note: "Note",
+    notePlaceholder: "Note (optional)",
+    // A row, for a screen reader: "Ingredient 2", "Remove ingredient 2".
+    ingredientRow: "Ingredient {{position}}",
+    removeIngredient: "Remove ingredient {{position}}",
+    addIngredient: "Add ingredient",
+    // Also cook mode's dots, for a screen reader.
+    step: "Step {{position}}",
+    stepPlaceholder: "e.g. Rinse the lentils and soften the onion.",
+    removeStep: "Remove step {{position}}",
+    addStep: "Add step",
+    // Followed by where it came from (recipe.writtenByYou, a site's name…).
+    source: "Source:",
+    serves: "Serves",
+    prepMinutes: "Prep (min)",
+    cookMinutes: "Cook (min)",
+    // A tag's ✕: "Remove vegetarian".
+    removeTag: "Remove {{tag}}",
+    addTag: "Add tag",
+    // The tags' sheet: they apply as they're ticked, so Done only closes it.
+    done: "Done",
+    // By Save: what's left to fix, and a save that failed for the whole form.
+    toFix_one: "1 thing to fix before saving",
+    toFix_other: "{{count}} things to fix before saving",
+    couldntSave: "It couldn't be saved. Try again.",
+    saveRecipe: "Save recipe",
+    saveChanges: "Save changes",
+    saveToMyRecipes: "Save to My recipes",
+    saving: "Saving…",
+    // The way out, and its question (LeaveDialog). {{title}} is the draft's, in its own <bdi>.
+    cancel: "Cancel",
+    discardChangesQuestion: "Discard your changes?",
+    changesWontBeSaved: "What you've changed here won't be saved.",
+    discardChanges: "Discard changes",
+    keepEditing: "Keep editing",
+    discard: "Discard",
+    discarding: "Discarding…",
+    discardDraftQuestion: "Discard this draft?",
+    titleWontBeSaved: "“{{title}}” won't be saved.",
+    wontBeSaved: "It won't be saved.",
+    discardDraft: "Discard draft",
+    keepReviewing: "Keep reviewing",
+  },
+  // Cook mode, at /recipes/:id/cook (CookPage, StepCarousel, StepCard, TimerBar, CookSkeleton).
+  // A timer's time is the step's own words ("20 min"), in its own <bdi> (§16.5); the clock
+  // ("19:58") is digits in both languages (§16.3).
+  cook: {
+    cook: "Cook",
+    // The page's title. {{title}} is the recipe's, in isolates (§16.3).
+    pageTitle: "Cooking {{title}}",
+    // After the source: whether the browser keeps the screen on (the Wake Lock API).
+    screenOn: "The screen stays on.",
+    mayLock: "This browser may let the screen lock.",
+    allIngredients: "All ingredients ({{number}})",
+    forThisStep: "For this step",
+    // The counter over the cards: the same words for any number of steps, in both languages.
+    stepOf: "Step {{position}} of {{total}}",
+    back: "Back",
+    next: "Next",
+    done: "Done",
+    keys: "or the ← → keys",
+    // A step's timer button, then the running timers.
+    timer: "Timer: {{time}}",
+    running: "Running: {{time}}",
+    timers: "Timers",
+    // "19:58 left · 20 min timer": the time left first, the minutes not said twice.
+    left: "{{clock}} left · {{time}} timer",
+    timerDone: "{{time}} timer: done",
+    stop: "Stop",
+    dismiss: "Dismiss",
+    // Named for its timer: with two running, "Stop" alone wouldn't say which.
+    stopTimer: "Stop the {{time}} timer",
+    dismissTimer: "Dismiss the {{time}} timer",
+  },
   // The shared components' own words (components/ui): a sheet's ✕, a breadcrumb's landmark.
   ui: {
     close: "Close",

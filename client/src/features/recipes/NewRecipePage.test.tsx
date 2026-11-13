@@ -2,7 +2,7 @@ import type { Recipe } from "@pinch/shared";
 import { screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, test, vi } from "vitest";
-import { renderApp } from "../../test-utils.tsx";
+import { renderApp, renderInHebrew } from "../../test-utils.tsx";
 
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -328,4 +328,109 @@ test("after the API's message, the next Save goes through", async () => {
   await userEvent.click(screen.getByRole("button", { name: "Save recipe" }));
 
   expect(await screen.findByRole("heading", { level: 1, name: "Toast" })).toBeInTheDocument();
+});
+
+// In Hebrew (design §16.11): the editor's own words are Hebrew; what's typed keeps its own
+// direction (§16.5), and the fields' messages are the shared schemas' English until I8.
+test("in Hebrew, writing a recipe: its page, fields and buttons are in Hebrew", async () => {
+  stubApi(() => Response.json(saved, { status: 201 }));
+  await renderInHebrew("/recipes/new");
+
+  const title = await screen.findByLabelText("שם המתכון");
+  expect(document.title).toBe("לכתוב מתכון · Pinch");
+  expect(screen.getByRole("heading", { level: 1, name: "לכתוב מתכון" })).toBeInTheDocument();
+  const breadcrumb = screen.getByRole("navigation", { name: "נתיב ניווט" });
+  expect(within(breadcrumb).getByRole("link", { name: "להוסיף מתכון" })).toHaveAttribute(
+    "href",
+    "/",
+  );
+  expect(screen.getByRole("link", { name: "להדביק אותו בהוספת מתכון" })).toHaveAttribute(
+    "href",
+    "/",
+  );
+  expect(title).toHaveAttribute("placeholder", "למשל: מרק עדשים כתומות");
+  expect(title).toHaveAttribute("dir", "auto");
+  expect(screen.getByLabelText("תיאור")).toBeInTheDocument();
+  expect(screen.getByRole("group", { name: "מצרכים" })).toBeInTheDocument();
+  const row = within(screen.getByRole("group", { name: "מצרך 1" }));
+  expect(row.getByLabelText("כמות")).toHaveAttribute("placeholder", "200");
+  // Unit stays free text (the combobox is I10, §16.12): only its label and example are Hebrew.
+  expect(row.getByLabelText("יחידה")).toHaveAttribute("placeholder", "גרם");
+  expect(row.getByLabelText("מצרך")).toHaveAttribute("placeholder", "למשל: קמח");
+  expect(row.getByLabelText("הערה")).toHaveAttribute("placeholder", "הערה (לא חובה)");
+  expect(row.getByRole("button", { name: "להסיר את מצרך 1" })).toBeDisabled();
+  expect(screen.getByRole("group", { name: "אופן ההכנה" })).toBeInTheDocument();
+  expect(screen.getByLabelText("שלב 1")).toHaveAttribute(
+    "placeholder",
+    "למשל: לשטוף את העדשים ולרכך את הבצל.",
+  );
+  expect(screen.getByRole("button", { name: "להסיר את שלב 1" })).toBeDisabled();
+  expect(screen.getByText("מקור:", { exact: false })).toHaveTextContent("מקור: נכתב ידנית");
+  expect(screen.getByLabelText("מנות")).toBeInTheDocument();
+  expect(screen.getByLabelText("הכנה (דק׳)")).toBeInTheDocument();
+  expect(screen.getByLabelText("בישול (דק׳)")).toBeInTheDocument();
+  expect(screen.getByRole("link", { name: "לבטל" })).toHaveAttribute("href", "/");
+
+  await userEvent.click(screen.getByRole("button", { name: "להוסיף מצרך" }));
+  expect(screen.getByRole("group", { name: "מצרך 2" })).toBeInTheDocument();
+  await userEvent.click(screen.getByRole("button", { name: "להוסיף שלב" }));
+  expect(screen.getByLabelText("שלב 2")).toBeInTheDocument();
+
+  // Empty, Save says how many things to fix, in Hebrew's plural.
+  await userEvent.click(screen.getByRole("button", { name: "לשמור מתכון" }));
+  expect(await screen.findByText("5 דברים לתקן לפני השמירה")).toBeInTheDocument();
+});
+
+test("in Hebrew, one thing to fix is said in words", async () => {
+  stubApi(() => Response.json(saved, { status: 201 }));
+  await renderInHebrew("/recipes/new");
+
+  await userEvent.type(await screen.findByLabelText("שם המתכון"), "Toast");
+  await userEvent.type(screen.getByLabelText("מצרך"), "bread");
+  await userEvent.click(screen.getByRole("button", { name: "לשמור מתכון" }));
+
+  expect(await screen.findByText("דבר אחד לתקן לפני השמירה")).toBeInTheDocument();
+});
+
+test("in Hebrew, a failed save says so in Hebrew", async () => {
+  stubApi(() => new Response(null, { status: 500 }));
+  await renderInHebrew("/recipes/new");
+
+  await userEvent.type(await screen.findByLabelText("שם המתכון"), "Toast");
+  await userEvent.type(screen.getByLabelText("מצרך"), "bread");
+  await userEvent.type(screen.getByLabelText("שלב 1"), "Toast the bread.");
+  await userEvent.click(screen.getByRole("button", { name: "לשמור מתכון" }));
+
+  expect(await screen.findByRole("alert")).toHaveTextContent("השמירה נכשלה. אפשר לנסות שוב.");
+});
+
+test("in Hebrew, Add tag's sheet names the tags in Hebrew, and a chip's ✕ says which it removes", async () => {
+  stubApi(() => Response.json(saved, { status: 201 }));
+  await renderInHebrew("/recipes/new");
+
+  expect(await screen.findByRole("group", { name: "תגיות" })).toBeInTheDocument();
+  await userEvent.click(screen.getByRole("button", { name: "להוסיף תגית" }));
+  const sheet = await screen.findByRole("dialog", { name: "תגיות" });
+  expect(within(sheet).getByRole("group", { name: "ארוחה" })).toBeInTheDocument();
+  await userEvent.click(within(sheet).getByRole("checkbox", { name: "ארוחת בוקר" }));
+  expect(within(sheet).getByRole("button", { name: "לסגור" })).toBeInTheDocument();
+  await userEvent.click(within(sheet).getByRole("button", { name: "סיום" }));
+
+  expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  await userEvent.click(screen.getByRole("button", { name: "להסיר: ארוחת בוקר" }));
+  expect(screen.queryByText("ארוחת בוקר")).not.toBeInTheDocument();
+});
+
+test("in Hebrew, Cancel with changes asks first, in Hebrew", async () => {
+  stubApi(() => Response.json(saved, { status: 201 }));
+  await renderInHebrew("/recipes/new");
+
+  await userEvent.type(await screen.findByLabelText("שם המתכון"), "Toast");
+  await userEvent.click(screen.getByRole("button", { name: "לבטל" }));
+
+  const dialog = await screen.findByRole("alertdialog", { name: "לצאת בלי לשמור?" });
+  expect(dialog).toHaveAccessibleDescription("השינויים כאן לא יישמרו.");
+  expect(within(dialog).getByRole("button", { name: "לצאת בלי לשמור" })).toBeInTheDocument();
+  await userEvent.click(within(dialog).getByRole("button", { name: "להמשיך לערוך" }));
+  expect(screen.getByLabelText("שם המתכון")).toHaveValue("Toast");
 });

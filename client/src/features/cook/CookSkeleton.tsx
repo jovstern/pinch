@@ -1,9 +1,12 @@
+import { useTranslation } from "react-i18next";
+
 // While cook mode loads (its chunk, then the recipe): the page's shape, so it doesn't jump from one
 // line of text to the step. Said once for screen readers; the shapes are hidden.
 export function CookSkeleton() {
+  const { t } = useTranslation();
   return (
     <>
-      <p className="sr-only">Loading the recipe…</p>
+      <p className="sr-only">{t("recipe.loading")}</p>
       <div aria-hidden="true" className="motion-safe:animate-pulse">
         {/* As CookPage: the breadcrumbs, title, subtitle, the step's label, bar and card. */}
         <div className="my-3 h-5 w-48 rounded-control bg-fill" />

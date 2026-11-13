@@ -1,3 +1,5 @@
+import { useTranslation } from "react-i18next";
+import { InSentence } from "../../components/InSentence.tsx";
 import { Button } from "../../components/ui/Button.tsx";
 import type { Timer } from "./useTimers.ts";
 
@@ -10,10 +12,11 @@ type TimerBarProps = {
 // The running timers, kept at the bottom of the screen by cook mode while the cook moves between
 // steps. At most 40% of the screen's height, scrolling past it, so many timers never hide the step.
 export function TimerBar({ timers, now, onStop }: TimerBarProps) {
+  const { t } = useTranslation();
   if (timers.length === 0) return null;
   return (
     <ul
-      aria-label="Timers"
+      aria-label={t("cook.timers")}
       // Its top border separates it from Back and Next above it in cook mode's footer: meant.
       className="grid max-h-[40dvh] gap-1 overflow-y-auto border-t border-border bg-surface py-2"
     >
@@ -24,25 +27,30 @@ export function TimerBar({ timers, now, onStop }: TimerBarProps) {
             {left > 0 ? (
               // "19:58 left · 20 min timer": the time left first, the minutes not said twice.
               <p className="tabular-nums">
-                {clock(left)} left · <bdi>{timer.label}</bdi> timer
+                <InSentence
+                  sentence={(time) => t("cook.left", { clock: clock(left), time })}
+                  text={timer.label}
+                />
               </p>
             ) : (
               // Said aloud once, as it ends. Keyed, so it's a new element: a screen reader may miss
               // an alert role added to one already there.
               <p key="done" role="alert" className="font-semibold text-accent-strong">
-                <bdi>{timer.label}</bdi> timer: done
+                <InSentence sentence={(time) => t("cook.timerDone", { time })} text={timer.label} />
               </p>
             )}
             {/* Named for its timer: with two running, "Stop" alone wouldn't say which. */}
             <Button
               type="button"
               variant="secondary"
-              aria-label={`${left > 0 ? "Stop" : "Dismiss"} the ${timer.label} timer`}
+              aria-label={t(left > 0 ? "cook.stopTimer" : "cook.dismissTimer", {
+                time: timer.label,
+              })}
               onClick={() => {
                 onStop(timer.id);
               }}
             >
-              {left > 0 ? "Stop" : "Dismiss"}
+              {left > 0 ? t("cook.stop") : t("cook.dismiss")}
             </Button>
           </li>
         );

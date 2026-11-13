@@ -379,7 +379,7 @@ test("in Hebrew, the session's error is in Hebrew", async () => {
   stubFetch(() => Promise.resolve(new Response(null, { status: 500 })));
   await renderInHebrew("/nope", { me: "ask" });
   expect(
-    await screen.findByRole("heading", { level: 1, name: "אין חיבור ל-Pinch" }),
+    await screen.findByRole("heading", { level: 1, name: "אין חיבור ל\u2011Pinch" }),
   ).toBeInTheDocument();
   expect(screen.getByRole("button", { name: "לנסות שוב" })).toBeInTheDocument();
 });

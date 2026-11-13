@@ -2,7 +2,7 @@ import type { Recipe } from "@pinch/shared";
 import { act, fireEvent, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, test, vi } from "vitest";
-import { renderApp, stubFetch } from "../../test-utils.tsx";
+import { renderApp, renderInHebrew, stubFetch } from "../../test-utils.tsx";
 
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -310,4 +310,81 @@ test("below 1024 px the timers share one footer with Back and Next, pinned to th
   // One footer, so a short phone can't hide the buttons under the timers (design §14).
   const footer = screen.getByRole("button", { name: "Done" }).closest("[data-cook-footer]");
   expect(footer).toContainElement(screen.getByRole("list", { name: "Timers" }));
+});
+
+// In Hebrew (design §16.11): cook mode's own words are Hebrew; the recipe's title and its steps'
+// times are the user's, in isolates or their own <bdi> (§16.5).
+test("in Hebrew, cook mode says its page, steps and buttons in Hebrew", async () => {
+  stubApi();
+  await renderInHebrew(`/recipes/${omelette.id}/cook`);
+
+  expect(await screen.findByRole("heading", { level: 1, name: "Omelette" })).toBeInTheDocument();
+  expect(document.title).toBe("בישול: \u2068Omelette\u2069 · Pinch");
+  const breadcrumb = screen.getByRole("navigation", { name: "נתיב ניווט" });
+  expect(within(breadcrumb).getByRole("link", { name: "המתכונים שלי" })).toBeInTheDocument();
+  expect(within(breadcrumb).getByText("בישול")).toHaveAttribute("aria-current", "page");
+  expect(screen.getByText("נכתב ידנית", { exact: false })).toBeInTheDocument();
+
+  // The counter, read whole with the step's words.
+  expect(screen.getByRole("status")).toHaveTextContent("שלב 1 מתוך 2: Beat the eggs.");
+  const steps = screen.getByRole("list", { name: "אופן ההכנה" });
+  expect(within(steps).getByRole("listitem", { name: "שלב 2 מתוך 2" })).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "שלב 2" })).toBeInTheDocument();
+  expect(screen.getByText("או במקשי החיצים")).toBeInTheDocument();
+  expect(screen.getByText("כל המצרכים (2)")).toBeInTheDocument();
+  expect(within(steps).getAllByText("לשלב הזה")).toHaveLength(2);
+
+  // ‹ and › point the reading way, so they mirror (design §16.4).
+  const back = screen.getByRole("button", { name: "הקודם" });
+  expect(back).toHaveAttribute("aria-disabled", "true");
+  expect(back.querySelector("svg")).toHaveClass("rtl:-scale-x-100");
+  const next = screen.getByRole("button", { name: "הבא" });
+  expect(next.querySelector("svg")).toHaveClass("rtl:-scale-x-100");
+  await userEvent.click(next);
+  expect(screen.getByRole("status")).toHaveTextContent("שלב 2 מתוך 2: Cook them in butter.");
+  expect(screen.getByRole("button", { name: "סיום" })).toBeInTheDocument();
+});
+
+test("in Hebrew, the counter says the same words for one step, two or many", async () => {
+  stubApi({ ...omelette, steps: ["Beat the eggs."] });
+  await renderInHebrew(`/recipes/${omelette.id}/cook`);
+
+  expect(await screen.findByRole("status")).toHaveTextContent("שלב 1 מתוך 1: Beat the eggs.");
+});
+
+test("in Hebrew, a timer counts down and says when it's done, its time in its <bdi>", async () => {
+  vi.useFakeTimers({ shouldAdvanceTime: true });
+  const user = userEvent.setup({ advanceTimers: (ms) => vi.advanceTimersByTime(ms) });
+  stubApi({ ...omelette, steps: ["לבשל את הביצים 2 דקות."] });
+  await renderInHebrew(`/recipes/${omelette.id}/cook`);
+
+  const timer = await screen.findByRole("button", { name: "טיימר: 2 דקות" });
+  expect(within(timer).getByText("2 דקות").tagName).toBe("BDI");
+  await user.click(timer);
+  expect(screen.getByRole("button", { name: "טיימר פועל: 2 דקות" })).toHaveAttribute(
+    "aria-disabled",
+    "true",
+  );
+  const timers = screen.getByRole("list", { name: "טיימרים" });
+  expect(timers).toHaveTextContent("נותרו 2:00 · טיימר של 2 דקות");
+  expect(within(timers).getByText("2 דקות").tagName).toBe("BDI");
+  expect(
+    within(timers).getByRole("button", { name: "לעצור את הטיימר של 2 דקות" }),
+  ).toHaveTextContent("לעצור");
+
+  act(() => {
+    vi.advanceTimersByTime(120_000);
+  });
+  expect(within(timers).getByRole("alert")).toHaveTextContent("הטיימר של 2 דקות הסתיים");
+
+  await user.click(screen.getByRole("button", { name: "לסגור את הטיימר של 2 דקות" }));
+  expect(screen.queryByRole("list", { name: "טיימרים" })).not.toBeInTheDocument();
+});
+
+test("in Hebrew, cook mode says whether the screen stays on", async () => {
+  stubWakeLock();
+  stubApi();
+  await renderInHebrew(`/recipes/${omelette.id}/cook`);
+
+  expect(await screen.findByText("המסך יישאר דלוק.", { exact: false })).toBeInTheDocument();
 });
