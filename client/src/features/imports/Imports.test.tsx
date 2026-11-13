@@ -578,6 +578,10 @@ test("an import that becomes ready or fails says so once in a toast, with its ne
   expect(
     within(toastOf("Tomato pasta is ready to review")).getByRole("button", { name: "Review" }),
   ).toBeVisible();
+  // The title in its own direction (design §16.5).
+  expect(within(toastOf("Tomato pasta is ready to review")).getByText("Tomato pasta").tagName).toBe(
+    "BDI",
+  );
   // With what the draft asks the user to check.
   expect(
     within(toastOf("Tomato pasta is ready to review")).getByText("1 thing to look at"),

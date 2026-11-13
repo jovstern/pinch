@@ -52,14 +52,15 @@ export function renderApp(
 // it, and Hebrew's strings, as main.tsx loads them. Back to English once the test is done, the
 // other tests' language (test-setup.ts).
 export async function renderInHebrew(path: string, options?: Parameters<typeof renderApp>[1]) {
-  document.documentElement.lang = "he";
-  document.documentElement.dir = "rtl";
-  await loadHebrew();
+  // First, so a failure below still puts English back.
   onTestFinished(async () => {
     document.documentElement.removeAttribute("lang");
     document.documentElement.removeAttribute("dir");
     await i18next.changeLanguage("en");
   });
+  document.documentElement.lang = "he";
+  document.documentElement.dir = "rtl";
+  await loadHebrew();
   renderApp(path, options);
 }
 

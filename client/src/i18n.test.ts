@@ -64,14 +64,18 @@ test("in Hebrew, the header, its menu and not found are in Hebrew, right to left
   expect(logOut.querySelector("svg")).toHaveClass("rtl:-scale-x-100");
 });
 
-// Each string's {{variables}}, sorted, by its key.
-// Not Hebrew's dual (_two): it may say its number in words ("שעתיים"), without {{count}}.
+// Each string's {{variables}}, sorted, by its key. A plural's single and dual forms (_one, _two)
+// may say their number in words ("מתכון אחד", "שעתיים"), so {{count}} is left out of theirs; their
+// other variables still count. Hebrew's dual has no English twin, so it isn't compared.
 function placeholders(strings: object, prefix = ""): Record<string, string> {
   const found: Record<string, string> = {};
   for (const [key, value] of Object.entries(strings)) {
     if (key.endsWith("_two")) continue;
     if (typeof value === "string") {
-      const marks = value.match(/{{\w+}}/g) ?? [];
+      const words = /_(one|two)$/.test(key);
+      const marks = (value.match(/{{\w+}}/g) ?? []).filter(
+        (mark) => !(words && mark === "{{count}}"),
+      );
       found[prefix + key] = marks.sort().join(" ");
     } else {
       Object.assign(found, placeholders(value as object, `${prefix}${key}.`));

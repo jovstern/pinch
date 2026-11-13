@@ -33,9 +33,10 @@ export function useToastSent() {
   );
 }
 
-// A sentence with a recipe's title in it, the title in its <bdi>. Split here, not by
-// react-i18next's Trans: its HTML parser would cost the entry (where the toasts are) 4.2 kB gzip,
-// and these sentences hold nothing but the title.
+// A sentence with a recipe's title in it, the title in its <bdi>, wherever the language puts it
+// (first or last). Split here, not by react-i18next's Trans: its HTML parser would cost the entry
+// (where the toasts are) 4.2 kB gzip, and these sentences hold nothing but the title, which each
+// says once (a second {{title}} would be dropped).
 function withTitle(key: "toasts.ready" | "toasts.deleted", title: string) {
   const [before, after] = i18next.t(key, { title: "\0" }).split("\0");
   return (

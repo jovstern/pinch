@@ -2,7 +2,7 @@ import type { Recipe } from "@pinch/shared";
 import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, test, vi } from "vitest";
-import { renderApp, stubFetch, toastTitled } from "../../test-utils.tsx";
+import { renderApp, renderInHebrew, stubFetch, toastTitled } from "../../test-utils.tsx";
 
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -121,6 +121,19 @@ test("Undo on Delete's toast restores the recipe, and View opens it", async () =
   expect(screen.getByRole("heading", { level: 1, name: "My recipes" })).toBeInTheDocument();
   fireEvent.click(await toastButton("Back in My recipes", "View"));
   expect(await screen.findByRole("heading", { level: 1, name: "Omelette" })).toBeInTheDocument();
+});
+
+test("in Hebrew, Delete's toast names the recipe after the verb, in its <bdi>", async () => {
+  stubApi();
+  await renderInHebrew(`/recipes/${omelette.id}`);
+  // The recipe's page and its dialog are still English until I6.
+  await chooseDelete();
+  const dialog = await screen.findByRole("alertdialog", { name: "Delete this recipe?" });
+  await userEvent.click(within(dialog).getByRole("button", { name: "Delete" }));
+  const undo = await toastButton("נמחק: Omelette", "לבטל");
+  const toast = undo.closest("li");
+  if (toast === null) throw new Error("לבטל isn't in a toast");
+  expect(within(toast).getByText("Omelette").tagName).toBe("BDI");
 });
 
 // A button on the toast with this title (Sonner's list item).

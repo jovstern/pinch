@@ -167,8 +167,11 @@ exactly as it is: each slice's English screens look the same before and after.
       language picker's "Couldn't save" with Try again among them, English until then);
       `renderInHebrew` and its first tests
 - [ ] I5 Strings with Hebrew: Add recipe and the queue (its heading's plurals, the failure
-      reasons by their key)
-- [ ] I6 Strings with Hebrew: My recipes, Filters and the tag labels; a recipe's page
+      reasons by their key, the queue's toasts in `useImportToasts`: "Couldn't read that video",
+      "Your recipe", the things to look at)
+- [ ] I6 Strings with Hebrew: My recipes, Filters and the tag labels; a recipe's page; the
+      shared `ui/` labels they bring (Sheet's `aria-label="Close"`, Breadcrumb's
+      `aria-label="Breadcrumb"`)
 - [ ] I7 Strings with Hebrew: the editor and cook mode, page titles with their isolates
 - [ ] I8 The server's messages and `Intl`: `shared/src/messages.ts` used by the schemas and the
       worker, `validation` in the client; minutes, counts and nutrition through `Intl`
