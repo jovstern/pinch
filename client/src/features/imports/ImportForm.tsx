@@ -13,6 +13,7 @@ import { useNavigate } from "react-router";
 import { FieldError } from "../../components/FieldError.tsx";
 import { Button } from "../../components/ui/Button.tsx";
 import { Input } from "../../components/ui/Input.tsx";
+import { pageIsRtl } from "../../i18n.ts";
 import { ApiError, sendJson } from "../../lib/api.ts";
 import { thingsToLookAt } from "../../lib/thingsToLookAt.ts";
 import {
@@ -134,9 +135,13 @@ export function ImportForm({ inputRef }: { inputRef: RefObject<HTMLInputElement 
               {/* shadcn's input group: the group draws the field's edge and focus ring, the
                   input inside has none. The sparkles are Pinch's mark, not a control. The room
                   for them (ps-6, plus the input's own px-3) is the group's: the input is
-                  dir="auto", so its own padding would follow what's typed, not the page
-                  (design §16.4). */}
-              <div className="relative flex items-center rounded-control border border-input bg-card ps-6 has-[[aria-invalid=true]]:border-destructive has-[input:focus-visible]:outline-2 has-[input:focus-visible]:outline-offset-2 has-[input:focus-visible]:outline-ring">
+                  dir="auto", so its own padding would follow what's typed, not the page.
+                  Left to right in Hebrew too, the user's call (design §16.4): the sparkles on
+                  the left, Pinch on the right, as in English. */}
+              <div
+                dir="ltr"
+                className="relative flex items-center rounded-control border border-input bg-card ps-6 has-[[aria-invalid=true]]:border-destructive has-[input:focus-visible]:outline-2 has-[input:focus-visible]:outline-offset-2 has-[input:focus-visible]:outline-ring"
+              >
                 <Sparkles
                   aria-hidden="true"
                   className="pointer-events-none absolute start-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
@@ -148,8 +153,9 @@ export function ImportForm({ inputRef }: { inputRef: RefObject<HTMLInputElement 
                   value={field.state.value}
                   placeholder={t("imports.pastePlaceholder")}
                   // Hebrew reads right to left: the field follows what's typed in it. Empty, the
-                  // page's direction, as TextField's (Chrome reads an empty "auto" as ltr).
-                  dir={field.state.value === "" ? undefined : "auto"}
+                  // page's direction, so a Hebrew placeholder and caret sit by Pinch: not
+                  // inherited, as the row is ltr, nor "auto" (Chrome reads an empty one as ltr).
+                  dir={field.state.value !== "" ? "auto" : pageIsRtl() ? "rtl" : "ltr"}
                   aria-invalid={invalid}
                   aria-describedby={invalid ? `${hintId} ${errorId}` : hintId}
                   enterKeyHint="send"

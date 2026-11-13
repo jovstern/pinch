@@ -56,7 +56,7 @@ export const he: Translation<typeof en> = {
     pasteLabel: "לשמור מתכון מסרטון",
     pasteHint:
       "אפשר להדביק סרטון קצר מ\u2011YouTube, ריל מ\u2011Facebook או מ\u2011Instagram, או מתכון כטקסט",
-    pastePlaceholder: "להדביק סרטון או מתכון",
+    pastePlaceholder: "להדביק קישור לריל או מתכון",
     pinchIt: "Pinch",
     sending: "שליחה…",
     couldntSend: "השליחה נכשלה. אפשר לנסות שוב.",
@@ -66,6 +66,14 @@ export const he: Translation<typeof en> = {
     screenshotsHint: "עד {{max}} צילומי מסך של המתכון, כשהקישור והטקסט לא מספיקים.",
     couldntSendThese: "השליחה נכשלה. אפשר לנסות שוב.",
     writeItYourself: "או לכתוב מתכון ידנית",
+    // The arrow points the reading way, to the left (§16.4); העתקת קישור kept on one line.
+    pasteHelp: {
+      label: "איפה מוצאים את הקישור",
+      instagram: "בריל: שיתוף (מטוס הנייר) ← העתקת\u00A0קישור",
+      facebook: "בסרטון או בריל: שיתוף ← העתקת\u00A0קישור",
+      youtube: "בסרטון או ב\u2011Short: שיתוף ← העתקת\u00A0קישור",
+      text: "או להדביק את הטקסט של המתכון, מהכיתוב של פוסט או מאתר.",
+    },
     couldntLoad: "התור לא נטען",
     ready_one: "1 מוכן",
     ready_other: "{{count}} מוכנים",

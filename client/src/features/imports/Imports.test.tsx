@@ -332,6 +332,47 @@ test("Or write it yourself leads to the empty editor", async () => {
   );
 });
 
+test("the (i) under Pinch it says where each app keeps a post's link", async () => {
+  stubApi([[]]);
+  renderApp("/");
+
+  const help = await screen.findByRole("button", { name: "Where to find the link" });
+  await userEvent.click(help);
+
+  // A popover, not a tooltip: a tap opens it (design §14). "Copy link" has a no-break space,
+  // which Testing Library reads as a space.
+  const popover = await screen.findByRole("dialog", { name: "Where to find the link" });
+  expect(within(popover).getByText("On a reel: Share (the paper plane) → Copy link")).toBeVisible();
+  expect(within(popover).getByText("On a video or reel: Share → Copy link")).toBeVisible();
+  expect(within(popover).getByText("On a Short or video: Share → Copy link")).toBeVisible();
+  expect(
+    within(popover).getByText("Or paste the recipe's text, from a post's caption or a website."),
+  ).toBeVisible();
+});
+
+test("the (i) opens on Enter, and Escape closes it and puts focus back on it", async () => {
+  stubApi([[]]);
+  renderApp("/");
+
+  (await screen.findByRole("button", { name: "Where to find the link" })).focus();
+  await userEvent.keyboard("{Enter}");
+  expect(await screen.findByRole("dialog", { name: "Where to find the link" })).toBeVisible();
+
+  await userEvent.keyboard("{Escape}");
+
+  expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Where to find the link" })).toHaveFocus();
+});
+
+test("the paste box's placeholder and an empty box read left to right", async () => {
+  stubApi([[]]);
+  renderApp("/");
+
+  const box = await screen.findByRole("textbox", { name: "Pinch a recipe from a reel" });
+  expect(box).toHaveAttribute("placeholder", "Paste a reel link or recipe");
+  expect(box).toHaveAttribute("dir", "ltr");
+});
+
 test("a ready one counts its things to look at", async () => {
   const uncertain = [
     { path: "title", reason: "Not said." },
@@ -888,7 +929,7 @@ test("in Hebrew, Add recipe's box, its button and the way to write a recipe are 
   await renderInHebrew("/");
 
   const box = await screen.findByRole("textbox", { name: "לשמור מתכון מסרטון" });
-  expect(box).toHaveAttribute("placeholder", "להדביק סרטון או מתכון");
+  expect(box).toHaveAttribute("placeholder", "להדביק קישור לריל או מתכון");
   expect(box).toHaveAccessibleDescription(
     "אפשר להדביק סרטון קצר מ\u2011YouTube, ריל מ\u2011Facebook או מ\u2011Instagram, או מתכון כטקסט",
   );
@@ -902,6 +943,52 @@ test("in Hebrew, Add recipe's box, its button and the way to write a recipe are 
   await waitFor(() => {
     expect(document.title).toBe("להוסיף מתכון · Pinch");
   });
+});
+
+test("in Hebrew, the paste row is laid out left to right, and its words read right to left", async () => {
+  stubApi([[]]);
+  await renderInHebrew("/");
+
+  const box = await screen.findByRole("textbox", { name: "לשמור מתכון מסרטון" });
+  // The user's call (design §16.4): the sparkles on the left and Pinch on the right, as in
+  // English; the link on the left and the (i) on the right under it.
+  expect(box.parentElement).toHaveAttribute("dir", "ltr");
+  expect(screen.getByRole("link", { name: "או לכתוב מתכון ידנית" }).parentElement).toHaveAttribute(
+    "dir",
+    "ltr",
+  );
+  // Empty, the page's direction: the Hebrew placeholder and the caret on the right, by Pinch.
+  expect(box).toHaveAttribute("dir", "rtl");
+  // Typed in, its own (§16.5): a link left to right, Hebrew right to left.
+  await userEvent.type(box, "שקשוקה");
+  expect(box).toHaveAttribute("dir", "auto");
+});
+
+test("in Hebrew, the (i) is named in Hebrew, says it in Hebrew, and Escape puts focus back", async () => {
+  stubApi([[]]);
+  await renderInHebrew("/");
+
+  const help = await screen.findByRole("button", { name: "איפה מוצאים את הקישור" });
+  await userEvent.click(help);
+
+  const popover = await screen.findByRole("dialog", { name: "איפה מוצאים את הקישור" });
+  // Its words read right to left, though the row it opens from is left to right.
+  expect(within(popover).getByText("איפה מוצאים את הקישור").parentElement).toHaveAttribute(
+    "dir",
+    "rtl",
+  );
+  expect(within(popover).getByText("Instagram")).toBeVisible();
+  expect(within(popover).getByText("בריל: שיתוף (מטוס הנייר) ← העתקת קישור")).toBeVisible();
+  expect(within(popover).getByText("בסרטון או בריל: שיתוף ← העתקת קישור")).toBeVisible();
+  expect(within(popover).getByText("בסרטון או ב\u2011Short: שיתוף ← העתקת קישור")).toBeVisible();
+  expect(
+    within(popover).getByText("או להדביק את הטקסט של המתכון, מהכיתוב של פוסט או מאתר."),
+  ).toBeVisible();
+
+  await userEvent.keyboard("{Escape}");
+
+  expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "איפה מוצאים את הקישור" })).toHaveFocus();
 });
 
 test("in Hebrew, a link from another site is refused in Hebrew", async () => {
