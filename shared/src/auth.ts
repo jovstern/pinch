@@ -49,6 +49,8 @@ export const MeSchema = z.object({
   email: z.string(),
   name: z.string(),
   language: LanguageSchema,
+  // Google's profile picture, for the avatar; none for an account that never signed in with Google.
+  picture: z.url().optional(),
 });
 export type Me = z.infer<typeof MeSchema>;
 
