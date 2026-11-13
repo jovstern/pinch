@@ -14,6 +14,22 @@
   line-gap-override: 0%;
 }
 
+/* The same for a Hebrew title until Frank Ruhl Libre arrives (design §16.6): Times New Roman
+   Bold, which has Hebrew on Apple and Windows, sized to take Frank Ruhl Libre's room. From both
+   fonts' files: Frank Ruhl Libre's Hebrew is 1.7% wider at 600 and 2.7% at 700 (the advances of
+   a dozen Hebrew titles), so 102.2%; its ascent 0.957 em and descent 0.334 em, divided by that.
+   Android draws Noto Serif Hebrew instead: there a Hebrew title may shift once. */
+@font-face {
+  font-family: "Frank Ruhl Fallback";
+  src: local("Times New Roman Bold"), local("TimesNewRomanPS-BoldMT");
+  font-weight: 600 700;
+  unicode-range: U+0590-05FF, U+FB1D-FB4F;
+  size-adjust: 102.2%;
+  ascent-override: 93.6%;
+  descent-override: 32.7%;
+  line-gap-override: 0%;
+}
+
 /* Design tokens (styling.md, docs/ux/plan.md §6): components use these names, never raw
    colours. Every text/background pair passes WCAG AA in both themes. */
 @theme {
@@ -52,10 +68,12 @@
   /* Behind a dialog: dark in both themes. */
   --color-scrim: #0f0c09;
 
-  /* Fraunces has no Hebrew: a Hebrew title is named a serif here (Times New Roman on Apple and
-     Windows, Noto Serif Hebrew on Android), so it's the same before and after Fraunces swaps in. */
+  /* Fraunces has no Hebrew (Georgia neither): a Hebrew title is in Frank Ruhl Libre, the
+     "Fraunces" face for Hebrew (lib/displayFont.ts), and until then in its sized fallback; on
+     Android, where there's no Times New Roman, in Noto Serif Hebrew. */
   --font-display:
-    "Fraunces", "Fraunces Fallback", "Times New Roman", "Noto Serif Hebrew", Georgia, serif;
+    "Fraunces", "Fraunces Fallback", "Frank Ruhl Fallback", "Times New Roman", "Noto Serif Hebrew",
+    Georgia, serif;
   /* A recipe's emoji (D25): the colour emoji fonts first, so a text font's plain glyph for it
      never draws it in grey. */
   --font-emoji: "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif;

@@ -1239,15 +1239,17 @@ change needs nothing else. `index.html`'s own `lang="en"` stays, for a browser w
   Francisco with its Hebrew, Segoe UI, Roboto with Noto Sans Hebrew). It stays, in both
   languages.
 - **The Hebrew display face** is Frank Ruhl Libre (SIL OFL), self-hosted beside Fraunces:
-  `public/fonts/frank-ruhl-libre.woff2`, the Hebrew block only, weights 500–700 (about 25–35 kB,
-  measured in its slice). `displayFont.ts` adds it as a second "Fraunces" face with
+  `public/fonts/frank-ruhl-libre.woff2`, the Hebrew block only, weights 500–700 (9.6 kB, measured
+  in I9; the command and source are in `displayFont.ts`). `displayFont.ts` adds it as a second
+  "Fraunces" face with
   `unicodeRange: "U+0590-05FF, U+FB1D-FB4F"`, at the same moment as Fraunces, 1.5 s after load,
   added to `document.fonts` without `load()`: the browser fetches it only when a Hebrew title is
   drawn, so an English page with no Hebrew recipe pays nothing, and no page pays before its LCP.
-- Until it arrives, a Hebrew title is in a fallback sized to match (`Frank Ruhl Fallback`, from
-  the system serif's metrics, as `Fraunces Fallback` is from Georgia's), so nothing moves when it
-  swaps in. `font-display` doesn't apply (it's added once loaded), as for Fraunces. Nothing is
-  preloaded: neither face is on the LCP's path.
+- Until it arrives, a Hebrew title is in a fallback sized to match (`Frank Ruhl Fallback`:
+  Times New Roman Bold, sized from both fonts' files, as `Fraunces Fallback` is from Georgia's),
+  so nothing moves when it swaps in (CLS 0 on a Hebrew recipe, measured in I9). Unlike
+  Fraunces, it's added before it's loaded, so its `font-display: swap` applies: the fallback is
+  drawn while it comes. Nothing is preloaded: neither face is on the LCP's path.
 
 ### 16.7 Server messages (D44)
 
