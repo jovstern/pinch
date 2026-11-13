@@ -11,7 +11,7 @@ export function NoRecipesYet() {
   return (
     <EmptyState
       icon={ShoppingBasket}
-      heading="h2"
+      as="h2"
       title={t("recipes.noRecipesYet")}
       subtitle={t("recipes.pinchOrWrite")}
       action={

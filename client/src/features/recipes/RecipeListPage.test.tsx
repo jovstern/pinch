@@ -78,7 +78,12 @@ test("when loading fails, Try again loads the list again", async () => {
   stubFetch(fetch);
   renderApp("/recipes");
 
-  await userEvent.click(await screen.findByRole("button", { name: "Try again" }));
+  const alert = await screen.findByRole("alert");
+  expect(
+    within(alert).getByRole("heading", { level: 2, name: "We couldn't load your recipes" }),
+  ).toBeInTheDocument();
+  expect(within(alert).getByText("Check your connection, then try again.")).toBeInTheDocument();
+  await userEvent.click(within(alert).getByRole("button", { name: "Try again" }));
   expect(await screen.findByRole("link", { name: /Omelette/ })).toBeInTheDocument();
 });
 
@@ -453,6 +458,16 @@ test("in Hebrew, a search says one match, two and many in their own forms", asyn
   await userEvent.clear(search);
   await userEvent.type(search, "seven{Enter}");
   expect(await screen.findByText("7 מתכונים מתאימים.")).toBeInTheDocument();
+});
+
+test("in Hebrew, when loading fails, it says so and offers to try again", async () => {
+  stubFetch(vi.fn().mockResolvedValue(new Response(null, { status: 502 })));
+  await renderInHebrew("/recipes");
+
+  const alert = await screen.findByRole("alert");
+  expect(within(alert).getByRole("heading", { name: "המתכונים לא נטענו" })).toBeInTheDocument();
+  expect(within(alert).getByText("כדאי לבדוק את החיבור ולנסות שוב.")).toBeInTheDocument();
+  expect(within(alert).getByRole("button", { name: "לנסות שוב" })).toBeInTheDocument();
 });
 
 test("in Hebrew, with no recipes, it offers to add the first one", async () => {

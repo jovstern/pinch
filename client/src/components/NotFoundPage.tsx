@@ -11,7 +11,7 @@ export function NotFoundPage() {
       <title>{`${t("frame.notFound")} · Pinch`}</title>
       <EmptyState
         icon={MapPinOff}
-        heading="h1"
+        as="h1"
         title={t("frame.notFound")}
         subtitle={t("frame.nothingHere")}
         action={

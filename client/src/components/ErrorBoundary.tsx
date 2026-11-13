@@ -28,13 +28,13 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, { failed: boole
 }
 
 // A function component, for its t(): a class can't call a hook. Reload fetches the page again,
-// with the new deploy's chunks.
+// with the new deploy's chunks. Filled (the default button): it is the page's only action.
 function PageDidntLoad() {
   const { t } = useTranslation();
   return (
     <EmptyState
       icon={CloudOff}
-      heading="h1"
+      as="h1"
       title={t("frame.didntLoad")}
       subtitle={t("frame.checkAndReload")}
       role="alert"

@@ -83,7 +83,25 @@ test("when loading fails, it offers to try again", async () => {
   vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(null, { status: 500 })));
   renderApp(`/recipes/${omelette.id}`);
 
-  expect(await screen.findByRole("button", { name: "Try again" })).toBeInTheDocument();
+  const heading = await screen.findByRole("heading", {
+    level: 1,
+    name: "We couldn't load this recipe",
+  });
+  expect(screen.getByText("Check your connection, then try again.")).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Try again" })).toBeInTheDocument();
+  // The page is the empty state alone, which makes main a column it centres in (Layout).
+  expect(heading.closest("[data-empty-state]")?.parentElement).toBe(screen.getByRole("main"));
+});
+
+test("in Hebrew, when loading fails, it says so in Hebrew", async () => {
+  vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(null, { status: 500 })));
+  await renderInHebrew(`/recipes/${omelette.id}`);
+
+  expect(
+    await screen.findByRole("heading", { level: 1, name: "המתכון לא נטען" }),
+  ).toBeInTheDocument();
+  expect(screen.getByText("כדאי לבדוק את החיבור ולנסות שוב.")).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "לנסות שוב" })).toBeInTheDocument();
 });
 
 test("Delete asks first, then deletes the recipe and goes back to the list, focused on it", async () => {

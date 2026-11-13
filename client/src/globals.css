@@ -195,6 +195,8 @@ body {
     background-clip: text;
     color: transparent;
     animation: shimmer 2s linear infinite;
+    /* The build lowers :dir(rtl) to :lang(he) and the other right-to-left languages: that holds
+       because <html> always gets lang and dir together (index.html's script, i18n.ts). */
     &:dir(rtl) {
       animation-direction: reverse;
     }

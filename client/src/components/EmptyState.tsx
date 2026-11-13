@@ -5,7 +5,7 @@ type EmptyStateProps = {
   // Decoration: the title says it.
   icon: LucideIcon;
   // h1 when it is the whole page (not found, the page that didn't load), h2 inside one.
-  heading: "h1" | "h2";
+  as: "h1" | "h2";
   title: string;
   subtitle: ReactNode;
   // The way on: one button, or nothing.
@@ -19,13 +19,12 @@ type EmptyStateProps = {
 // main is one, and Layout's main becomes one for any page whose content is this (data-empty-state).
 export function EmptyState({
   icon: Icon,
-  heading,
+  as: Heading,
   title,
   subtitle,
   action,
   role,
 }: EmptyStateProps) {
-  const Heading = heading;
   return (
     <div data-empty-state="" role={role} className="my-auto text-center">
       <Icon
