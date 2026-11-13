@@ -2,7 +2,7 @@ import { fireEvent, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, test, vi } from "vitest";
 import { loadPage, reloadPage } from "../../lib/loadPage.ts";
-import { renderApp, stubFetch, testUser } from "../../test-utils.tsx";
+import { renderApp, renderInHebrew, stubFetch, testUser } from "../../test-utils.tsx";
 
 // jsdom can't load a page: the tests see where the app would go.
 vi.mock("../../lib/loadPage.ts", () => ({ loadPage: vi.fn(), reloadPage: vi.fn() }));
@@ -351,4 +351,52 @@ test("Sign up sends the page's language, for the new account", async () => {
       language: "en",
     }),
   });
+});
+
+test("in Hebrew, Log in is in Hebrew, its switch names English, and a wrong password says so", async () => {
+  const user = userEvent.setup();
+  stubFetch(() => Promise.resolve(new Response(null, { status: 401 })));
+  await renderInHebrew("/login", { me: null });
+  expect(await screen.findByRole("heading", { level: 1, name: "להתחבר" })).toBeInTheDocument();
+  expect(screen.getByRole("link", { name: "להירשם" })).toHaveAttribute("href", "/signup");
+  expect(screen.getByRole("button", { name: "English" })).toHaveAttribute("lang", "en");
+  await user.type(screen.getByLabelText("אימייל"), "cook@example.com");
+  await user.type(screen.getByLabelText("סיסמה"), "not it");
+  await user.click(screen.getByRole("button", { name: "להתחבר" }));
+  expect(await screen.findByRole("alert")).toHaveTextContent("האימייל והסיסמה לא תואמים.");
+});
+
+test("in Hebrew, Sign up is in Hebrew, with Log in's link", async () => {
+  stubFetch(notFound);
+  await renderInHebrew("/signup", { me: null });
+  expect(await screen.findByRole("heading", { level: 1, name: "להירשם" })).toBeInTheDocument();
+  expect(screen.getByLabelText("שם")).toBeInTheDocument();
+  expect(screen.getByText("8 תווים לפחות.")).toBeInTheDocument();
+  expect(screen.getByRole("link", { name: "להתחבר" })).toHaveAttribute("href", "/login");
+});
+
+test("in Hebrew, the session's error is in Hebrew", async () => {
+  stubFetch(() => Promise.resolve(new Response(null, { status: 500 })));
+  await renderInHebrew("/nope", { me: "ask" });
+  expect(
+    await screen.findByRole("heading", { level: 1, name: "אין חיבור ל-Pinch" }),
+  ).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "לנסות שוב" })).toBeInTheDocument();
+});
+
+test("in Hebrew, a language that couldn't be saved says so in a Hebrew toast, right to left", async () => {
+  const user = userEvent.setup();
+  stubFetch((path) =>
+    path === "/api/auth/me" ? Promise.reject(new TypeError("Failed to fetch")) : notFound(),
+  );
+  await renderInHebrew("/nope", { me: { ...testUser, language: "he" } });
+  await user.click(screen.getByRole("button", { name: "החשבון שלך" }));
+  await user.click(await screen.findByRole("menuitemradio", { name: "English" }));
+  const toast = (await screen.findByText("השמירה נכשלה")).closest("li");
+  if (toast === null) throw new Error("השמירה נכשלה isn't in a toast");
+  expect(toast).toHaveTextContent("כדאי לבדוק את החיבור");
+  expect(within(toast).getByRole("button", { name: "לנסות שוב" })).toBeInTheDocument();
+  // Sonner's list, in the page's direction (design §16.4).
+  expect(toast.closest("ol")).toHaveAttribute("dir", "rtl");
+  expect(reloadPage).not.toHaveBeenCalled();
 });

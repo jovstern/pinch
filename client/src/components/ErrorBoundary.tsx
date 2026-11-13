@@ -1,4 +1,5 @@
 import { Component, type ReactNode } from "react";
+import { useTranslation } from "react-i18next";
 
 type ErrorBoundaryProps = {
   children: ReactNode;
@@ -19,15 +20,19 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, { failed: boole
   render() {
     if (!this.state.failed) return this.props.children;
     if (this.props.fallback !== undefined) return this.props.fallback;
-    return (
-      <div role="alert">
-        <h1 className="mt-8 text-3xl font-bold tracking-tight text-balance">
-          This page didn't load
-        </h1>
-        <p className="mt-3 text-pretty text-text-muted">
-          Check your connection, then reload the page.
-        </p>
-      </div>
-    );
+    return <PageDidntLoad />;
   }
+}
+
+// A function component, for its t(): a class can't call a hook.
+function PageDidntLoad() {
+  const { t } = useTranslation();
+  return (
+    <div role="alert">
+      <h1 className="mt-8 text-3xl font-bold tracking-tight text-balance">
+        {t("frame.didntLoad")}
+      </h1>
+      <p className="mt-3 text-pretty text-text-muted">{t("frame.checkAndReload")}</p>
+    </div>
+  );
 }

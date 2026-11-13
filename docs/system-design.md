@@ -1217,9 +1217,12 @@ change needs nothing else. `index.html`'s own `lang="en"` stays, for a browser w
   app is localised" (#113, the user's call on 2026-11-12). In M10 the card is laid out by the
   interface's direction, its title and pasted text `dir="auto"`, and a link `dir="ltr"`. This
   reverses #113 on purpose; the card's comment says why.
-- Interpolated user text inside a translated sentence ("Discard {{title}}?") goes in `<bdi>`
-  (react-i18next's `Trans`), so a Hebrew title in an English sentence, or the reverse, keeps the
-  punctuation where it belongs.
+- Interpolated user text inside a translated sentence ("Discard {{title}}?") goes in `<bdi>`,
+  so a Hebrew title in an English sentence, or the reverse, keeps the punctuation where it
+  belongs. The sentence is split around the title by hand (`withTitle` in `lib/toasts.tsx`), not
+  by react-i18next's `Trans`: its HTML parser cost the entry 4.2 kB gzip (measured in I4), and
+  these sentences hold nothing but the title. A title shown alone (a toast's description) is in
+  a `<bdi>` too.
 
 ### 16.6 Fonts (D45)
 

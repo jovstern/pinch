@@ -2,7 +2,7 @@ import type { Recipe } from "@pinch/shared";
 import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, test, vi } from "vitest";
-import { renderApp, stubFetch } from "../../test-utils.tsx";
+import { renderApp, stubFetch, toastTitled } from "../../test-utils.tsx";
 
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -123,9 +123,9 @@ test("Undo on Delete's toast restores the recipe, and View opens it", async () =
   expect(await screen.findByRole("heading", { level: 1, name: "Omelette" })).toBeInTheDocument();
 });
 
-// A button on the toast that says this (Sonner's list item).
+// A button on the toast with this title (Sonner's list item).
 async function toastButton(text: string, name: string) {
-  const toast = (await screen.findByText(text)).closest("li");
+  const toast = (await screen.findByText(toastTitled(text))).closest("li");
   if (toast === null) throw new Error(`"${text}" isn't in a toast`);
   return within(toast).getByRole("button", { name });
 }

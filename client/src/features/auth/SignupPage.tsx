@@ -1,6 +1,7 @@
 import { fieldErrors, SignupInputSchema } from "@pinch/shared";
 import { revalidateLogic, useForm } from "@tanstack/react-form";
 import { useRef } from "react";
+import { useTranslation } from "react-i18next";
 import { Link, useLocation } from "react-router";
 import { TextField } from "../../components/TextField.tsx";
 import { pageLanguage } from "../../i18n.ts";
@@ -17,6 +18,7 @@ import { Wordmark } from "./Wordmark.tsx";
 
 // Sign up (design §8.3, §14), at /signup: as Log in, with a name and a new password.
 export function SignupPage() {
+  const { t } = useTranslation();
   const { search } = useLocation();
   const formRef = useRef<HTMLFormElement>(null);
   const form = useForm({
@@ -48,14 +50,14 @@ export function SignupPage() {
 
   return (
     <AuthFrame
-      title="Sign up"
+      title={t("auth.signUp")}
       logo={<Wordmark />}
       languageSwitch={<LanguageSwitch />}
       footer={
         <>
-          Already have an account?{" "}
+          {t("auth.haveAccount")}{" "}
           <Link to={`/login${search}`} className="font-semibold text-accent-strong underline">
-            Log in
+            {t("auth.logIn")}
           </Link>
         </>
       }
@@ -71,19 +73,21 @@ export function SignupPage() {
         }}
       >
         <form.Field name="name">
-          {(field) => <TextField field={field} label="Name" autoComplete="name" />}
+          {(field) => <TextField field={field} label={t("auth.name")} autoComplete="name" />}
         </form.Field>
         <form.Field name="email">
-          {(field) => <TextField field={field} label="Email" type="email" autoComplete="email" />}
+          {(field) => (
+            <TextField field={field} label={t("auth.email")} type="email" autoComplete="email" />
+          )}
         </form.Field>
         <form.Field name="password">
           {(field) => (
             <TextField
               field={field}
-              label="Password"
+              label={t("auth.password")}
               type="password"
               autoComplete="new-password"
-              hint="At least 8 characters."
+              hint={t("auth.passwordHint")}
             />
           )}
         </form.Field>
@@ -99,7 +103,7 @@ export function SignupPage() {
         <form.Subscribe selector={(state) => state.isSubmitting}>
           {(isSubmitting) => (
             <Button type="submit" aria-disabled={isSubmitting} aria-busy={isSubmitting}>
-              {isSubmitting ? "Signing up…" : "Sign up"}
+              {isSubmitting ? t("auth.signingUp") : t("auth.signUp")}
             </Button>
           )}
         </form.Subscribe>

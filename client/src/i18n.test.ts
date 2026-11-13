@@ -1,8 +1,11 @@
-import { screen } from "@testing-library/react";
+import { screen, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import i18next from "i18next";
 import { afterEach, expect, test, vi } from "vitest";
 import { loadHebrew, needsReloadFor } from "./i18n.ts";
-import { renderApp, stubFetch, testUser } from "./test-utils.tsx";
+import { en } from "./locales/en.ts";
+import { he } from "./locales/he.ts";
+import { renderInHebrew, stubFetch, testUser } from "./test-utils.tsx";
 
 // A new device (design §16.1): the page is in English (jsdom's <html> has no lang).
 afterEach(async () => {
@@ -43,10 +46,40 @@ test("once Hebrew is loaded, i18next says the page is in Hebrew, right to left",
   expect(i18next.dir()).toBe("rtl");
 });
 
-test("in Hebrew, the header's tabs are in Hebrew", async () => {
-  await inHebrew();
+test("in Hebrew, the header, its menu and not found are in Hebrew, right to left", async () => {
   stubFetch(() => Promise.resolve(new Response(null, { status: 404 })));
-  renderApp("/nope");
+  await renderInHebrew("/nope");
   expect(screen.getByRole("link", { name: /^המתכונים שלי/ })).toBeInTheDocument();
-  expect(screen.getByRole("button", { name: "החשבון שלך" })).toBeInTheDocument();
+  expect(screen.getByRole("heading", { level: 1, name: "הדף לא נמצא" })).toBeInTheDocument();
+  expect(screen.getByRole("link", { name: "לחזור למתכונים שלי" })).toHaveAttribute(
+    "href",
+    "/recipes",
+  );
+  await userEvent.setup().click(screen.getByRole("button", { name: "החשבון שלך" }));
+  const menu = await screen.findByRole("menu");
+  expect(menu).toHaveAttribute("dir", "rtl");
+  expect(within(menu).getByRole("group", { name: "שפה" })).toBeInTheDocument();
+  // Log out's arrow points the reading way, so it mirrors (design §16.4).
+  const logOut = within(menu).getByRole("menuitem", { name: "להתנתק" });
+  expect(logOut.querySelector("svg")).toHaveClass("rtl:-scale-x-100");
+});
+
+// Each string's {{variables}}, sorted, by its key.
+// Not Hebrew's dual (_two): it may say its number in words ("שעתיים"), without {{count}}.
+function placeholders(strings: object, prefix = ""): Record<string, string> {
+  const found: Record<string, string> = {};
+  for (const [key, value] of Object.entries(strings)) {
+    if (key.endsWith("_two")) continue;
+    if (typeof value === "string") {
+      const marks = value.match(/{{\w+}}/g) ?? [];
+      found[prefix + key] = marks.sort().join(" ");
+    } else {
+      Object.assign(found, placeholders(value as object, `${prefix}${key}.`));
+    }
+  }
+  return found;
+}
+
+test("each Hebrew string has its English one's variables (design §16.11)", () => {
+  expect(placeholders(he)).toEqual(placeholders(en));
 });

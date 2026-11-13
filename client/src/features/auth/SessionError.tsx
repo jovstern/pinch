@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { Button } from "../../components/ui/Button.tsx";
 import { AuthFrame } from "./AuthFrame.tsx";
 
@@ -6,10 +7,11 @@ import { AuthFrame } from "./AuthFrame.tsx";
 // in. It's in the entry (it shows when the network is gone, so no chunk can load), so the logo is
 // the file, not Log in's inline Wordmark, which would cost every page its paths.
 export function SessionError({ retry, retrying }: { retry: () => void; retrying: boolean }) {
+  const { t } = useTranslation();
   return (
     <AuthFrame
-      title="We couldn't reach Pinch"
-      tabTitle="We couldn't reach Pinch"
+      title={t("auth.cantReach")}
+      tabTitle={t("auth.cantReach")}
       logo={
         <picture>
           <source media="(prefers-color-scheme: dark)" srcSet="/logo-dark.svg" />
@@ -20,7 +22,7 @@ export function SessionError({ retry, retrying }: { retry: () => void; retrying:
       {/* The alert is the message alone, not the card: <main> keeps its own role (axe), and the
           button inside an alert would be read again on every try. */}
       <p role="alert" className="mt-3 text-pretty text-text-muted">
-        Check your connection, then try again.
+        {t("auth.checkAndTryAgain")}
       </p>
       {/* Not disabled while it asks, so focus stays on it (as Pinch it). */}
       <Button
@@ -32,7 +34,7 @@ export function SessionError({ retry, retrying }: { retry: () => void; retrying:
         aria-busy={retrying}
         className="mt-6 w-full"
       >
-        {retrying ? "Trying…" : "Try again"}
+        {retrying ? t("auth.trying") : t("auth.tryAgain")}
       </Button>
     </AuthFrame>
   );

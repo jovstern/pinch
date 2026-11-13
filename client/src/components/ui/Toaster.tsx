@@ -1,5 +1,6 @@
 import { CircleCheck, TriangleAlert } from "lucide-react";
 import type { CSSProperties } from "react";
+import { useTranslation } from "react-i18next";
 import { Toaster as Sonner } from "sonner";
 import { pageIsRtl } from "../../i18n.ts";
 import { useMediaQuery } from "../../lib/useMediaQuery.ts";
@@ -19,6 +20,7 @@ const focusRing =
 // floating button and the thumb. The media query is read as it changes: a turned phone follows.
 // alwaysTop keeps them at the top on every width (the page says why: Layout).
 export function Toaster({ alwaysTop }: { alwaysTop: boolean }) {
+  const { t } = useTranslation();
   const atBottom = useMediaQuery(wide) && !alwaysTop;
   const rtl = pageIsRtl();
   return (
@@ -30,6 +32,8 @@ export function Toaster({ alwaysTop }: { alwaysTop: boolean }) {
       mobileOffset={belowHeader}
       // Sonner's own dark colours (the close button's hover) follow the system, as Pinch's do.
       theme="system"
+      // Sonner's own words, which a screen reader says: the region, and each toast's ✕.
+      containerAriaLabel={t("toasts.region")}
       icons={{
         success: <CircleCheck className="size-4 text-primary" />,
         error: <TriangleAlert className="size-4 text-destructive" />,
@@ -44,6 +48,7 @@ export function Toaster({ alwaysTop }: { alwaysTop: boolean }) {
         } as CSSProperties
       }
       toastOptions={{
+        closeButtonAriaLabel: t("toasts.close"),
         // Important (!): Sonner's own rules are more specific than a utility. The action is a
         // link-like button, as in the wireframe, 44 px tall for a thumb (ui-craft); the close
         // button stays a small mark but takes 44 px of touch (the after: around it), inside the
