@@ -1234,7 +1234,7 @@ change needs nothing else. `index.html`'s own `lang="en"` stays, for a browser w
 ### 16.6 Fonts (D45)
 
 - **Fraunces has no Hebrew** (the subset is Latin, as was the face; globals.css already says so):
-  a Hebrew title today falls back to Times New Roman, or Noto Serif Hebrew on Android.
+  before M10, a Hebrew title fell back to Times New Roman, or Noto Serif Hebrew on Android.
 - **The body font** is the system sans (zero bytes), which has Hebrew on every platform (San
   Francisco with its Hebrew, Segoe UI, Roboto with Noto Sans Hebrew). It stays, in both
   languages.
@@ -1250,6 +1250,9 @@ change needs nothing else. `index.html`'s own `lang="en"` stays, for a browser w
   so nothing moves when it swaps in (CLS 0 on a Hebrew recipe, measured in I9). Unlike
   Fraunces, it's added before it's loaded, so its `font-display: swap` applies: the fallback is
   drawn while it comes. Nothing is preloaded: neither face is on the LCP's path.
+- U+2011, the non-breaking hyphen in "ל‑Pinch", is in none of the stack's fonts (Fraunces, Frank
+  Ruhl Libre, Georgia, Times New Roman), so the browser draws it from a system font: fine for
+  one short dash.
 
 ### 16.7 Server messages (D44)
 

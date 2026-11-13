@@ -1,4 +1,4 @@
-// The display face (docs/ux/plan.md §6): Fraunces, SIL OFL (public/fonts/OFL.txt), cut down to
+// The display face (docs/ux/plan.md §6): Fraunces, SIL OFL (public/fonts/fraunces-OFL.txt), cut down to
 // what the titles use (Latin, weights 500–700, one optical size: 29.5 kB). Served from public/
 // by its path.
 //
@@ -12,8 +12,11 @@ const AFTER_LOAD_MS = 1500;
 
 // Fraunces has no Hebrew, so a Hebrew title gets Frank Ruhl Libre (design §16.6, D45), SIL OFL
 // (public/fonts/frank-ruhl-libre-OFL.txt), as a second "Fraunces" face for the Hebrew block only:
-// 9.6 kB. Made with fonttools 4.68 from google/fonts' ofl/frankruhllibre/FrankRuhlLibre[wght].ttf
-// at commit a60a77e (upstream fontef/frankruhllibre 2372d19):
+// 9.6 kB. Made from google/fonts' ofl/frankruhllibre/FrankRuhlLibre[wght].ttf at commit
+// a60a77e14f28abd4ef243a1b5dfc48df0cec5205 (upstream fontef/frankruhllibre 2372d19; sha256
+// f9bf26966681037aae894b031bd0dcf2c1bfdfa128dd0640cf276fe62a338a43), with fonttools (woff2 needs
+// its brotli extra):
+//   pip install "fonttools[woff]==4.68"
 //   fonttools varLib.instancer "FrankRuhlLibre[wght].ttf" wght=500:700 -o frl-500-700.ttf
 //   pyftsubset frl-500-700.ttf --unicodes="U+0590-05FF,U+FB1D-FB4F" --flavor=woff2 \
 //     --output-file=frank-ruhl-libre.woff2

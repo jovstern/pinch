@@ -16,17 +16,18 @@
 
 /* The same for a Hebrew title until Frank Ruhl Libre arrives (design §16.6): Times New Roman
    Bold, which has Hebrew on Apple and Windows, sized to take Frank Ruhl Libre's room. From both
-   fonts' files: Frank Ruhl Libre's Hebrew is 1.7% wider at 600 and 2.7% at 700 (the advances of
-   a dozen Hebrew titles), so 102.2%; its ascent 0.957 em and descent 0.334 em, divided by that.
+   fonts' files: Frank Ruhl Libre's Hebrew is 2.5% wider at 600 and 3.7% at 700 (letters only: a
+   title's spaces stay in Fraunces' faces; the advances of a dozen Hebrew titles), so 103.1%; its
+   ascent 0.957 em and descent 0.334 em, divided by that.
    Android draws Noto Serif Hebrew instead: there a Hebrew title may shift once. */
 @font-face {
   font-family: "Frank Ruhl Fallback";
   src: local("Times New Roman Bold"), local("TimesNewRomanPS-BoldMT");
   font-weight: 600 700;
   unicode-range: U+0590-05FF, U+FB1D-FB4F;
-  size-adjust: 102.2%;
-  ascent-override: 93.6%;
-  descent-override: 32.7%;
+  size-adjust: 103.1%;
+  ascent-override: 92.8%;
+  descent-override: 32.4%;
   line-gap-override: 0%;
 }
 
