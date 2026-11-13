@@ -1,12 +1,12 @@
 import type { Ingredient } from "@pinch/shared";
 import { useId } from "react";
 import { useTranslation } from "react-i18next";
-import { InSentence } from "../../components/InSentence.tsx";
 import { Button } from "../../components/ui/Button.tsx";
 import { keepRangesTogether } from "../recipes/ranges.ts";
 import { stepDurations, type Duration } from "./durations.ts";
 import { IngredientChecklist } from "./IngredientChecklist.tsx";
 import { stepIngredients } from "./stepIngredients.ts";
+import { timeInWords } from "./timeInWords.ts";
 
 type StepCardProps = {
   step: string;
@@ -61,12 +61,13 @@ export function StepCard({
                   onStart(key, duration);
                 }}
               >
-                {/* The step's own words in their <bdi> (design §16.5); one span, so a flex
-                    item's trailing space isn't lost ("Timer:20 min"). */}
-                <InSentence
-                  sentence={(time) => t(running ? "cook.running" : "cook.timer", { time })}
-                  text={duration.label}
-                />
+                {/* The time in the interface's words, not the step's (design §16.9). One span,
+                    so a flex item's trailing space isn't lost ("Timer:20 min"). */}
+                <span>
+                  {t(running ? "cook.running" : "cook.timer", {
+                    time: timeInWords(duration.seconds),
+                  })}
+                </span>
               </Button>
             );
           })}

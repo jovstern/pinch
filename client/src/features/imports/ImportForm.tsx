@@ -147,8 +147,9 @@ export function ImportForm({ inputRef }: { inputRef: RefObject<HTMLInputElement 
                   name={field.name}
                   value={field.state.value}
                   placeholder={t("imports.pastePlaceholder")}
-                  // Hebrew reads right to left: the field follows what's typed in it.
-                  dir="auto"
+                  // Hebrew reads right to left: the field follows what's typed in it. Empty, the
+                  // page's direction, as TextField's (Chrome reads an empty "auto" as ltr).
+                  dir={field.state.value === "" ? undefined : "auto"}
                   aria-invalid={invalid}
                   aria-describedby={invalid ? `${hintId} ${errorId}` : hintId}
                   enterKeyHint="send"

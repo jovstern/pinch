@@ -803,7 +803,7 @@ the browser's console). Another user's recipe or import is a 404, as before. The
 | D44 | **Server messages are translated in the client.** The API's errors already carry a `code`, and the client already words them itself. The other texts the server sends (the schemas' field messages, the import's failure reasons) are named in one `messages` object in `shared/`; the client finds a known English text's key and translates it, and shows an unknown one as it came (§16.7) | Nothing on the server or in the database changes, so old imports read as before and the server's tests stay; one list is the English source for both sides | The server translating by the user's language (the worker and every route would need it, and the strings live twice); an `errorCode` field on imports (a schema change, and old imports still need the fallback) |
 | D45 | **Fonts:** Fraunces has no Hebrew, so Hebrew display text gets **Frank Ruhl Libre** (OFL), a Hebrew-only subset, weights 500–700, self-hosted, declared with a Hebrew `unicode-range` beside Fraunces and added at the same moment after load, so it's fetched only when Hebrew display text is on the page; the body stays the system sans, which has Hebrew everywhere (§16.6) | Fraunces' warmth in Hebrew, where the system serif (Times New Roman) looks like a form; no bytes for English pages, and none before the LCP | Heebo or Assistant for the body (a download on every Hebrew page for text the system already draws well, and English's body is the system's too); the system serif only (today's); Noto Serif Hebrew (plainer) |
 | D46 | **Some words stay in English** in Hebrew: Pinch, the platforms' and Google's names, links, emails, the codes in the address, and the toasts (the user, 2026-11-13) (§16.8) | They're names and addresses, not words: they are what the user sees on the logo, the site, the button they'll press and the URL bar | Transliterating them ("פינץ'", "יוטיוב": a second name to recognise) |
-| D47 | **The unit is a combobox** in the editor: a text field that suggests the common units in the interface's language as you type (English: g, kg, ml, l, tsp, tbsp, cup, clove, can, pinch, handful; Hebrew: גרם, ק"ג, מ"ל, ליטר, כפית, כף, כוס, שן, קופסה, קמצוץ, חופן), and still takes any text or none; the stored unit stays free text, as written (§16.12) | The user wants units consistent and quicker to enter, mostly on a phone, when writing or editing; picking a suggestion makes new recipes consistent by itself; no change to the data, the API, Gemini or the links cache, since imports already read units well | A select box (no "2 cloves", "1 ball", or no unit for "3 eggs" without an "Other" field beside it); units stored as codes and translated for display, with a migration and a prompt change (worth it only for scaling and conversion, which the user ruled out in docs/ux/plan.md §9); the native `<datalist>` (no code, but it looks different in every browser: the user chose the combobox) |
+| D47 | **The unit is a combobox** in the editor: a text field that suggests the common units in the interface's language as you type (English: g, kg, ml, L, tsp, tbsp, cup, pinch, handful, clove, slice, can, piece, bunch; Hebrew: גרם, ק״ג, מ״ל, ליטר, כפית, כף, כוס, קורט, חופן, שן, פרוסה, קופסה, יחידה, צרור, חבילה), and still takes any text or none; the stored unit stays free text, as written (§16.12) | The user wants units consistent and quicker to enter, mostly on a phone, when writing or editing; picking a suggestion makes new recipes consistent by itself; no change to the data, the API, Gemini or the links cache, since imports already read units well | A select box (no "2 cloves", "1 ball", or no unit for "3 eggs" without an "Other" field beside it); units stored as codes and translated for display, with a migration and a prompt change (worth it only for scaling and conversion, which the user ruled out in docs/ux/plan.md §9); the native `<datalist>` (no code, but it looks different in every browser: the user chose the combobox) |
 
 ## 11. Risks
 
@@ -1270,6 +1270,9 @@ What the server says that the user reads, found by grep on 2026-11-12:
   `FieldError`, the screenshots' message and the queue card): in English, and only until the
   import's 7-day TTL. No migration and no new field.
 - `validation` in `en.ts` is `messages` itself, imported from `shared/`: one English source.
+- The messages' numbers are written as the pages show them (Intl, §16.3): "2,000" and "1,440"
+  with a comma, in English as in Hebrew (the user's choice, 2026-11-13); the API's 400s say them
+  so too.
 - The draft is still in the post's language (D16), whatever the interface's, and so are the
   model's "things to look at" reasons (§9). Tag labels (D10) are translated in the client; the
   codes stay.
@@ -1304,6 +1307,9 @@ that adds a string:
 - **A one-letter prefix joined to Latin or a number** ("ב‑Pinch", "מ‑Instagram", "מ‑5") takes the
   non-breaking hyphen (U+2011, written `\u2011` in `he.ts` so it can be seen): an ASCII hyphen and
   the maqaf both let a line break after them, and "ו-" ended a line at 360 px (I7).
+- **A number and its unit** ("20 דק׳", "≈ 450 קק״ל", "12 גרם חלבון", and English's "20 min",
+  "450 kcal", "12 g") are joined by a no-break space (U+00A0, written `\u00A0` in `en.ts` and
+  `he.ts`), so a line never ends between them.
 - **Numbers and times** through `Intl` with `he` (§16.3): Western digits, as Hebrew uses.
 - **Plurals** through i18next: `_one`, `_two` where Hebrew has a dual ("שעתיים"), `_other`; each
   form a whole phrase ("מתכון אחד", "2 מתכונים").
@@ -1348,18 +1354,33 @@ that adds a string:
 - **Server:** `PATCH /api/auth/me` (saved, the cookie, 400 for another field or value, 401
   signed out, 415 without JSON); `me` with and without `language`; sign-up's and Google's new
   account keep the page's language.
-- **e2e:** the accessibility run (axe) also in Hebrew, on the same pages; one flow switches to
-  עברית in the avatar's menu, sees the reload in RTL, then signs in from a fresh context (a
-  second device) and lands in Hebrew. Expected without a config change (a cookie on the context);
-  if Playwright's config must change (a `locale`), the user is asked first.
+- **e2e** (`e2e/hebrew.spec.ts`): axe in Hebrew on Log in, Add recipe with its queue, a draft's
+  review page, My recipes, a recipe, cook mode and the editor with the Unit's list open. One flow
+  signs up in English, switches to עברית in the avatar's menu, sees the reload in RTL, reloads
+  again (still Hebrew: the account), logs out on the same context (Log in in Hebrew: the device's
+  `pinch_lang`), picks English on Log in, logs back in (the account's Hebrew wins, §16.1) and
+  switches to English in the menu. No config change: the language is a cookie on the context.
 
 ### 16.12 The unit's combobox (D47)
 
 In the editor (writing, editing, reviewing a draft), an ingredient's Unit is a combobox: a text
-field with a list under it of the common units in the interface's language, filtered by what's
-typed (from its start, ignoring case). A tap or Enter picks one; anything else typed is kept as
-it is, and the unit can stay empty ("3 eggs"). The lists live in `en.ts` and `he.ts` beside the
-other strings. The keyboard and screen readers get the ARIA combobox pattern: `role="combobox"`,
-`aria-expanded`, `aria-controls`, the arrow keys move through the list (`aria-activedescendant`),
-Escape closes it. The stored unit stays free text as written (§6): a Hebrew recipe's "כף" reads
-"כף" in English too, as its ingredients' names do (D43, §16.8). Gemini's prompt is unchanged.
+field with a list under it of the common units in the interface's language. Typing filters it
+(from the unit's start, ignoring case); a tap or a click in the box, or ↓ ↑, shows the whole list,
+on the unit the box holds if it's one of them, so a filled row (editing, reviewing) still offers
+the others. A tap or Enter picks one; anything else typed is kept as it is, and the unit can stay
+empty ("3 eggs"). The lists live in `en.ts` and `he.ts` beside the other strings. The keyboard and
+screen readers get the ARIA combobox pattern: `role="combobox"`, `aria-expanded`,
+`aria-controls`, the arrow keys move through the list (`aria-activedescendant`), Escape closes it;
+Tab leaves with what's typed. Each language's list is its own length (`Translation` takes any
+list of strings), in one form each, short or singular ("cup", "כוס"): the plural is the user's to
+type.
+
+Hand-written (`components/ui/Combobox.tsx`, used by `TextField`): Radix has no combobox, and its
+Popover would add its positioning code to the editor's tight budget (§16.10). The list sits under
+the box, over the rows below it and the phone's Save bar, five options tall and scrolling. **Near
+the bottom of the screen:** as the list opens, a box in the screen's lower half scrolls to its
+middle (the form has room under its last field for it), so the list is whole above the Save bar;
+the list never flips above the box.
+
+The stored unit stays free text as written (§6): a Hebrew recipe's "כף" reads "כף" in English too,
+as its ingredients' names do (D43, §16.8). Gemini's prompt is unchanged.

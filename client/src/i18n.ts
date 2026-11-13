@@ -25,9 +25,14 @@ declare module "i18next" {
 }
 
 // What he.ts must be: en's keys, each a string, and beside a plural an optional _two, Hebrew's
-// dual ("שעתיים"). A missing or an extra key fails tsc.
+// dual ("שעתיים"). A missing or an extra key fails tsc. A list (the units, §16.12) is any list of
+// strings: Hebrew's needn't be as long as English's.
 export type Translation<T> = {
-  [K in keyof T]: T[K] extends string ? string : Translation<T[K]>;
+  [K in keyof T]: T[K] extends string
+    ? string
+    : T[K] extends readonly string[]
+      ? readonly string[]
+      : Translation<T[K]>;
 } & { [K in keyof T as K extends `${infer Key}_other` ? `${Key}_two` : never]?: string };
 
 // English is in the bundle, the fallback for any key. Synchronous (initAsync: false), so t()

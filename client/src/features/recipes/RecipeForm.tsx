@@ -237,11 +237,8 @@ export function RecipeForm({
                 <span>{t("editor.ingredient")}</span>
                 <span className="hidden sm:block">{t("editor.note")}</span>
               </div>
-              {list.state.value.map((ingredient, index) => {
+              {list.state.value.map((_, index) => {
                 const position = String(index + 1);
-                // An example while the row has no name yet (Add ingredient, a new recipe), as the
-                // title's; not in a recipe's own rows, where "g" in an empty unit would mislead.
-                const example = ingredient.name === "";
                 // TanStack Form types the name as `ingredients[${number}]`: the index must stay a
                 // number, which this rule forbids in a template.
                 // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
@@ -251,39 +248,57 @@ export function RecipeForm({
                   // The recipe's own shape (design §6): amount · unit · name, and a note.
                   <fieldset key={index} className={ingredientColumns}>
                     <legend className="sr-only">{t("editor.ingredientRow", { position })}</legend>
-                    <form.Field name={`${row}.quantity`}>
-                      {(field) => (
-                        <TextField
-                          field={field}
-                          label={t("editor.amount")}
-                          hideLabel
-                          placeholder={example ? "200" : undefined}
-                          markId={markId(field.name)}
-                        />
+                    {/* An example while the row has no name yet (Add ingredient, a new recipe),
+                        as the title's; not in a recipe's own rows, where "g" in an empty unit
+                        would mislead. Read here, not from the list: the list draws again only when
+                        a row comes or goes, so its row's name would be stale once typed. */}
+                    <form.Subscribe
+                      selector={(state) => state.values.ingredients[index]?.name === ""}
+                    >
+                      {(example) => (
+                        <>
+                          <form.Field name={`${row}.quantity`}>
+                            {(field) => (
+                              <TextField
+                                field={field}
+                                label={t("editor.amount")}
+                                hideLabel
+                                placeholder={example ? "200" : undefined}
+                                markId={markId(field.name)}
+                              />
+                            )}
+                          </form.Field>
+                          <form.Field name={`${row}.unit`}>
+                            {(field) => (
+                              <TextField
+                                field={field}
+                                label={t("editor.unit")}
+                                hideLabel
+                                placeholder={example ? t("editor.unitPlaceholder") : undefined}
+                                markId={markId(field.name)}
+                                suggestions={{
+                                  options: t("editor.units", { returnObjects: true }),
+                                  label: t("editor.unitSuggestions"),
+                                }}
+                              />
+                            )}
+                          </form.Field>
+                          <form.Field name={`${row}.name`}>
+                            {(field) => (
+                              <TextField
+                                field={field}
+                                label={t("editor.ingredient")}
+                                hideLabel
+                                placeholder={
+                                  example ? t("editor.ingredientPlaceholder") : undefined
+                                }
+                                markId={markId(field.name)}
+                              />
+                            )}
+                          </form.Field>
+                        </>
                       )}
-                    </form.Field>
-                    <form.Field name={`${row}.unit`}>
-                      {(field) => (
-                        <TextField
-                          field={field}
-                          label={t("editor.unit")}
-                          hideLabel
-                          placeholder={example ? t("editor.unitPlaceholder") : undefined}
-                          markId={markId(field.name)}
-                        />
-                      )}
-                    </form.Field>
-                    <form.Field name={`${row}.name`}>
-                      {(field) => (
-                        <TextField
-                          field={field}
-                          label={t("editor.ingredient")}
-                          hideLabel
-                          placeholder={example ? t("editor.ingredientPlaceholder") : undefined}
-                          markId={markId(field.name)}
-                        />
-                      )}
-                    </form.Field>
+                    </form.Subscribe>
                     <form.Field name={`${row}.note`}>
                       {(field) => (
                         <TextField

@@ -1,6 +1,6 @@
 import { useTranslation } from "react-i18next";
-import { InSentence } from "../../components/InSentence.tsx";
 import { Button } from "../../components/ui/Button.tsx";
+import { timeInWords } from "./timeInWords.ts";
 import type { Timer } from "./useTimers.ts";
 
 type TimerBarProps = {
@@ -22,30 +22,25 @@ export function TimerBar({ timers, now, onStop }: TimerBarProps) {
     >
       {timers.map((timer) => {
         const left = Math.max(0, Math.ceil((timer.endsAt - now) / 1000));
+        // In the interface's words, not the step's (design §16.9).
+        const time = timeInWords(timer.seconds);
         return (
           <li key={timer.id} className="flex items-center justify-between gap-3">
             {left > 0 ? (
-              // "19:58 left · 20 min timer": the time left first, the minutes not said twice.
-              <p className="tabular-nums">
-                <InSentence
-                  sentence={(time) => t("cook.left", { clock: clock(left), time })}
-                  text={timer.label}
-                />
-              </p>
+              // "19:58 left of 20 minutes": the time left first.
+              <p className="tabular-nums">{t("cook.left", { clock: clock(left), time })}</p>
             ) : (
               // Said aloud once, as it ends. Keyed, so it's a new element: a screen reader may miss
               // an alert role added to one already there.
               <p key="done" role="alert" className="font-semibold text-accent-strong">
-                <InSentence sentence={(time) => t("cook.timerDone", { time })} text={timer.label} />
+                {t("cook.timerDone", { time })}
               </p>
             )}
             {/* Named for its timer: with two running, "Stop" alone wouldn't say which. */}
             <Button
               type="button"
               variant="secondary"
-              aria-label={t(left > 0 ? "cook.stopTimer" : "cook.dismissTimer", {
-                time: timer.label,
-              })}
+              aria-label={t(left > 0 ? "cook.stopTimer" : "cook.dismissTimer", { time })}
               onClick={() => {
                 onStop(timer.id);
               }}

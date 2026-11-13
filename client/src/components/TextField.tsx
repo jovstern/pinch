@@ -1,5 +1,6 @@
 import { useId } from "react";
 import { FieldError } from "./FieldError.tsx";
+import { Combobox } from "./ui/Combobox.tsx";
 import { Input } from "./ui/Input.tsx";
 import { Textarea } from "./ui/Textarea.tsx";
 
@@ -29,6 +30,9 @@ type TextFieldProps = {
   // A draft's "thing to look at" (design §14): the id of its note, which the form shows under
   // the field's row. The box is dashed while it's marked, and read with the note.
   markId?: string;
+  // Suggestions under the box as you type (a combobox, design §16.12), and the list's name for
+  // a screen reader; anything else typed is kept.
+  suggestions?: { options: readonly string[]; label: string };
   className?: string;
 };
 
@@ -45,6 +49,7 @@ export function TextField({
   autoComplete,
   hint,
   markId,
+  suggestions,
   className = "",
 }: TextFieldProps) {
   const id = useId();
@@ -61,8 +66,15 @@ export function TextField({
     value: field.state.value,
     placeholder,
     // Hebrew reads right to left, English left to right: each box follows what's typed in it. An
-    // email is always left to right, in either language (D43, design §16.5).
-    dir: type === "email" ? "ltr" : "auto",
+    // email is always left to right, in either language (D43, design §16.5). An empty box, and a
+    // number's, take the page's direction: Chrome reads an empty dir="auto" as left to right, which
+    // put Hebrew's examples and caret at the left (§16.4).
+    dir:
+      type === "email"
+        ? "ltr"
+        : inputMode === "numeric" || field.state.value === ""
+          ? undefined
+          : "auto",
     onBlur: field.handleBlur,
     "aria-invalid": invalid,
     "aria-describedby": describedBy.length > 0 ? describedBy.join(" ") : undefined,
@@ -86,6 +98,14 @@ export function TextField({
           onChange={(event) => {
             field.handleChange(event.target.value);
           }}
+        />
+      ) : suggestions ? (
+        <Combobox
+          {...shared}
+          className={marked}
+          options={suggestions.options}
+          listLabel={suggestions.label}
+          onValueChange={field.handleChange}
         />
       ) : (
         <Input

@@ -3,7 +3,7 @@ import type { Duration } from "./durations.ts";
 
 // key: which of the recipe's times it is (its step's words and its place in them), so one can't
 // run twice.
-export type Timer = { id: number; key: string; label: string; endsAt: number };
+export type Timer = { id: number; key: string; seconds: number; endsAt: number };
 
 // Cook mode's timers (docs/ux/plan.md U2): each runs to its end time, and the page redraws
 // every second while any is running, so the time left is always worked out from the end time.
@@ -50,7 +50,7 @@ export function useTimers() {
   }
 
   // Pressed again while it runs (a double tap with wet hands): nothing more.
-  function start(key: string, { label, seconds }: Duration) {
+  function start(key: string, { seconds }: Duration) {
     if (isRunning(key)) return;
     if ("AudioContext" in window) {
       audio.current ??= new AudioContext();
@@ -61,7 +61,7 @@ export function useTimers() {
     const startedAt = Date.now();
     setNow(startedAt);
     const id = nextId.current++;
-    setTimers((before) => [...before, { id, key, label, endsAt: startedAt + seconds * 1000 }]);
+    setTimers((before) => [...before, { id, key, seconds, endsAt: startedAt + seconds * 1000 }]);
   }
 
   function stop(id: number) {
