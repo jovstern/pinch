@@ -305,7 +305,7 @@ test("in Hebrew, a draft's page, banner and things to look at are in Hebrew", as
   expect(page.closest("[aria-current=page]")).toHaveTextContent("בדיקה: Tomato pasta");
 
   // The banner: the platform's name stays as it is (D46); the link's arrow mirrors (§16.4).
-  expect(screen.getByText("Pinch קרא את זה מ-Instagram")).toBeInTheDocument();
+  expect(screen.getByText("Pinch קרא את זה מ\u2011Instagram")).toBeInTheDocument();
   expect(screen.getByText("כדאי לבדוק ואז לשמור.")).toBeInTheDocument();
   const watch = screen.getByRole("link", { name: /^לצפות בסרטון.*נפתח בכרטיסייה חדשה/ });
   expect(watch).toHaveAttribute("href", reel);

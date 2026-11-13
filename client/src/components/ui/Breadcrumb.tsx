@@ -42,10 +42,12 @@ export function Breadcrumb({ links, page }: BreadcrumbProps) {
         {/* The title is the page itself (My recipes › title) or the link before it (My recipes ›
             title › Cook): only the title gives way, so "Cook" or "Edit" stays whole. */}
         <li className={links.length > 1 ? "shrink-0" : "max-w-[28ch] min-w-0"}>
+          {/* A sentence around a title (Review: …): only the title gives way, cut at its own end,
+              as a <bdi> takes its own direction. A plain string is cut as before. */}
           <span
             aria-current="page"
             dir="auto"
-            className="block truncate px-1 font-medium text-foreground"
+            className="block truncate px-1 font-medium text-foreground [&_bdi]:min-w-0 [&_bdi]:truncate [&>span]:flex [&>span]:whitespace-pre"
           >
             {page}
           </span>

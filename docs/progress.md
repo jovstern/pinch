@@ -178,7 +178,9 @@ exactly as it is: each slice's English screens look the same before and after.
 - [ ] I9 The Hebrew display face: Frank Ruhl Libre's Hebrew subset with its `unicode-range`,
       its sized fallback, measured
 - [ ] I10 The unit's combobox (D47, §16.12): the editor's Unit suggests the common units in the
-      interface's language, any text still allowed; the ARIA combobox pattern; tests
+      interface's language, any text still allowed; the ARIA combobox pattern; tests. Also the
+      Unit's example ("g") that stays once a row has its name: `form.Field mode="array"` only
+      draws again on add or remove, so `example` is stale; read the name through `form.Subscribe`
 - [ ] End of milestone: UI review in both languages (each screen at 360 and 1440 px in Hebrew),
       observer (budgets, LCP in Hebrew too), e2e with axe in Hebrew and the switch flow, demo
 

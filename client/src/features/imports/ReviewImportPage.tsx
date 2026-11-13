@@ -101,7 +101,7 @@ export function ReviewImportPage() {
 
   return (
     <>
-      {/* The title in isolates, as a <title> can't hold <bdi> (design §16.5). */}
+      {/* The title in isolates, as a <title> can't hold <bdi> (design §16.3, §16.5). */}
       <title>{`${t("editor.reviewTitle", { title: isolate(job.draft.title) })} · Pinch`}</title>
       <Breadcrumb
         links={[{ label: t("header.addRecipe"), to: "/" }]}

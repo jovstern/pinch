@@ -892,7 +892,7 @@ test("in Hebrew, Add recipe's box, its button and the way to write a recipe are 
   const box = await screen.findByRole("textbox", { name: "לשמור מתכון מסרטון" });
   expect(box).toHaveAttribute("placeholder", "להדביק סרטון או מתכון");
   expect(box).toHaveAccessibleDescription(
-    "אפשר להדביק סרטון קצר מ-YouTube, ריל מ-Facebook או מ-Instagram, או מתכון כטקסט",
+    "אפשר להדביק סרטון קצר מ\u2011YouTube, ריל מ\u2011Facebook או מ\u2011Instagram, או מתכון כטקסט",
   );
   // "Pinch it" is "Pinch" alone in Hebrew: the brand as the action (D46).
   expect(screen.getByRole("button", { name: "Pinch" })).toBeInTheDocument();
@@ -945,7 +945,7 @@ test("in Hebrew, one ready, two in progress and one failed", async () => {
   expect(screen.getByRole("link", { name: "לבדוק" })).toHaveAccessibleDescription("Tomato pasta");
   expect(screen.getAllByRole("button", { name: "בהכנה…" })[0]).toBeDisabled();
   // A link's card: named by its site, which stays in English; the link reads left to right.
-  expect(screen.getAllByText("קישור מ-Instagram")[0]).toHaveAttribute("dir", "auto");
+  expect(screen.getAllByText("קישור מ\u2011Instagram")[0]).toHaveAttribute("dir", "auto");
   expect(screen.getAllByText(reel)[0]).toHaveAttribute("dir", "ltr");
 });
 

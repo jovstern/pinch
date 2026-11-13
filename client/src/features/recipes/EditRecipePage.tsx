@@ -51,7 +51,7 @@ export function EditRecipePage() {
 
   return (
     <>
-      {/* The title in isolates, as a <title> can't hold <bdi> (design §16.5). */}
+      {/* The title in isolates, as a <title> can't hold <bdi> (design §16.3, §16.5). */}
       <title>{`${t("editor.editTitle", { title: isolate(recipe.title) })} · Pinch`}</title>
       <Breadcrumb
         links={[

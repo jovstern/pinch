@@ -4,5 +4,5 @@
 // English one in a Hebrew sentence, keeps its own direction, and the sentence's punctuation stays
 // where it belongs.
 export function isolate(text: string) {
-  return `⁨${text}⁩`;
+  return `\u2068${text}\u2069`;
 }

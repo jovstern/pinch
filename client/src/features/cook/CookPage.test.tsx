@@ -361,7 +361,7 @@ test("in Hebrew, a timer counts down and says when it's done, its time in its <b
   const timer = await screen.findByRole("button", { name: "טיימר: 2 דקות" });
   expect(within(timer).getByText("2 דקות").tagName).toBe("BDI");
   await user.click(timer);
-  expect(screen.getByRole("button", { name: "פועל: 2 דקות" })).toHaveAttribute(
+  expect(screen.getByRole("button", { name: "טיימר פועל: 2 דקות" })).toHaveAttribute(
     "aria-disabled",
     "true",
   );

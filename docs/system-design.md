@@ -1291,6 +1291,9 @@ that adds a string:
   A status is a noun, not a gendered present ("בהכנה…" for Cooking…).
 - **No case:** Hebrew has no capitals, so sentence case doesn't apply; Latin names keep theirs.
 - **Punctuation:** the real geresh and gershayim (דק׳, ק״ג), not `'` and `"`; "…" as in English.
+- **A one-letter prefix joined to Latin or a number** ("ב‑Pinch", "מ‑Instagram", "מ‑5") takes the
+  non-breaking hyphen (U+2011, written `\u2011` in `he.ts` so it can be seen): an ASCII hyphen and
+  the maqaf both let a line break after them, and "ו-" ended a line at 360 px (I7).
 - **Numbers and times** through `Intl` with `he-IL` (§16.3): Western digits, as Hebrew uses.
 - **Plurals** through i18next: `_one`, `_two` where Hebrew has a dual ("שעתיים"), `_other`; each
   form a whole phrase ("מתכון אחד", "2 מתכונים").

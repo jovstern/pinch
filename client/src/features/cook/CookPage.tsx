@@ -70,7 +70,7 @@ export function CookPage() {
 
   return (
     <article>
-      {/* The title in isolates, as a <title> can't hold <bdi> (design §16.3). */}
+      {/* The title in isolates, as a <title> can't hold <bdi> (design §16.3, §16.5). */}
       <title>{`${t("cook.pageTitle", { title: isolate(recipe.title) })} · Pinch`}</title>
       {/* The way out (no Exit): the recipe's crumb, a link that pushes like every crumb. Only Done
           replaces, as it ends the cooking. */}

@@ -49,7 +49,7 @@ export function RecipePage() {
   const recipeDetails = details(recipe);
   return (
     <article>
-      {/* The title in isolates, as a <title> can't hold <bdi> (design §16.5). */}
+      {/* The title in isolates, as a <title> can't hold <bdi> (design §16.3, §16.5). */}
       <title>{`${isolate(recipe.title)} · Pinch`}</title>
       <Breadcrumb links={[{ label: t("header.myRecipes"), to: "/recipes" }]} page={recipe.title} />
       {/* The picture above the title on a phone, beside it from 1024 px (design §14). */}

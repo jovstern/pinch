@@ -344,7 +344,10 @@ test("in Hebrew, writing a recipe: its page, fields and buttons are in Hebrew", 
     "href",
     "/",
   );
-  expect(screen.getByRole("link", { name: "להדביק אותו בדף ההוספה" })).toHaveAttribute("href", "/");
+  expect(screen.getByRole("link", { name: "להדביק אותו בהוספת מתכון" })).toHaveAttribute(
+    "href",
+    "/",
+  );
   expect(title).toHaveAttribute("placeholder", "למשל: מרק עדשים כתומות");
   expect(title).toHaveAttribute("dir", "auto");
   expect(screen.getByLabelText("תיאור")).toBeInTheDocument();

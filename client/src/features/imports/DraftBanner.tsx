@@ -8,7 +8,7 @@ import { platformNames } from "../../lib/platformNames.ts";
 // (RecipeForm).
 export function DraftBanner({ input }: { input: Import["input"] }) {
   const { t } = useTranslation();
-  // Whole sentences, as Hebrew joins "from" to the word after it (מ-Instagram, מהטקסט).
+  // Whole sentences, as Hebrew joins "from" to the word after it (מ‑Instagram, מהטקסט).
   const readFrom =
     input.type === "link"
       ? t("editor.readFromPlatform", { platform: platformNames[input.platform] })
