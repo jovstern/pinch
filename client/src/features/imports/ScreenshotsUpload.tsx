@@ -6,8 +6,8 @@ import {
   screenshotsMessage,
 } from "@pinch/shared";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { ImagePlus } from "lucide-react";
 import i18next from "i18next";
+import { ImagePlus } from "lucide-react";
 import { useId, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "../../components/ui/Button.tsx";

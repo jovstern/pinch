@@ -975,7 +975,9 @@ test("in Hebrew, a failure is said by its reason's key, and one it doesn't know 
   await renderInHebrew("/");
 
   expect(await screen.findByText("זה לא נראה כמו מתכון.")).toBeInTheDocument();
-  expect(screen.getByText("It may be private.")).toBeInTheDocument();
+  // In English, marked so: read in English, its period at its end.
+  expect(screen.getByText("It may be private.")).toHaveAttribute("lang", "en");
+  expect(screen.getByText("It may be private.")).toHaveAttribute("dir", "ltr");
   expect(screen.getByText("טקסט מודבק")).toBeInTheDocument();
   // No retry can fix the first (D23): only the second offers one.
   expect(await screen.findAllByRole("button", { name: "להסיר" })).toHaveLength(2);
@@ -991,7 +993,7 @@ test("in Hebrew, past the daily cap, Retry's note is in Hebrew", async () => {
   await userEvent.click(await screen.findByRole("button", { name: "לנסות שוב" }));
 
   expect(
-    await screen.findByText("נשלחו היום 20 ייבואים, המכסה היומית. אפשר לנסות שוב מחר."),
+    await screen.findByText("המכסה היומית של 20 מתכונים כבר נוצלה. אפשר לנסות שוב מחר."),
   ).toBeInTheDocument();
 });
 
@@ -1003,7 +1005,7 @@ test("in Hebrew, the queue's toasts stay English", async () => {
   ]);
   await renderInHebrew("/");
 
-  expect(await screen.findByText("בטיפול…")).toBeInTheDocument();
+  expect(await screen.findByText("בעיבוד…")).toBeInTheDocument();
   await vi.advanceTimersByTimeAsync(2000);
 
   // The card in Hebrew, its toast in English, with the reason as the worker kept it (D46).

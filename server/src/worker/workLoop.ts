@@ -36,6 +36,8 @@ const ATTEMPT_DEADLINE_MS = LEASE_MS - 30_000;
 const MAX_ATTEMPTS = 3;
 
 // What the user reads on a failed import. The cause is in the worker's log.
+// The queue card finds its translation by this exact text (client en.ts imports.reasons;
+// design §16.7).
 export const FAILED_MESSAGE = "We couldn't turn this into a recipe.";
 
 // A failure no retry can fix (not a recipe, too long): the import fails at once, and the

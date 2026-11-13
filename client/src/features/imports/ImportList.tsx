@@ -232,14 +232,22 @@ function statusText(job: Import): ReactNode {
 }
 
 // The worker keeps its reason in English (design §16.7); the card says it by its key, found by
-// that English. One it doesn't know (worded before a change, or new) is shown as it came.
-function failureReason(error: string | undefined) {
+// that English. One it doesn't know (worded before a change, or new) is shown as it came, in
+// English: marked so, so a Hebrew page reads it in English and keeps its period at its end.
+function failureReason(error: string | undefined): ReactNode {
   if (error === undefined) return i18next.t("imports.didntWork");
   const reasons = en.imports.reasons;
   const key = (Object.keys(reasons) as (keyof typeof reasons)[]).find(
     (key) => reasons[key] === error,
   );
-  return key === undefined ? error : i18next.t(`imports.reasons.${key}`);
+  if (key === undefined) {
+    return (
+      <span lang="en" dir="ltr">
+        {error}
+      </span>
+    );
+  }
+  return i18next.t(`imports.reasons.${key}`);
 }
 
 // "Ready to review · ◆ 3 things to look at" (design §14): the ◆ is the editor's mark, in its
