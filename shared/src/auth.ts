@@ -9,6 +9,10 @@ const EmailSchema = z
   .min(1, "Enter your email.")
   .pipe(z.email("Enter a valid email.").max(254, "Keep the email under 254 characters."));
 
+// The interface's language (design §16.1, D40): on the account, in me, and in the pinch_lang cookie.
+export const LanguageSchema = z.enum(["en", "he"]);
+export type Language = z.infer<typeof LanguageSchema>;
+
 // The body of POST /api/auth/signup. At least 8 characters and no other rules (§8.3); the cap
 // keeps hashing cheap.
 export const SignupInputSchema = z.object({
@@ -22,6 +26,8 @@ export const SignupInputSchema = z.object({
     .trim()
     .min(1, "Enter your name.")
     .max(100, "Keep the name under 100 characters."),
+  // The language the page was in: the new account keeps it (§16.1). None is English.
+  language: LanguageSchema.optional(),
 });
 export type SignupInput = z.infer<typeof SignupInputSchema>;
 
@@ -37,8 +43,17 @@ export const LoginInputSchema = z.object({
 export type LoginInput = z.infer<typeof LoginInputSchema>;
 
 // The signed-in user: what signup, login and GET /api/auth/me answer.
-export const MeSchema = z.object({ id: z.string(), email: z.string(), name: z.string() });
+export const MeSchema = z.object({
+  id: z.string(),
+  email: z.string(),
+  name: z.string(),
+  language: LanguageSchema,
+});
 export type Me = z.infer<typeof MeSchema>;
+
+// The body of PATCH /api/auth/me: the language, and nothing else (a 400 for any other field).
+export const MePatchSchema = z.strictObject({ language: LanguageSchema });
+export type MePatch = z.infer<typeof MePatchSchema>;
 
 // GET /api/auth/providers: the ways to sign in besides a password. Google is on only when the
 // API has its settings (§8.3).

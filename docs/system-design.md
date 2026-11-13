@@ -596,8 +596,9 @@ the browser's console). Another user's recipe or import is a 404, as before. The
 - **The language cookie (M10, §16.2):** `pinch_lang=en|he`, as the hint is (`SameSite=Lax;
   Path=/`, `Secure` in production, not `HttpOnly`, nothing secret), but a year's `Max-Age` and
   **kept by logout**: the device stays in the last language, so Log in shows in it. The API
-  sets it from the account with every sign-in, every `me` that has a user and every `PATCH
-  /api/auth/me`; signed out, the page's switch sets it (`document.cookie`). The same inline
+  sets it from the account with every sign-in, every `PATCH /api/auth/me`, and every `me` with a
+  user whose request's cookie doesn't already say the account's language (as the hint, set only
+  when missing); signed out, the page's switch sets it (`document.cookie`). The same inline
   script reads it and sets `<html lang dir>` before the first paint. The account decides once
   someone is signed in; the cookie only says it early.
 - **Login:** the same 401 for a wrong email or a wrong password; an unknown email is still

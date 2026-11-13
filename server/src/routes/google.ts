@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { LanguageSchema } from "@pinch/shared";
 import express, { type Request } from "express";
 import type { Db } from "mongodb";
 import { z } from "zod";
@@ -23,6 +24,8 @@ const FlowSchema = z.object({
   nonce: z.string(),
   codeVerifier: z.string(),
   next: z.string(),
+  // The page's language (§16.1), for an account Google creates. English when it's missing.
+  language: LanguageSchema.catch("en"),
 });
 type Flow = z.infer<typeof FlowSchema>;
 
@@ -61,6 +64,7 @@ export function googleRouter(db: Db, { google, secureCookies, now }: GoogleDeps)
       // caught on the way back is no use to anyone else.
       codeVerifier: newToken(),
       next: nextPath(req.query.next, origin),
+      language: FlowSchema.shape.language.parse(req.query.lang),
     };
     const json = JSON.stringify(flow);
     res.cookie(FLOW_COOKIE, Buffer.from(json).toString("base64url"), {
@@ -99,12 +103,13 @@ export function googleRouter(db: Db, { google, secureCookies, now }: GoogleDeps)
       email,
       // As signup's limit; an account without a name on Google gets its email's first part.
       name: claims.name?.trim().slice(0, 100) || email.split("@")[0] || email,
+      language: flow.language,
     });
     if (user === "linked_elsewhere") {
       failed(user);
       return;
     }
-    await startSession(db, req, res, user._id, secureCookies);
+    await startSession(db, req, res, user, secureCookies);
     res.redirect(flow.next);
   });
 

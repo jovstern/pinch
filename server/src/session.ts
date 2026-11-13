@@ -1,7 +1,7 @@
 import type { Request, Response } from "express";
 import { ObjectId, type Db } from "mongodb";
 import { hashToken, newToken, SESSION_MS, sessionsCollection } from "./db/sessions.ts";
-import { usersCollection } from "./db/users.ts";
+import { toMe, usersCollection, type UserDocument } from "./db/users.ts";
 
 // The session cookie (design §8.3). HttpOnly: no script can read it. SameSite=Lax: another site
 // can't send it with a POST (CSRF). Secure outside development and tests, which run on
@@ -30,13 +30,25 @@ export function clearSignedInHint(req: Request, res: Response, secure: boolean) 
   if (readCookie(req, SIGNED_IN_HINT)) res.clearCookie(SIGNED_IN_HINT, hintOptions(secure));
 }
 
+// The interface's language, for index.html (design §8.3, §16.2): its script reads it before the
+// first paint and sets <html lang dir>. Like the hint, not HttpOnly and nothing secret, but it lasts
+// a year and logout keeps it: the device stays in the last language, so Log in shows in it. The
+// account decides; the cookie only says it early. Set with every session and by PATCH me; by me
+// when the browser's doesn't say the account's language.
+export const LANGUAGE_COOKIE = "pinch_lang";
+const LANGUAGE_MS = 365 * 24 * 60 * 60_000;
+
+export function setLanguageCookie(res: Response, user: UserDocument, secure: boolean) {
+  res.cookie(LANGUAGE_COOKIE, toMe(user).language, { ...hintOptions(secure), maxAge: LANGUAGE_MS });
+}
+
 // A new session on every sign-in: the database keeps the token's hash, the browser the token.
 // The browser's previous session, if it sent one, ends: one browser, one session.
 export async function startSession(
   db: Db,
   req: Request,
   res: Response,
-  userId: ObjectId,
+  user: UserDocument,
   secure: boolean,
 ) {
   await deleteSession(db, req);
@@ -44,13 +56,14 @@ export async function startSession(
   const now = new Date();
   await sessionsCollection(db).insertOne({
     _id: new ObjectId(),
-    userId,
+    userId: user._id,
     tokenHash: hashToken(token),
     createdAt: now,
     expiresAt: new Date(now.getTime() + SESSION_MS),
   });
   res.cookie(SESSION_COOKIE, token, { ...cookieOptions(secure), maxAge: SESSION_MS });
   setSignedInHint(res, secure);
+  setLanguageCookie(res, user, secure);
 }
 
 // Also from me, for a session that began before the hint did: it lasts as long as a new one.

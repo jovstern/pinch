@@ -29,6 +29,19 @@ export class HttpError extends Error {
 export function parseInput<T>(schema: z.ZodType<T>, value: unknown): T {
   const result = schema.safeParse(value);
   if (result.success) return result.data;
+  // A field the request doesn't take (a strict schema, as PATCH /api/auth/me's): named, as Zod
+  // reports it at the object's own path, which the check below would read as no body.
+  const extra = result.error.issues.find((issue) => issue.code === "unrecognized_keys");
+  if (extra) {
+    throw new HttpError(
+      400,
+      "invalid_input",
+      `This request doesn't take ${extra.keys.join(", ")}.`,
+      {
+        fields: Object.fromEntries(extra.keys.map((key) => [key, "Not a field of this request."])),
+      },
+    );
+  }
   // No body at all (or not an object) has no field to name.
   if (result.error.issues.some((issue) => issue.path.length === 0)) {
     throw new HttpError(400, "bad_request", "Send the data as a JSON object.");

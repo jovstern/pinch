@@ -54,8 +54,8 @@ function googleUser() {
 }
 
 // Starts a sign-in as the Log in page does: the address Google is sent to and the flow cookie.
-async function start(next = "/recipes") {
-  const response = await request(app).get("/api/auth/google").query({ next });
+async function start(next = "/recipes", lang?: string) {
+  const response = await request(app).get("/api/auth/google").query({ next, lang });
   const setCookie = (response.headers["set-cookie"] as unknown as string[] | undefined) ?? [];
   // A base, as a refusal goes to /login on our own site.
   const google = new URL(response.headers.location ?? "", "http://localhost:5173");
@@ -123,6 +123,32 @@ test("a new Google user gets an account, signed in, and goes where they were goi
   expect(account?.passwordHash).toBeUndefined();
   // The flow cookie is used once.
   expect(response.headers["set-cookie"]).toContainEqual(expect.stringMatching(/^pinch_google=;/));
+});
+
+test("a new Google user's account keeps the page's language, and gets its cookie", async () => {
+  const response = await callBack(await start("/", "he"), googleUser());
+
+  const me = await request(app).get("/api/auth/me").set("Cookie", sessionCookie(response));
+  expect(me.body).toMatchObject({ language: "he" });
+  expect(response.headers["set-cookie"]).toContainEqual(expect.stringMatching(/^pinch_lang=he;/));
+});
+
+test("a new Google user without a language, or with an unknown one, is in English", async () => {
+  const none = await callBack(await start("/"), googleUser());
+  const unknown = await callBack(await start("/", "fr"), googleUser());
+
+  for (const response of [none, unknown]) {
+    const me = await request(app).get("/api/auth/me").set("Cookie", sessionCookie(response));
+    expect(me.body).toMatchObject({ language: "en" });
+  }
+});
+
+test("a returning Google user keeps their account's language, whatever the page's", async () => {
+  const user = googleUser();
+  await callBack(await start("/", "he"), user);
+
+  const response = await callBack(await start("/", "en"), user);
+  expect(response.headers["set-cookie"]).toContainEqual(expect.stringMatching(/^pinch_lang=he;/));
 });
 
 test("a Google sign-in with a password account's email signs into it and links it", async () => {

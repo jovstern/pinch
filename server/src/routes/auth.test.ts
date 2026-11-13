@@ -56,7 +56,7 @@ test("signup makes an account, signed in, and answers 201 me", async () => {
   expect(response.status).toBe(201);
   const { id } = MeSchema.parse(response.body);
   // The email is stored lowercase (design §8.3).
-  expect(response.body).toEqual({ id, email: "new@example.com", name: "Dana" });
+  expect(response.body).toEqual({ id, email: "new@example.com", name: "Dana", language: "en" });
   const me = await request(app).get("/api/auth/me").set("Cookie", sessionCookie(response));
   expect(me.body).toEqual(response.body);
 });
@@ -282,4 +282,150 @@ test("behind a trusted proxy, each browser's address has its own tries", async (
     .set("X-Forwarded-For", "203.0.113.2")
     .send({ email: "guess@example.com", password: "a guess" });
   expect(other.status).toBe(401);
+});
+
+// The language (design §16.1, D40).
+
+// The value of one cookie the response set, with its options: "pinch_lang=he; Max-Age=…".
+function setCookieNamed(response: request.Response, name: string) {
+  const setCookie = (response.headers["set-cookie"] as unknown as string[] | undefined) ?? [];
+  return setCookie.find((line) => line.startsWith(`${name}=`));
+}
+
+test("signup keeps the page's language, and sets the language cookie for a year", async () => {
+  const response = await request(app).post("/api/auth/signup").send({
+    email: "hebrew@example.com",
+    password: "a long password",
+    name: "Noa",
+    language: "he",
+  });
+
+  expect(response.body).toMatchObject({ language: "he" });
+  const cookie = setCookieNamed(response, "pinch_lang");
+  expect(cookie).toMatch(/^pinch_lang=he; Max-Age=31536000; Path=\/; Expires=/);
+  expect(cookie).toContain("; SameSite=Lax");
+  expect(cookie).not.toContain("HttpOnly");
+});
+
+test("signup without a language makes an English account", async () => {
+  const { email, response } = await signUp();
+
+  expect(response.body).toMatchObject({ language: "en" });
+  expect(setCookieNamed(response, "pinch_lang")).toMatch(/^pinch_lang=en;/);
+  expect((await usersCollection(db).findOne({ email }))?.language).toBe("en");
+});
+
+test("signup with a language Pinch doesn't speak answers 400 naming it", async () => {
+  const response = await request(app).post("/api/auth/signup").send({
+    email: "french@example.com",
+    password: "a long password",
+    name: "Lou",
+    language: "fr",
+  });
+
+  expect(response.status).toBe(400);
+  expect(response.body).toMatchObject({
+    error: { fields: { language: 'Invalid option: expected one of "en"|"he"' } },
+  });
+});
+
+test("an account from before languages reads as English, and me sets its cookie", async () => {
+  const { email, response } = await signUp();
+  await usersCollection(db).updateOne({ email }, { $unset: { language: "" } });
+
+  const me = await request(app).get("/api/auth/me").set("Cookie", sessionCookie(response));
+  expect(me.body).toMatchObject({ language: "en" });
+  expect(setCookieNamed(me, "pinch_lang")).toMatch(/^pinch_lang=en; Max-Age=31536000/);
+});
+
+test("me leaves a language cookie that says the account's, and corrects one that doesn't", async () => {
+  const { response } = await signUp();
+  const session = sessionCookie(response);
+
+  const same = await request(app).get("/api/auth/me").set("Cookie", `${session}; pinch_lang=en`);
+  const other = await request(app).get("/api/auth/me").set("Cookie", `${session}; pinch_lang=he`);
+  expect(setCookieNamed(same, "pinch_lang")).toBeUndefined();
+  expect(setCookieNamed(other, "pinch_lang")).toMatch(/^pinch_lang=en; Max-Age=31536000/);
+});
+
+test("login sets the account's language cookie, whatever the browser had", async () => {
+  const { email, password } = await signUp();
+  await usersCollection(db).updateOne({ email }, { $set: { language: "he" } });
+
+  const response = await request(app)
+    .post("/api/auth/login")
+    .set("Cookie", "pinch_lang=en")
+    .send({ email, password });
+  expect(response.body).toMatchObject({ language: "he" });
+  expect(setCookieNamed(response, "pinch_lang")).toMatch(/^pinch_lang=he;/);
+});
+
+test("logout keeps the language cookie", async () => {
+  const { response } = await signUp();
+
+  const logout = await request(app)
+    .post("/api/auth/logout")
+    .set("Cookie", `${sessionCookie(response)}; pinch_lang=en`)
+    .send({});
+  expect(setCookieNamed(logout, "pinch_lang")).toBeUndefined();
+});
+
+test("PATCH me saves the language, sets its cookie and answers me", async () => {
+  const { email, response } = await signUp();
+
+  const patch = await request(app)
+    .patch("/api/auth/me")
+    .set("Cookie", sessionCookie(response))
+    .send({ language: "he" });
+  expect(patch.status).toBe(200);
+  expect(patch.body).toEqual({ ...response.body, language: "he" });
+  expect(setCookieNamed(patch, "pinch_lang")).toMatch(/^pinch_lang=he; Max-Age=31536000/);
+  expect((await usersCollection(db).findOne({ email }))?.language).toBe("he");
+});
+
+test("PATCH me with another field, or another language, answers 400 and changes nothing", async () => {
+  const { email, response } = await signUp();
+  const cookie = sessionCookie(response);
+
+  const otherField = await request(app)
+    .patch("/api/auth/me")
+    .set("Cookie", cookie)
+    .send({ language: "he", name: "Someone else" });
+  const otherValue = await request(app)
+    .patch("/api/auth/me")
+    .set("Cookie", cookie)
+    .send({ language: "fr" });
+  expect(otherField.status).toBe(400);
+  // The field is named, not "send the data as a JSON object".
+  expect(otherField.body).toMatchObject({
+    error: {
+      code: "invalid_input",
+      message: "This request doesn't take name.",
+      fields: { name: "Not a field of this request." },
+    },
+  });
+  expect(otherValue.status).toBe(400);
+  expect(await usersCollection(db).findOne({ email })).toMatchObject({
+    name: "Cook",
+    language: "en",
+  });
+});
+
+test("PATCH me signed out answers 401", async () => {
+  const response = await request(app).patch("/api/auth/me").send({ language: "he" });
+
+  expect(response.status).toBe(401);
+  expect(response.body).toMatchObject({ error: { code: "signed_out" } });
+});
+
+test("PATCH me without a JSON Content-Type answers 415 and changes nothing", async () => {
+  const { email, response } = await signUp();
+
+  const patch = await request(app)
+    .patch("/api/auth/me")
+    .set("Cookie", sessionCookie(response))
+    .type("form")
+    .send("language=he");
+  expect(patch.status).toBe(415);
+  expect((await usersCollection(db).findOne({ email }))?.language).toBe("en");
 });

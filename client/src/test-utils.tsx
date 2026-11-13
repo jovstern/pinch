@@ -13,6 +13,7 @@ export const testUser: Me = {
   id: "6650a1b2c3d4e5f600000099",
   email: "cook@example.com",
   name: "Dana",
+  language: "en",
 };
 
 // Renders the whole app at one address, with what main.tsx provides. No retries, so a failing
