@@ -67,6 +67,13 @@ export const he: Translation<typeof en> = {
     screenshotsHint: "עד {{max}} צילומי מסך של המתכון, כשהקישור והטקסט לא מספיקים.",
     couldntSendThese: "השליחה נכשלה. אפשר לנסות שוב.",
     writeItYourself: "או לכתוב מתכון ידנית",
+    pasteHelp: {
+      label: "איפה מוצאים את הקישור",
+      instagram: "בריל:",
+      facebook: "בסרטון או בריל:",
+      youtube: "בסרטון או ב\u2011Short:",
+      text: "או להדביק את הטקסט של המתכון, מהכיתוב של פוסט או מאתר.",
+    },
     couldntLoad: "התור לא נטען",
     ready_one: "1 מוכן",
     ready_other: "{{count}} מוכנים",
