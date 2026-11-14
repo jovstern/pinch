@@ -21,6 +21,11 @@ export const en = {
     writeRecipe: "Write a recipe",
     account: "Your account",
     language: "Language",
+    // The theme's choices (lib/theme.ts): the system's, or one of the two always.
+    theme: "Theme",
+    themeSystem: "System",
+    themeLight: "Light",
+    themeDark: "Dark",
     logOut: "Log out",
   },
   // The frame's own pages: an address with nothing at it, and a page that failed to render

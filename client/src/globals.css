@@ -116,35 +116,39 @@
   --color-ring: var(--color-accent-strong);
 }
 
-/* Dark follows the system, with no toggle (plan §6): the same names, other values. */
-@media (prefers-color-scheme: dark) {
-  :root {
-    --color-surface: #17130f;
-    --color-surface-raised: #221c16;
-    --color-surface-sunken: #0f0c09;
-    --color-fill: #2c241d;
-    --color-border: #3a3029;
-    --color-border-field: #76695d;
-    --color-text: #f3ede4;
-    --color-text-muted: #a89c8f;
-    --color-accent: #f0693a;
-    --color-accent-strong: #f0693a;
-    --color-accent-soft: #3a1d12;
-    /* Ink, not white: white on the lighter dark-theme accent wouldn't pass AA. */
-    --color-on-accent: #17130f;
-    --color-check: #f2c94c;
-    --color-check-mark: #f2c94c;
-    --color-cooked: #8fb35e;
-    --color-success: #7fcf8f;
-    --color-success-soft: #162a1b;
-    --color-danger: #f2706a;
-  }
+/* The dark theme: the same names, other values. On <html data-theme="dark">, which index.html's
+   script sets before the first paint from the avatar's menu's choice, else the system's
+   (lib/theme.ts, design §14): a media query alone couldn't be overridden by a choice. */
+:root[data-theme="dark"] {
+  --color-surface: #17130f;
+  --color-surface-raised: #221c16;
+  --color-surface-sunken: #0f0c09;
+  --color-fill: #2c241d;
+  --color-border: #3a3029;
+  --color-border-field: #76695d;
+  --color-text: #f3ede4;
+  --color-text-muted: #a89c8f;
+  --color-accent: #f0693a;
+  --color-accent-strong: #f0693a;
+  --color-accent-soft: #3a1d12;
+  /* Ink, not white: white on the lighter dark-theme accent wouldn't pass AA. */
+  --color-on-accent: #17130f;
+  --color-check: #f2c94c;
+  --color-check-mark: #f2c94c;
+  --color-cooked: #8fb35e;
+  --color-success: #7fcf8f;
+  --color-success-soft: #162a1b;
+  --color-danger: #f2706a;
+  color-scheme: dark;
 }
 
+/* System controls (scrollbars, checkboxes, autofill) follow the theme too: dark above. */
 :root {
-  /* System controls (scrollbars, checkboxes, autofill) follow the theme too. */
-  color-scheme: light dark;
+  color-scheme: light;
 }
+
+/* Tailwind's dark: classes follow the same attribute, not the system. */
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
 
 body {
   @apply bg-surface text-text antialiased;

@@ -4,14 +4,17 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description" content="Pinch a recipe from a reel, cook it later." />
-    <!-- The browser's bar in the page's colour (--color-surface), in each theme. -->
-    <meta name="theme-color" content="#fbf8f2" media="(prefers-color-scheme: light)" />
-    <meta name="theme-color" content="#17130f" media="(prefers-color-scheme: dark)" />
+    <!-- The browser's bar in the page's colour (--color-surface): the script below sets the
+         theme's, as lib/theme.ts does on a change. -->
+    <meta name="theme-color" content="#fbf8f2" />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <!-- First, the page's language and direction, before any CSS or JS, so the first frame has
          them (design §16.2, D41): the pinch_lang cookie the API sets from the account (or the
          switch on Log in), else the browser's: Hebrew if one of its languages is (iw is its old
          code) or its time zone is Israel's, else English. main.tsx then reads <html lang>.
+         Then the theme (design §14): the avatar's menu's choice on this device, else the
+         system's, as data-theme, which the CSS keys on (globals.css, lib/theme.ts). Storage a
+         private window blocks reads as no choice.
          Then that language's strings, which the first render waits for (design §16.3), asked
          for with the entry rather than after it has run; the build puts their chunks' names in
          (vite.config.ts).
@@ -31,6 +34,16 @@
       const lang = saved ?? (hebrew ? "he" : "en");
       document.documentElement.lang = lang;
       document.documentElement.dir = lang === "he" ? "rtl" : "ltr";
+
+      let theme = null;
+      try {
+        theme = localStorage.getItem("pinch_theme");
+      } catch {}
+      const dark =
+        theme === "dark" ||
+        (theme !== "light" && matchMedia("(prefers-color-scheme: dark)").matches);
+      document.documentElement.dataset.theme = dark ? "dark" : "light";
+      document.querySelector('meta[name="theme-color"]').content = dark ? "#17130f" : "#fbf8f2";
 
       const strings = document.createElement("link");
       strings.rel = "modulepreload";

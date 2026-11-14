@@ -9,6 +9,7 @@ import { queueKnown } from "./features/imports/importQueries.ts";
 import { pageIsRtl, pageLanguage, startI18n } from "./i18n.ts";
 import { ApiError } from "./lib/api.ts";
 import { loadDisplayFont } from "./lib/displayFont.ts";
+import { watchTheme } from "./lib/theme.ts";
 import "./globals.css";
 
 const root = document.getElementById("root");
@@ -27,6 +28,8 @@ const queryClient = new QueryClient({
 });
 
 loadDisplayFont();
+// index.html's script set the theme; from here it follows the system (on System) and other tabs.
+watchTheme();
 
 // Radix's menus and radio groups follow the page's direction (§16.4): a menu aligned to the end
 // opens toward the left in Hebrew, and the arrow keys follow.

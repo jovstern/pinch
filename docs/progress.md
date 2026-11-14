@@ -199,7 +199,7 @@ After M10 (found by M10's UI review, not M10's to fix):
 - [ ] U2 Add recipe's paste box: the row keeps the English layout in Hebrew, an (i) with where to find the link per app, a new placeholder
 - [ ] U6 The English strings out of the entry, loaded like Hebrew (the user's choice over raising the budgets; before U3, as the editor is at 209.3 of 210)
 - [x] U3 The header: on phones the tabs under the full logo and the avatar; in Hebrew the logo centred; an All recipes tab with a Coming soon page (the shared recipes to clone, ranked: not in v1)
-- [ ] U4 Light, dark or the system's, from the avatar's menu, saved on this device
+- [x] U4 Light, dark or the system's, from the avatar's menu, saved on this device
 - [ ] U5 Google's profile picture in the avatar
 
 ## M11 — Pinch online (design §15, §8.3, D31–D38)

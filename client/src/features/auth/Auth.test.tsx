@@ -320,6 +320,51 @@ test("a language that couldn't be saved says so, with Try again, and doesn't rel
   });
 });
 
+// The theme (design §14): saved on this device, applied at once. Each test ends on System, the
+// default, so the next starts there (the choice lives in lib/theme.ts for the whole file).
+
+test("the avatar's menu sets the theme at once and saves it on this device", async () => {
+  const user = userEvent.setup();
+  stubFetch(notFound);
+  renderApp("/nope");
+  const html = document.documentElement;
+  await user.click(screen.getByRole("button", { name: "Your account" }));
+  const themes = await screen.findByRole("group", { name: "Theme" });
+  expect(within(themes).getByRole("menuitemradio", { name: "System" })).toBeChecked();
+
+  await user.click(within(themes).getByRole("menuitemradio", { name: "Dark" }));
+  expect(html).toHaveAttribute("data-theme", "dark");
+  expect(localStorage.getItem("pinch_theme")).toBe("dark");
+  // The menu stays open, the new choice checked, and the header's logo is the dark one.
+  expect(within(themes).getByRole("menuitemradio", { name: "Dark" })).toBeChecked();
+  expect(screen.getByRole("img", { name: "Pinch" })).toHaveAttribute("src", "/logo-dark.svg");
+
+  await user.click(within(themes).getByRole("menuitemradio", { name: "Light" }));
+  expect(html).toHaveAttribute("data-theme", "light");
+  expect(localStorage.getItem("pinch_theme")).toBe("light");
+  expect(screen.getByRole("img", { name: "Pinch" })).toHaveAttribute("src", "/logo.svg");
+
+  // System is the default: nothing stored, and the system's theme (light, renderApp's).
+  await user.click(within(themes).getByRole("menuitemradio", { name: "System" }));
+  expect(html).toHaveAttribute("data-theme", "light");
+  expect(localStorage.getItem("pinch_theme")).toBeNull();
+});
+
+test("in Hebrew, the avatar's menu names the themes in Hebrew", async () => {
+  const user = userEvent.setup();
+  stubFetch(notFound);
+  await renderInHebrew("/nope");
+  await user.click(screen.getByRole("button", { name: "החשבון שלך" }));
+  const themes = await screen.findByRole("group", { name: "מראה" });
+  expect(within(themes).getByRole("menuitemradio", { name: "לפי המכשיר" })).toBeChecked();
+  expect(within(themes).getByRole("menuitemradio", { name: "בהיר" })).not.toBeChecked();
+  await user.click(within(themes).getByRole("menuitemradio", { name: "כהה" }));
+  expect(document.documentElement).toHaveAttribute("data-theme", "dark");
+  expect(localStorage.getItem("pinch_theme")).toBe("dark");
+  await user.click(within(themes).getByRole("menuitemradio", { name: "לפי המכשיר" }));
+  expect(localStorage.getItem("pinch_theme")).toBeNull();
+});
+
 test("signed out, the switch under Log in keeps עברית on this device and reloads", async () => {
   stubFetch(notFound);
   renderApp("/login", { me: null });

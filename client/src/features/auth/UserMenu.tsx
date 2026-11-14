@@ -1,6 +1,6 @@
 import { LanguageSchema, type Me } from "@pinch/shared";
 import { useMutation } from "@tanstack/react-query";
-import { LogOut } from "lucide-react";
+import { LogOut, Monitor, Moon, Sun } from "lucide-react";
 import { useId } from "react";
 import { useTranslation } from "react-i18next";
 import {
@@ -14,20 +14,31 @@ import {
   DropdownMenuTrigger,
 } from "../../components/ui/DropdownMenu.tsx";
 import { loadPage, reloadPage } from "../../lib/loadPage.ts";
+import { setTheme, useTheme } from "../../lib/theme.ts";
 import { toastCouldntSave } from "../../lib/toasts.tsx";
 import { Avatar } from "./Avatar.tsx";
 import { changeLanguage, logOut } from "./authQueries.ts";
 
-// The avatar's menu (design §14): who is signed in, the language, and Log out. Loaded on its first
-// press (LazyUserMenu), and open as it appears.
-// A language picked keeps the menu open: it shows the save under way, until the page reloads.
+// The avatar's menu (design §14): who is signed in, the language, the theme, and Log out. Loaded
+// on its first press (LazyUserMenu), and open as it appears.
+// A language picked keeps the menu open: it shows the save under way, until the page reloads. A
+// theme picked too: it shows at once around the menu, so another can be tried beside it.
 function keepOpen(event: Event) {
   event.preventDefault();
 }
 
+// The theme's choices, each with its picture: the screen, the sun, the moon.
+const themes = [
+  { value: "system", Icon: Monitor, label: "header.themeSystem" },
+  { value: "light", Icon: Sun, label: "header.themeLight" },
+  { value: "dark", Icon: Moon, label: "header.themeDark" },
+] as const;
+
 export function UserMenu({ me }: { me: Me }) {
   const { t } = useTranslation();
   const languageId = useId();
+  const themeId = useId();
+  const theme = useTheme();
   // Signed out: Log in, as a new page (design §8.3: a change of user leaves nothing of the last
   // one's), and plain /login, without the page they were on: they chose to leave it, and the
   // next person on this device shouldn't land on it.
@@ -99,6 +110,27 @@ export function UserMenu({ me }: { me: Me }) {
           <DropdownMenuRadioItem value="he" lang="he" disabled={saving} onSelect={keepOpen}>
             עברית
           </DropdownMenuRadioItem>
+        </DropdownMenuRadioGroup>
+        <DropdownMenuSeparator />
+        <DropdownMenuLabel id={themeId} className="pb-1 text-sm text-text-muted">
+          {t("header.theme")}
+        </DropdownMenuLabel>
+        {/* Saved on this device, not the account (lib/theme.ts): it applies at once. */}
+        <DropdownMenuRadioGroup aria-labelledby={themeId} value={theme}>
+          {themes.map(({ value, Icon, label }) => (
+            <DropdownMenuRadioItem
+              key={value}
+              value={value}
+              className="gap-2"
+              onSelect={(event) => {
+                keepOpen(event);
+                setTheme(value);
+              }}
+            >
+              <Icon aria-hidden="true" className="size-4" />
+              {t(label)}
+            </DropdownMenuRadioItem>
+          ))}
         </DropdownMenuRadioGroup>
         <DropdownMenuSeparator />
         <DropdownMenuItem

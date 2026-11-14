@@ -236,6 +236,9 @@ is the tight one. Checked in U4 PR 1: all pass. Two tokens were added there: `--
 accent and danger buttons, and `--color-scrim` (`#0F0C09`) behind dialogs.
 `:root { color-scheme: light dark }`, dark under
 `@media (prefers-color-scheme: dark)` only — no toggle in v1 (smart defaults over settings).
+Since the UI pass's U4 (the user, 2026-11-13) the avatar's menu has a Theme choice, System
+(the default), Light or Dark, saved on the device; dark is `<html data-theme="dark">`
+(design §14, "The theme").
 
 **Type.** Display: **Fraunces** (variable serif, SIL OFL), self-hosted woff2 subset to
 Latin, `wght` 500–700. Built (U4 PR 1): 29.5 kB, with the optical size
