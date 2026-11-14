@@ -392,14 +392,13 @@ test("the (i) opens on Enter, and Escape closes it and puts focus back on it", a
   expect(screen.getByRole("button", { name: "Where to find the link" })).toHaveFocus();
 });
 
-test("the paste box's placeholder and an empty box read left to right, in English", async () => {
+test("the paste box's placeholder and an empty box read left to right", async () => {
   stubApi([[]]);
   renderApp("/");
 
   const box = await screen.findByRole("textbox", { name: "Pinch a recipe from a reel" });
   expect(box).toHaveAttribute("placeholder", "Paste a video or a recipe");
   expect(box).toHaveAttribute("dir", "ltr");
-  expect(box).toHaveAttribute("lang", "en");
 });
 
 test("a ready one counts its things to look at", async () => {
@@ -963,7 +962,6 @@ test("in Hebrew, Add recipe's box and the way to write a recipe are in Hebrew, i
   );
   // The placeholder and Pinch it stay in English (D46, the user's call, 2026-11-14).
   expect(box).toHaveAttribute("placeholder", "Paste a video or a recipe");
-  expect(box).toHaveAttribute("lang", "en");
   expect(screen.getByText("Pinch it")).toHaveAttribute("lang", "en");
   expect(screen.getByRole("button", { name: "Pinch it" })).toBeInTheDocument();
   expect(screen.getByRole("heading", { level: 1, name: "להוסיף מתכון" })).toBeInTheDocument();

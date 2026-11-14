@@ -12,10 +12,10 @@ const ImportForm = lazy(async () => ({
 export function LazyImportForm(props: ComponentProps<typeof ImportForm>) {
   return (
     // The field's own box (46 px, as measured), so nothing moves when it arrives, with its
-    // sparkles, placeholder and Pinch it where the field puts them, left to right and in English
-    // in Hebrew too (design §16.4, §16.8): with an empty queue those words are the page's LCP, and here they paint
-    // with the entry, not after this chunk (docs/metrics/m09.md, Miss 1). Hidden: the field
-    // reads them once it's there.
+    // sparkles, placeholder and Pinch it where the field puts them, left to right and in
+    // English in Hebrew too (design §16.4, §16.8): with an empty queue those words are the
+    // page's LCP, and here they paint with the entry, not after this chunk
+    // (docs/metrics/m09.md, Miss 1). Hidden: the field reads them once it's there.
     <Suspense
       fallback={
         <div

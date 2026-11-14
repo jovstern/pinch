@@ -3,7 +3,7 @@ import type { ComponentProps } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "../../components/ui/Button.tsx";
 
-// The (i) under Pinch it (design §14): where each app keeps a post's link. A 44 px button; the
+// The (i) under Pinch it (design §14; hidden for now, ImportPage): where each app keeps a post's link. A 44 px button; the
 // props are its popover's (Radix's trigger, or LazyPasteHelp's).
 export function PasteHelpButton(props: ComponentProps<"button">) {
   const { t } = useTranslation();

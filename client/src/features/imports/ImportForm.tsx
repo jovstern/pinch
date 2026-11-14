@@ -136,7 +136,7 @@ export function ImportForm({ inputRef }: { inputRef: RefObject<HTMLInputElement 
                   for them (ps-6, plus the input's own px-3) is the group's: the input is
                   dir="auto", so its own padding would follow what's typed, not the page.
                   Left to right in Hebrew too, the user's call (design §16.4): the sparkles on
-                  the left, Pinch on the right, as in English. */}
+                  the left, Pinch it on the right, as in English. */}
               <div
                 dir="ltr"
                 className="relative flex items-center rounded-control border border-input bg-card ps-6 has-[[aria-invalid=true]]:border-destructive has-[input:focus-visible]:outline-2 has-[input:focus-visible]:outline-offset-2 has-[input:focus-visible]:outline-ring"
@@ -150,13 +150,12 @@ export function ImportForm({ inputRef }: { inputRef: RefObject<HTMLInputElement 
                   id={id}
                   name={field.name}
                   value={field.state.value}
-                  // English in Hebrew too, as Pinch it (design §16.8, the user's call): so
-                  // empty, the field is English, left to right, its placeholder by the sparkles.
-                  // Typed in, it follows what's typed (Hebrew reads right to left) and the page's
-                  // language.
+                  // English in Hebrew too, as Pinch it (design §16.8, the user's call). Only the
+                  // direction changes: empty, left to right, so the placeholder sits by the
+                  // sparkles; typed in, it follows what's typed (Hebrew reads right to left). No
+                  // lang: the field's name and hint are the page's language.
                   placeholder="Paste a video or a recipe"
                   dir={field.state.value === "" ? "ltr" : "auto"}
-                  lang={field.state.value === "" ? "en" : undefined}
                   aria-invalid={invalid}
                   aria-describedby={invalid ? `${hintId} ${errorId}` : hintId}
                   enterKeyHint="send"

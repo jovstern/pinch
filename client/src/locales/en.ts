@@ -92,7 +92,7 @@ export const en = {
     screenshotsHint: "Up to {{max}} screenshots of the recipe, when its link and text won't do.",
     couldntSendThese: "We couldn't send these. Try again.",
     writeItYourself: "Or write it yourself",
-    // The (i) under Pinch it (PasteHelp): its name, then where on each app the share menu is (its
+    // The (i) under Pinch it (PasteHelp; hidden for now, ImportPage): its name, then where on each app the share menu is (its
     // steps, "Share → Copy link", are English in both languages, in PasteHelp: D46), and the
     // other thing the box takes.
     pasteHelp: {
