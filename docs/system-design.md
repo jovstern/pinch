@@ -810,7 +810,7 @@ the browser's console). Another user's recipe or import is a 404, as before. The
 | D36 | Security headers with **`helmet`**, already on every answer, now on the pages too; its CSP allows the inline script by a hash the API computes at start from the `index.html` it serves (§15.4) | helmet is already in the code (node-api.md) and its defaults are right; a hash from the served file can't drift from the script | Headers by hand (more lines to get right); moving the script to a file (a round trip on every page's LCP, the reason it's inline); `'unsafe-inline'` (no protection) |
 | D37 | Monitoring: Fly's logs (pino JSON) and its free Grafana dashboards; a warning log at 80% of the global cap; optional free alerts: UptimeRobot on `/api/ready`, Healthchecks.io pinged by the worker (§15.5) | Enough to see errors and know when something stops, at no cost and with almost no code | Sentry (an SDK in both processes and the client, for one household's traffic); log shipping to a paid service |
 | D38 | Backups: a nightly GitHub Actions job `mongodump`s Atlas, encrypts the archive with `age` to the user's public key, and keeps it 14 days as a workflow artifact | M0 has no backups; the repo is public, so only an encrypted file may sit in it, and only the user's own machine can decrypt it | No backups (accepted only until O1); a paid Atlas tier for its snapshots; a Fly volume and a scheduled machine (more parts) |
-| D39 | Strings through **i18next + react-i18next** (the user's choice): English bundled, Hebrew a lazy chunk loaded before the first render when it's needed; keys typed from the English file, so `he` must have every key; plurals by i18next (`Intl.PluralRules`), numbers and times by `Intl` (§16.3) | The common pair, with plurals, interpolation and typed keys built in; nothing is drawn before its strings are there, so no English flashes | A `t()` of our own over `Intl.PluralRules` (about 0.5 kB, but plurals, variables and types by hand); FormatJS / react-intl (ICU messages, a heavier runtime); Lingui (a compile step and macros); both languages bundled (every English user pays for Hebrew) |
+| D39 | Strings through **i18next + react-i18next** (the user's choice): each language a lazy chunk, only the page's loaded, before the first render, and preloaded by `index.html`'s script (English was bundled until the user moved it out on 2026-11-13: a Hebrew page downloaded it and never used it, §16.3); keys typed from the English file, so `he` must have every key; plurals by i18next (`Intl.PluralRules`), numbers and times by `Intl` (§16.3) | The common pair, with plurals, interpolation and typed keys built in; nothing is drawn before its strings are there, so no English flashes | A `t()` of our own over `Intl.PluralRules` (about 0.5 kB, but plurals, variables and types by hand); FormatJS / react-intl (ICU messages, a heavier runtime); Lingui (a compile step and macros); both languages bundled (every English user pays for Hebrew) |
 | D40 | **The language is saved on the account** (`language`, default English), changed by `PATCH /api/auth/me` from the avatar's menu; signed out, the browser decides (its languages, else its time zone: Israel's means Hebrew), with a switch on Log in and Sign up, and a sign-up keeps the language it was shown in; **switching reloads** the page (§16.1) | Facebook's model, the user's guide: the choice follows the person to every device; a reload redraws everything at once (every string, date, toast and Radix part) with no in-place switching code | The browser only (`localStorage`: lost on another device); the language in the address (`/he/…`: every route and link changes, for a site that isn't indexed); switching without a reload (every cached string and component must follow) |
 | D41 | **The direction is set before the first paint** by the inline script in `index.html` (§8.3), from a `pinch_lang` cookie the API sets from the account, else the browser's language; online, the CSP's hash is computed from the served file (D36), so it follows the script with no change (§16.2) | `lang` and `dir` must be right on the very first frame, before any CSS or JS; the script already runs there for the hint, and a cookie is what it can read | Setting them in `main.tsx` (a second place that decides; and fonts and the scrollbar side would already follow `ltr`); the API templating `index.html` per language (two files to hash, and Vite serves it in development); the language in `localStorage` (the server can't set it from the account) |
 | D42 | **Logical CSS:** Tailwind v4's `ms-/me-/ps-/pe-/start-/end-/text-start/rounded-s-/border-s-` instead of left and right; `rtl:` only where a logical class can't say it (a mirrored icon); a test fails on a physical class in `client/src` (§16.4) | One set of classes serves both directions, so English stays exactly as it is; the test keeps the next class honest | An RTL post-processor (`rtlcss`: a second stylesheet to build and load); `rtl:` beside every physical class (twice the classes) |
@@ -1173,15 +1173,31 @@ language: `main.tsx` reads it, never the cookie. It stays one script, so online 
 has one hash, and that hash is computed by the API from the file it serves (D36, §15.4): the
 change needs nothing else. `index.html`'s own `lang="en"` stays, for a browser without scripts.
 
+Since 2026-11-13 (§16.3) the script also preloads the language's strings, a `<link
+rel="modulepreload">` to `en`'s or `he`'s chunk, so they come with the entry rather than after it
+has run. The chunks' names are hashed, so the build writes them into the script (a small plugin
+in `vite.config.ts`; the dev server serves the source path the file has). The script's text, and
+so its CSP hash, now changes with each build: online that needs nothing, as the API hashes the
+file it serves at start (D36, §15.4).
+
 ### 16.3 Strings (D39)
 
-- `client/src/i18n.ts` sets up i18next with `lng` from `<html lang>`, `fallbackLng: "en"`,
-  React's escaping (`escapeValue: false`), and the English resources in the bundle
-  (`client/src/locales/en.ts`, one object, keys grouped by area: `header`, `auth`, `imports`,
-  `recipes`, `editor`, `cook`, `validation`; not the toasts, which stay English, §16.8). In
-  Hebrew, `main.tsx` waits for `import("./locales/he.ts")` before the first render, alongside
-  the queue's wait it already has (§8.3), so the chunk adds no round trip of its own on `/`, and
-  no English is ever drawn (but the toasts').
+- `client/src/i18n.ts` sets up i18next with `lng` from `<html lang>`, React's escaping
+  (`escapeValue: false`), and only that language's strings: each language is a lazy chunk of its
+  own (`client/src/locales/en.ts` and `he.ts`, one object each, keys grouped by area: `header`,
+  `auth`, `imports`, `recipes`, `editor`, `cook`, `validation`; not the toasts, which stay
+  English, §16.8). `main.tsx` waits for the page's chunk before the first render, alongside the
+  queue's wait it already has (§8.3), and `index.html`'s script preloads it (§16.2), so it adds no
+  round trip of its own and nothing is drawn before its strings (but the toasts'). No fallback
+  language (`fallbackLng: false`): `tsc` makes `he` complete, and a fallback to English would
+  fetch it for Hebrew too. If the chunk can't be fetched (offline mid-load, or a deploy that
+  replaced it), `main.tsx` renders `AppDidntLoad` instead of the app: fixed text, no i18n, in both
+  languages ("Pinch didn't load. Check your connection, then reload." / "Pinch לא נטען. כדאי
+  לבדוק את החיבור ולטעון מחדש."), with a Reload button. `e2e/strings.spec.ts` blocks the chunk. `validation` is shared's `messages`, which the schemas already put in
+  the entry: `en`'s chunk refers to it there, not a copy.
+- **Changed by the user on 2026-11-13** (after M10; docs/metrics/m10.md, Worth doing 1 and 2):
+  English was in the entry, as the default and the fallback, so a Hebrew page downloaded it and
+  never used it, every slice's strings cost every route, and cook's LCP was at 2.46 of 2.5 s.
 - **Typed keys:** i18next's `CustomTypeOptions` reads the type of `en`, so `t("a.missing")`
   fails `tsc`. `he` is declared as `Translation<typeof en>`: the same keys, each a string, and an
   optional `_two` beside a plural (Hebrew's dual, "שעתיים"). A missing or extra Hebrew key fails
@@ -1370,11 +1386,22 @@ that adds a string:
   180.1 → 198.3; the Hebrew chunk 0.3 kB with only the header's strings), and the observer
   checks LCP in Hebrew too (the lazy chunk and the reload of a new device).
 - **Raised again** (the user, 2026-11-13, after I6): 195 → **200** kB on the app's routes, 205 →
-  **210** kB on routes that add their own chunk. The English strings are in the entry (§16.3), so
+  **210** kB on routes that add their own chunk. The English strings were in the entry (§16.3), so
   each slice's strings cost every route: I6 (My recipes, Filters, the tags, a recipe's page) added
   +2.2 kB everywhere, the editor 201.5 → 203.7 of 205, with I7's editor and cook strings still to
   come. Kept over per-chunk English (`addResourceBundle`) or lazy pages, which change §16.3 or
   the LCP.
+- **The English strings out of the entry** (the user, 2026-11-13, after M10; §16.3). Vite's gzip
+  figures, the entry plus the route's chunks, against master at 71ff2bd: the entry 181.9 → **178.4**
+  (−3.5 kB, not the 6.5 estimated from the source: minified beside the rest, the strings compressed
+  better than alone); app routes 181.9 → 178.4, `/` 200.8 → 197.3, the editor 208.6 → **205.1**,
+  cook 189.7 → 186.2, Log in · Sign up 207.4 · 207.3 → 203.9 · 203.8. The budgets keep counting
+  the entry and the route's chunks; the page's strings are now a chunk beside them, as Hebrew's
+  always was: `en` 3.6 kB, `he` 4.9 kB. A first load with its strings, the editor: English 208.6
+  → 208.7 (a chunk of its own repeats a little), Hebrew 213.5 → 210.0. LCP (Lighthouse mobile,
+  median of 3) improved, with `index.html`'s preload (§16.2): cook 2.45 → 2.38 s in English, 2.49
+  → 2.45 in Hebrew; a recipe 2.40 → 2.31 · 2.47 → 2.31; `/recipes` 2.40 → 2.39 · 2.51 → 2.39.
+  Without the preload English lost 25–100 ms (cook 2.48), so the preload stays.
 
 ### 16.11 Tests
 
