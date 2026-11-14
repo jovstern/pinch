@@ -36,6 +36,14 @@ const ClaimsSchema = z.object({
   email_verified: z.boolean().optional(),
   name: z.string().optional(),
   nonce: z.string().optional(),
+  // Their profile picture, for the avatar (§8.3): kept only as an https address on Google's image
+  // host, so the page never loads a picture from anywhere else; any other value is as none, and
+  // doesn't stop the sign-in. Kept as the URL parser writes it (normalize), so what was checked is
+  // what the browser reads: "https:lh3…" would otherwise be stored as is, a relative address.
+  picture: z
+    .url({ protocol: /^https$/, hostname: /\.googleusercontent\.com$/, normalize: true })
+    .optional()
+    .catch(undefined),
 });
 
 type GoogleDeps = { google: Google; secureCookies: boolean; now: () => Date };
@@ -103,6 +111,7 @@ export function googleRouter(db: Db, { google, secureCookies, now }: GoogleDeps)
       email,
       // As signup's limit; an account without a name on Google gets its email's first part.
       name: claims.name?.trim().slice(0, 100) || email.split("@")[0] || email,
+      picture: claims.picture,
       language: flow.language,
     });
     if (user === "linked_elsewhere") {

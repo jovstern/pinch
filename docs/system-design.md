@@ -319,6 +319,8 @@ User {                             // M9 (§8.3, D29)
   name, createdAt,
   passwordHash?,                   // argon2id; none for an account made with Google
   googleId?,                       // Google's "sub"; set by a Google sign-in
+  picture?,                        // Google's profile picture (https, *.googleusercontent.com), for
+                                   // the avatar; set or removed by each Google sign-in (§8.3)
   language?: "en" | "he"           // M10: the interface's language (§16, D40); none reads as "en"
 }
 
@@ -636,7 +638,20 @@ the browser's console). Another user's recipe or import is a 404, as before. The
   its sessions**: Google proved the email is theirs, the unverified password hasn't (someone
   could have signed up with it first and waited); else a new one with Google's name and no
   password. An email whose account has another `googleId` can't sign in this way
-  (`linked_elsewhere`). A new session, then a 302 to `next`. The routes take
+  (`linked_elsewhere`). A new session, then a 302 to `next`.
+  **The picture (the user, 2026-11-13):** the ID token's `picture` claim (it comes with the
+  `profile` scope) is the avatar's (§14). It's kept as `picture` on the account only when it is an
+  `https` address whose host ends `.googleusercontent.com`, Google's image host (Zod's `z.url`
+  with a protocol and a hostname pattern, which reads the host as a browser does, and
+  `normalize`, so it's stored as the parser writes it: `https:lh3…` becomes `https://lh3…`, not
+  a relative address); anything else
+  is as none and doesn't stop the sign-in, so the page never loads a picture from another origin.
+  Every Google sign-in sets it again, or removes it when the claim is missing: Google's addresses
+  change, and a picture the user removed on Google goes here too. All three ways in get it (a
+  returning user, an account linked by its email, a new one); a password-only account has none.
+  An account that later has a password too (a reset, M11) keeps it until its next Google sign-in:
+  it's still that person's Google account, and nothing about the password says otherwise. `me`
+  (and every answer that returns the user) includes `picture` when there is one. The routes take
   Google as a dependency of `createApp` (`google`, built by `googleFromConfig`), so the tests
   pass a fake exchange and need no network; `jose`'s check has its own tests with a key of
   their own. Without `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` (in `.env`, set by the user)
@@ -780,7 +795,7 @@ the browser's console). Another user's recipe or import is a 404, as before. The
 | D21 | React Router (declarative: `<Routes>` in `App.tsx`, `useParams`, `Link`) | A handful of screens; the most familiar API and the least setup, easy to read line by line | TanStack Router (type-safe routes and loaders, more concepts) |
 | D22 | The daily cap (20) counts links pasted and Retry clicks, in a per-user, per-UTC-day counter (`usage`) raised atomically by both routes; past it, 429 | Imports are deleted once done, so counting them would undercount; the unique `{ownerId, day}` index makes two first counts at once safe on a standalone Mongo (as D9); the routes are where a user asks for work; automatic retries (3 a link) aren't counted, so at most 60 Gemini calls a day | Counting each Gemini call in the worker (exact, but a link could be accepted and then fail with "limit reached") |
 | D23 | "Not a recipe" and "too long" fail the import at once (`NoRetryError`, its message shown to the user); every other error is retried | Trying again gives the same answer and costs a Gemini call each time; the user learns why straight away; nor is the user offered a Retry that can't help, and would use one of the day's 20 | Retry everything (3 Gemini calls for a cat video, and a vague message) |
-| D24 | Three tabs: **Add recipe** (`/`, the default; *New recipe* until 2026-11-10), **My recipes** (`/recipes`, with how many recipes there are: `GET /api/recipes/count`) and **All recipes** (`/explore`, Coming soon until after v1, §14.1, since 2026-11-13); the import queue sits under the box on Add recipe; every inner page has breadcrumbs (docs/ux/pass-02.md §12–13). The header: the "Pinch" wordmark (the user's logo, 2026-11-11) leads and links to Add recipe; the avatar (the first letter of the user's name, M9) ends it and opens the account menu. Below 1024 px two rows, the logo and the avatar, then the tabs; one row from 1024 px. In Hebrew the logo is centred (§14, §16.4). Until 2026-11-13 a phone showed the "P" mark beside two tabs in one row (none under 360 px) | Adding is the main event, so it opens first; the split keeps the form off the library, and All recipes is the third place, others' recipes; breadcrumbs say where a page belongs and replace Exit and "‹ Recipes". Three tabs and their counts need a phone's whole width, so they get their own row, which also leaves room for the full wordmark | One home with the box above the recipes; Recipes as the default tab; a bottom tab bar; the tabs scrolling sideways on a phone |
+| D24 | Three tabs: **Add recipe** (`/`, the default; *New recipe* until 2026-11-10), **My recipes** (`/recipes`, with how many recipes there are: `GET /api/recipes/count`) and **All recipes** (`/explore`, Coming soon until after v1, §14.1, since 2026-11-13); the import queue sits under the box on Add recipe; every inner page has breadcrumbs (docs/ux/pass-02.md §12–13). The header: the "Pinch" wordmark (the user's logo, 2026-11-11) leads and links to Add recipe; the avatar (the first letter of the user's name, M9; their Google picture when they have one, 2026-11-13, §8.3) ends it and opens the account menu. Below 1024 px two rows, the logo and the avatar, then the tabs; one row from 1024 px. In Hebrew the logo is centred (§14, §16.4). Until 2026-11-13 a phone showed the "P" mark beside two tabs in one row (none under 360 px) | Adding is the main event, so it opens first; the split keeps the form off the library, and All recipes is the third place, others' recipes; breadcrumbs say where a page belongs and replace Exit and "‹ Recipes". Three tabs and their counts need a phone's whole width, so they get their own row, which also leaves room for the full wordmark | One home with the box above the recipes; Recipes as the default tab; a bottom tab bar; the tabs scrolling sideways on a phone |
 | D25 | Every recipe has a face: the post's picture, else an emoji the model picks for the dish (an optional `emoji` on the recipe and the draft) on a soft tile, else a cooking pot (with sparkles for a video's); a recipe written by hand gets one from its title (§6) — built in M8 F3 | The picture is what the user remembers; a recipe with none still needs something to recognise; the title's list keeps it to the server, and the editor's JS at its budget | Grey placeholders; generated images; an emoji field in the editor; a map from the tags on the client |
 | D26 | The UI is built from **shadcn/ui** components, copied into `client/src/components/ui/`, their variables mapped onto Pinch's tokens; controls 44 px tall for touch | Accessible Radix parts (Tabs, Sheet, DropdownMenu, Dialog, toasts) whose code lives in the repo and can be read line by line; one pattern per control | Pinch's own components only; a packaged kit (MUI, Chakra) |
 | D27 | Undo in the toasts is a **soft delete**: DELETE sets `deletedAt` on the recipe or import, every read (lists, search, a recipe, its picture, edit, cook, the queue, its badge, approve, retry, the worker's claim and saves) leaves those out, `POST …/restore` unsets it, and a partial TTL index deletes them for good an hour later. Pinch it's Undo is the same DELETE: the worker's writes are conditional on the job not being deleted (§4.3), so a cancelled import never turns ready. Built in M8 F4 | Undo needs the thing to still exist; the server is the one place every tab and the worker agree on, and a closed tab can't lose a delete; one field and one filter for both collections, one atomic `updateOne` per write (no transactions, D9). Cancelling counts against the day's cap (D22): the request was already counted | Sending the DELETE only once the toast's 8 s are over (lost if the tab closes, other tabs show the deleted one meanwhile); a `cancelled` status for imports (a second mechanism next to the recipes' delete); moving deleted documents to a trash collection (two writes, no transaction) |
@@ -863,8 +878,13 @@ noise, and M5/M6 only swap the extractor.
 Phone first (§1); the wireframes in `docs/ux/wireframes/` (pass 02, revision 2) show each
 screen at 360 and 1440 px. Every page sits in one frame (D24): a header of three tabs, **Add
 recipe** (its badge counts drafts ready to review), **My recipes** and **All recipes** (a Coming
-soon page, §14.1), then the avatar: the first
-letter of the user's name in a 44 px circle, which opens a menu (not modal, loaded on its first
+soon page, §14.1), then the avatar: the
+user's Google picture (§8.3), else the first letter of their name, in a 44 px circle (the
+picture: `alt=""`, as the button is named "Your account"; `referrerPolicy="no-referrer"`, as
+Google's image host can answer 403 to a request with a referrer; a fixed 44 × 44 box, so nothing
+moves as it loads; Google's size suffix (`=s96-c` or `=s96`) asked as `=s132-c`, the circle on a 3× screen;
+one that fails to load gives way to the letter, as a recipe's thumbnail does, never a broken
+image), which opens a menu (not modal, loaded on its first
 press as ⋯ is), 288 px wide, with the name and email (a long one cut, whole in its title), then Language, its two choices
 each named in itself, "English" and "עברית", the current one checked (M10, §16.1), then Log out
 (§8.3; the theme follows the system, so it has no switch). **Write a recipe** is on every page
@@ -1052,7 +1072,12 @@ run), `object-src 'none'` and `upgrade-insecure-requests`. One change: `script-s
 'sha256-…'`, for the inline script in `index.html` (§8.3). The API reads the `index.html` it
 serves once at start, takes the inline script's text and hashes it, so the hash comes from the
 very file it serves and can't drift: no build plugin, no test to keep in step. The fonts are
-served by the app, and Google sign-in is a page load, not a fetch, so no other origin is needed.
+served by the app, and Google sign-in is a page load, not a fetch. **One other origin:** the
+avatar's Google picture (§8.3, §14) comes from Google's image host, so `img-src` must be
+`'self' data: https://*.googleusercontent.com`; without it the avatar falls back to the letter
+(a blocked image is a failed load). Privacy: the browser fetches the picture from Google, which
+sees the user's IP when the page loads, but not which page (`Referrer-Policy: no-referrer`): the
+same Google account that signed them in, so it tells Google nothing new about who they are.
 
 ### 15.5 Monitoring and backups
 
