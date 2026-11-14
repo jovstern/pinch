@@ -34,10 +34,8 @@ const tabClass =
 // the tabs (the row's width on a phone; from 768 px as wide as they need, under the logo).
 // Write a recipe floats bottom right on a phone (on Add recipe and My recipes), and is by the
 // avatar from 768 px. One row from 1024 px: the logo and the tabs at the start, the rest at the
-// end. In Hebrew the logo is in the middle of the header's width at every width (§16.4: the one
-// thing not mirrored), the tabs under it, and one row only from 1280 px, the tabs, Write a
-// recipe and the avatar in the half beside the logo: Write a recipe as its pen alone up to
-// 1440 px, where it fits in full.
+// end. Hebrew is the mirror, but for the tabs: centred under the logo from 768 px, and in the
+// header's true centre from 1024 px (the user's call, 2026-11-14; §16.4).
 export function Header({ onTabPage }: { onTabPage: boolean }) {
   const { t } = useTranslation();
   const { pathname } = useLocation();
@@ -54,19 +52,15 @@ export function Header({ onTabPage }: { onTabPage: boolean }) {
     // A grid of named areas, so each width and direction places the same three parts, kept in
     // the tab order: the logo, the tabs, then Write a recipe and the avatar. Its two outer
     // columns share what's left equally, so the middle one is the header's true centre (where
-    // the Hebrew logo goes).
+    // the Hebrew tabs go from 1024 px).
     <header
       className={cn(
         "grid grid-cols-[1fr_auto_1fr] items-center gap-x-4 gap-y-2 px-4 pt-3 md:border-b md:border-border md:px-6 md:py-3",
         // Two rows: the logo and the end, then the tabs.
-        "[grid-template-areas:'logo_._end'_'nav_nav_nav'] rtl:[grid-template-areas:'._logo_end'_'nav_nav_nav']",
-        // English, one row from 1024 px: the logo, the tabs, the end.
-        "lg:ltr:grid-cols-[auto_auto_1fr] lg:ltr:[grid-template-areas:'logo_nav_end']",
-        // Hebrew, one row from 1280 px, the logo centred: the tabs share the end's cell, at its
-        // start (the nav's xl:rtl: classes). Two items in one cell can meet: these breakpoints
-        // are where they fit apart (measured, design §14), with Write a recipe as its pen alone
-        // up to 1440 px.
-        "xl:rtl:[grid-template-areas:'._logo_end']",
+        "[grid-template-areas:'logo_._end'_'nav_nav_nav']",
+        // One row from 1024 px: the logo, the tabs, the end. English packs the tabs beside the
+        // logo; Hebrew keeps the equal outer columns, so its tabs are in the true centre.
+        "lg:[grid-template-areas:'logo_nav_end'] lg:ltr:grid-cols-[auto_auto_1fr]",
       )}
     >
       {/* The logo (D24), the "Pinch" wordmark, as files in public/: inlined, its paths would
@@ -87,7 +81,7 @@ export function Header({ onTabPage }: { onTabPage: boolean }) {
           Radix Tabs is for panels that switch within one page. It only borrows their look. */}
       <nav
         aria-label={t("header.nav")}
-        className="flex rounded-control bg-muted p-1 [grid-area:nav] md:justify-self-start md:rtl:justify-self-center xl:rtl:justify-self-start xl:rtl:[grid-area:end]"
+        className="flex rounded-control bg-muted p-1 [grid-area:nav] md:justify-self-start md:rtl:justify-self-center"
       >
         <Link to="/" aria-current={tab === "new" ? "page" : undefined} className={tabClass}>
           {t("header.addRecipe")}
@@ -133,24 +127,18 @@ export function Header({ onTabPage }: { onTabPage: boolean }) {
             recipes only), in the header from 768 px on every page. On a phone it comes after
             the tabs in the tab order though it shows at the bottom: fine for the header's one
             action. z-10: over My recipes' cards, which are positioned (the site's label on the
-            picture). In Hebrew from 1280 to 1440 px, its pen alone in a 44 px square: the words
-            stay its name for a screen reader (sr-only), and its title shows them on hover. */}
+            picture). */}
         <Button
           asChild
           variant="outline"
           className={cn(
             "md:static md:inline-flex md:rounded-control md:shadow-none",
             onTabPage ? "fixed end-4 bottom-5 z-10 rounded-full shadow-sheet" : "hidden",
-            "xl:max-[90rem]:rtl:w-11 xl:max-[90rem]:rtl:px-0",
           )}
         >
-          <Link
-            to="/recipes/new"
-            title={t("header.writeRecipe")}
-            aria-current={pathname === "/recipes/new" ? "page" : undefined}
-          >
+          <Link to="/recipes/new" aria-current={pathname === "/recipes/new" ? "page" : undefined}>
             <PenLine aria-hidden="true" className="size-4" />
-            <span className="xl:max-[90rem]:rtl:sr-only">{t("header.writeRecipe")}</span>
+            {t("header.writeRecipe")}
           </Link>
         </Button>
 
