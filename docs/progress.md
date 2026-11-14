@@ -201,7 +201,7 @@ After M10 (found by M10's UI review, not M10's to fix):
 - [x] U3 The header: on phones the tabs under the full logo and the avatar; in Hebrew the logo centred; an All recipes tab with a Coming soon page (the shared recipes to clone, ranked: not in v1)
 - [x] U4 Light, dark or the system's, from the avatar's menu, saved on this device
 - [ ] U5 Google's profile picture in the avatar
-- [ ] U7 The Hebrew header: the logo at the right, the tabs centred (in the true centre from 1024 px), the user's call of 2026-11-14
+- [ ] U7 The header mirrored in Hebrew (the logo at the right) and its tabs centred in both languages (the true centre from 1024 px); on Add recipe, Pinch it and the placeholder in English in Hebrew too, and the (i) hidden for now (the user's calls of 2026-11-14)
 
 ## M11 — Pinch online (design §15, §8.3, D31–D38)
 

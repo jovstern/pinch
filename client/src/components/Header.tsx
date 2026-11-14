@@ -31,11 +31,10 @@ const tabClass =
 
 // The app's frame, on every page (design §14, D24): the logo, the three tabs, Write a recipe and
 // the avatar, and the imports read for the tab's count. Two rows: the logo and the avatar, then
-// the tabs (the row's width on a phone; from 768 px as wide as they need, under the logo).
-// Write a recipe floats bottom right on a phone (on Add recipe and My recipes), and is by the
-// avatar from 768 px. One row from 1024 px: the logo and the tabs at the start, the rest at the
-// end. Hebrew is the mirror, but for the tabs: centred under the logo from 768 px, and in the
-// header's true centre from 1024 px (the user's call, 2026-11-14; §16.4).
+// the tabs (the row's width on a phone; from 768 px as wide as they need, centred). Write a
+// recipe floats bottom right on a phone (on Add recipe and My recipes), and is by the avatar
+// from 768 px. One row from 1024 px: the logo at the start, the tabs in the header's true
+// centre, the rest at the end (the user's call, 2026-11-14). Hebrew is its mirror (§16.4).
 export function Header({ onTabPage }: { onTabPage: boolean }) {
   const { t } = useTranslation();
   const { pathname } = useLocation();
@@ -49,18 +48,17 @@ export function Header({ onTabPage }: { onTabPage: boolean }) {
   const me = useQuery(meQuery).data;
 
   return (
-    // A grid of named areas, so each width and direction places the same three parts, kept in
-    // the tab order: the logo, the tabs, then Write a recipe and the avatar. Its two outer
-    // columns share what's left equally, so the middle one is the header's true centre (where
-    // the Hebrew tabs go from 1024 px).
+    // A grid of named areas, so each width places the same three parts, kept in the tab order:
+    // the logo, the tabs, then Write a recipe and the avatar. Its two outer columns share what's
+    // left equally, so the middle one is the header's true centre (where the tabs go from
+    // 1024 px). The grid follows dir, so Hebrew needs no classes of its own.
     <header
       className={cn(
         "grid grid-cols-[1fr_auto_1fr] items-center gap-x-4 gap-y-2 px-4 pt-3 md:border-b md:border-border md:px-6 md:py-3",
         // Two rows: the logo and the end, then the tabs.
         "[grid-template-areas:'logo_._end'_'nav_nav_nav']",
-        // One row from 1024 px: the logo, the tabs, the end. English packs the tabs beside the
-        // logo; Hebrew keeps the equal outer columns, so its tabs are in the true centre.
-        "lg:[grid-template-areas:'logo_nav_end'] lg:ltr:grid-cols-[auto_auto_1fr]",
+        // One row from 1024 px: the logo, the tabs, the end.
+        "lg:[grid-template-areas:'logo_nav_end']",
       )}
     >
       {/* The logo (D24), the "Pinch" wordmark, as files in public/: inlined, its paths would
@@ -81,7 +79,7 @@ export function Header({ onTabPage }: { onTabPage: boolean }) {
           Radix Tabs is for panels that switch within one page. It only borrows their look. */}
       <nav
         aria-label={t("header.nav")}
-        className="flex rounded-control bg-muted p-1 [grid-area:nav] md:justify-self-start md:rtl:justify-self-center"
+        className="flex rounded-control bg-muted p-1 [grid-area:nav] md:justify-self-center"
       >
         <Link to="/" aria-current={tab === "new" ? "page" : undefined} className={tabClass}>
           {t("header.addRecipe")}

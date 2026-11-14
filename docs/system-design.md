@@ -795,7 +795,7 @@ the browser's console). Another user's recipe or import is a 404, as before. The
 | D21 | React Router (declarative: `<Routes>` in `App.tsx`, `useParams`, `Link`) | A handful of screens; the most familiar API and the least setup, easy to read line by line | TanStack Router (type-safe routes and loaders, more concepts) |
 | D22 | The daily cap (20) counts links pasted and Retry clicks, in a per-user, per-UTC-day counter (`usage`) raised atomically by both routes; past it, 429 | Imports are deleted once done, so counting them would undercount; the unique `{ownerId, day}` index makes two first counts at once safe on a standalone Mongo (as D9); the routes are where a user asks for work; automatic retries (3 a link) aren't counted, so at most 60 Gemini calls a day | Counting each Gemini call in the worker (exact, but a link could be accepted and then fail with "limit reached") |
 | D23 | "Not a recipe" and "too long" fail the import at once (`NoRetryError`, its message shown to the user); every other error is retried | Trying again gives the same answer and costs a Gemini call each time; the user learns why straight away; nor is the user offered a Retry that can't help, and would use one of the day's 20 | Retry everything (3 Gemini calls for a cat video, and a vague message) |
-| D24 | Three tabs: **Add recipe** (`/`, the default; *New recipe* until 2026-11-10), **My recipes** (`/recipes`, with how many recipes there are: `GET /api/recipes/count`) and **All recipes** (`/explore`, Coming soon until after v1, §14.1, since 2026-11-13); the import queue sits under the box on Add recipe; every inner page has breadcrumbs (docs/ux/pass-02.md §12–13). The header: the "Pinch" wordmark (the user's logo, 2026-11-11) leads and links to Add recipe; the avatar (the first letter of the user's name, M9; their Google picture when they have one, 2026-11-13, §8.3) ends it and opens the account menu. Below 1024 px two rows, the logo and the avatar, then the tabs; one row from 1024 px. In Hebrew the header is the mirror, the logo at the right, but the tabs are centred: under the logo from 768 px, in the header's true centre from 1024 px (the user's call, 2026-11-14, §14, §16.4; from 2026-11-13 the Hebrew logo was centred). Until 2026-11-13 a phone showed the "P" mark beside two tabs in one row (none under 360 px) | Adding is the main event, so it opens first; the split keeps the form off the library, and All recipes is the third place, others' recipes; breadcrumbs say where a page belongs and replace Exit and "‹ Recipes". Three tabs and their counts need a phone's whole width, so they get their own row, which also leaves room for the full wordmark | One home with the box above the recipes; Recipes as the default tab; a bottom tab bar; the tabs scrolling sideways on a phone |
+| D24 | Three tabs: **Add recipe** (`/`, the default; *New recipe* until 2026-11-10), **My recipes** (`/recipes`, with how many recipes there are: `GET /api/recipes/count`) and **All recipes** (`/explore`, Coming soon until after v1, §14.1, since 2026-11-13); the import queue sits under the box on Add recipe; every inner page has breadcrumbs (docs/ux/pass-02.md §12–13). The header: the "Pinch" wordmark (the user's logo, 2026-11-11) leads and links to Add recipe; the avatar (the first letter of the user's name, M9; their Google picture when they have one, 2026-11-13, §8.3) ends it and opens the account menu. Below 1024 px two rows, the logo and the avatar, then the tabs; one row from 1024 px, the tabs centred: under the logo from 768 px, in the header's true centre from 1024 px (the user's call, 2026-11-14; before, they sat beside the logo). Hebrew is its mirror, the logo at the right (2026-11-14, §14, §16.4; from 2026-11-13 the Hebrew logo was centred). Until 2026-11-13 a phone showed the "P" mark beside two tabs in one row (none under 360 px) | Adding is the main event, so it opens first; the split keeps the form off the library, and All recipes is the third place, others' recipes; breadcrumbs say where a page belongs and replace Exit and "‹ Recipes". Three tabs and their counts need a phone's whole width, so they get their own row, which also leaves room for the full wordmark | One home with the box above the recipes; Recipes as the default tab; a bottom tab bar; the tabs scrolling sideways on a phone |
 | D25 | Every recipe has a face: the post's picture, else an emoji the model picks for the dish (an optional `emoji` on the recipe and the draft) on a soft tile, else a cooking pot (with sparkles for a video's); a recipe written by hand gets one from its title (§6) — built in M8 F3 | The picture is what the user remembers; a recipe with none still needs something to recognise; the title's list keeps it to the server, and the editor's JS at its budget | Grey placeholders; generated images; an emoji field in the editor; a map from the tags on the client |
 | D26 | The UI is built from **shadcn/ui** components, copied into `client/src/components/ui/`, their variables mapped onto Pinch's tokens; controls 44 px tall for touch | Accessible Radix parts (Tabs, Sheet, DropdownMenu, Dialog, toasts) whose code lives in the repo and can be read line by line; one pattern per control | Pinch's own components only; a packaged kit (MUI, Chakra) |
 | D27 | Undo in the toasts is a **soft delete**: DELETE sets `deletedAt` on the recipe or import, every read (lists, search, a recipe, its picture, edit, cook, the queue, its badge, approve, retry, the worker's claim and saves) leaves those out, `POST …/restore` unsets it, and a partial TTL index deletes them for good an hour later. Pinch it's Undo is the same DELETE: the worker's writes are conditional on the job not being deleted (§4.3), so a cancelled import never turns ready. Built in M8 F4 | Undo needs the thing to still exist; the server is the one place every tab and the worker agree on, and a closed tab can't lose a delete; one field and one filter for both collections, one atomic `updateOne` per write (no transactions, D9). Cancelling counts against the day's cap (D22): the request was already counted | Sending the DELETE only once the toast's 8 s are over (lost if the tab closes, other tabs show the deleted one meanwhile); a `cancelled` status for imports (a second mechanism next to the recipes' delete); moving deleted documents to a trash collection (two writes, no transaction) |
@@ -895,10 +895,12 @@ My recipes. The logo comes first and links to Add recipe: the "Pinch" wordmark a
 `components/Logo.tsx`, not in the JS). The header has two
 rows below 1024 px: the logo and the avatar (with Write a recipe from 768 px), then the tabs, the
 row's width on a phone (a size smaller there, and again under 360 px, so the three fit with their
-counts at 320 px) and as wide as they need from 768 px. From 1024 px it is one row: the logo and
-the tabs at the start, Write a recipe and the avatar at the end. It is a grid of named areas
-(logo, nav, end) whose outer columns share the rest equally, so its middle column is the true
-centre; the tab order is the logo, the tabs, Write a recipe, the avatar at every width. Inner pages have
+counts at 320 px) and as wide as they need, centred, from 768 px. From 1024 px it is one row: the
+logo at the start, the tabs in the true centre, Write a recipe and the avatar at the end (the
+tabs centred: the user's call, 2026-11-14; before, they sat beside the logo). It is a grid of
+named areas (logo, nav, end) whose outer columns share the rest equally, so its middle column is
+the true centre; measured with the counts "13" and "120", at 1024 px the tabs (383 px, 392 in
+Hebrew) keep 74 px from Write a recipe (92 in Hebrew) and over 200 from the logo. The tab order is the logo, the tabs, Write a recipe, the avatar at every width. Inner pages have
 breadcrumbs under the header, and the tab they belong to stays selected. Every async change to
 a recipe's status confirms itself in a toast, with the next step when there is one: sent,
 ready to review (Review; its description counts the things to look at), failed (Retry), saved, changes saved, deleted, discarded, couldn't save
@@ -973,13 +975,9 @@ recipe's page), so the keyboard and the eye go the same way; the Save bar's butt
 phone's width up to 1024 px.
 
 **In Hebrew** (M10, §16) every screen is the mirror of the above, "left" and "right" read as
-start and end, and so is the header, but for its tabs (the user's call, 2026-11-14, which
-replaced the centred logo of 2026-11-13; §16.4): the logo at the right, Write a recipe and the
-avatar at the left, the avatar's menu opening from there, and the tabs centred. Two rows below
-1024 px, as in English: the tabs fill the second row on a phone and are centred under the logo
-from 768 px. One row from 1024 px, the tabs in the header's true centre (the grid's middle
-column). Measured with the counts "13" and "120": the tabs are 392 px, so at 1024 px they keep
-92 px from Write a recipe and 213 from the logo. Write a recipe floats bottom left on a phone; toasts sit bottom left from 768 px;
+start and end, the header too (the user's call, 2026-11-14, which replaced the centred logo of
+2026-11-13; §16.4): the logo at the right, the tabs centred, Write a recipe and the avatar at the
+left, the avatar's menu opening from there. Write a recipe floats bottom left on a phone; toasts sit bottom left from 768 px;
 My recipes' filter panel is on the right from 1024 px, and the editor's main column too; a
 breadcrumb's › and cook mode's ‹ › point the other way, and there the next card comes in from
 the left, and ← goes to the next step. What a user or a post wrote keeps its own direction
@@ -1307,11 +1305,10 @@ private window blocks reads as no choice. The CSP needs nothing: the API hashes 
   `rounded-tl`…, `scroll-ml`… and `float-`/`clear-left`), naming the file and line. It matches
   classes, not words: margin, padding and inset need a value after them (a number, `px`, `auto`,
   `full`, `[…]`), so prose ("the top left corner", "bottom-right") passes.
-- **The header** (§14) is mirrored like the rest, with the same breakpoints, but its tabs are
-  centred in Hebrew (the user's call, 2026-11-14): under the logo from 768 px
-  (`md:rtl:justify-self-center`), and in the true centre from 1024 px, where English packs them
-  beside the logo (`lg:ltr:grid-cols-[auto_auto_1fr]`). No physical class. From 2026-11-13 to
-  2026-11-14 the Hebrew logo was centred instead, with a header of its own breakpoints.
+- **The header** (§14) is mirrored like the rest, with no class of either direction: its grid
+  follows `dir`, and the tabs are centred in both languages (the user's call, 2026-11-14). From
+  2026-11-13 to 2026-11-14 the Hebrew logo was centred instead, the one exception to mirroring,
+  with breakpoints of its own.
 - **Icons that mirror** (`rtl:-scale-x-100`): those that point the reading way. ChevronLeft and
   ChevronRight (cook mode's ‹ ›, a breadcrumb's separator), ExternalLink (its arrow leaves toward
   the end), LogOut (its arrow too), and any back, forward or send arrow added later. **Not
