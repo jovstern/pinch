@@ -1,5 +1,8 @@
 import { Component, type ReactNode } from "react";
+import { CloudOff } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { EmptyState } from "./EmptyState.tsx";
+import { Button } from "./ui/Button.tsx";
 
 type ErrorBoundaryProps = {
   children: ReactNode;
@@ -24,15 +27,27 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, { failed: boole
   }
 }
 
-// A function component, for its t(): a class can't call a hook.
+// A function component, for its t(): a class can't call a hook. Reload fetches the page again,
+// with the new deploy's chunks. Filled (the default button): it is the page's only action.
 function PageDidntLoad() {
   const { t } = useTranslation();
   return (
-    <div role="alert">
-      <h1 className="mt-8 text-3xl font-bold tracking-tight text-balance">
-        {t("frame.didntLoad")}
-      </h1>
-      <p className="mt-3 text-pretty text-text-muted">{t("frame.checkAndReload")}</p>
-    </div>
+    <EmptyState
+      icon={CloudOff}
+      as="h1"
+      title={t("frame.didntLoad")}
+      subtitle={t("frame.checkAndReload")}
+      role="alert"
+      action={
+        <Button
+          type="button"
+          onClick={() => {
+            window.location.reload();
+          }}
+        >
+          {t("frame.reload")}
+        </Button>
+      }
+    />
   );
 }

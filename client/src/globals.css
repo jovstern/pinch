@@ -174,3 +174,40 @@ body {
     scroll-padding-bottom: 10rem;
   }
 }
+
+/* An import being worked on (ImportList): its status line in muted text with a band of the
+   body's text colour sweeping across it, the way apps show a model at work. Between two colours
+   that each pass AA on the card and the page, in both themes, every point of the sweep passes too
+   (muted is the lowest: 5.92:1 on a light card, 6.28:1 on a dark one). It sweeps the way the line
+   reads: reversed in Hebrew. With reduced motion, plain muted text. */
+@utility shimmer {
+  color: var(--color-text-muted);
+  @media (prefers-reduced-motion: no-preference) {
+    /* The band is a fifth of the image, 3 times the line's width, so it starts and ends out of
+       sight. */
+    background-image: linear-gradient(
+      90deg,
+      var(--color-text-muted) 40%,
+      var(--color-text) 50%,
+      var(--color-text-muted) 60%
+    );
+    background-size: 300% 100%;
+    background-clip: text;
+    color: transparent;
+    animation: shimmer 2s linear infinite;
+    /* The build lowers :dir(rtl) to :lang(he) and the other right-to-left languages: that holds
+       because <html> always gets lang and dir together (index.html's script, i18n.ts). */
+    &:dir(rtl) {
+      animation-direction: reverse;
+    }
+  }
+}
+
+@keyframes shimmer {
+  from {
+    background-position: 100% 0;
+  }
+  to {
+    background-position: 0 0;
+  }
+}

@@ -193,6 +193,15 @@ After M10 (found by M10's UI review, not M10's to fix):
 - [ ] Move the English strings out of the entry (about 6.5 kB gzip that Hebrew users never use):
       frees room on every route and cook's LCP (2.46 of 2.5 s); changes §16.3
 
+## UI pass after M10 (the user's list, 2026-11-13)
+
+- [x] U1 One centred empty state (icon, title, subtitle) for not found, the error page and No recipes yet; the queue's working status shimmers
+- [ ] U2 Add recipe's paste box: the row keeps the English layout in Hebrew, an (i) with where to find the link per app, a new placeholder
+- [ ] U6 The English strings out of the entry, loaded like Hebrew (the user's choice over raising the budgets; before U3, as the editor is at 209.3 of 210)
+- [ ] U3 The header: on phones the tabs under the full logo and the avatar; in Hebrew the logo centred; an All recipes tab with a Coming soon page (the shared recipes to clone, ranked: not in v1)
+- [ ] U4 Light, dark or the system's, from the avatar's menu, saved on this device
+- [ ] U5 Google's profile picture in the avatar
+
 ## M11 — Pinch online (design §15, §8.3, D31–D38)
 
 The user's steps (accounts, the domain, secrets) are listed in design §15.9; each slice says

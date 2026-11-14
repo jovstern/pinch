@@ -1,6 +1,6 @@
 import { screen, within } from "@testing-library/react";
 import { afterEach, expect, test, vi } from "vitest";
-import { renderApp, stubFetch } from "./test-utils.tsx";
+import { renderApp, renderInHebrew, stubFetch } from "./test-utils.tsx";
 
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -20,8 +20,22 @@ function tab(name: string) {
 test("an unknown address shows the not-found page with a way back", () => {
   stubNotFound();
   renderApp("/nope");
-  expect(screen.getByRole("heading", { level: 1, name: "Page not found" })).toBeInTheDocument();
+  const heading = screen.getByRole("heading", { level: 1, name: "Page not found" });
+  expect(screen.getByText("There is nothing at this address.")).toBeInTheDocument();
   expect(screen.getByRole("link", { name: "Back to My recipes" })).toHaveAttribute(
+    "href",
+    "/recipes",
+  );
+  // The empty state is main's whole content, which makes main a column it centres in (Layout).
+  expect(heading.closest("[data-empty-state]")?.parentElement).toBe(screen.getByRole("main"));
+});
+
+test("in Hebrew, the not-found page is in Hebrew", async () => {
+  stubNotFound();
+  await renderInHebrew("/nope");
+  expect(screen.getByRole("heading", { level: 1, name: "הדף לא נמצא" })).toBeInTheDocument();
+  expect(screen.getByText("אין כלום בכתובת הזאת.")).toBeInTheDocument();
+  expect(screen.getByRole("link", { name: "לחזור למתכונים שלי" })).toHaveAttribute(
     "href",
     "/recipes",
   );

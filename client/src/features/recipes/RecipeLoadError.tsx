@@ -1,4 +1,6 @@
+import { CloudOff } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { EmptyState } from "../../components/EmptyState.tsx";
 import { Button } from "../../components/ui/Button.tsx";
 import { NotFoundPage } from "../../components/NotFoundPage.tsx";
 import { ApiError } from "../../lib/api.ts";
@@ -10,26 +12,32 @@ type RecipeLoadErrorProps = {
 };
 
 // When a recipe doesn't load: "not found" if it doesn't exist (no retry would change that),
-// otherwise Try again. Shared by the recipe page, its edit page and an import's review page.
+// otherwise Try again, as an empty state, centred as the page that didn't load. Shared by the
+// recipe page, its edit page, cook mode and an import's review page, each of which it is whole.
 export function RecipeLoadError({ error, retry, retrying }: RecipeLoadErrorProps) {
   const { t } = useTranslation();
   if (error instanceof ApiError && error.status === 404) return <NotFoundPage />;
   return (
-    <div role="alert">
+    <>
       <title>{`${t("recipe.notLoaded")} · Pinch`}</title>
-      <h1 className="mt-8 text-3xl font-bold tracking-tight text-balance">
-        {t("recipe.couldntLoad")}
-      </h1>
-      <Button
-        type="button"
-        variant="secondary"
-        onClick={retry}
-        disabled={retrying}
-        aria-busy={retrying}
-        className="mt-3"
-      >
-        {retrying ? t("auth.trying") : t("auth.tryAgain")}
-      </Button>
-    </div>
+      <EmptyState
+        icon={CloudOff}
+        as="h1"
+        title={t("recipe.couldntLoad")}
+        subtitle={t("auth.checkAndTryAgain")}
+        role="alert"
+        action={
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={retry}
+            disabled={retrying}
+            aria-busy={retrying}
+          >
+            {retrying ? t("auth.trying") : t("auth.tryAgain")}
+          </Button>
+        }
+      />
+    </>
   );
 }

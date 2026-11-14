@@ -42,8 +42,10 @@ export function Layout() {
           className={cn(
             "mx-auto w-full max-w-3xl flex-1 px-4 py-8 wrap-anywhere sm:px-6",
             // Add recipe centres its field in the height left (ImportPage), and My recipes its
-            // "No recipes yet": a column, so their my-auto has the room to share.
+            // "No recipes yet": a column, so their my-auto has the room to share. The same for a
+            // page that is only an empty state (not found, the page that didn't load: EmptyState).
             onTabPage && "flex flex-col",
+            "has-[>[data-empty-state]]:flex has-[>[data-empty-state]]:flex-col",
             // From 1024 px My recipes has a panel beside its grid, and a recipe its picture beside
             // the title and its ingredients beside the steps (in cook mode too): they take the width.
             (pathname === "/recipes" || onRecipe) && "max-w-7xl",
