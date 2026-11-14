@@ -2,8 +2,9 @@ import { useInfiniteQuery } from "@tanstack/react-query";
 import i18next from "i18next";
 import { useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
-import { Link, useSearchParams } from "react-router";
-import { ShoppingBasket, X } from "lucide-react";
+import { useSearchParams } from "react-router";
+import { CloudOff, X } from "lucide-react";
+import { EmptyState } from "../../components/EmptyState.tsx";
 import { InSentence } from "../../components/InSentence.tsx";
 import { Badge } from "../../components/ui/Badge.tsx";
 import { Button } from "../../components/ui/Button.tsx";
@@ -13,6 +14,7 @@ import { useHeadingFocus } from "../../lib/useHeadingFocus.ts";
 import { useMediaQuery } from "../../lib/useMediaQuery.ts";
 import { LazyFiltersPanel } from "./LazyFiltersPanel.tsx";
 import { ListFilters } from "./ListFilters.tsx";
+import { NoRecipesYet } from "./NoRecipesYet.tsx";
 import { RecipeCard } from "./RecipeCard.tsx";
 import { appliedFilters } from "./filterLabels.ts";
 import {
@@ -102,6 +104,8 @@ export function RecipeListPage() {
   // Not before the first recipe: there's nothing to search yet. Known only once a list without
   // filters has loaded, so the search box stays while one loads (it keeps its focus).
   const noRecipesYet = !filtering && !isPlaceholderData && recipes?.length === 0;
+  // The two messages centred in the height under the header, as the empty states.
+  const centred = noRecipesYet || isLoadingError;
 
   return (
     <>
@@ -128,8 +132,9 @@ export function RecipeListPage() {
       )}
 
       {/* Two columns from 1024 px: the Filters panel and the grid. */}
-      {/* With no recipes yet, a column that fills main (Layout), so the message can centre. */}
-      <div className={cn("lg:flex lg:gap-8", noRecipesYet && "flex flex-1 flex-col")}>
+      {/* With no recipes yet, or none loaded, a column that fills main (Layout), so the message
+          can centre in what's left under the search; from 1024 px still a row, the panel beside. */}
+      <div className={cn("lg:flex lg:gap-8", centred && "flex flex-1 flex-col lg:flex-row")}>
         {!noRecipesYet && wide && (
           <LazyFiltersPanel
             filters={filters}
@@ -141,7 +146,7 @@ export function RecipeListPage() {
           />
         )}
 
-        <div className={cn("min-w-0 flex-1", noRecipesYet && "flex flex-col")}>
+        <div className={cn("min-w-0 flex-1", centred && "flex flex-col")}>
           {!noRecipesYet && (
             <>
               <ListFilters
@@ -215,23 +220,28 @@ export function RecipeListPage() {
             </>
           )}
 
-          {/* Only when nothing has loaded: a failed refetch or next page keeps the list on screen. */}
-          {/* Centred, as the empty states. */}
+          {/* Only when nothing has loaded: a failed refetch or next page keeps the list on screen.
+              Under the search, which stays: the words typed are kept for the next try. */}
           {isLoadingError && (
-            <div role="alert" className="mt-10 text-center">
-              <h2 className="text-xl font-semibold">{t("recipes.couldntLoad")}</h2>
-              {/* The status stays "error" while it retries, so the button shows the wait. */}
-              <Button
-                type="button"
-                variant="secondary"
-                onClick={() => void refetch()}
-                disabled={isFetching}
-                aria-busy={isFetching}
-                className="mt-4"
-              >
-                {isFetching ? t("auth.trying") : t("auth.tryAgain")}
-              </Button>
-            </div>
+            <EmptyState
+              icon={CloudOff}
+              as="h2"
+              title={t("recipes.couldntLoad")}
+              subtitle={t("auth.checkAndTryAgain")}
+              role="alert"
+              action={
+                // The status stays "error" while it retries, so the button shows the wait.
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={() => void refetch()}
+                  disabled={isFetching}
+                  aria-busy={isFetching}
+                >
+                  {isFetching ? t("auth.trying") : t("auth.tryAgain")}
+                </Button>
+              }
+            />
           )}
 
           {noMatch && (
@@ -273,20 +283,8 @@ export function RecipeListPage() {
             </div>
           )}
 
-          {noRecipesYet && (
-            // In the middle of the height the header leaves, as Add recipe's field (ImportPage).
-            <div className="my-auto text-center">
-              <div className="flex justify-center text-muted-foreground">
-                <ShoppingBasket className="size-[5em]" strokeWidth={1.5} />
-              </div>
-              <h2 className="mt-1 text-xl font-semibold">{t("recipes.noRecipesYet")}</h2>
-              <p className="mt-2 text-pretty text-muted-foreground">{t("recipes.pinchOrWrite")}</p>
-              {/* Write a recipe is already on the page (Header). */}
-              <Button asChild className="mt-4">
-                <Link to="/">{t("recipes.pinchRecipe")}</Link>
-              </Button>
-            </div>
-          )}
+          {/* In the middle of the height the header leaves, as Add recipe's field (ImportPage). */}
+          {noRecipesYet && <NoRecipesYet />}
 
           {recipes !== undefined && recipes.length > 0 && (
             <ul

@@ -25,6 +25,7 @@ export const he: Translation<typeof en> = {
     backToRecipes: "לחזור למתכונים שלי",
     didntLoad: "הדף לא נטען",
     checkAndReload: "כדאי לבדוק את החיבור ולטעון את הדף מחדש.",
+    reload: "לטעון מחדש",
   },
   auth: {
     logInTitle: "התחברות",

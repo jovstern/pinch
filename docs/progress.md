@@ -190,8 +190,17 @@ After M10 (found by M10's UI review, not M10's to fix):
 - [ ] An English title's alignment on a Hebrew recipe page at desktop width (the review's S6)
 - [ ] The quick-tag chips at 40 px, under the 44 px touch target (the review's S7)
 - [ ] The top toast covers the paste field on a phone (the review's S8)
-- [ ] Move the English strings out of the entry (about 6.5 kB gzip that Hebrew users never use):
-      frees room on every route and cook's LCP (2.46 of 2.5 s); changes §16.3
+- [x] Move the English strings out of the entry (about 6.5 kB gzip that Hebrew users never use;
+      measured 3.5, §16.10): frees room on every route and cook's LCP (2.46 of 2.5 s); changes §16.3
+
+## UI pass after M10 (the user's list, 2026-11-13)
+
+- [x] U1 One centred empty state (icon, title, subtitle) for not found, the error page and No recipes yet; the queue's working status shimmers
+- [ ] U2 Add recipe's paste box: the row keeps the English layout in Hebrew, an (i) with where to find the link per app, a new placeholder
+- [ ] U6 The English strings out of the entry, loaded like Hebrew (the user's choice over raising the budgets; before U3, as the editor is at 209.3 of 210)
+- [ ] U3 The header: on phones the tabs under the full logo and the avatar; in Hebrew the logo centred; an All recipes tab with a Coming soon page (the shared recipes to clone, ranked: not in v1)
+- [ ] U4 Light, dark or the system's, from the avatar's menu, saved on this device
+- [ ] U5 Google's profile picture in the avatar
 
 ## M11 — Pinch online (design §15, §8.3, D31–D38)
 
@@ -210,7 +219,7 @@ which it needs.
 - [ ] D2 Fly: `fly.toml` (two process groups, the release command, blue-green), the API's check
       on `/api/ready`, the worker's health port; `ci.yml` (the gates on every PR, deploy on
       `master`). Needs `FLY_API_TOKEN` and the secrets; the first deploy, on `*.fly.dev`
-- [ ] D3 The domain and the headers: helmet's CSP with the inline script's hash computed at start;
+- [ ] D3 The domain and the headers: helmet's CSP with the inline script's hash computed at start, and `img-src 'self' data: https://*.googleusercontent.com` for the avatar (§15.4), with a header test;
       `PUBLIC_URL` and Google's production redirect. Needs the domain and its certificate
 - [ ] P1 Password reset, the API: `passwordResets` and its indexes, `POST /api/auth/forgot` and
       `/reset`, their rate limits, every session ended; `email.ts` (Resend through `fetch`, a

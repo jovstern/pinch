@@ -12,6 +12,9 @@
          them (design §16.2, D41): the pinch_lang cookie the API sets from the account (or the
          switch on Log in), else the browser's: Hebrew if one of its languages is (iw is its old
          code) or its time zone is Israel's, else English. main.tsx then reads <html lang>.
+         Then that language's strings, which the first render waits for (design §16.3), asked
+         for with the entry rather than after it has run; the build puts their chunks' names in
+         (vite.config.ts).
          Then the queue, asked for with the page, not after its JS has run: every page's header counts
          it, and Add recipe shows nothing until it's known (ImportPage), so it is that page's
          LCP. fetch() picks this answer up (same address, mode and credentials). Only when the
@@ -28,6 +31,11 @@
       const lang = saved ?? (hebrew ? "he" : "en");
       document.documentElement.lang = lang;
       document.documentElement.dir = lang === "he" ? "rtl" : "ltr";
+
+      const strings = document.createElement("link");
+      strings.rel = "modulepreload";
+      strings.href = lang === "he" ? "/src/locales/he.ts" : "/src/locales/en.ts";
+      document.head.append(strings);
 
       if (/(^|; )pinch_signed_in=1/.test(document.cookie)) {
         const queue = document.createElement("link");

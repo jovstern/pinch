@@ -1,10 +1,10 @@
 import { messages } from "@pinch/shared";
 
 // Every word the interface says, in English (design §16.3, D39): one object, keys grouped by
-// area. In the entry: English is the default and the fallback. Hebrew (he.ts) has the same keys,
-// which tsc checks. A plural is written whole in each form (_one, _other), and i18next picks one
-// by count. The strings move here area by area (M10's slices); the rest are still in the
-// components.
+// area. Its own chunk, as Hebrew's: fetched only by a page in English. Hebrew (he.ts) has the
+// same keys, which tsc checks. A plural is written whole in each form (_one, _other), and
+// i18next picks one by count. The strings move here area by area (M10's slices); the rest are
+// still in the components.
 export const en = {
   // The app's frame: the logo, the tabs, Write a recipe and the avatar's menu (Header, UserMenu).
   header: {
@@ -30,6 +30,7 @@ export const en = {
     backToRecipes: "Back to My recipes",
     didntLoad: "This page didn't load",
     checkAndReload: "Check your connection, then reload the page.",
+    reload: "Reload",
   },
   // Log in, Sign up and the session's error (SessionError), with what a failed submit says
   // (submitError). A field's own messages are the shared schemas' (validation, design §16.7).

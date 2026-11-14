@@ -186,9 +186,13 @@ function queueSummary(imports: Import[]) {
     .join(" · ");
 }
 
-// Ready stands out: it's the one waiting for the user. Stuck is a problem, as failed.
+// Ready stands out: it's the one waiting for the user. Stuck is a problem, as failed. One being
+// worked on (fetching, analyzing) shimmers (globals.css), as long as the worker has it; waiting
+// in the queue, or to try again, nothing is working on it yet, so it stays still. w-fit: the
+// band sweeps the words, not the card's whole width.
 function statusColor(job: Import) {
   if (job.stalled || job.status === "failed") return "text-destructive";
+  if (job.status === "processing") return "w-fit shimmer";
   return job.status === "ready" ? "font-semibold text-primary" : "text-muted-foreground";
 }
 

@@ -51,6 +51,9 @@ otherwise list them in the PR.
 
 **Last PR of a milestone only:** also run the `ui-reviewer` agent (if UI changed) and the
 `observer` agent, fix their must-fixes, run `npm run e2e`, and record the demo with `pr-demo`.
+Then run the `designer` agent in review mode, include its `docs/ux/` changes in the PR and
+list its new proposals in the PR body for the user to approve or decline. Build none of them
+until the user approves.
 
 ## 4. Open the PR and stop
 
