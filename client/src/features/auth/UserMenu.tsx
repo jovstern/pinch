@@ -14,7 +14,7 @@ import {
   DropdownMenuTrigger,
 } from "../../components/ui/DropdownMenu.tsx";
 import { loadPage, reloadPage } from "../../lib/loadPage.ts";
-import { setTheme, useTheme } from "../../lib/theme.ts";
+import { setTheme, useTheme, type Theme } from "../../lib/theme.ts";
 import { toastCouldntSave } from "../../lib/toasts.tsx";
 import { Avatar } from "./Avatar.tsx";
 import { changeLanguage, logOut } from "./authQueries.ts";
@@ -116,17 +116,16 @@ export function UserMenu({ me }: { me: Me }) {
           {t("header.theme")}
         </DropdownMenuLabel>
         {/* Saved on this device, not the account (lib/theme.ts): it applies at once. */}
-        <DropdownMenuRadioGroup aria-labelledby={themeId} value={theme}>
+        <DropdownMenuRadioGroup
+          aria-labelledby={themeId}
+          value={theme}
+          onValueChange={(value) => {
+            // One of the items' values, below.
+            setTheme(value as Theme);
+          }}
+        >
           {themes.map(({ value, Icon, label }) => (
-            <DropdownMenuRadioItem
-              key={value}
-              value={value}
-              className="gap-2"
-              onSelect={(event) => {
-                keepOpen(event);
-                setTheme(value);
-              }}
-            >
+            <DropdownMenuRadioItem key={value} value={value} className="gap-2" onSelect={keepOpen}>
               <Icon aria-hidden="true" className="size-4" />
               {t(label)}
             </DropdownMenuRadioItem>

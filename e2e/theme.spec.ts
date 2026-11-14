@@ -53,3 +53,18 @@ test("the avatar's menu, open, has no accessibility violations in either theme",
   await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
   expect((await scan(page)).violations).toEqual([]);
 });
+
+// Sonner draws its own colours too (the close button's hover): they follow the chosen theme, not
+// the system's.
+test("the toasts follow the theme chosen, against the system's", async ({ page }) => {
+  await page.emulateMedia({ colorScheme: "light" });
+  await page.goto("/");
+  await page.getByRole("button", { name: "Your account" }).click();
+  await page.getByRole("menuitemradio", { name: "Dark" }).click();
+  await page.keyboard.press("Escape");
+  await page
+    .getByLabel("Pinch a recipe from a reel")
+    .fill("https://www.instagram.com/reel/e2e-theme-toast/");
+  await page.getByRole("button", { name: "Pinch it" }).click();
+  await expect(page.locator("[data-sonner-toaster]")).toHaveAttribute("data-sonner-theme", "dark");
+});

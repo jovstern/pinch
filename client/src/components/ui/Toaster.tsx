@@ -2,6 +2,7 @@ import { CircleCheck, TriangleAlert } from "lucide-react";
 import type { CSSProperties } from "react";
 import { Toaster as Sonner } from "sonner";
 import { pageIsRtl } from "../../i18n.ts";
+import { useDarkTheme } from "../../lib/theme.ts";
 import { useMediaQuery } from "../../lib/useMediaQuery.ts";
 
 // md: Tailwind's 768 px, where the toasts move from the top to the bottom corner on the end side:
@@ -25,6 +26,7 @@ const focusRing =
 export function Toaster({ alwaysTop }: { alwaysTop: boolean }) {
   const atBottom = useMediaQuery(wide) && !alwaysTop;
   const rtl = pageIsRtl();
+  const dark = useDarkTheme();
   return (
     <div lang="en" className="contents">
       <Sonner
@@ -38,8 +40,9 @@ export function Toaster({ alwaysTop }: { alwaysTop: boolean }) {
         // Both: Sonner's phone rule (mobileOffset) stops at 600 px, the header's at 768.
         offset={atBottom ? undefined : belowHeader}
         mobileOffset={belowHeader}
-        // Sonner's own dark colours (the close button's hover) follow the system, as Pinch's do.
-        theme="system"
+        // Sonner's own dark colours (the close button's hover) follow the page's theme, the one
+        // chosen in the avatar's menu or the system's (lib/theme.ts), as Pinch's do.
+        theme={dark ? "dark" : "light"}
         icons={{
           success: <CircleCheck className="size-4 text-primary" />,
           error: <TriangleAlert className="size-4 text-destructive" />,

@@ -1,4 +1,6 @@
 import { afterEach, expect, test, vi } from "vitest";
+import indexHtml from "../../index.html?raw";
+import { barColour, themeKey } from "./theme.ts";
 
 // The module reads the stored choice as it loads, so each test loads it afresh, after setting up
 // the device: its storage and its system's theme (jsdom has no matchMedia).
@@ -100,4 +102,12 @@ test("a choice made in another tab applies here too", async () => {
   dispatchEvent(new StorageEvent("storage", { key: "pinch_theme", newValue: "dark" }));
   expect(getTheme()).toBe("dark");
   expect(pageTheme()).toBe("dark");
+});
+
+// index.html's script repeats the key and the bar's colours (it runs before any module): this
+// keeps the copies the same.
+test("index.html's script uses the same storage key and bar colours", () => {
+  expect(indexHtml).toContain(`localStorage.getItem("${themeKey}")`);
+  expect(indexHtml).toContain(barColour.light);
+  expect(indexHtml).toContain(barColour.dark);
 });

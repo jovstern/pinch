@@ -6,16 +6,18 @@ import { useSyncExternalStore } from "react";
 // System, and when another tab chooses. The CSS keys on data-theme alone (globals.css).
 export type Theme = "system" | "light" | "dark";
 
-const key = "pinch_theme";
+// Also in index.html's script, which a test checks (theme.test.ts).
+export const themeKey = "pinch_theme";
 const systemDark = "(prefers-color-scheme: dark)";
-// The browser's bar in the page's colour (--color-surface of each theme), as index.html's script.
-const barColour = { light: "#fbf8f2", dark: "#17130f" };
+// The browser's bar in the page's colour (--color-surface of each theme, globals.css), as
+// index.html's script.
+export const barColour = { light: "#fbf8f2", dark: "#17130f" };
 
 // Unreadable or unwritable storage (a private window that blocks it) isn't an error: the choice
 // still holds for this page, it just isn't kept.
 function stored(): Theme {
   try {
-    const value = localStorage.getItem(key);
+    const value = localStorage.getItem(themeKey);
     return value === "light" || value === "dark" ? value : "system";
   } catch {
     return "system";
@@ -25,13 +27,10 @@ function stored(): Theme {
 let chosen = stored();
 const listeners = new Set<() => void>();
 
-export function resolveTheme(theme: Theme, systemIsDark: boolean) {
-  if (theme === "system") return systemIsDark ? "dark" : "light";
-  return theme;
-}
-
+// As index.html's script: the choice, else the system's.
 export function applyTheme() {
-  const theme = resolveTheme(chosen, chosen === "system" && matchMedia(systemDark).matches);
+  const dark = chosen === "dark" || (chosen === "system" && matchMedia(systemDark).matches);
+  const theme = dark ? "dark" : "light";
   document.documentElement.dataset.theme = theme;
   document.querySelector('meta[name="theme-color"]')?.setAttribute("content", barColour[theme]);
   for (const listener of listeners) listener();
@@ -45,19 +44,21 @@ export function setTheme(theme: Theme) {
   chosen = theme;
   try {
     // System is the default, so it's the key's absence.
-    if (theme === "system") localStorage.removeItem(key);
-    else localStorage.setItem(key, theme);
+    if (theme === "system") localStorage.removeItem(themeKey);
+    else localStorage.setItem(themeKey, theme);
   } catch {
     // Kept for this page only (above).
   }
   applyTheme();
 }
 
-// main.tsx, once: follow the system while on System, and another tab's choice.
+// main.tsx, once: the theme now (as the script did, in case it stopped before), then the system's
+// changes while on System, and another tab's choice.
 export function watchTheme() {
+  applyTheme();
   matchMedia(systemDark).addEventListener("change", applyTheme);
   addEventListener("storage", (event) => {
-    if (event.key !== key && event.key !== null) return;
+    if (event.key !== themeKey && event.key !== null) return;
     chosen = stored();
     applyTheme();
   });

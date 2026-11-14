@@ -28,7 +28,8 @@ const queryClient = new QueryClient({
 });
 
 loadDisplayFont();
-// index.html's script set the theme; from here it follows the system (on System) and other tabs.
+// The theme, as index.html's script set it; from here it follows the system (on System) and
+// other tabs.
 watchTheme();
 
 // Radix's menus and radio groups follow the page's direction (§16.4): a menu aligned to the end
