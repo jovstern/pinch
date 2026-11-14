@@ -19,9 +19,14 @@ const LoginPage = lazy(async () => ({
 const SignupPage = lazy(async () => ({
   default: (await import("./features/auth/SignupPage.tsx")).SignupPage,
 }));
+// All recipes' placeholder (design §14.1): its own chunk too, as nothing else needs it.
+const ExplorePage = lazy(async () => ({
+  default: (await import("./features/explore/ExplorePage.tsx")).ExplorePage,
+}));
 
-// The screens (design §14): / is Add recipe, /recipes My recipes (D24). Log in and Sign up are
-// for a signed-out visitor, everything else for a signed-in user (SessionGate, §8.3).
+// The screens (design §14): / is Add recipe, /recipes My recipes, /explore All recipes (D24). Log
+// in and Sign up are for a signed-out visitor, everything else for a signed-in user (SessionGate,
+// §8.3).
 export function App() {
   return (
     <Routes>
@@ -52,6 +57,14 @@ export function App() {
           <Route path="recipes/:id/edit" element={<EditRecipePage />} />
           <Route path="recipes/:id/cook" element={<LazyCookPage />} />
           <Route path="imports/:id" element={<ReviewImportPage />} />
+          <Route
+            path="explore"
+            element={
+              <Suspense>
+                <ExplorePage />
+              </Suspense>
+            }
+          />
           <Route path="*" element={<NotFoundPage />} />
         </Route>
       </Route>
