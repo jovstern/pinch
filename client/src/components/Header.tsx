@@ -12,7 +12,7 @@ import { Badge } from "./ui/Badge.tsx";
 import { Button } from "./ui/Button.tsx";
 
 // The tab that owns each page (design §14, D24): an inner page keeps its tab selected. A page
-// of none (not found) selects none.
+// of no tab (not found) selects none.
 function tabOf(pathname: string) {
   if (pathname === "/" || pathname === "/recipes/new" || pathname.startsWith("/imports/")) {
     return "new";
@@ -24,9 +24,9 @@ function tabOf(pathname: string) {
 
 // shadcn's TabsTrigger look; the selected one is lifted out of the row. On a phone the three
 // share the row's width, tighter and a size smaller, so they fit with their counts ("Add recipe
-// 13", "My recipes 120") at 360 px, and smaller again under it, for 320 px.
+// 13", "My recipes 120") at 360 px, and smaller and tighter again under it, for 320 px.
 const tabClass =
-  "inline-flex min-h-11 flex-1 items-center justify-center gap-1 rounded-control px-1.5 text-sm font-medium whitespace-nowrap text-muted-foreground aria-[current=page]:bg-background aria-[current=page]:text-foreground aria-[current=page]:shadow-sm max-[22.5rem]:px-1 max-[22.5rem]:text-[0.8125rem] sm:gap-1.5 sm:px-3 sm:text-base";
+  "inline-flex min-h-11 flex-1 items-center justify-center gap-1 rounded-control px-1.5 text-sm font-medium whitespace-nowrap text-muted-foreground aria-[current=page]:bg-background aria-[current=page]:text-foreground aria-[current=page]:shadow-sm max-[22.5rem]:px-0.5 max-[22.5rem]:text-[0.8125rem] sm:gap-1.5 sm:px-3 sm:text-base";
 
 // The app's frame, on every page (design §14, D24): the logo, the three tabs, Write a recipe and
 // the avatar, and the imports read for the tab's count. Two rows: the logo and the avatar, then
@@ -34,8 +34,9 @@ const tabClass =
 // Write a recipe floats bottom right on a phone (on Add recipe and My recipes), and is by the
 // avatar from 768 px. One row from 1024 px: the logo and the tabs at the start, the rest at the
 // end. In Hebrew the logo is in the middle of the header's width at every width (§16.4: the one
-// thing not mirrored), the tabs under it, and one row only from 1440 px, the first width where
-// the tabs, Write a recipe and the avatar fit in the half beside the logo.
+// thing not mirrored), the tabs under it, and one row only from 1280 px, the tabs, Write a
+// recipe and the avatar in the half beside the logo: Write a recipe as its pen alone up to
+// 1440 px, where it fits in full.
 export function Header({ onTabPage }: { onTabPage: boolean }) {
   const { t } = useTranslation();
   const { pathname } = useLocation();
@@ -52,8 +53,21 @@ export function Header({ onTabPage }: { onTabPage: boolean }) {
     // A grid of named areas, so each width and direction places the same three parts, kept in
     // the tab order: the logo, the tabs, then Write a recipe and the avatar. Its two outer
     // columns share what's left equally, so the middle one is the header's true centre (where
-    // the Hebrew logo goes). In Hebrew's one row the tabs share the end's cell, at its start.
-    <header className="grid grid-cols-[1fr_auto_1fr] items-center gap-x-4 gap-y-2 px-4 pt-3 [grid-template-areas:'logo_._end'_'nav_nav_nav'] md:border-b md:border-border md:px-6 md:py-3 lg:ltr:grid-cols-[auto_auto_1fr] lg:ltr:[grid-template-areas:'logo_nav_end'] rtl:[grid-template-areas:'._logo_end'_'nav_nav_nav'] min-[90rem]:rtl:[grid-template-areas:'._logo_end']">
+    // the Hebrew logo goes).
+    <header
+      className={cn(
+        "grid grid-cols-[1fr_auto_1fr] items-center gap-x-4 gap-y-2 px-4 pt-3 md:border-b md:border-border md:px-6 md:py-3",
+        // Two rows: the logo and the end, then the tabs.
+        "[grid-template-areas:'logo_._end'_'nav_nav_nav'] rtl:[grid-template-areas:'._logo_end'_'nav_nav_nav']",
+        // English, one row from 1024 px: the logo, the tabs, the end.
+        "lg:ltr:grid-cols-[auto_auto_1fr] lg:ltr:[grid-template-areas:'logo_nav_end']",
+        // Hebrew, one row from 1280 px, the logo centred: the tabs share the end's cell, at its
+        // start (the nav's xl:rtl: classes). Two items in one cell can meet: these breakpoints
+        // are where they fit apart (measured, design §14), with Write a recipe as its pen alone
+        // up to 1440 px.
+        "xl:rtl:[grid-template-areas:'._logo_end']",
+      )}
+    >
       {/* The logo (D24), the "Pinch" wordmark, as files in public/: inlined, its paths would
           cost the bundle (docs/metrics). In the dark accent in the dark theme. Its height is
           set and the file gives its width, so nothing moves as it loads; asked for at low
@@ -80,7 +94,7 @@ export function Header({ onTabPage }: { onTabPage: boolean }) {
           Radix Tabs is for panels that switch within one page. It only borrows their look. */}
       <nav
         aria-label={t("header.nav")}
-        className="flex rounded-control bg-muted p-1 [grid-area:nav] md:justify-self-start rtl:md:justify-self-center min-[90rem]:rtl:justify-self-start min-[90rem]:rtl:[grid-area:end]"
+        className="flex rounded-control bg-muted p-1 [grid-area:nav] md:justify-self-start md:rtl:justify-self-center xl:rtl:justify-self-start xl:rtl:[grid-area:end]"
       >
         <Link to="/" aria-current={tab === "new" ? "page" : undefined} className={tabClass}>
           {t("header.addRecipe")}
@@ -107,7 +121,9 @@ export function Header({ onTabPage }: { onTabPage: boolean }) {
           {recipeCount !== undefined && recipeCount > 0 && (
             <>
               {" "}
-              <span className="text-sm text-muted-foreground tabular-nums">{recipeCount}</span>{" "}
+              <span className="text-muted-foreground tabular-nums sm:text-sm">
+                {recipeCount}
+              </span>{" "}
               <span className="sr-only">{t("header.recipeCount", { count: recipeCount })}</span>
             </>
           )}
@@ -124,18 +140,24 @@ export function Header({ onTabPage }: { onTabPage: boolean }) {
             recipes only), in the header from 768 px on every page. On a phone it comes after
             the tabs in the tab order though it shows at the bottom: fine for the header's one
             action. z-10: over My recipes' cards, which are positioned (the site's label on the
-            picture). */}
+            picture). In Hebrew from 1280 to 1440 px, its pen alone in a 44 px square: the words
+            stay its name for a screen reader (sr-only), and its title shows them on hover. */}
         <Button
           asChild
           variant="outline"
           className={cn(
             "md:static md:inline-flex md:rounded-control md:shadow-none",
             onTabPage ? "fixed end-4 bottom-5 z-10 rounded-full shadow-sheet" : "hidden",
+            "xl:max-[90rem]:rtl:w-11 xl:max-[90rem]:rtl:px-0",
           )}
         >
-          <Link to="/recipes/new" aria-current={pathname === "/recipes/new" ? "page" : undefined}>
+          <Link
+            to="/recipes/new"
+            title={t("header.writeRecipe")}
+            aria-current={pathname === "/recipes/new" ? "page" : undefined}
+          >
             <PenLine aria-hidden="true" className="size-4" />
-            {t("header.writeRecipe")}
+            <span className="xl:max-[90rem]:rtl:sr-only">{t("header.writeRecipe")}</span>
           </Link>
         </Button>
 

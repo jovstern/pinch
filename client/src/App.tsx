@@ -24,8 +24,9 @@ const ExplorePage = lazy(async () => ({
   default: (await import("./features/explore/ExplorePage.tsx")).ExplorePage,
 }));
 
-// The screens (design §14): / is Add recipe, /recipes My recipes, /explore All recipes (D24). Log in and Sign up are
-// for a signed-out visitor, everything else for a signed-in user (SessionGate, §8.3).
+// The screens (design §14): / is Add recipe, /recipes My recipes, /explore All recipes (D24). Log
+// in and Sign up are for a signed-out visitor, everything else for a signed-in user (SessionGate,
+// §8.3).
 export function App() {
   return (
     <Routes>

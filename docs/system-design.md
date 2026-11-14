@@ -780,7 +780,7 @@ the browser's console). Another user's recipe or import is a 404, as before. The
 | D21 | React Router (declarative: `<Routes>` in `App.tsx`, `useParams`, `Link`) | A handful of screens; the most familiar API and the least setup, easy to read line by line | TanStack Router (type-safe routes and loaders, more concepts) |
 | D22 | The daily cap (20) counts links pasted and Retry clicks, in a per-user, per-UTC-day counter (`usage`) raised atomically by both routes; past it, 429 | Imports are deleted once done, so counting them would undercount; the unique `{ownerId, day}` index makes two first counts at once safe on a standalone Mongo (as D9); the routes are where a user asks for work; automatic retries (3 a link) aren't counted, so at most 60 Gemini calls a day | Counting each Gemini call in the worker (exact, but a link could be accepted and then fail with "limit reached") |
 | D23 | "Not a recipe" and "too long" fail the import at once (`NoRetryError`, its message shown to the user); every other error is retried | Trying again gives the same answer and costs a Gemini call each time; the user learns why straight away; nor is the user offered a Retry that can't help, and would use one of the day's 20 | Retry everything (3 Gemini calls for a cat video, and a vague message) |
-| D24 | Two tabs (three since 2026-11-13: **All recipes**, `/explore`, Coming soon until after v1, §14.1), **Add recipe** (`/`, the default; *New recipe* until 2026-11-10, renamed by the user) and **My recipes** (`/recipes`, with how many recipes there are: `GET /api/recipes/count`); the import queue sits under the box on Add recipe; every inner page has breadcrumbs (docs/ux/pass-02.md §12–13); the logo (the user's, 2026-11-11) leads the header and links to Add recipe: the Pinch wordmark from 768 px, the P mark on a phone, none under 360 px (since 2026-11-13: the wordmark at every width, with the avatar above the tabs below 1024 px, and centred in Hebrew, §14); the avatar (the first letter of the user's name, M9) ends it and opens the account menu: name, email, Log out | Adding is the main event, so it opens first; the split keeps the form off the library; breadcrumbs say where a page belongs and replace Exit and "‹ Recipes"; the wordmark doesn't fit beside the tabs on a phone, and under 360 px the tabs and their counts need the whole row | One home with the box above the recipes; Recipes as the default tab; a bottom tab bar |
+| D24 | Three tabs: **Add recipe** (`/`, the default; *New recipe* until 2026-11-10), **My recipes** (`/recipes`, with how many recipes there are: `GET /api/recipes/count`) and **All recipes** (`/explore`, Coming soon until after v1, §14.1, since 2026-11-13); the import queue sits under the box on Add recipe; every inner page has breadcrumbs (docs/ux/pass-02.md §12–13). The header: the "Pinch" wordmark (the user's logo, 2026-11-11) leads and links to Add recipe; the avatar (the first letter of the user's name, M9) ends it and opens the account menu. Below 1024 px two rows, the logo and the avatar, then the tabs; one row from 1024 px. In Hebrew the logo is centred (§14, §16.4). Until 2026-11-13 a phone showed the "P" mark beside two tabs in one row (none under 360 px) | Adding is the main event, so it opens first; the split keeps the form off the library, and All recipes is the third place, others' recipes; breadcrumbs say where a page belongs and replace Exit and "‹ Recipes". Three tabs and their counts need a phone's whole width, so they get their own row, which also leaves room for the full wordmark | One home with the box above the recipes; Recipes as the default tab; a bottom tab bar; the tabs scrolling sideways on a phone |
 | D25 | Every recipe has a face: the post's picture, else an emoji the model picks for the dish (an optional `emoji` on the recipe and the draft) on a soft tile, else a cooking pot (with sparkles for a video's); a recipe written by hand gets one from its title (§6) — built in M8 F3 | The picture is what the user remembers; a recipe with none still needs something to recognise; the title's list keeps it to the server, and the editor's JS at its budget | Grey placeholders; generated images; an emoji field in the editor; a map from the tags on the client |
 | D26 | The UI is built from **shadcn/ui** components, copied into `client/src/components/ui/`, their variables mapped onto Pinch's tokens; controls 44 px tall for touch | Accessible Radix parts (Tabs, Sheet, DropdownMenu, Dialog, toasts) whose code lives in the repo and can be read line by line; one pattern per control | Pinch's own components only; a packaged kit (MUI, Chakra) |
 | D27 | Undo in the toasts is a **soft delete**: DELETE sets `deletedAt` on the recipe or import, every read (lists, search, a recipe, its picture, edit, cook, the queue, its badge, approve, retry, the worker's claim and saves) leaves those out, `POST …/restore` unsets it, and a partial TTL index deletes them for good an hour later. Pinch it's Undo is the same DELETE: the worker's writes are conditional on the job not being deleted (§4.3), so a cancelled import never turns ready. Built in M8 F4 | Undo needs the thing to still exist; the server is the one place every tab and the worker agree on, and a closed tab can't lose a delete; one field and one filter for both collections, one atomic `updateOne` per write (no transactions, D9). Cancelling counts against the day's cap (D22): the request was already counted | Sending the DELETE only once the toast's 8 s are over (lost if the tab closes, other tabs show the deleted one meanwhile); a `cancelled` status for imports (a second mechanism next to the recipes' delete); moving deleted documents to a trash collection (two writes, no transaction) |
@@ -937,11 +937,14 @@ phone's width up to 1024 px.
 
 **In Hebrew** (M10, §16) every screen is the mirror of the above, "left" and "right" read as
 start and end, but for the logo: it is in the middle of the header's width at every width (the
-user's call, 2026-11-13; §16.4), the avatar at the left, its menu opening from there. Below
-1440 px the tabs are a second row, centred under the logo; from 1440 px one row, the tabs beside
-the logo in the left half, then Write a recipe and the avatar (measured: the tabs, Write a recipe
-and the avatar need about 600 px, the half beside the logo, so one row at 1024 or 1280 px would
-put the tabs over the logo); Write a recipe floats bottom left on a phone; toasts sit bottom left from 768 px;
+user's call, 2026-11-13; §16.4), the avatar at the left, its menu opening from there. The tabs
+fill the second row on a phone, and are centred under the logo from 768 px. One row from 1280
+px: the tabs beside the logo in the left half, then Write a recipe and the avatar; up to 1440 px
+Write a recipe is its pen alone (a 44 px square, its words its name and its title), and in full
+from 1440 px (the user's call, 2026-11-14). The left half has to hold all three: measured with
+the counts "13" and "120", the tabs are 392 px, so at 1280 px they keep 64 px from the pen and
+16 from the logo, and at 1440 px 48 px from Write in full; below 1280 px the half is too
+narrow for them. Write a recipe floats bottom left on a phone; toasts sit bottom left from 768 px;
 My recipes' filter panel is on the right from 1024 px, and the editor's main column too; a
 breadcrumb's › and cook mode's ‹ › point the other way, and there the next card comes in from
 the left, and ← goes to the next step. What a user or a post wrote keeps its own direction
@@ -953,7 +956,8 @@ Log in and Sign up have a quiet switch under the card, the other language named 
 
 The third tab, **All recipes** (`/explore`), will be the recipes saved across Pinch, ranked, for
 a user to copy into My recipes. Until then it opens a Coming soon page: an empty state (a globe,
-"Coming soon", "Recipes saved across Pinch, ranked, to copy into My recipes.", no button), its own
+"Coming soon", "The recipes people save on Pinch, the best first, to copy into My recipes.", no
+button), its own
 lazy chunk. The address names the page's job rather than the tab's label, which may change, as
 New recipe became Add recipe (D24). The tabs go from the user's own work outward: Add recipe,
 My recipes, All recipes.
@@ -964,7 +968,11 @@ My recipes, All recipes.
   holds one answer per post; or only recipes their owners chose to share); what a copy keeps (a
   link back, the original's later edits or not); the ranking's signals (copies, cooks, saves,
   recency) and how they resist gaming; whether hand-written recipes can be shared; moderation
-  and reporting; and the API and indexes a ranked, searchable list needs.
+  and reporting; credit to the post's creator, and copyright in a recipe's words; the post's
+  picture (the right to show it, and hosting it for everyone); filtering by language; one entry
+  per post (dedupe by `linkKey`, §4.6); what happens when an owner deletes a recipe or their
+  account; whether an owner's edits change what others see or the shared answer stays as it was
+  read; and the API and indexes a ranked, searchable list needs.
 
 ## 15. Running in production (M11, D31–D38)
 
@@ -1242,7 +1250,9 @@ file it serves at start (D36, §15.4).
   `full`, `[…]`), so prose ("the top left corner", "bottom-right") passes.
 - **The one exception, the header's logo** (§14): it is centred in Hebrew rather than mirrored
   to the right, the user's call (2026-11-13). The header's grid has its own areas for each
-  direction (`rtl:[grid-template-areas:…]`), so it stays logical: no physical class.
+  direction (`rtl:[grid-template-areas:…]`), so it stays logical: no physical class. The
+  header's breakpoints differ by direction too: one row from 1024 px in English, from 1280 px
+  in Hebrew, where Write a recipe is its pen alone up to 1440 px (`xl:max-[90rem]:rtl:`).
 - **Icons that mirror** (`rtl:-scale-x-100`): those that point the reading way. ChevronLeft and
   ChevronRight (cook mode's ‹ ›, a breadcrumb's separator), ExternalLink (its arrow leaves toward
   the end), LogOut (its arrow too), and any back, forward or send arrow added later. **Not

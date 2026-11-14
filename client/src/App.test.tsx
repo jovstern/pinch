@@ -101,7 +101,7 @@ test("All recipes is a Coming soon page, until there are recipes to share", asyn
   // Its own chunk (App), so it shows once loaded.
   const heading = await screen.findByRole("heading", { level: 1, name: "Coming soon" });
   expect(
-    screen.getByText("Recipes saved across Pinch, ranked, to copy into My recipes."),
+    screen.getByText("The recipes people save on Pinch, the best first, to copy into My recipes."),
   ).toBeInTheDocument();
   expect(document.title).toBe("All recipes · Pinch");
   expect(heading.closest("[data-empty-state]")?.parentElement).toBe(screen.getByRole("main"));
@@ -112,7 +112,7 @@ test("in Hebrew, All recipes' Coming soon page is in Hebrew", async () => {
   await renderInHebrew("/explore");
   expect(await screen.findByRole("heading", { level: 1, name: "בקרוב" })).toBeInTheDocument();
   expect(
-    screen.getByText("מתכונים שנשמרו ב\u2011Pinch, מדורגים, להעתקה אל המתכונים שלי."),
+    screen.getByText("המתכונים שנשמרים ב\u2011Pinch, הטובים ביותר קודם, להעתקה אל המתכונים שלי."),
   ).toBeInTheDocument();
 });
 

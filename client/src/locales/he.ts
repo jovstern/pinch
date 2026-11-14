@@ -30,7 +30,7 @@ export const he: Translation<typeof en> = {
   },
   explore: {
     comingSoon: "בקרוב",
-    willBe: "מתכונים שנשמרו ב\u2011Pinch, מדורגים, להעתקה אל המתכונים שלי.",
+    willBe: "המתכונים שנשמרים ב\u2011Pinch, הטובים ביותר קודם, להעתקה אל המתכונים שלי.",
   },
   auth: {
     logInTitle: "התחברות",
