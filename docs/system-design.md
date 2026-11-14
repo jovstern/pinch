@@ -886,12 +886,13 @@ moves as it loads; Google's size suffix (`=s96-c` or `=s96`) asked as `=s132-c`,
 one that fails to load gives way to the letter, as a recipe's thumbnail does, never a broken
 image), which opens a menu (not modal, loaded on its first
 press as ⋯ is), 288 px wide, with the name and email (a long one cut, whole in its title), then Language, its two choices
-each named in itself, "English" and "עברית", the current one checked (M10, §16.1), then Log out
-(§8.3; the theme follows the system, so it has no switch). **Write a recipe** is on every page
+each named in itself, "English" and "עברית", the current one checked (M10, §16.1), then Theme
+(below), then Log out (§8.3). **Write a recipe** is on every page
 in the header from 768 px, and a floating button at the bottom right on a phone on Add recipe and
 My recipes. The logo comes first and links to Add recipe: the "Pinch" wordmark at every width
 (the user's call, 2026-11-13), in the dark theme's accent in the dark theme
-(`client/public/logo.svg` and `logo-dark.svg`, as `<img>`, not in the JS). The header has two
+(`client/public/logo.svg` and `logo-dark.svg`, as one `<img>` whose file follows the theme,
+`components/Logo.tsx`, not in the JS). The header has two
 rows below 1024 px: the logo and the avatar (with Write a recipe from 768 px), then the tabs, the
 row's width on a phone (a size smaller there, and again under 360 px, so the three fit with their
 counts at 320 px) and as wide as they need from 768 px. From 1024 px it is one row: the logo and
@@ -916,6 +917,22 @@ off-screen". Toasts sit at the top on a phone, under the header, and bottom righ
 "ready to review" toast); they are the queue's announcements too (Sonner's region is live).
 The toasts of a step that finished (ready to review, Saved to My recipes, Back in My recipes) are
 green (`success` on `success-soft`); the rest stay neutral, and errors red.
+
+**The theme** (U4, the user's call, 2026-11-13). The avatar's menu has a Theme group ("מראה"),
+radio items with an icon each like the language's: **System** (the default, "לפי המכשיר",
+a screen), **Light** ("בהיר", a sun) and **Dark** ("כהה", a moon). A choice applies at once,
+with no reload, and the menu stays open, as for a language, so the change shows around it and
+another can be tried. It is saved on this device only (`localStorage` `pinch_theme`; System is
+the key's absence), not on the account: a theme suits a screen and its room, not a person. With
+storage blocked (a private window) it holds for the page and is lost on reload, silently.
+`lib/theme.ts` keeps it, a tiny module, no store: `<html data-theme="light|dark">` is the
+resolved theme, set first by `index.html`'s script (§16.2) and after that by the module, on a
+choice, on a change of the system's theme while on System (`matchMedia`), and on a choice made
+in another tab (the `storage` event). The CSS keys on the attribute alone: the dark tokens and
+`color-scheme: dark` are under `:root[data-theme="dark"]`, and Tailwind's `dark:` variant is
+redefined to match (`globals.css`); a `prefers-color-scheme` query alone couldn't be overridden.
+What CSS can't switch follows the module: the logo's file (`useDarkTheme`) and the one
+`theme-color` meta (the browser's bar, `--color-surface` of each theme).
 
 | Address | Screen | Its job | States |
 |---|---|---|---|
@@ -1071,7 +1088,8 @@ defaults stay: HSTS (a year, with subdomains; not on the preload list), `nosniff
 run), `object-src 'none'` and `upgrade-insecure-requests`. One change: `script-src 'self'
 'sha256-…'`, for the inline script in `index.html` (§8.3). The API reads the `index.html` it
 serves once at start, takes the inline script's text and hashes it, so the hash comes from the
-very file it serves and can't drift: no build plugin, no test to keep in step. The fonts are
+very file it serves and can't drift: no build plugin, no test to keep in step. A change to the script (the theme's lines, U4, §16.2)
+needs nothing here. The fonts are
 served by the app, and Google sign-in is a page load, not a fetch. **One other origin:** the
 avatar's Google picture (§8.3, §14) comes from Google's image host, so `img-src` must be
 `'self' data: https://*.googleusercontent.com`; without it the avatar falls back to the letter
@@ -1215,6 +1233,24 @@ has run. The chunks' names are hashed, so the build writes them into the script 
 in `vite.config.ts`; the dev server serves the source path the file has). The script's text, and
 so its CSP hash, now changes with each build: online that needs nothing, as the API hashes the
 file it serves at start (D36, §15.4).
+
+Since U4 (2026-11-13) it also sets the theme, after `dir`: the avatar's menu's choice on this
+device, else the system's, as `<html data-theme>`, and the `theme-color` meta to that theme's
+page colour (§14, "The theme"):
+
+```js
+let theme = null;
+try {
+  theme = localStorage.getItem("pinch_theme");
+} catch {}
+const dark =
+  theme === "dark" || (theme !== "light" && matchMedia("(prefers-color-scheme: dark)").matches);
+document.documentElement.dataset.theme = dark ? "dark" : "light";
+document.querySelector('meta[name="theme-color"]').content = dark ? "#17130f" : "#fbf8f2";
+```
+
+So the first frame is in the right theme and the logo's first file is the right one. Storage a
+private window blocks reads as no choice. The CSP needs nothing: the API hashes the served file.
 
 ### 16.3 Strings (D39)
 

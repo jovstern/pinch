@@ -1,4 +1,5 @@
 import { useTranslation } from "react-i18next";
+import { Logo } from "../../components/Logo.tsx";
 import { Button } from "../../components/ui/Button.tsx";
 import { AuthFrame } from "./AuthFrame.tsx";
 
@@ -12,12 +13,7 @@ export function SessionError({ retry, retrying }: { retry: () => void; retrying:
     <AuthFrame
       title={t("auth.cantReach")}
       tabTitle={t("auth.cantReach")}
-      logo={
-        <picture>
-          <source media="(prefers-color-scheme: dark)" srcSet="/logo-dark.svg" />
-          <img src="/logo.svg" alt="Pinch" width={79} height={32} className="h-10 w-auto" />
-        </picture>
-      }
+      logo={<Logo className="h-10" />}
     >
       {/* The alert is the message alone, not the card: <main> keeps its own role (axe), and the
           button inside an alert would be read again on every try. */}

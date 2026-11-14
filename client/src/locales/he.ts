@@ -18,6 +18,10 @@ export const he: Translation<typeof en> = {
     writeRecipe: "לכתוב מתכון",
     account: "החשבון שלך",
     language: "שפה",
+    theme: "מראה",
+    themeSystem: "לפי המכשיר",
+    themeLight: "בהיר",
+    themeDark: "כהה",
     logOut: "להתנתק",
   },
   frame: {

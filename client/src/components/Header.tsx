@@ -8,6 +8,7 @@ import { meQuery } from "../features/auth/authQueries.ts";
 import { importListQuery } from "../features/imports/importQueries.ts";
 import { recipeCountQuery } from "../features/recipes/recipeQueries.ts";
 import { cn } from "../lib/cn.ts";
+import { Logo } from "./Logo.tsx";
 import { Badge } from "./ui/Badge.tsx";
 import { Button } from "./ui/Button.tsx";
 
@@ -69,26 +70,18 @@ export function Header({ onTabPage }: { onTabPage: boolean }) {
       )}
     >
       {/* The logo (D24), the "Pinch" wordmark, as files in public/: inlined, its paths would
-          cost the bundle (docs/metrics). In the dark accent in the dark theme. Its height is
-          set and the file gives its width, so nothing moves as it loads; asked for at low
-          priority, so it waits behind what the page's content needs (LCP). The focus ring is
-          the logo's (! over the global ring, which is outside Tailwind's layers). */}
+          cost the bundle (docs/metrics). In the dark accent in the dark theme (Logo). Asked
+          for at low priority, so it waits behind what the page's content needs (LCP). The focus
+          ring is the logo's (! over the global ring, which is outside Tailwind's layers). */}
       <Link
         to="/"
         aria-label={t("header.home")}
         className="group flex min-h-11 items-center justify-self-start [grid-area:logo] focus-visible:outline-none!"
       >
-        <picture>
-          <source media="(prefers-color-scheme: dark)" srcSet="/logo-dark.svg" />
-          <img
-            src="/logo.svg"
-            alt="Pinch"
-            width={79}
-            height={32}
-            fetchPriority="low"
-            className="h-8 w-auto rounded-sm group-focus-visible:outline-2 group-focus-visible:outline-offset-2 group-focus-visible:outline-ring"
-          />
-        </picture>
+        <Logo
+          fetchPriority="low"
+          className="h-8 rounded-sm group-focus-visible:outline-2 group-focus-visible:outline-offset-2 group-focus-visible:outline-ring"
+        />
       </Link>
       {/* Links in a nav, not Radix Tabs: each tab is its own page with its own address, and
           Radix Tabs is for panels that switch within one page. It only borrows their look. */}
