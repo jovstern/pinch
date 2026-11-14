@@ -95,6 +95,16 @@ export const en = {
     screenshotsHint: "Up to {{max}} screenshots of the recipe, when its link and text won't do.",
     couldntSendThese: "We couldn't send these. Try again.",
     writeItYourself: "Or write it yourself",
+    // The (i) under Pinch it (PasteHelp): its name, then where on each app the share menu is (its
+    // steps, "Share → Copy link", are English in both languages, in PasteHelp: D46), and the
+    // other thing the box takes.
+    pasteHelp: {
+      label: "Where to find the link",
+      instagram: "On a reel:",
+      facebook: "On a video or reel:",
+      youtube: "On a Short or video:",
+      text: "Or paste the recipe's text, from a post's caption or a website.",
+    },
     couldntLoad: "We couldn't load your imports",
     // The queue's heading, "2 ready · 1 in progress · 1 failed", each part left out when none.
     ready_one: "{{count}} ready",
