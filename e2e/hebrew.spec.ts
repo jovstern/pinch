@@ -44,7 +44,7 @@ test.describe("signed in, in Hebrew", () => {
     await page.goto("/");
     await expect(page.locator("html")).toHaveAttribute("dir", "rtl");
     await page.getByLabel("לשמור מתכון מסרטון").fill("https://www.instagram.com/reel/e2e-he-a11y/");
-    await page.getByRole("button", { name: "Pinch", exact: true }).click();
+    await page.getByRole("button", { name: "Pinch it" }).click();
     const item = page.getByRole("listitem").filter({ hasText: "e2e-he-a11y" });
     await expect(item.getByText("מוכן לבדיקה")).toBeVisible({ timeout: 15_000 });
     expect((await scan(page)).violations).toEqual([]);
