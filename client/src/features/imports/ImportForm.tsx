@@ -13,7 +13,6 @@ import { useNavigate } from "react-router";
 import { FieldError } from "../../components/FieldError.tsx";
 import { Button } from "../../components/ui/Button.tsx";
 import { Input } from "../../components/ui/Input.tsx";
-import { pageIsRtl } from "../../i18n.ts";
 import { ApiError, sendJson } from "../../lib/api.ts";
 import { thingsToLookAt } from "../../lib/thingsToLookAt.ts";
 import {
@@ -151,11 +150,13 @@ export function ImportForm({ inputRef }: { inputRef: RefObject<HTMLInputElement 
                   id={id}
                   name={field.name}
                   value={field.state.value}
-                  placeholder={t("imports.pastePlaceholder")}
-                  // Hebrew reads right to left: the field follows what's typed in it. Empty, the
-                  // page's direction, so a Hebrew placeholder and caret sit by Pinch: not
-                  // inherited, as the row is ltr, nor "auto" (Chrome reads an empty one as ltr).
-                  dir={field.state.value !== "" ? "auto" : pageIsRtl() ? "rtl" : "ltr"}
+                  // English in Hebrew too, as Pinch it (design §16.8, the user's call): so
+                  // empty, the field is English, left to right, its placeholder by the sparkles.
+                  // Typed in, it follows what's typed (Hebrew reads right to left) and the page's
+                  // language.
+                  placeholder="Paste a video or a recipe"
+                  dir={field.state.value === "" ? "ltr" : "auto"}
+                  lang={field.state.value === "" ? "en" : undefined}
                   aria-invalid={invalid}
                   aria-describedby={invalid ? `${hintId} ${errorId}` : hintId}
                   enterKeyHint="send"
@@ -199,7 +200,8 @@ export function ImportForm({ inputRef }: { inputRef: RefObject<HTMLInputElement 
                       // Attached to the group's end edge.
                       className="-my-px -me-px shrink-0 self-stretch rounded-s-none"
                     >
-                      {isSubmitting ? t("imports.sending") : t("imports.pinchIt")}
+                      {/* English in Hebrew too (§16.8, the user's call). */}
+                      {isSubmitting ? t("imports.sending") : <span lang="en">Pinch it</span>}
                     </Button>
                   )}
                 </form.Subscribe>

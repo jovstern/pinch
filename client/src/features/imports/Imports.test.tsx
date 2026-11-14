@@ -9,10 +9,13 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, test, vi } from "vitest";
+import { Direction } from "radix-ui";
 import { MemoryRouter } from "react-router";
+import { pageIsRtl } from "../../i18n.ts";
 import { inHebrew, renderApp, renderInHebrew, toastTitled } from "../../test-utils.tsx";
 import { ImportList } from "./ImportList.tsx";
 import { pollInterval } from "./importQueries.ts";
+import { LazyPasteHelp } from "./LazyPasteHelp.tsx";
 import { ScreenshotsUpload } from "./ScreenshotsUpload.tsx";
 
 afterEach(() => {
@@ -346,9 +349,20 @@ test("Or write it yourself leads to the empty editor", async () => {
   );
 });
 
-test("the (i) under Pinch it says where each app keeps a post's link", async () => {
-  stubApi([[]]);
-  renderApp("/");
+// The (i) is hidden from / for now (ImportPage, the user's call on 2026-11-14), so it's tested on
+// its own, in the left-to-right row it had under the box, in the page's direction for Radix.
+function renderPasteHelp() {
+  render(
+    <Direction.Provider dir={pageIsRtl() ? "rtl" : "ltr"}>
+      <div dir="ltr">
+        <LazyPasteHelp />
+      </div>
+    </Direction.Provider>,
+  );
+}
+
+test("the (i) says where each app keeps a post's link", async () => {
+  renderPasteHelp();
 
   const help = await screen.findByRole("button", { name: "Where to find the link" });
   await userEvent.click(help);
@@ -366,8 +380,7 @@ test("the (i) under Pinch it says where each app keeps a post's link", async () 
 });
 
 test("the (i) opens on Enter, and Escape closes it and puts focus back on it", async () => {
-  stubApi([[]]);
-  renderApp("/");
+  renderPasteHelp();
 
   (await screen.findByRole("button", { name: "Where to find the link" })).focus();
   await userEvent.keyboard("{Enter}");
@@ -379,13 +392,14 @@ test("the (i) opens on Enter, and Escape closes it and puts focus back on it", a
   expect(screen.getByRole("button", { name: "Where to find the link" })).toHaveFocus();
 });
 
-test("the paste box's placeholder and an empty box read left to right", async () => {
+test("the paste box's placeholder and an empty box read left to right, in English", async () => {
   stubApi([[]]);
   renderApp("/");
 
   const box = await screen.findByRole("textbox", { name: "Pinch a recipe from a reel" });
   expect(box).toHaveAttribute("placeholder", "Paste a video or a recipe");
   expect(box).toHaveAttribute("dir", "ltr");
+  expect(box).toHaveAttribute("lang", "en");
 });
 
 test("a ready one counts its things to look at", async () => {
@@ -939,17 +953,19 @@ test("screenshots past the global cap say so", async () => {
 
 // In Hebrew (design §16.11): Add recipe and the queue say it in Hebrew; the toasts stay English
 // (D46), and what a user pasted keeps its own direction (§16.5).
-test("in Hebrew, Add recipe's box, its button and the way to write a recipe are in Hebrew", async () => {
+test("in Hebrew, Add recipe's box and the way to write a recipe are in Hebrew, its placeholder and button in English", async () => {
   stubApi([[]]);
   await renderInHebrew("/");
 
   const box = await screen.findByRole("textbox", { name: "לשמור מתכון מסרטון" });
-  expect(box).toHaveAttribute("placeholder", "להדביק סרטון או מתכון");
   expect(box).toHaveAccessibleDescription(
     "אפשר להדביק סרטון קצר מ\u2011YouTube, ריל מ\u2011Facebook או מ\u2011Instagram, או מתכון כטקסט",
   );
-  // "Pinch it" is "Pinch" alone in Hebrew: the brand as the action (D46).
-  expect(screen.getByRole("button", { name: "Pinch" })).toBeInTheDocument();
+  // The placeholder and Pinch it stay in English (D46, the user's call, 2026-11-14).
+  expect(box).toHaveAttribute("placeholder", "Paste a video or a recipe");
+  expect(box).toHaveAttribute("lang", "en");
+  expect(screen.getByText("Pinch it")).toHaveAttribute("lang", "en");
+  expect(screen.getByRole("button", { name: "Pinch it" })).toBeInTheDocument();
   expect(screen.getByRole("heading", { level: 1, name: "להוסיף מתכון" })).toBeInTheDocument();
   expect(screen.getByRole("link", { name: "או לכתוב מתכון ידנית" })).toHaveAttribute(
     "href",
@@ -960,28 +976,28 @@ test("in Hebrew, Add recipe's box, its button and the way to write a recipe are 
   });
 });
 
-test("in Hebrew, the paste row is laid out left to right, and its words read right to left", async () => {
+test("in Hebrew, the paste row is laid out left to right, and what's typed keeps its own direction", async () => {
   stubApi([[]]);
   await renderInHebrew("/");
 
   const box = await screen.findByRole("textbox", { name: "לשמור מתכון מסרטון" });
-  // The user's call (design §16.4): the sparkles on the left and Pinch on the right, as in
-  // English; the link on the left and the (i) on the right under it.
+  // The user's call (design §16.4): the sparkles on the left and Pinch it on the right, as in
+  // English; the link on the left under it.
   expect(box.parentElement).toHaveAttribute("dir", "ltr");
   expect(screen.getByRole("link", { name: "או לכתוב מתכון ידנית" }).parentElement).toHaveAttribute(
     "dir",
     "ltr",
   );
-  // Empty, the page's direction: the Hebrew placeholder and the caret on the right, by Pinch.
-  expect(box).toHaveAttribute("dir", "rtl");
+  // Empty, English: the placeholder and the caret on the left, by the sparkles.
+  expect(box).toHaveAttribute("dir", "ltr");
   // Typed in, its own (§16.5): a link left to right, Hebrew right to left.
   await userEvent.type(box, "שקשוקה");
   expect(box).toHaveAttribute("dir", "auto");
 });
 
 test("in Hebrew, the (i) is named in Hebrew, says it in Hebrew, and Escape puts focus back", async () => {
-  stubApi([[]]);
-  await renderInHebrew("/");
+  await inHebrew();
+  renderPasteHelp();
 
   const help = await screen.findByRole("button", { name: "איפה מוצאים את הקישור" });
   await userEvent.click(help);
@@ -1028,7 +1044,7 @@ test("in Hebrew, a refused paste's message is outside the ltr row, in the page's
 
   const box = await screen.findByRole("textbox", { name: "לשמור מתכון מסרטון" });
   await userEvent.type(box, "https://www.tiktok.com/@chef/video/1");
-  await userEvent.click(screen.getByRole("button", { name: "Pinch" }));
+  await userEvent.click(screen.getByRole("button", { name: "Pinch it" }));
 
   expect((await screen.findByRole("alert")).closest('[dir="ltr"]')).toBeNull();
 });
@@ -1039,7 +1055,7 @@ test("in Hebrew, a link from another site is refused in Hebrew", async () => {
 
   const box = await screen.findByRole("textbox", { name: "לשמור מתכון מסרטון" });
   await userEvent.type(box, "https://www.tiktok.com/@chef/video/1");
-  await userEvent.click(screen.getByRole("button", { name: "Pinch" }));
+  await userEvent.click(screen.getByRole("button", { name: "Pinch it" }));
 
   // shared's message, by its name (design §16.7).
   expect(await screen.findByRole("alert")).toHaveTextContent(
