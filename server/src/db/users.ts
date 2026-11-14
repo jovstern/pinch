@@ -11,6 +11,9 @@ export type UserDocument = {
   passwordHash?: string;
   // Google's "sub", set by a Google sign-in (A4).
   googleId?: string;
+  // Google's profile picture (an https address on *.googleusercontent.com), for the avatar: set by
+  // each Google sign-in, which also removes it when Google has none (§8.3).
+  picture?: string;
   // The interface's language (§16.1, M10); an account from before M10 has none: English.
   language?: Language;
   createdAt: Date;
@@ -27,6 +30,7 @@ export function toMe(user: UserDocument): Me {
     email: user.email,
     name: user.name,
     language: user.language ?? "en",
+    ...(user.picture && { picture: user.picture }),
   };
 }
 
@@ -41,24 +45,31 @@ export async function findAccount(db: Db, email: string) {
 // A Google sign-in's account (design §8.3): the one with this Google id; else the one with this
 // email, which Google has verified, now linked to it; else a new one, with no password. An email
 // whose account is linked to another Google account can't sign in this way: "linked_elsewhere".
+// Each sign-in stores Google's picture as it is now (its address can change), or removes it.
 export async function googleAccount(
   db: Db,
   {
     googleId,
     email,
     name,
+    picture,
     language,
-  }: { googleId: string; email: string; name: string; language: Language },
+  }: { googleId: string; email: string; name: string; picture?: string; language: Language },
 ) {
   const users = usersCollection(db);
-  const returning = await users.findOne({ googleId });
+  const returning = await users.findOneAndUpdate(
+    { googleId },
+    picture ? { $set: { picture } } : { $unset: { picture: "" } },
+    { returnDocument: "after" },
+  );
   if (returning) return returning;
   // Google has proved the email is theirs; the account's password proved nothing (anyone can sign
   // up with an email that isn't theirs and wait). So linking drops the password and ends every
   // session it made: whoever set it up is out.
   const linked = await users.findOneAndUpdate(
     { email, googleId: { $exists: false } },
-    { $set: { googleId }, $unset: { passwordHash: "" } },
+    // A password account has no picture to remove.
+    { $set: { googleId, ...(picture && { picture }) }, $unset: { passwordHash: "" } },
     { returnDocument: "after" },
   );
   if (linked) {
@@ -70,6 +81,7 @@ export async function googleAccount(
     email,
     name,
     googleId,
+    ...(picture && { picture }),
     language,
     createdAt: new Date(),
   };

@@ -219,7 +219,7 @@ which it needs.
 - [ ] D2 Fly: `fly.toml` (two process groups, the release command, blue-green), the API's check
       on `/api/ready`, the worker's health port; `ci.yml` (the gates on every PR, deploy on
       `master`). Needs `FLY_API_TOKEN` and the secrets; the first deploy, on `*.fly.dev`
-- [ ] D3 The domain and the headers: helmet's CSP with the inline script's hash computed at start;
+- [ ] D3 The domain and the headers: helmet's CSP with the inline script's hash computed at start, and `img-src 'self' data: https://*.googleusercontent.com` for the avatar (§15.4), with a header test;
       `PUBLIC_URL` and Google's production redirect. Needs the domain and its certificate
 - [ ] P1 Password reset, the API: `passwordResets` and its indexes, `POST /api/auth/forgot` and
       `/reset`, their rate limits, every session ended; `email.ts` (Resend through `fetch`, a

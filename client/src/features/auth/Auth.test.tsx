@@ -212,6 +212,48 @@ test("the avatar's menu names the user, and Log out loads plain Log in", async (
   });
 });
 
+test("the avatar shows the user's Google picture, at the avatar's size, sent without a referrer", () => {
+  stubFetch(notFound);
+  renderApp("/nope", {
+    me: { ...testUser, picture: "https://lh3.googleusercontent.com/a/photo=s96-c" },
+  });
+  const avatar = screen.getByRole("button", { name: "Your account" });
+  // Decorative: the button's name is the account's.
+  const picture = within(avatar).getByRole("presentation");
+  expect(picture).toHaveAttribute("src", "https://lh3.googleusercontent.com/a/photo=s132-c");
+  expect(picture).toHaveAttribute("referrerpolicy", "no-referrer");
+  expect(avatar).not.toHaveTextContent("D");
+});
+
+test("a picture whose address ends with a size but no crop is asked at the avatar's size too", () => {
+  stubFetch(notFound);
+  renderApp("/nope", { me: { ...testUser, picture: "https://lh3.googleusercontent.com/a/p=s96" } });
+  const avatar = screen.getByRole("button", { name: "Your account" });
+  expect(within(avatar).getByRole("presentation")).toHaveAttribute(
+    "src",
+    "https://lh3.googleusercontent.com/a/p=s132-c",
+  );
+});
+
+test("without a picture, the avatar shows the name's first letter", () => {
+  stubFetch(notFound);
+  renderApp("/nope");
+  const avatar = screen.getByRole("button", { name: "Your account" });
+  expect(within(avatar).queryByRole("presentation")).toBeNull();
+  expect(avatar).toHaveTextContent("D");
+});
+
+test("a picture that doesn't load gives way to the name's first letter, no broken image", () => {
+  stubFetch(notFound);
+  renderApp("/nope", {
+    me: { ...testUser, picture: "https://lh3.googleusercontent.com/a/gone" },
+  });
+  const avatar = screen.getByRole("button", { name: "Your account" });
+  fireEvent.error(within(avatar).getByRole("presentation"));
+  expect(within(avatar).queryByRole("presentation")).toBeNull();
+  expect(avatar).toHaveTextContent("D");
+});
+
 // The API's answer to /api/auth/providers, with Google on; anything else is a 404.
 function googleOn(path: string) {
   return path === "/api/auth/providers"

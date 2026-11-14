@@ -210,6 +210,72 @@ test("a returning Google user signs into their account, even with a new email", 
   expect(await usersCollection(db).countDocuments({ googleId: user.sub })).toBe(1);
 });
 
+// Google's profile picture, for the avatar (§8.3).
+const PICTURE = "https://lh3.googleusercontent.com/a/ACg8ocJ-first=s96-c";
+
+test("a Google user's picture is kept and me returns it", async () => {
+  const response = await callBack(await start(), { ...googleUser(), picture: PICTURE });
+
+  const me = await request(app).get("/api/auth/me").set("Cookie", sessionCookie(response));
+  expect(MeSchema.parse(me.body).picture).toBe(PICTURE);
+});
+
+test("each Google sign-in refreshes the picture, and removes it when Google has none", async () => {
+  const user = googleUser();
+  await callBack(await start(), { ...user, picture: PICTURE });
+  const changed = "https://lh4.googleusercontent.com/a/ACg8ocJ-second=s96-c";
+
+  const again = await callBack(await start(), { ...user, picture: changed });
+  const me = await request(app).get("/api/auth/me").set("Cookie", sessionCookie(again));
+  expect(me.body).toMatchObject({ picture: changed });
+
+  const none = await callBack(await start(), user);
+  const meWithout = await request(app).get("/api/auth/me").set("Cookie", sessionCookie(none));
+  expect(meWithout.body).not.toHaveProperty("picture");
+  expect(await usersCollection(db).findOne({ googleId: user.sub })).not.toHaveProperty("picture");
+});
+
+test("a picture that isn't https on Google's image host is ignored, and the sign-in goes on", async () => {
+  for (const picture of [
+    "http://lh3.googleusercontent.com/a/photo",
+    "https://example.com/photo.jpg",
+    "https://googleusercontent.com.example.com/photo.jpg",
+    "javascript:alert(1)",
+    // A user name before the @: the host is evil.com.
+    "https://x.googleusercontent.com@evil.com/p",
+    42,
+  ]) {
+    const response = await callBack(await start("/recipes"), { ...googleUser(), picture });
+
+    expect(response.headers.location).toBe("/recipes");
+    const me = await request(app).get("/api/auth/me").set("Cookie", sessionCookie(response));
+    expect(me.body).toMatchObject({ name: "Dana" });
+    expect(me.body).not.toHaveProperty("picture");
+  }
+});
+
+test("a picture's address is kept as a browser reads it, not as written", async () => {
+  // Without "//", which a browser would read as a path on our own site.
+  const response = await callBack(await start(), {
+    ...googleUser(),
+    picture: "https:lh3.googleusercontent.com/p",
+  });
+
+  const me = await request(app).get("/api/auth/me").set("Cookie", sessionCookie(response));
+  expect(me.body).toMatchObject({ picture: "https://lh3.googleusercontent.com/p" });
+});
+
+test("a password account linked by Google gets the picture", async () => {
+  const user = googleUser();
+  await request(app)
+    .post("/api/auth/signup")
+    .send({ email: user.email.toLowerCase(), password: "a long password", name: "Cook" });
+
+  const response = await callBack(await start(), { ...user, picture: PICTURE });
+  const me = await request(app).get("/api/auth/me").set("Cookie", sessionCookie(response));
+  expect(me.body).toMatchObject({ name: "Cook", picture: PICTURE });
+});
+
 test("an answer whose state isn't this browser's goes back to Log in", async () => {
   const flow = await start();
   const response = await request(app)
