@@ -1,7 +1,7 @@
 import { useId } from "react";
 import { useTranslation } from "react-i18next";
 import { NativeSelect } from "../../components/ui/NativeSelect.tsx";
-import { TIMES, timesLabel } from "./useScale.ts";
+import { peopleChoices, TIMES, timesLabel } from "./useScale.ts";
 
 type ServingsPickerProps = {
   // The recipe's own number of servings, if it says.
@@ -17,10 +17,7 @@ type ServingsPickerProps = {
 export function ServingsPicker({ servings, value, onChange }: ServingsPickerProps) {
   const { t } = useTranslation();
   const id = useId();
-  // Up to three times the recipe, at least 12, at most the 100 a recipe may serve.
-  const people = servings
-    ? Array.from({ length: Math.min(100, Math.max(12, servings * 3)) }, (_, index) => index + 1)
-    : [];
+  const noteId = useId();
 
   return (
     <div className="mt-3 grid gap-1.5">
@@ -30,6 +27,8 @@ export function ServingsPicker({ servings, value, onChange }: ServingsPickerProp
         </label>
         <NativeSelect
           id={id}
+          // The lines under it, read with it: what the recipe says, and that the amounts changed.
+          aria-describedby={noteId}
           value={String(value)}
           onChange={(event) => {
             onChange(Number(event.target.value));
@@ -37,7 +36,7 @@ export function ServingsPicker({ servings, value, onChange }: ServingsPickerProp
           className="w-auto tabular-nums"
         >
           {servings
-            ? people.map((count) => (
+            ? peopleChoices(servings).map((count) => (
                 <option key={count} value={count}>
                   {count === servings
                     ? t("recipe.original", { option: t("recipe.people", { count }) })
@@ -53,16 +52,17 @@ export function ServingsPicker({ servings, value, onChange }: ServingsPickerProp
               ))}
         </NativeSelect>
       </div>
-      {/* In the accent's colour when the amounts aren't the recipe's, so it's noticed. */}
-      {servings ? (
-        value !== servings && (
-          <p className="text-sm font-medium text-accent-strong">
-            {t("recipe.scaledFrom", { count: servings })}
+      <div id={noteId} className="grid gap-1 text-sm">
+        {!servings && <p className="text-muted-foreground">{t("recipe.noServings")}</p>}
+        {/* In the accent's colour when the amounts aren't the recipe's, so it's noticed. */}
+        {value !== (servings ?? 1) && (
+          <p className="font-medium text-accent-strong">
+            {servings
+              ? t("recipe.scaledFrom", { count: servings })
+              : t("recipe.scaledTimes", { times: timesLabel(value) })}
           </p>
-        )
-      ) : (
-        <p className="text-sm text-muted-foreground">{t("recipe.noServings")}</p>
-      )}
+        )}
+      </div>
     </div>
   );
 }

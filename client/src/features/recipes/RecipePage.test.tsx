@@ -434,21 +434,48 @@ test("Cooking for scales the amounts, says the recipe's own number, and Cook kee
   );
 });
 
+// The isolates around "×½" and fractions (useScale, ranges.ts), left out to read the text.
+function withoutIsolates(text: string | null) {
+  return text?.replace(/[⁦⁩]/g, "");
+}
+
 test("a recipe that doesn't say how many it serves offers ×½ to ×3", async () => {
   const unsure: Recipe = { ...omelette, servings: undefined };
   stubFetch(vi.fn(() => Promise.resolve(Response.json(unsure))));
-  renderApp(`/recipes/${omelette.id}?times=0.5`);
+  renderApp(`/recipes/${omelette.id}?times=3`);
 
   const picker = await screen.findByRole("combobox", { name: "Amounts" });
-  expect(picker).toHaveDisplayValue("×½");
-  expect(screen.getByText("The recipe doesn't say how many it serves.")).toBeInTheDocument();
-  // The half in its isolate (scaleQuantity), left out here.
-  expect(
-    screen.getByRole("list", { name: "Ingredients" }).textContent.replace(/[\u2066\u2069]/g, ""),
-  ).toBe("1 eggs½ tbsp butter, soft");
   expect(
     within(picker)
       .getAllByRole("option")
-      .map((option) => option.textContent),
+      .map((option) => withoutIsolates(option.textContent)),
   ).toEqual(["×½", "×1 (original)", "×2", "×3"]);
+  expect(withoutIsolates(screen.getByRole("list", { name: "Ingredients" }).textContent)).toBe(
+    "6 eggs3 tbsp butter, soft",
+  );
+  // What the recipe doesn't say, and that the amounts aren't its own, read with the picker.
+  expect(withoutIsolates(screen.getByText(/Amounts changed/).textContent)).toBe(
+    "Amounts changed · ×3 the original",
+  );
+  expect(picker).toHaveAccessibleDescription(/doesn't say how many it serves.*Amounts changed/);
+});
+
+test("a number of people the picker doesn't offer reads as the recipe as written", async () => {
+  stubApi();
+  renderApp(`/recipes/${omelette.id}?serves=50`);
+
+  const picker = await screen.findByRole("combobox", { name: "Cooking for" });
+  expect(picker).toHaveDisplayValue("1 person (original)");
+  expect(screen.getByRole("list", { name: "Ingredients" })).toHaveTextContent("2 eggs");
+  expect(screen.queryByText(/Amounts changed/)).not.toBeInTheDocument();
+});
+
+test("in Hebrew, Cooking for and its note are in Hebrew", async () => {
+  stubFetch(() => Promise.resolve(Response.json({ ...omelette, servings: 2 })));
+  await renderInHebrew(`/recipes/${omelette.id}?serves=4`);
+
+  const picker = await screen.findByRole("combobox", { name: "בישול עבור" });
+  expect(picker).toHaveDisplayValue("4 אנשים");
+  expect(within(picker).getByRole("option", { name: "2 אנשים (כמו במתכון)" })).toBeInTheDocument();
+  expect(screen.getByText("הכמויות שונו · המתכון ל־2 אנשים")).toBeInTheDocument();
 });

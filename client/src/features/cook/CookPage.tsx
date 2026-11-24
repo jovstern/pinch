@@ -101,10 +101,10 @@ export function CookPage() {
         <p className="mt-1 text-sm font-medium text-accent-strong">
           {recipe.servings
             ? t("cook.scaledFor", {
-                count: scale.chosen ?? recipe.servings,
+                count: scale.chosen,
                 servings: recipe.servings,
               })
-            : t("cook.scaledTimes", { times: timesLabel(scale.factor) })}
+            : t("recipe.scaledTimes", { times: timesLabel(scale.factor) })}
         </p>
       )}
 

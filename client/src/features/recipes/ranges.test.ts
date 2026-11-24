@@ -9,3 +9,10 @@ test("a range of numbers is joined to its dash and set left to right", () => {
   // Whole numbers, not just the digits by the dash.
   expect(keepRangesTogether("4–16")).toBe("\u20664\u2060–\u206016\u2069");
 });
+
+test("a number with a fraction, alone or in a range, is set left to right too", () => {
+  expect(keepRangesTogether("2¼ כוסות")).toBe("⁦2¼⁩ כוסות");
+  expect(keepRangesTogether("3-4½")).toBe("⁦3⁠-⁠4½⁩");
+  expect(keepRangesTogether("½-1")).toBe("⁦½⁠-⁠1⁩");
+  expect(keepRangesTogether("2 cups")).toBe("2 cups");
+});

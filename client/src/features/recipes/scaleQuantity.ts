@@ -9,48 +9,36 @@ const FRACTIONS: [number, string][] = [
   [2 / 3, "⅔"],
   [3 / 4, "¾"],
 ];
-const GLYPHS: Record<string, number> = Object.fromEntries(
-  FRACTIONS.map(([value, glyph]) => [glyph, value]),
-);
+// What's read: those, and a few more recipes write but a scaled amount isn't shown in.
+const GLYPHS: Record<string, number> = {
+  ...Object.fromEntries(FRACTIONS.map(([value, glyph]) => [glyph, value])),
+  "⅕": 1 / 5,
+  "⅙": 1 / 6,
+  "⅜": 3 / 8,
+  "⅝": 5 / 8,
+  "⅞": 7 / 8,
+};
 
-// A number in a quantity, in the forms recipes write it (the longest first): "1½" or "½", "1 1/2",
-// "1/2", "1.5", "1,5" or "1,000" (a comma before three digits groups thousands), "2".
-const AMOUNT = /(?:(\d+) ?)?([⅛¼⅓½⅔¾])|(\d+) (\d+)\/(\d+)|(\d+)\/(\d+)|\d+(?:[.,]\d+)?/g;
+// One number, in the forms recipes write it: "1 1/2" or "1-1/2", "1/2", "1½" or "½", "1.5",
+// ".5", "1,5" or "1,000" (a comma before three digits groups thousands), "2".
+const NUMBER = String.raw`(?:\d+[ -])?\d+\/\d+|(?:\d+ ?)?[⅛¼⅓½⅔¾⅕⅙⅜⅝⅞]|\d*[.,]?\d+`;
+// The quantity's amount: its first number, or a range ("2-3", "2 – 3").
+const AMOUNT = new RegExp(`(${NUMBER})(?:\\s?([-–])\\s?(${NUMBER}))?`);
 
-// A quantity for more or fewer people (design D48): each number in it multiplied, the rest kept,
-// so "2-3" becomes "4-6" and "a pinch" stays "a pinch". Only for showing: the recipe isn't changed.
+// A quantity for more or fewer people (design D48): its amount multiplied, the rest kept as
+// written, so "2-3" becomes "4-6", "2 x 400" becomes "4 x 400" (the pack's size isn't the
+// amount) and "a pinch" stays "a pinch". Only for showing: the recipe isn't changed.
 export function scaleQuantity(quantity: string, factor: number) {
   if (factor === 1) return quantity;
-  const scaled = quantity.replace(
-    AMOUNT,
-    (
-      match: string,
-      whole?: string,
-      glyph?: string,
-      mixed?: string,
-      top?: string,
-      bottom?: string,
-      numerator?: string,
-      divisor?: string,
-    ) => {
-      let amount: number;
-      if (glyph) amount = Number(whole ?? 0) + (GLYPHS[glyph] ?? 0);
-      else if (mixed) amount = Number(mixed) + Number(top) / Number(bottom);
-      else if (numerator) amount = Number(numerator) / Number(divisor);
-      else
-        amount = Number(
-          /^\d+,\d{3}$/.test(match) ? match.replace(",", "") : match.replace(",", "."),
-        );
-      // "1/0" isn't an amount: left as written.
-      return Number.isFinite(amount) ? formatAmount(amount * factor) : match;
-    },
-  );
-  // An amount with a fraction ("2¼", "3-4½") set left to right in an isolate: the fraction is a
-  // neutral character, so a Hebrew line would put it before the number ("¼2"). As ranges.ts.
-  return scaled.replace(WITH_FRACTION, "\u2066$&\u2069");
+  return quantity.replace(AMOUNT, (match: string, from: string, dash?: string, to?: string) => {
+    const low = read(from);
+    const high = to === undefined ? undefined : read(to);
+    // "1/0" isn't an amount: left as written.
+    if (!Number.isFinite(low) || (high !== undefined && !Number.isFinite(high))) return match;
+    const scaled = formatAmount(low * factor);
+    return high === undefined ? scaled : `${scaled}${dash ?? "-"}${formatAmount(high * factor)}`;
+  });
 }
-
-const WITH_FRACTION = /(?:\d+[-–])?\d*[⅛¼⅓½⅔¾]/g;
 
 export function scaleIngredients(ingredients: Ingredient[], factor: number): Ingredient[] {
   return ingredients.map((ingredient) =>
@@ -60,10 +48,24 @@ export function scaleIngredients(ingredients: Ingredient[], factor: number): Ing
   );
 }
 
-// 1.5 → "1½", 0.333 → "⅓", 2.4 → "2.4", 133.3 → "133": from 10 a whole number (no one weighs
-// 133⅓ g); under it a fraction when it's close to one a cook measures, else a tenth.
+// One NUMBER's value.
+function read(number: string) {
+  const fraction = /^(?:(\d+)[ -])?(\d+)\/(\d+)$/.exec(number);
+  if (fraction) {
+    const [, whole = "0", top, bottom] = fraction;
+    return Number(whole) + Number(top) / Number(bottom);
+  }
+  const glyph = /^(?:(\d+) ?)?(.)$/u.exec(number);
+  if (glyph?.[2] && glyph[2] in GLYPHS) return Number(glyph[1] ?? 0) + (GLYPHS[glyph[2]] ?? 0);
+  return Number(/^\d+,\d{3}$/.test(number) ? number.replace(",", "") : number.replace(",", "."));
+}
+
+// 1.5 → "1½", 0.333 → "⅓", 2.4 → "2.4", 133.3 → "133", 0.04 → "0.04": from 10 a whole number
+// (no one weighs 133⅓ g); under it a fraction when it's close to one a cook measures, else a
+// tenth; and never 0 for something there is some of.
 function formatAmount(amount: number) {
   if (amount >= 10) return String(Math.round(amount));
+  if (amount < 0.1) return String(Number(amount.toPrecision(1)));
   const whole = Math.floor(amount);
   const rest = amount - whole;
   if (rest < 0.04) return String(whole);

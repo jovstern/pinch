@@ -296,6 +296,8 @@ export const en = {
     scaledFrom_one: "Amounts changed · the recipe is for 1",
     scaledFrom_other: "Amounts changed · the recipe is for {{count}}",
     noServings: "The recipe doesn't say how many it serves.",
+    // {{times}} is "×2", in its isolate.
+    scaledTimes: "Amounts changed · {{times}} the original",
     comments: "Comments",
     commentsSoon: "Coming soon: notes from whoever you share this recipe with.",
     // ⋯ and its menu.
@@ -432,7 +434,6 @@ export const en = {
     // The amounts chosen on the recipe's page (D48).
     scaledFor_one: "Amounts for 1 person · the recipe is for {{servings}}",
     scaledFor_other: "Amounts for {{count}} people · the recipe is for {{servings}}",
-    scaledTimes: "Amounts {{times}} the recipe's",
     forThisStep: "For this step",
     // The counter over the cards: the same words for any number of steps, in both languages.
     stepOf: "Step {{position}} of {{total}}",

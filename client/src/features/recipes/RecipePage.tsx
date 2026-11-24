@@ -143,11 +143,7 @@ export function RecipePage() {
           <h2 id="ingredients" className="text-xl font-semibold">
             {t("recipe.ingredients")}
           </h2>
-          <ServingsPicker
-            servings={recipe.servings}
-            value={scale.chosen ?? recipe.servings ?? 1}
-            onChange={scale.choose}
-          />
+          <ServingsPicker servings={recipe.servings} value={scale.chosen} onChange={scale.choose} />
           <ul aria-labelledby="ingredients" dir="auto" className="mt-3 grid gap-2">
             {ingredients.map((ingredient, index) => (
               // Ingredients have no id; their order is their identity within the recipe.
