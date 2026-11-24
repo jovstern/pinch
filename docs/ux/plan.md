@@ -592,7 +592,8 @@ bold feature; U3 is the trust feature and needs the server; U8 is the phone.
 
 1. TikTok: out for now, but kept in mind. Nothing should rule it out.
 2. v1 is for the household, so the Hebrew UI and RTL (U11 and later) move up.
-3. Servings scaling stays out, in cook mode too.
+3. Servings scaling stays out, in cook mode too. (Reopened by the user on 2026-11-24: built as
+   design D48, on the recipe's page and in cook mode, never saved.)
 4. Fraunces is worth it, self-hosted as its own woff2.
 5. Storing the caption is OK.
 6. PWA (U8): later.

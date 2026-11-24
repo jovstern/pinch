@@ -286,6 +286,16 @@ export const en = {
     cook: "Cook",
     ingredients: "Ingredients",
     steps: "Steps",
+    // The amounts for more or fewer people (D48), never saved: "Cooking for [4 people]", or
+    // "Amounts [×2]" when the recipe doesn't say how many it serves.
+    servingsLabel: "Cooking for",
+    amountsLabel: "Amounts",
+    people_one: "{{count}} person",
+    people_other: "{{count}} people",
+    original: "{{option}} (original)",
+    scaledFrom_one: "Amounts changed · the recipe is for 1",
+    scaledFrom_other: "Amounts changed · the recipe is for {{count}}",
+    noServings: "The recipe doesn't say how many it serves.",
     comments: "Comments",
     commentsSoon: "Coming soon: notes from whoever you share this recipe with.",
     // ⋯ and its menu.
@@ -419,6 +429,10 @@ export const en = {
     screenOn: "The screen stays on.",
     mayLock: "This browser may let the screen lock.",
     allIngredients: "All ingredients ({{number}})",
+    // The amounts chosen on the recipe's page (D48).
+    scaledFor_one: "Amounts for 1 person · the recipe is for {{servings}}",
+    scaledFor_other: "Amounts for {{count}} people · the recipe is for {{servings}}",
+    scaledTimes: "Amounts {{times}} the recipe's",
     forThisStep: "For this step",
     // The counter over the cards: the same words for any number of steps, in both languages.
     stepOf: "Step {{position}} of {{total}}",

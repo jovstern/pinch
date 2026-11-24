@@ -203,6 +203,14 @@ After M10 (found by M10's UI review, not M10's to fix):
 - [ ] U5 Google's profile picture in the avatar
 - [ ] U7 The header mirrored in Hebrew (the logo at the right) and its tabs centred in both languages (the true centre from 1024 px); on Add recipe, Pinch it and the placeholder in English in Hebrew too, and the (i) hidden for now (the user's calls of 2026-11-14)
 
+## The user's findings (2026-11-24)
+
+- [x] C1 Cooking for: the amounts for more or fewer people on the recipe's page and in cook mode, never saved (D48)
+- [ ] C2 Save on the import's review page, on a phone (waiting for the device)
+- [ ] C3 Print, and save as PDF from the print dialog
+- [ ] C4 An Edited mark on a recipe pinched from a link and changed after saving
+- [ ] C5 Similar recipes under each recipe, from the user's own
+
 ## M11 — Pinch online (design §15, §8.3, D31–D38)
 
 The user's steps (accounts, the domain, secrets) are listed in design §15.9; each slice says

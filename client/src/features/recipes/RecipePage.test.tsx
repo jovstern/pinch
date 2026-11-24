@@ -402,3 +402,53 @@ test("in Hebrew, ⋯ holds Edit, Share and Delete, and Delete's question holds t
   await userEvent.click(within(dialog).getByRole("button", { name: "להשאיר" }));
   expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
 });
+
+test("Cooking for scales the amounts, says the recipe's own number, and Cook keeps them", async () => {
+  stubApi();
+  renderApp(`/recipes/${omelette.id}`);
+
+  const picker = await screen.findByRole("combobox", { name: "Cooking for" });
+  expect(picker).toHaveDisplayValue("1 person (original)");
+  await userEvent.selectOptions(picker, "3");
+
+  const ingredients = screen.getByRole("list", { name: "Ingredients" });
+  expect(
+    within(ingredients)
+      .getAllByRole("listitem")
+      .map((item) => item.textContent),
+  ).toEqual(["6 eggs", "3 tbsp butter, soft"]);
+  expect(screen.getByText("Amounts changed · the recipe is for 1")).toBeInTheDocument();
+  // The details still say the recipe's own number.
+  expect(screen.getByText(/Prep 5 min/)).toHaveTextContent("Serves 1");
+  expect(screen.getByRole("link", { name: "Cook" })).toHaveAttribute(
+    "href",
+    `/recipes/${omelette.id}/cook?serves=3`,
+  );
+
+  // Back to the original: the note goes, and Cook's link is the plain one.
+  await userEvent.selectOptions(picker, "1");
+  expect(screen.queryByText(/Amounts changed/)).not.toBeInTheDocument();
+  expect(screen.getByRole("link", { name: "Cook" })).toHaveAttribute(
+    "href",
+    `/recipes/${omelette.id}/cook`,
+  );
+});
+
+test("a recipe that doesn't say how many it serves offers ×½ to ×3", async () => {
+  const unsure: Recipe = { ...omelette, servings: undefined };
+  stubFetch(vi.fn(() => Promise.resolve(Response.json(unsure))));
+  renderApp(`/recipes/${omelette.id}?times=0.5`);
+
+  const picker = await screen.findByRole("combobox", { name: "Amounts" });
+  expect(picker).toHaveDisplayValue("×½");
+  expect(screen.getByText("The recipe doesn't say how many it serves.")).toBeInTheDocument();
+  // The half in its isolate (scaleQuantity), left out here.
+  expect(
+    screen.getByRole("list", { name: "Ingredients" }).textContent.replace(/[\u2066\u2069]/g, ""),
+  ).toBe("1 eggs½ tbsp butter, soft");
+  expect(
+    within(picker)
+      .getAllByRole("option")
+      .map((option) => option.textContent),
+  ).toEqual(["×½", "×1 (original)", "×2", "×3"]);
+});
