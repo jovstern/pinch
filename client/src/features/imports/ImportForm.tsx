@@ -13,7 +13,6 @@ import { useNavigate } from "react-router";
 import { FieldError } from "../../components/FieldError.tsx";
 import { Button } from "../../components/ui/Button.tsx";
 import { Input } from "../../components/ui/Input.tsx";
-import { pageIsRtl } from "../../i18n.ts";
 import { ApiError, sendJson } from "../../lib/api.ts";
 import { thingsToLookAt } from "../../lib/thingsToLookAt.ts";
 import {
@@ -137,7 +136,7 @@ export function ImportForm({ inputRef }: { inputRef: RefObject<HTMLInputElement 
                   for them (ps-6, plus the input's own px-3) is the group's: the input is
                   dir="auto", so its own padding would follow what's typed, not the page.
                   Left to right in Hebrew too, the user's call (design §16.4): the sparkles on
-                  the left, Pinch on the right, as in English. */}
+                  the left, Pinch it on the right, as in English. */}
               <div
                 dir="ltr"
                 className="relative flex items-center rounded-control border border-input bg-card ps-6 has-[[aria-invalid=true]]:border-destructive has-[input:focus-visible]:outline-2 has-[input:focus-visible]:outline-offset-2 has-[input:focus-visible]:outline-ring"
@@ -151,11 +150,12 @@ export function ImportForm({ inputRef }: { inputRef: RefObject<HTMLInputElement 
                   id={id}
                   name={field.name}
                   value={field.state.value}
-                  placeholder={t("imports.pastePlaceholder")}
-                  // Hebrew reads right to left: the field follows what's typed in it. Empty, the
-                  // page's direction, so a Hebrew placeholder and caret sit by Pinch: not
-                  // inherited, as the row is ltr, nor "auto" (Chrome reads an empty one as ltr).
-                  dir={field.state.value !== "" ? "auto" : pageIsRtl() ? "rtl" : "ltr"}
+                  // English in Hebrew too, as Pinch it (design §16.8, the user's call). Only the
+                  // direction changes: empty, left to right, so the placeholder sits by the
+                  // sparkles; typed in, it follows what's typed (Hebrew reads right to left). No
+                  // lang: the field's name and hint are the page's language.
+                  placeholder="Paste a video or a recipe"
+                  dir={field.state.value === "" ? "ltr" : "auto"}
                   aria-invalid={invalid}
                   aria-describedby={invalid ? `${hintId} ${errorId}` : hintId}
                   enterKeyHint="send"
@@ -199,7 +199,8 @@ export function ImportForm({ inputRef }: { inputRef: RefObject<HTMLInputElement 
                       // Attached to the group's end edge.
                       className="-my-px -me-px shrink-0 self-stretch rounded-s-none"
                     >
-                      {isSubmitting ? t("imports.sending") : t("imports.pinchIt")}
+                      {/* English in Hebrew too (§16.8, the user's call). */}
+                      {isSubmitting ? t("imports.sending") : <span lang="en">Pinch it</span>}
                     </Button>
                   )}
                 </form.Subscribe>

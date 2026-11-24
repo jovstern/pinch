@@ -10,7 +10,6 @@ import { useHeadingFocus } from "../../lib/useHeadingFocus.ts";
 import { ImportList } from "./ImportList.tsx";
 import { importListQuery } from "./importQueries.ts";
 import { LazyImportForm } from "./LazyImportForm.tsx";
-import { LazyPasteHelp } from "./LazyPasteHelp.tsx";
 
 // The Add recipe tab, at / (design §14, D24): paste a link or a post's text, and the queue of
 // what's being turned into recipes.
@@ -38,9 +37,8 @@ export function ImportPage() {
         <LazyImportForm inputRef={pasteBoxRef} />
         {/* Screenshots: hidden for now (user, 2026-11-10). <ScreenshotsUpload /> */}
         {/* The other way in, quiet: the paste is the main one (design §14). Write a recipe's
-            pen, as in the header. Then, under Pinch it, the (i): where to find a post's link.
-            Left to right in Hebrew too, as the box above (§16.4): the link on the left, the (i)
-            on the right. The link's own words, and its pen, in the page's direction: in Hebrew the
+            pen, as in the header. Left to right in Hebrew too, as the box above (§16.4): the link
+            on the left. The link's own words, and its pen, in the page's direction: in Hebrew the
             pen is at their right, as on the header's Write a recipe. */}
         <div dir="ltr" className="mt-1 flex items-center justify-between gap-2">
           <Button asChild variant="link" className="px-0 text-sm">
@@ -49,7 +47,8 @@ export function ImportPage() {
               {t("imports.writeItYourself")}
             </Link>
           </Button>
-          <LazyPasteHelp />
+          {/* The (i), where to find a post's link, on the right: hidden for now, the user's
+              call on 2026-11-14. <LazyPasteHelp /> */}
         </div>
         <ImportList focusPasteBox={() => pasteBoxRef.current?.focus()} />
       </div>

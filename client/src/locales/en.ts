@@ -82,9 +82,6 @@ export const en = {
     // The paste box's label, for a screen reader, and its hint (the placeholder isn't read).
     pasteLabel: "Pinch a recipe from a reel",
     pasteHint: "Paste a YouTube short, a Facebook or Instagram reel, or a recipe as text",
-    // Short: it's the page's LCP with an empty queue (LazyImportForm draws it before the box).
-    pastePlaceholder: "Paste a video or a recipe",
-    pinchIt: "Pinch it",
     sending: "Sending…",
     couldntSend: "We couldn't send this. Try again.",
     // The day's caps (D22, D30), as the API's 429 says them (shared's dailyLimitMessage and
@@ -95,7 +92,7 @@ export const en = {
     screenshotsHint: "Up to {{max}} screenshots of the recipe, when its link and text won't do.",
     couldntSendThese: "We couldn't send these. Try again.",
     writeItYourself: "Or write it yourself",
-    // The (i) under Pinch it (PasteHelp): its name, then where on each app the share menu is (its
+    // The (i) under Pinch it (PasteHelp; hidden for now, ImportPage): its name, then where on each app the share menu is (its
     // steps, "Share → Copy link", are English in both languages, in PasteHelp: D46), and the
     // other thing the box takes.
     pasteHelp: {

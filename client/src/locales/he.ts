@@ -66,8 +66,6 @@ export const he: Translation<typeof en> = {
     pasteLabel: "לשמור מתכון מסרטון",
     pasteHint:
       "אפשר להדביק סרטון קצר מ\u2011YouTube, ריל מ\u2011Facebook או מ\u2011Instagram, או מתכון כטקסט",
-    pastePlaceholder: "להדביק סרטון או מתכון",
-    pinchIt: "Pinch",
     sending: "שליחה…",
     couldntSend: "השליחה נכשלה. אפשר לנסות שוב.",
     dailyLimit: "המכסה היומית של {{cap}} מתכונים כבר נוצלה. אפשר לנסות שוב מחר.",
