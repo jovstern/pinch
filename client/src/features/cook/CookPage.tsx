@@ -8,6 +8,8 @@ import { useMediaQuery } from "../../lib/useMediaQuery.ts";
 import { RecipeLoadError } from "../recipes/RecipeLoadError.tsx";
 import { RecipeSource } from "../recipes/RecipeSource.tsx";
 import { recipeQuery } from "../recipes/recipeQueries.ts";
+import { scaleIngredients } from "../recipes/scaleQuantity.ts";
+import { timesLabel, useScale } from "../recipes/useScale.ts";
 import { CookSkeleton } from "./CookSkeleton.tsx";
 import { IngredientChecklist } from "./IngredientChecklist.tsx";
 import { StepCard } from "./StepCard.tsx";
@@ -40,14 +42,18 @@ export function CookPage() {
   // lg: Tailwind's 1024 px, where the whole checklist is a panel beside the steps, not folded
   // under them: a <details> can't be opened from CSS.
   const wide = useMediaQuery("(min-width: 64rem)");
+  // The amounts chosen on the recipe's page (design D48), in the address.
+  const scale = useScale(recipe?.servings);
 
   if (status === "pending") return <CookSkeleton />;
   if (isLoadingError) {
     return <RecipeLoadError error={error} retry={() => void refetch()} retrying={isFetching} />;
   }
 
-  const recipePath = `/recipes/${recipe.id}`;
-  const all = recipe.ingredients.map((_, position) => position);
+  // Back to the recipe with the same amounts.
+  const recipePath = `/recipes/${recipe.id}${scale.search}`;
+  const ingredients = scaleIngredients(recipe.ingredients, scale.factor);
+  const all = ingredients.map((_, position) => position);
 
   // As TagPicker's toggle: in the order ticked.
   function toggle(position: number, on: boolean) {
@@ -59,7 +65,7 @@ export function CookPage() {
   const checklist = (
     <IngredientChecklist
       labelledBy={allId}
-      ingredients={recipe.ingredients}
+      ingredients={ingredients}
       shown={all}
       ticked={ticked}
       onToggle={toggle}
@@ -90,6 +96,17 @@ export function CookPage() {
         {wakeLock === "on" && ` · ${t("cook.screenOn")}`}
         {wakeLock === "off" && ` · ${t("cook.mayLock")}`}
       </p>
+      {/* The amounts aren't the recipe's: said where the cook looks first. */}
+      {scale.factor !== 1 && (
+        <p className="mt-1 text-sm font-medium text-accent-strong">
+          {recipe.servings
+            ? t("cook.scaledFor", {
+                count: scale.chosen,
+                servings: recipe.servings,
+              })
+            : t("recipe.scaledTimes", { times: timesLabel(scale.factor) })}
+        </p>
+      )}
 
       {/* As on the recipe's page: from 1024 px the checklist sits on the left, beside the steps;
           on a phone it's folded under them, as the step is what matters at the stove. */}
@@ -108,7 +125,7 @@ export function CookPage() {
           card={(step) => (
             <StepCard
               step={step}
-              ingredients={recipe.ingredients}
+              ingredients={ingredients}
               ticked={ticked}
               onToggle={toggle}
               isRunning={isRunning}

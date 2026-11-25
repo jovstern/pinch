@@ -394,3 +394,18 @@ test("in Hebrew, an English step's timer says its time in Hebrew; the step stays
   expect(await screen.findByRole("button", { name: "טיימר: שעה ו‑30 דקות" })).toBeInTheDocument();
   expect(screen.getByText("Rest the dough for 1 hour 30 minutes.")).toBeInTheDocument();
 });
+
+test("cooks with the amounts chosen on the recipe's page, and says they aren't the recipe's", async () => {
+  stubApi({ ...omelette, servings: 2 });
+  renderApp(`/recipes/${omelette.id}/cook?serves=4`, { wide: true });
+
+  expect(await screen.findByText("Amounts for 4 people · the recipe is for 2")).toBeInTheDocument();
+  const all = screen.getByRole("list", { name: "All ingredients (2)" });
+  expect(within(all).getByRole("checkbox", { name: "4 eggs" })).toBeInTheDocument();
+  expect(within(all).getByRole("checkbox", { name: "2 tbsp butter" })).toBeInTheDocument();
+  // The way back keeps them.
+  expect(screen.getByRole("link", { name: "Omelette" })).toHaveAttribute(
+    "href",
+    `/recipes/${omelette.id}?serves=4`,
+  );
+});

@@ -17,6 +17,9 @@ import { LazyRecipeMenu } from "./LazyRecipeMenu.tsx";
 import { RecipeLoadError } from "./RecipeLoadError.tsx";
 import { RecipeSkeleton } from "./RecipeSkeleton.tsx";
 import { RecipeSource } from "./RecipeSource.tsx";
+import { scaleIngredients } from "./scaleQuantity.ts";
+import { ServingsPicker } from "./ServingsPicker.tsx";
+import { useScale } from "./useScale.ts";
 import { filterParams, listedRecipe, noFilters, recipeQuery } from "./recipeQueries.ts";
 import { tagLabel } from "./tagLabels.ts";
 
@@ -38,6 +41,8 @@ export function RecipePage() {
     placeholderData: () => listedRecipe(queryClient, id),
   });
   const headingRef = useHeadingFocus();
+  // Before the early returns (a hook); the recipe's servings once it's here.
+  const scale = useScale(recipe?.servings);
 
   if (status === "pending") return <RecipeSkeleton />;
 
@@ -48,6 +53,7 @@ export function RecipePage() {
   }
 
   const recipeDetails = details(recipe);
+  const ingredients = scaleIngredients(recipe.ingredients, scale.factor);
   return (
     <article>
       {/* The title in isolates, as a <title> can't hold <bdi> (design §16.3, §16.5). */}
@@ -122,7 +128,7 @@ export function RecipePage() {
           {/* Cook is the page's one main action (docs/ux/plan.md U2); the rest is under ⋯. */}
           <div className="mt-5 flex gap-2">
             <Button asChild className="flex-1 sm:w-48 sm:flex-none">
-              <Link to={`/recipes/${recipe.id}/cook`}>{t("recipe.cook")}</Link>
+              <Link to={`/recipes/${recipe.id}/cook${scale.search}`}>{t("recipe.cook")}</Link>
             </Button>
             <LazyRecipeMenu recipe={recipe} />
           </div>
@@ -137,8 +143,9 @@ export function RecipePage() {
           <h2 id="ingredients" className="text-xl font-semibold">
             {t("recipe.ingredients")}
           </h2>
+          <ServingsPicker servings={recipe.servings} value={scale.chosen} onChange={scale.choose} />
           <ul aria-labelledby="ingredients" dir="auto" className="mt-3 grid gap-2">
-            {recipe.ingredients.map((ingredient, index) => (
+            {ingredients.map((ingredient, index) => (
               // Ingredients have no id; their order is their identity within the recipe.
               <li key={index}>
                 {ingredientLine(ingredient)}
