@@ -36,19 +36,18 @@ test("paste a reel, review the draft with its picture, save it, cook it", async 
   await expect(title).toBeVisible();
 });
 
-// The fallback: screenshots become a draft, the first one its picture. Their picker is hidden on /
-// for now (ImportPage), so they're sent as it sends them, and the draft is reviewed on the page.
-test("add screenshots, review the draft made from them", async ({ page }) => {
+// The fallback: photos or screenshots become a draft, the first one its picture, uploaded under
+// the paste box, and the draft is reviewed on the page.
+test("upload a screenshot, review the draft made from it", async ({ page }) => {
   // A 1×1 PNG: the fake extractor doesn't read it; the API checks it's an image.
   const screenshot = Buffer.from(
     "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg==",
     "base64",
   );
-  const sent = await page.request.post("/api/imports/screenshots", {
-    multipart: { images: { name: "recipe.png", mimeType: "image/png", buffer: screenshot } },
-  });
-  expect(sent.status()).toBe(202);
   await page.goto("/");
+  await page
+    .getByLabel("Or upload a photo or screenshot")
+    .setInputFiles({ name: "recipe.png", mimeType: "image/png", buffer: screenshot });
 
   // By its count: once ready, the card is named by the draft's title.
   const shots = page.getByRole("listitem").filter({ hasText: "1 image" });

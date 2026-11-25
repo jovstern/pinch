@@ -70,10 +70,9 @@ export const he: Translation<typeof en> = {
     couldntSend: "השליחה נכשלה. אפשר לנסות שוב.",
     dailyLimit: "המכסה היומית של {{cap}} מתכונים כבר נוצלה. אפשר לנסות שוב מחר.",
     globalLimit: "Pinch הגיע למכסה היומית שלו. אפשר לנסות שוב מחר.",
-    addScreenshots: "או להוסיף צילומי מסך",
-    screenshotsHint: "עד {{max}} צילומי מסך של המתכון, כשהקישור והטקסט לא מספיקים.",
+    addScreenshots: "או להעלות תמונה או צילום מסך",
+    screenshotsHint: "עד {{max}} תמונות של המתכון: צילומים או צילומי מסך.",
     couldntSendThese: "השליחה נכשלה. אפשר לנסות שוב.",
-    writeItYourself: "או לכתוב מתכון ידנית",
     pasteHelp: {
       label: "איפה מוצאים את הקישור",
       instagram: "בריל:",

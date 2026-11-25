@@ -88,10 +88,9 @@ export const en = {
     // globalLimitMessage, which the toasts show), chosen by its code (design §16.7).
     dailyLimit: "You've sent {{cap}} imports today. Try again tomorrow.",
     globalLimit: "Pinch has read all it can for today. Try again tomorrow.",
-    addScreenshots: "Or add screenshots",
-    screenshotsHint: "Up to {{max}} screenshots of the recipe, when its link and text won't do.",
+    addScreenshots: "Or upload a photo or screenshot",
+    screenshotsHint: "Up to {{max}} pictures of the recipe: photos or screenshots.",
     couldntSendThese: "We couldn't send these. Try again.",
-    writeItYourself: "Or write it yourself",
     // The (i) under Pinch it (PasteHelp; hidden for now, ImportPage): its name, then where on each app the share menu is (its
     // steps, "Share → Copy link", are English in both languages, in PasteHelp: D46), and the
     // other thing the box takes.
