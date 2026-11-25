@@ -152,9 +152,15 @@
   }
 }
 
-/* Tailwind's dark: classes follow the same attribute, not the system: for any dark: class to come
-   (none uses it yet). */
-@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+/* Tailwind's dark: classes follow the same attribute, not the system, and on screen only, as the
+   tokens (D49): for any dark: class to come (none uses it yet). */
+@custom-variant dark {
+  @media screen {
+    &:where([data-theme="dark"], [data-theme="dark"] *) {
+      @slot;
+    }
+  }
+}
 
 body {
   @apply bg-surface text-text antialiased;
@@ -173,6 +179,13 @@ body {
 :focus-visible {
   outline: 2px solid var(--color-ring);
   outline-offset: 2px;
+}
+
+/* Not on paper: a link focused when Ctrl+P is pressed would print with its ring (D49). */
+@media print {
+  :focus-visible {
+    outline: none;
+  }
 }
 
 /* A field focused or scrolled to (the first error after Save) stays clear of the editor's Save

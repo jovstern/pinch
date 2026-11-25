@@ -66,8 +66,9 @@ export function RecipePage() {
           page={recipe.title}
         />
       </div>
-      {/* The picture above the title on a phone, beside it from 1024 px (design §14). */}
-      <div className="mt-2 lg:flex lg:items-start lg:gap-12">
+      {/* The picture above the title on a phone, beside it from 1024 px (design §14); on paper
+          always above it, as paper that wide (A4 across) would squeeze the title (D49). */}
+      <div className="mt-2 lg:flex lg:items-start lg:gap-12 print:block">
         {recipe.thumbnail ? (
           <Thumbnail
             src={`/api/recipes/${recipe.id}/thumbnail`}
@@ -85,7 +86,7 @@ export function RecipePage() {
             className="-mx-4 aspect-5/2 text-7xl sm:mx-0 sm:rounded-card lg:aspect-4/3 lg:w-80 lg:shrink-0 print:hidden"
           />
         )}
-        <div className="mt-4 min-w-0 lg:mt-0">
+        <div className="mt-4 min-w-0 lg:mt-0 print:mt-4">
           <h1
             ref={headingRef}
             tabIndex={-1}

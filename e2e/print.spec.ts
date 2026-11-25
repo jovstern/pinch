@@ -20,6 +20,8 @@ test("a recipe prints as the recipe alone, for the people picked, dark on white"
   await page.getByRole("menuitem", { name: "Print or save as PDF" }).click();
   await expect(page.locator("body")).toHaveAttribute("data-printed", "yes");
 
+  // About A4's width less its margins, as print lays the page out at the paper's width.
+  await page.setViewportSize({ width: 718, height: 1000 });
   await page.emulateMedia({ media: "print", colorScheme: "dark" });
   await expect(page.getByRole("banner")).toBeHidden();
   await expect(page.getByRole("navigation", { name: "Breadcrumb" })).toBeHidden();
@@ -30,6 +32,11 @@ test("a recipe prints as the recipe alone, for the people picked, dark on white"
   await expect(page.getByRole("heading", { level: 2, name: "Comments" })).toBeHidden();
   // The light theme's text colour, though the screen is dark.
   await expect(page.getByRole("heading", { level: 1 })).toHaveCSS("color", "rgb(34, 26, 18)");
+
+  // A4 across is as wide as a desktop (1024 px): the title still keeps the page's width.
+  await page.setViewportSize({ width: 1050, height: 800 });
+  const title = await page.getByRole("heading", { level: 1 }).boundingBox();
+  expect(title?.width).toBeGreaterThan(500);
 
   // The PDF Chrome would save, kept with the run's results to look at.
   await page.pdf({ path: testInfo.outputPath("red-lentil-soup.pdf"), format: "A4" });
