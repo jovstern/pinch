@@ -6,9 +6,9 @@ import {
 } from "@pinch/shared";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import i18next from "i18next";
-import { ImagePlus } from "lucide-react";
 import { useId, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
+import { LazyInfoPopover } from "../../components/LazyInfoPopover.tsx";
 import { Button } from "../../components/ui/Button.tsx";
 import { pageIsRtl } from "../../i18n.ts";
 import { ApiError, sendForm } from "../../lib/api.ts";
@@ -25,7 +25,6 @@ export function ScreenshotsUpload() {
   const queryClient = useQueryClient();
   // Only the local check is kept; the send's failure is the mutation's own.
   const [refused, setRefused] = useState(false);
-  const hintId = useId();
   const errorId = useId();
   const upload = useMutation({
     mutationFn: (files: File[]) => {
@@ -61,37 +60,48 @@ export function ScreenshotsUpload() {
   const dir = pageIsRtl() ? "rtl" : "ltr";
   return (
     <div dir="ltr" className="mt-1 grid justify-items-start">
-      {/* Quiet, under the field: the paste is the main way in (design §14). A label with
+      {/* The upload, and its (i) beside it: what can be sent, for what, and what comes of it. */}
+      <div className="flex items-center gap-1">
+        {/* Quiet, under the field: the paste is the main way in (design §14). A label with
           Button's link look: the file input inside it is hidden, so the label shows its focus
           (as TagPicker's chips), and relative keeps the input inside it. */}
-      {/* The classes on Button, whose cn() lets px-0 win over its own px-4 (asChild's Slot only
+        {/* The classes on Button, whose cn() lets px-0 win over its own px-4 (asChild's Slot only
           joins them). */}
-      <Button
-        asChild
-        variant="link"
-        className="relative cursor-pointer px-0 text-sm has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-focus-visible:outline-ring"
-      >
-        <label dir={dir}>
-          <ImagePlus aria-hidden="true" className="size-4" />
-          {upload.isPending ? t("imports.sending") : t("imports.addScreenshots")}
-          <input
-            type="file"
-            multiple
-            accept={SCREENSHOT_TYPES.join(",")}
-            className="sr-only"
-            aria-disabled={upload.isPending}
-            aria-describedby={message ? `${hintId} ${errorId}` : hintId}
-            onChange={(event) => {
-              choose([...(event.target.files ?? [])]);
-              // Empty again, so choosing the same files twice still sends them.
-              event.target.value = "";
-            }}
-          />
-        </label>
-      </Button>
-      <p id={hintId} dir={dir} className="text-sm text-muted-foreground">
-        {t("imports.screenshotsHint", { max: MAX_SCREENSHOTS })}
-      </p>
+        <Button
+          asChild
+          variant="link"
+          className="relative cursor-pointer px-0 text-sm has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-focus-visible:outline-ring"
+        >
+          <label dir={dir}>
+            {upload.isPending ? t("imports.sending") : t("imports.addScreenshots")}
+            <input
+              type="file"
+              multiple
+              accept={SCREENSHOT_TYPES.join(",")}
+              className="sr-only"
+              aria-disabled={upload.isPending}
+              aria-describedby={message ? errorId : undefined}
+              onChange={(event) => {
+                choose([...(event.target.files ?? [])]);
+                // Empty again, so choosing the same files twice still sends them.
+                event.target.value = "";
+              }}
+            />
+          </label>
+        </Button>
+        <LazyInfoPopover label={t("imports.uploadHelp.label")} align="start">
+          <ul className="mt-3 space-y-2 text-sm">
+            <li>{t("imports.uploadHelp.what")}</li>
+            <li>
+              {t("imports.uploadHelp.limits", {
+                max: MAX_SCREENSHOTS,
+                megabytes: MAX_SCREENSHOT_BYTES / 1_000_000,
+              })}
+            </li>
+            <li className="text-muted-foreground">{t("imports.uploadHelp.after")}</li>
+          </ul>
+        </LazyInfoPopover>
+      </div>
       {/* The limit's live region is always on the page (empty until then), so screen readers
           hear it; an error is an alert. Either one is the input's description. */}
       <p
