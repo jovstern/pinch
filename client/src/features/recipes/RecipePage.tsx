@@ -58,7 +58,14 @@ export function RecipePage() {
     <article>
       {/* The title in isolates, as a <title> can't hold <bdi> (design §16.3, §16.5). */}
       <title>{`${isolate(recipe.title)} · Pinch`}</title>
-      <Breadcrumb links={[{ label: t("header.myRecipes"), to: "/recipes" }]} page={recipe.title} />
+      {/* Printed (⋯, Print or save as PDF), the page is only the recipe: no way around the app,
+          no buttons, no picker, no comments (design D49). */}
+      <div className="print:hidden">
+        <Breadcrumb
+          links={[{ label: t("header.myRecipes"), to: "/recipes" }]}
+          page={recipe.title}
+        />
+      </div>
       {/* The picture above the title on a phone, beside it from 1024 px (design §14). */}
       <div className="mt-2 lg:flex lg:items-start lg:gap-12">
         {recipe.thumbnail ? (
@@ -66,6 +73,8 @@ export function RecipePage() {
             src={`/api/recipes/${recipe.id}/thumbnail`}
             size={recipe.thumbnail}
             shape="banner"
+            // On paper: in the column, and a band, not most of the page.
+            className="print:mx-0 print:max-h-64 print:w-full print:rounded-card"
           />
         ) : (
           // Its face instead (D25): a lower band than a picture's, as there's less to see; edge
@@ -73,7 +82,7 @@ export function RecipePage() {
           <RecipeFace
             emoji={recipe.emoji}
             fromVideo={PlatformSchema.safeParse(recipe.source.type).success}
-            className="-mx-4 aspect-5/2 text-7xl sm:mx-0 sm:rounded-card lg:aspect-4/3 lg:w-80 lg:shrink-0"
+            className="-mx-4 aspect-5/2 text-7xl sm:mx-0 sm:rounded-card lg:aspect-4/3 lg:w-80 lg:shrink-0 print:hidden"
           />
         )}
         <div className="mt-4 min-w-0 lg:mt-0">
@@ -126,7 +135,7 @@ export function RecipePage() {
           )}
 
           {/* Cook is the page's one main action (docs/ux/plan.md U2); the rest is under ⋯. */}
-          <div className="mt-5 flex gap-2">
+          <div className="mt-5 flex gap-2 print:hidden">
             <Button asChild className="flex-1 sm:w-48 sm:flex-none">
               <Link to={`/recipes/${recipe.id}/cook${scale.search}`}>{t("recipe.cook")}</Link>
             </Button>
@@ -180,8 +189,10 @@ export function RecipePage() {
 
       {/* A placeholder (design §1). When built: its own collection, never an array in the
           recipe, as comments grow without limit. */}
-      <h2 className="mt-8 text-xl font-semibold">{t("recipe.comments")}</h2>
-      <p className="mt-3 text-muted-foreground">{t("recipe.commentsSoon")}</p>
+      <div className="print:hidden">
+        <h2 className="mt-8 text-xl font-semibold">{t("recipe.comments")}</h2>
+        <p className="mt-3 text-muted-foreground">{t("recipe.commentsSoon")}</p>
+      </div>
     </article>
   );
 }

@@ -251,6 +251,7 @@ export const he: Translation<typeof en> = {
     commentsSoon: "בקרוב: תגובות ממי שהמתכון ישותף איתו.",
     moreActions: "פעולות נוספות",
     edit: "לערוך",
+    print: "להדפיס או לשמור כ־PDF",
     shareSoon: "לשתף · בקרוב",
     delete: "למחוק…",
     deleteQuestion: "למחוק את המתכון?",
