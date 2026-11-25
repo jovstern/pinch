@@ -120,6 +120,16 @@
 /* System controls (scrollbars, checkboxes, autofill) follow the theme too: dark below. */
 :root {
   color-scheme: light;
+  /* Room for the scrollbar on every page, whether it scrolls or not, so the header doesn't move
+     by its width between a short page and a long one (where the system shows scrollbars). */
+  scrollbar-gutter: stable;
+}
+
+/* While a dialog or sheet is open, Radix's scroll lock adds a margin the scrollbar's width to make
+   up for the scrollbar it hides; with the room kept above that margin is extra, and the page would
+   move by it. Physical, as the lock's own rule is (margin-right, in either direction). */
+html body[data-scroll-locked] {
+  margin-right: 0 !important;
 }
 
 /* The dark theme: the same names, other values. On <html data-theme="dark">, which index.html's
