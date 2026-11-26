@@ -1,5 +1,5 @@
 import type { Recipe } from "@pinch/shared";
-import { fireEvent, screen, waitFor, within } from "@testing-library/react";
+import { act, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, test, vi } from "vitest";
 import { renderApp, renderInHebrew, stubFetch, toastTitled } from "../../test-utils.tsx";
@@ -25,7 +25,8 @@ const omelette: Recipe = {
   updatedAt: "2026-11-01T10:00:00.000Z",
 };
 
-// A fake API: the recipe, an empty list, and DELETE answering 204 (or the status given).
+// A fake API: the recipe, nothing similar to it, an empty list, and DELETE answering 204 (or the
+// status given).
 function stubApi(deleteStatus = 204) {
   const fetch = vi.fn((path: string, init?: RequestInit) => {
     if (init?.method === "DELETE") {
@@ -33,6 +34,7 @@ function stubApi(deleteStatus = 204) {
     }
     if (path === "/api/recipes")
       return Promise.resolve(Response.json({ items: [], nextCursor: null }));
+    if (path.endsWith("/similar")) return Promise.resolve(Response.json({ items: [] }));
     return Promise.resolve(Response.json(omelette));
   });
   // Delete goes to /, which asks for the imports too.
@@ -268,6 +270,43 @@ test("Print opens the browser's print dialog, which saves as PDF too", async () 
   expect(print).toHaveBeenCalledOnce();
   // On paper the choice is written out in place of the list (jsdom has no print styles).
   expect(screen.getByText("2 people", { selector: "span" })).toHaveClass("print:inline");
+});
+
+test("similar recipes of the user's are listed under the recipe, each a link to it", async () => {
+  const frittata = { ...omelette, id: "6650a1b2c3d4e5f600000002", title: "Frittata" };
+  stubFetch((path: string) =>
+    Promise.resolve(Response.json(path.endsWith("/similar") ? { items: [frittata] } : omelette)),
+  );
+  renderApp(`/recipes/${omelette.id}`);
+
+  const similar = await screen.findByRole("list", { name: "Similar recipes of yours" });
+  expect(within(similar).getByRole("link", { name: /Frittata/ })).toHaveAttribute(
+    "href",
+    `/recipes/${frittata.id}`,
+  );
+  expect(within(similar).getByRole("heading", { level: 3, name: "Frittata" })).toBeInTheDocument();
+});
+
+// Nothing similar ({ items: [] }), or an answer that failed: no section either way. Checked after
+// the answer has come, as Comments shows before it.
+test.each([
+  ["nothing is similar", () => Response.json({ items: [] })],
+  ["they can't be loaded", () => new Response(null, { status: 500 })],
+])("when %s, there's no Similar recipes section", async (_name, answer) => {
+  const similar = vi.fn(() => Promise.resolve(answer()));
+  stubFetch((path: string) =>
+    path.endsWith("/similar") ? similar() : Promise.resolve(Response.json(omelette)),
+  );
+  renderApp(`/recipes/${omelette.id}`);
+
+  expect(await screen.findByRole("heading", { level: 2, name: "Comments" })).toBeInTheDocument();
+  await waitFor(() => {
+    expect(similar).toHaveBeenCalled();
+  });
+  await act(() => new Promise((resolve) => setTimeout(resolve, 50)));
+  expect(
+    screen.queryByRole("heading", { name: "Similar recipes of yours" }),
+  ).not.toBeInTheDocument();
 });
 
 test("Comments are there, and say they're coming", async () => {

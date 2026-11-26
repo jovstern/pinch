@@ -48,3 +48,19 @@ test("write a recipe, find it in the list, edit it, delete it", async ({ page })
   await expect(page.getByRole("link", { name: /Green shakshuka/ })).toHaveCount(0);
   await page.waitForTimeout(1000);
 });
+
+// Similar recipes (design D51): the sample soup and mujadara both start with lentils.
+test("a recipe lists similar recipes of the user's, and each opens", async ({ page }) => {
+  await page.goto("/recipes");
+  await page.getByRole("link", { name: /Red lentil soup/ }).click();
+
+  const similar = page.getByRole("list", { name: "Similar recipes of yours" });
+  await similar.getByRole("link", { name: /Mujadara/ }).click();
+  // At its top, though the link was at the foot of the page before.
+  await expect(page.getByRole("heading", { level: 1, name: "Mujadara" })).toBeInViewport();
+  await expect(
+    page
+      .getByRole("list", { name: "Similar recipes of yours" })
+      .getByRole("link", { name: /Red lentil soup/ }),
+  ).toBeVisible();
+});

@@ -14,9 +14,12 @@ type RecipeCardProps = {
   recipe: Recipe;
   // Its picture loads at once, not when it nears the screen: the first row's (RecipeListPage).
   eager: boolean;
+  // Its title's heading: a level under the heading it's listed under (h2 in My recipes, under
+  // the page's h1; h3 under a recipe's "Similar recipes").
+  titleAs?: "h2" | "h3";
 };
 
-export function RecipeCard({ recipe, eager }: RecipeCardProps) {
+export function RecipeCard({ recipe, eager, titleAs: Title = "h2" }: RecipeCardProps) {
   // Instagram, YouTube or Facebook; a recipe written by hand (or from text) has no label.
   const platform = PlatformSchema.safeParse(recipe.source.type).data;
   return (
@@ -30,9 +33,9 @@ export function RecipeCard({ recipe, eager }: RecipeCardProps) {
       {/* dir="auto" on the block: the meta line follows its title's side (a Hebrew title, right),
           its words kept in their own order (bdi), so "120 min" doesn't turn into "min … 120". */}
       <div dir="auto">
-        <h2 className="mt-2 line-clamp-2 text-base font-semibold group-hover:underline">
+        <Title className="mt-2 line-clamp-2 text-base font-semibold group-hover:underline">
           {recipe.title}
-        </h2>
+        </Title>
         <p className="text-sm text-muted-foreground">
           <bdi>{summary(recipe)}</bdi>
         </p>

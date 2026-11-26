@@ -252,6 +252,7 @@ export const he: Translation<typeof en> = {
     noServings: "המתכון לא מציין לכמה אנשים.",
     scaledTimes: "הכמויות שונו · {{times}} מהמקור",
     steps: "אופן ההכנה",
+    similar: "מתכונים דומים משלך",
     comments: "תגובות",
     commentsSoon: "בקרוב: תגובות ממי שהמתכון ישותף איתו.",
     moreActions: "פעולות נוספות",

@@ -1,4 +1,9 @@
-import { RecipeCountSchema, RecipeListSchema, RecipeSchema } from "@pinch/shared";
+import {
+  RecipeCountSchema,
+  RecipeListSchema,
+  RecipeSchema,
+  SimilarRecipesSchema,
+} from "@pinch/shared";
 import { ObjectId } from "mongodb";
 import { pino } from "pino";
 import request from "supertest";
@@ -425,6 +430,70 @@ async function listTitles(userApi: request.Agent, query: Record<string, string>)
   const response = await userApi.get("/api/recipes").query(query);
   return RecipeListSchema.parse(response.body).items.map((recipe) => recipe.title);
 }
+
+test("GET /api/recipes/:id/similar answers the user's other recipes that share its words, the ones sharing tags first", async () => {
+  const pasta = {
+    ingredients: ["spaghetti", "garlic", "olive oil", "salt"].map((name) => ({ name })),
+  };
+  const { ownerId, userApi } = await insertRecipesOfNewUser([
+    { title: "Spaghetti aglio e olio", ...pasta, tags: ["cuisine:italian", "meal:dinner"] },
+    { title: "Spaghetti salad", ingredients: [{ name: "spaghetti" }], tags: [] },
+    { title: "Spaghetti carbonara", ...pasta, tags: ["cuisine:italian", "meal:dinner"] },
+    { title: "Pancakes", ingredients: [{ name: "flour" }], tags: ["meal:dinner"] },
+    // $search's syntax in a title: left in, the quotes would ask for "crusty" in every answer and
+    // the minus leave every spaghetti out.
+    { title: 'Bread "crusty" -spaghetti', ingredients: [{ name: "bread" }], tags: [] },
+    // Only salt in common, and not among its first ingredients: not similar.
+    {
+      title: "Lemonade",
+      ingredients: ["lemons", "sugar", "water", "salt"].map((name) => ({ name })),
+      tags: [],
+    },
+    { title: "Spaghetti gone", ...pasta, deletedAt: new Date() },
+  ]);
+  await recipesCollection(db).insertOne({
+    ...omelette,
+    _id: new ObjectId(),
+    ownerId: new ObjectId(),
+    title: "Spaghetti of someone else",
+    source: { type: "manual" },
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  });
+  const mine = await recipesCollection(db).find({ ownerId }).toArray();
+  const idOf = (title: string) => mine.find((recipe) => recipe.title === title)?._id.toHexString();
+
+  const response = await userApi.get(
+    `/api/recipes/${idOf("Spaghetti aglio e olio") ?? ""}/similar`,
+  );
+  expect(response.status).toBe(200);
+  const titles = SimilarRecipesSchema.parse(response.body).items.map((recipe) => recipe.title);
+  // Not itself, the deleted one, another user's, or one that shares only a tag.
+  expect(titles[0]).toBe("Spaghetti carbonara");
+  expect([...titles].sort()).toEqual([
+    'Bread "crusty" -spaghetti',
+    "Spaghetti carbonara",
+    "Spaghetti salad",
+  ]);
+
+  const fromBread = await userApi.get(
+    `/api/recipes/${idOf('Bread "crusty" -spaghetti') ?? ""}/similar`,
+  );
+  expect(SimilarRecipesSchema.parse(fromBread.body).items).toHaveLength(3);
+});
+
+test("GET /api/recipes/:id/similar answers at most four, and 404 for a recipe that isn't the user's", async () => {
+  const { userApi } = await insertRecipesOfNewUser(
+    ["one", "two", "three", "four", "five", "six"].map((n) => ({ title: `Lentil soup ${n}` })),
+  );
+  const list = RecipeListSchema.parse((await userApi.get("/api/recipes")).body);
+  const id = list.items[0]?.id ?? "";
+
+  const response = await userApi.get(`/api/recipes/${id}/similar`);
+  expect(SimilarRecipesSchema.parse(response.body).items).toHaveLength(4);
+
+  expect((await api.get(`/api/recipes/${id}/similar`)).status).toBe(404);
+});
 
 test("GET /api/recipes?source= lists the recipes from any of the sources", async () => {
   const { userApi } = await insertRecipesOfNewUser([
