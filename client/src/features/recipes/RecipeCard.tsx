@@ -73,7 +73,7 @@ export function RecipeCard({ recipe, eager }: RecipeCardProps) {
 function summary(recipe: Recipe) {
   const minutes = (recipe.prepMinutes ?? 0) + (recipe.cookMinutes ?? 0);
   const ingredients = i18next.t("recipes.ingredients", { count: recipe.ingredients.length });
-  const parts = [ingredients];
+  const parts: string[] = [ingredients];
   if (minutes > 0) parts.unshift(i18next.t("recipes.minutes", { minutes: formatNumber(minutes) }));
   // Pinched, then changed (design D50).
   if (editedSincePinched(recipe)) parts.push(i18next.t("recipe.edited"));
