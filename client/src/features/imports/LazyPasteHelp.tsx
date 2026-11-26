@@ -10,9 +10,9 @@ export function LazyPasteHelp() {
   const { t } = useTranslation();
   // "Copy link" with a no-break space, so it's never split over two lines.
   const apps = [
-    ["Instagram", t("imports.pasteHelp.instagram"), "Share (the paper plane) → Copy link"],
-    ["Facebook", t("imports.pasteHelp.facebook"), "Share → Copy link"],
-    ["YouTube", t("imports.pasteHelp.youtube"), "Share → Copy link"],
+    ["Instagram", t("imports.pasteHelp.instagram"), "Share (the paper plane) → Copy\u00A0link"],
+    ["Facebook", t("imports.pasteHelp.facebook"), "Share → Copy\u00A0link"],
+    ["YouTube", t("imports.pasteHelp.youtube"), "Share → Copy\u00A0link"],
   ];
   return (
     <LazyInfoPopover label={t("imports.pasteHelp.label")} align="end">

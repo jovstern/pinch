@@ -93,9 +93,9 @@ export const en = {
     uploadHelp: {
       label: "About uploading a photo",
       what: "A photo of a cookbook page or a handwritten card, or screenshots of a post whose link doesn't work.",
-      limits: "Up to {{max}} pictures at once, PNG, JPEG or WebP, up to {{megabytes}} MB each.",
+      limits: "Up to {{max}} pictures at once (PNG, JPEG or WebP), up to {{megabytes}} MB each.",
       after:
-        "Pinch reads them into a draft for you to review. The first picture becomes the recipe's.",
+        "Pinch reads them into a draft for you to review. The first picture becomes the recipe's picture.",
     },
     couldntSendThese: "We couldn't send these. Try again.",
     // The (i) under Pinch it (LazyPasteHelp; hidden for now, ImportPage): its name, then where on each app the share menu is (its

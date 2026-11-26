@@ -348,7 +348,7 @@ test("under the box, a photo of a recipe can be uploaded, and its (i) says what 
   await userEvent.click(screen.getByRole("button", { name: "About uploading a photo" }));
   const help = await screen.findByRole("dialog", { name: "About uploading a photo" });
   expect(
-    within(help).getByText("Up to 4 pictures at once, PNG, JPEG or WebP, up to 10 MB each."),
+    within(help).getByText("Up to 4 pictures at once (PNG, JPEG or WebP), up to 10 MB each."),
   ).toBeVisible();
   expect(within(help).getByText(/A photo of a cookbook page/)).toBeVisible();
 });
@@ -1033,7 +1033,7 @@ test("in Hebrew, the upload reads right to left inside its ltr row", async () =>
   stubApi([[]]);
   await renderInHebrew("/");
 
-  // Its icon at its words' right, as on the header's Write a recipe (design §16.4).
+  // Its words in the page's direction inside the ltr row (design §16.4).
   const picker = await screen.findByLabelText("או להעלות תמונה של מתכון");
   expect(picker.closest("label")).toHaveAttribute("dir", "rtl");
 });
@@ -1177,6 +1177,7 @@ test("in Hebrew, the upload and its card are in Hebrew", async () => {
   await inHebrew();
   renderScreenshots();
 
+  expect(screen.getByRole("button", { name: "על העלאת תמונה" })).toBeInTheDocument();
   await userEvent.upload(screen.getByLabelText("או להעלות תמונה של מתכון"), [
     screenshot("one.png"),
     screenshot("two.png"),

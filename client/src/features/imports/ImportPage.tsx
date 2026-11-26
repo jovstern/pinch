@@ -33,8 +33,8 @@ export function ImportPage() {
       <div className={cn("my-auto", isPending && "invisible")}>
         <LazyImportForm inputRef={pasteBoxRef} />
         {/* The other way in, quiet: the paste is the main one (design §14). Write a recipe is the
-            header's. The (i), where to find a post's link, would sit at this row's other end:
-            hidden for now, the user's call on 2026-11-14. <LazyPasteHelp /> */}
+            header's. The (i) for where to find a post's link (<LazyPasteHelp />) would sit at the
+            other end of ScreenshotsUpload's row: hidden for now, the user's call on 2026-11-14. */}
         <ScreenshotsUpload />
         <ImportList focusPasteBox={() => pasteBoxRef.current?.focus()} />
       </div>

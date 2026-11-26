@@ -61,7 +61,8 @@ export function ScreenshotsUpload() {
   return (
     <div dir="ltr" className="mt-1 grid justify-items-start">
       {/* The upload, and its (i) beside it: what can be sent, for what, and what comes of it. */}
-      <div className="flex items-center gap-1">
+      {/* The gap is the (i)'s touch area's reach (10 px), so it never covers the label's end. */}
+      <div className="flex items-center gap-2.5">
         {/* Quiet, under the field: the paste is the main way in (design §14). A label with
           Button's link look: the file input inside it is hidden, so the label shows its focus
           (as TagPicker's chips), and relative keeps the input inside it. */}
