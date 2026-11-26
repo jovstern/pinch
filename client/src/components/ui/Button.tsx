@@ -26,7 +26,7 @@ const buttonVariants = cva(
           "border border-input bg-background hover:not-aria-disabled:bg-secondary active:not-aria-disabled:bg-border",
         // No surface until hovered: a small tool beside a field (Paste).
         ghost: "hover:not-aria-disabled:bg-secondary active:not-aria-disabled:bg-border",
-        // A quiet way in, read as a link (Or write it yourself): no surface at all.
+        // A quiet way in, read as a link (Add recipe's upload): no surface at all.
         link: "text-primary underline underline-offset-4 hover:not-aria-disabled:decoration-2",
         // Only for what can't be undone.
         destructive:

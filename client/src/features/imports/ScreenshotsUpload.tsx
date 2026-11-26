@@ -6,16 +6,18 @@ import {
 } from "@pinch/shared";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import i18next from "i18next";
-import { ImagePlus } from "lucide-react";
 import { useId, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
+import { LazyInfoPopover } from "../../components/LazyInfoPopover.tsx";
 import { Button } from "../../components/ui/Button.tsx";
+import { pageIsRtl } from "../../i18n.ts";
 import { ApiError, sendForm } from "../../lib/api.ts";
 import { serverMessage } from "../../lib/serverMessage.tsx";
 import { toastPinching } from "../../lib/toasts.tsx";
 import { cancelImport, importListQuery, limitNote } from "./importQueries.ts";
 
-// The second way in on / (design §1, §14): screenshots of a post whose link and text won't do.
+// The second way in on / (design §1, §14): photos or screenshots of a recipe, for a post whose
+// link and text won't do, or a recipe on paper.
 // Choosing them sends them at once: the picker's Open is the confirm. Checked here first, with
 // the API's own limits, so a wrong pick is said before anything is sent.
 export function ScreenshotsUpload() {
@@ -23,7 +25,6 @@ export function ScreenshotsUpload() {
   const queryClient = useQueryClient();
   // Only the local check is kept; the send's failure is the mutation's own.
   const [refused, setRefused] = useState(false);
-  const hintId = useId();
   const errorId = useId();
   const upload = useMutation({
     mutationFn: (files: File[]) => {
@@ -54,40 +55,66 @@ export function ScreenshotsUpload() {
   const message = errorMessage(refused, upload.error);
   // A day's limit is a quiet note, as under the paste box; the rest are errors.
   const limit = refused ? undefined : limitNote(upload.error);
+  // Its words in the page's direction, in a row laid out left to right in Hebrew too, as the box
+  // above (§16.4): on the left, under the box's sparkles.
+  const dir = pageIsRtl() ? "rtl" : "ltr";
   return (
-    <div className="mt-2">
-      {/* Quiet, under the field: the paste is the main way in (design §14). A label with
-          Button's ghost look: the file input inside it is hidden, so the label
-          shows its focus (as TagPicker's chips), and relative keeps the input inside it. */}
-      <Button asChild variant="ghost">
-        <label className="relative -ms-2 cursor-pointer px-2 text-sm font-medium text-muted-foreground has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-focus-visible:outline-ring">
-          <ImagePlus aria-hidden="true" className="size-4" />
-          {upload.isPending ? t("imports.sending") : t("imports.addScreenshots")}
-          <input
-            type="file"
-            multiple
-            accept={SCREENSHOT_TYPES.join(",")}
-            className="sr-only"
-            aria-disabled={upload.isPending}
-            aria-describedby={message ? `${hintId} ${errorId}` : hintId}
-            onChange={(event) => {
-              choose([...(event.target.files ?? [])]);
-              // Empty again, so choosing the same files twice still sends them.
-              event.target.value = "";
-            }}
-          />
-        </label>
-      </Button>
-      <p id={hintId} className="text-sm text-muted-foreground">
-        {t("imports.screenshotsHint", { max: MAX_SCREENSHOTS })}
-      </p>
+    <div dir="ltr" className="mt-1 grid justify-items-start">
+      {/* The upload, and its (i) beside it: what can be sent, for what, and what comes of it. */}
+      {/* The gap is the (i)'s touch area's reach (10 px), so it never covers the label's end. */}
+      <div className="flex items-center gap-2.5">
+        {/* Quiet, under the field: the paste is the main way in (design §14). A label with
+          Button's link look: the file input inside it is hidden, so the label shows its focus
+          (as TagPicker's chips), and relative keeps the input inside it. */}
+        {/* The classes on Button, whose cn() lets px-0 win over its own px-4 (asChild's Slot only
+          joins them). */}
+        <Button
+          asChild
+          variant="link"
+          className="relative cursor-pointer px-0 text-sm has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-focus-visible:outline-ring"
+        >
+          <label dir={dir}>
+            {upload.isPending ? t("imports.sending") : t("imports.addScreenshots")}
+            <input
+              type="file"
+              multiple
+              accept={SCREENSHOT_TYPES.join(",")}
+              className="sr-only"
+              aria-disabled={upload.isPending}
+              aria-describedby={message ? errorId : undefined}
+              onChange={(event) => {
+                choose([...(event.target.files ?? [])]);
+                // Empty again, so choosing the same files twice still sends them.
+                event.target.value = "";
+              }}
+            />
+          </label>
+        </Button>
+        <LazyInfoPopover label={t("imports.uploadHelp.label")} align="start">
+          <ul className="mt-3 space-y-2 text-sm">
+            <li>{t("imports.uploadHelp.what")}</li>
+            <li>
+              {t("imports.uploadHelp.limits", {
+                max: MAX_SCREENSHOTS,
+                megabytes: MAX_SCREENSHOT_BYTES / 1_000_000,
+              })}
+            </li>
+            <li className="text-muted-foreground">{t("imports.uploadHelp.after")}</li>
+          </ul>
+        </LazyInfoPopover>
+      </div>
       {/* The limit's live region is always on the page (empty until then), so screen readers
           hear it; an error is an alert. Either one is the input's description. */}
-      <p id={limit && errorId} role="status" className="text-sm text-text-muted not-empty:mt-1">
+      <p
+        id={limit && errorId}
+        dir={dir}
+        role="status"
+        className="text-sm text-text-muted not-empty:mt-1"
+      >
         {limit}
       </p>
       {message && !limit && (
-        <p id={errorId} role="alert" className="mt-1 text-sm text-destructive">
+        <p id={errorId} dir={dir} role="alert" className="mt-1 text-sm text-destructive">
           {message}
         </p>
       )}

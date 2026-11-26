@@ -339,14 +339,18 @@ test("the heading counts what's ready, in progress and failed, a stalled one as 
   ).toBeInTheDocument();
 });
 
-test("Or write it yourself leads to the empty editor", async () => {
+test("under the box, a photo of a recipe can be uploaded, and its (i) says what to send", async () => {
   stubApi([[]]);
   renderApp("/");
 
-  expect(await screen.findByRole("link", { name: "Or write it yourself" })).toHaveAttribute(
-    "href",
-    "/recipes/new",
-  );
+  const picker = await screen.findByLabelText("Or upload a photo of a recipe");
+  expect(picker).toHaveAttribute("type", "file");
+  await userEvent.click(screen.getByRole("button", { name: "About uploading a photo" }));
+  const help = await screen.findByRole("dialog", { name: "About uploading a photo" });
+  expect(
+    within(help).getByText("Up to 4 pictures at once (PNG, JPEG or WebP), up to 10 MB each."),
+  ).toBeVisible();
+  expect(within(help).getByText(/A photo of a cookbook page/)).toBeVisible();
 });
 
 // The (i) is hidden from / for now (ImportPage, the user's call on 2026-11-14), so it's tested on
@@ -848,8 +852,7 @@ test("polling runs only while the worker has a link in hand", () => {
 
 const screenshot = (name: string) => new File(["png"], name, { type: "image/png" });
 
-// Screenshots are hidden from / for now (ImportPage), so their picker is tested on its own, above
-// the queue as it was on the page.
+// The picker on its own, above the queue as on the page: its sends without the paste box's.
 function renderScreenshots() {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   render(
@@ -867,7 +870,7 @@ test("chosen screenshots are sent at once, as a form, and show in the list", asy
   const fetch = stubApi([[], [shots]], () => Response.json(shots, { status: 202 }));
   renderScreenshots();
 
-  await userEvent.upload(screen.getByLabelText("Or add screenshots"), [
+  await userEvent.upload(screen.getByLabelText("Or upload a photo of a recipe"), [
     screenshot("one.png"),
     screenshot("two.png"),
   ]);
@@ -882,7 +885,7 @@ test("chosen screenshots are sent at once, as a form, and show in the list", asy
 test("more than 4 screenshots, or one too big, are refused before anything is sent", async () => {
   const fetch = stubApi([[]]);
   renderScreenshots();
-  const picker = screen.getByLabelText("Or add screenshots");
+  const picker = screen.getByLabelText("Or upload a photo of a recipe");
 
   await userEvent.upload(
     picker,
@@ -903,7 +906,7 @@ test("the API's reason for refusing the screenshots is shown, and tied to the pi
   );
   renderScreenshots();
 
-  const picker = screen.getByLabelText("Or add screenshots");
+  const picker = screen.getByLabelText("Or upload a photo of a recipe");
   await userEvent.upload(picker, [screenshot("one.png")]);
 
   expect(await screen.findByRole("alert")).toHaveTextContent("Not an image.");
@@ -921,7 +924,9 @@ test("a pick while screenshots are sending sends nothing more", async () => {
   vi.stubGlobal("fetch", fetch);
   renderScreenshots();
 
-  await userEvent.upload(screen.getByLabelText("Or add screenshots"), [screenshot("one.png")]);
+  await userEvent.upload(screen.getByLabelText("Or upload a photo of a recipe"), [
+    screenshot("one.png"),
+  ]);
   await userEvent.upload(await screen.findByLabelText("Sending…"), [screenshot("two.png")]);
   answer(Response.json(importOf({}), { status: 202 }));
 
@@ -933,7 +938,9 @@ test("screenshots past the day's cap say so", async () => {
   renderScreenshots();
 
   const regions = screen.getAllByRole("status");
-  await userEvent.upload(screen.getByLabelText("Or add screenshots"), [screenshot("one.png")]);
+  await userEvent.upload(screen.getByLabelText("Or upload a photo of a recipe"), [
+    screenshot("one.png"),
+  ]);
 
   // A quiet note, not an error (design §14), in a region that was already there.
   expect(regions).toContain(await screen.findByText(dailyLimitMessage));
@@ -944,7 +951,9 @@ test("screenshots past the global cap say so", async () => {
   renderScreenshots();
 
   const regions = screen.getAllByRole("status");
-  await userEvent.upload(screen.getByLabelText("Or add screenshots"), [screenshot("one.png")]);
+  await userEvent.upload(screen.getByLabelText("Or upload a photo of a recipe"), [
+    screenshot("one.png"),
+  ]);
 
   // A quiet note, not an error (design §14), in a region that was already there.
   expect(regions).toContain(await screen.findByText(globalLimitMessage));
@@ -952,7 +961,7 @@ test("screenshots past the global cap say so", async () => {
 
 // In Hebrew (design §16.11): Add recipe and the queue say it in Hebrew; the toasts stay English
 // (D46), and what a user pasted keeps its own direction (§16.5).
-test("in Hebrew, Add recipe's box and the way to write a recipe are in Hebrew, its placeholder and button in English", async () => {
+test("in Hebrew, Add recipe's box and its upload are in Hebrew, its placeholder and button in English", async () => {
   stubApi([[]]);
   await renderInHebrew("/");
 
@@ -965,10 +974,7 @@ test("in Hebrew, Add recipe's box and the way to write a recipe are in Hebrew, i
   expect(screen.getByText("Pinch it")).toHaveAttribute("lang", "en");
   expect(screen.getByRole("button", { name: "Pinch it" })).toBeInTheDocument();
   expect(screen.getByRole("heading", { level: 1, name: "להוסיף מתכון" })).toBeInTheDocument();
-  expect(screen.getByRole("link", { name: "או לכתוב מתכון ידנית" })).toHaveAttribute(
-    "href",
-    "/recipes/new",
-  );
+  expect(screen.getByLabelText("או להעלות תמונה של מתכון")).toHaveAttribute("type", "file");
   await waitFor(() => {
     expect(document.title).toBe("להוסיף מתכון · Pinch");
   });
@@ -980,12 +986,10 @@ test("in Hebrew, the paste row is laid out left to right, and what's typed keeps
 
   const box = await screen.findByRole("textbox", { name: "לשמור מתכון מסרטון" });
   // The user's call (design §16.4): the sparkles on the left and Pinch it on the right, as in
-  // English; the link on the left under it.
+  // English; the upload on the left under it.
   expect(box.parentElement).toHaveAttribute("dir", "ltr");
-  expect(screen.getByRole("link", { name: "או לכתוב מתכון ידנית" }).parentElement).toHaveAttribute(
-    "dir",
-    "ltr",
-  );
+  const upload = screen.getByLabelText("או להעלות תמונה של מתכון").closest("label");
+  expect(upload?.parentElement?.closest("[dir]")).toHaveAttribute("dir", "ltr");
   // Empty, English: the placeholder and the caret on the left, by the sparkles.
   expect(box).toHaveAttribute("dir", "ltr");
   // Typed in, its own (§16.5): a link left to right, Hebrew right to left.
@@ -1025,15 +1029,13 @@ test("in Hebrew, the (i) is named in Hebrew, says it in Hebrew, and Escape puts 
   expect(screen.getByRole("button", { name: "איפה מוצאים את הקישור" })).toHaveFocus();
 });
 
-test("in Hebrew, the link to write a recipe reads right to left inside its ltr row", async () => {
+test("in Hebrew, the upload reads right to left inside its ltr row", async () => {
   stubApi([[]]);
   await renderInHebrew("/");
 
-  // Its pen at its words' right, as on the header's Write a recipe (design §16.4).
-  expect(await screen.findByRole("link", { name: "או לכתוב מתכון ידנית" })).toHaveAttribute(
-    "dir",
-    "rtl",
-  );
+  // Its words in the page's direction inside the ltr row (design §16.4).
+  const picker = await screen.findByLabelText("או להעלות תמונה של מתכון");
+  expect(picker.closest("label")).toHaveAttribute("dir", "rtl");
 });
 
 test("in Hebrew, a refused paste's message is outside the ltr row, in the page's direction", async () => {
@@ -1169,14 +1171,14 @@ test("in Hebrew, the queue's toasts stay English", async () => {
   expect(within(failure).getByText("This doesn't look like a recipe.")).toBeInTheDocument();
 });
 
-test("in Hebrew, the screenshots' picker, its hint and its card are in Hebrew", async () => {
+test("in Hebrew, the upload and its card are in Hebrew", async () => {
   const shots = importOf({ input: { type: "images", count: 2 } });
   stubApi([[], [shots]], () => Response.json(shots, { status: 202 }));
   await inHebrew();
   renderScreenshots();
 
-  expect(screen.getByText("עד 4 צילומי מסך של המתכון, כשהקישור והטקסט לא מספיקים.")).toBeVisible();
-  await userEvent.upload(screen.getByLabelText("או להוסיף צילומי מסך"), [
+  expect(screen.getByRole("button", { name: "על העלאת תמונה" })).toBeInTheDocument();
+  await userEvent.upload(screen.getByLabelText("או להעלות תמונה של מתכון"), [
     screenshot("one.png"),
     screenshot("two.png"),
   ]);

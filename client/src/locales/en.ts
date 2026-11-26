@@ -88,12 +88,18 @@ export const en = {
     // globalLimitMessage, which the toasts show), chosen by its code (design §16.7).
     dailyLimit: "You've sent {{cap}} imports today. Try again tomorrow.",
     globalLimit: "Pinch has read all it can for today. Try again tomorrow.",
-    addScreenshots: "Or add screenshots",
-    screenshotsHint: "Up to {{max}} screenshots of the recipe, when its link and text won't do.",
+    addScreenshots: "Or upload a photo of a recipe",
+    // The (i) beside it: its name, then what can be sent, the limits, and what comes of it.
+    uploadHelp: {
+      label: "About uploading a photo",
+      what: "A photo of a cookbook page or a handwritten card, or screenshots of a post whose link doesn't work.",
+      limits: "Up to {{max}} pictures at once (PNG, JPEG or WebP), up to {{megabytes}} MB each.",
+      after:
+        "Pinch reads them into a draft for you to review. The first picture becomes the recipe's picture.",
+    },
     couldntSendThese: "We couldn't send these. Try again.",
-    writeItYourself: "Or write it yourself",
-    // The (i) under Pinch it (PasteHelp; hidden for now, ImportPage): its name, then where on each app the share menu is (its
-    // steps, "Share → Copy link", are English in both languages, in PasteHelp: D46), and the
+    // The (i) under Pinch it (LazyPasteHelp; hidden for now, ImportPage): its name, then where on each app the share menu is (its
+    // steps, "Share → Copy link", are English in both languages, in LazyPasteHelp: D46), and the
     // other thing the box takes.
     pasteHelp: {
       label: "Where to find the link",

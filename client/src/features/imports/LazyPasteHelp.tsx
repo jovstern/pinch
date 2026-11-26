@@ -1,32 +1,35 @@
-import { lazy, Suspense, useState } from "react";
-import { PasteHelpButton } from "./PasteHelpButton.tsx";
+import { useTranslation } from "react-i18next";
+import { LazyInfoPopover } from "../../components/LazyInfoPopover.tsx";
 
-// The popover is its own chunk, fetched when the (i) is about to be pressed (a pointer over it, a
-// finger on it, focus) or is pressed, as the avatar's menu (LazyUserMenu): Radix's positioning
-// would put / over its JS budget. Until then an (i) that looks and reads the same stands in;
-// pressed, the popover takes its place, open.
-const loadHelp = () => import("./PasteHelp.tsx");
-function preloadHelp() {
-  loadHelp().catch(() => undefined);
-}
-const PasteHelp = lazy(async () => ({ default: (await loadHelp()).PasteHelp }));
-
+// Where to find the link (design §14; hidden for now, ImportPage): one line per app, by the names
+// their share menus use, then the other thing the box takes, a recipe's text. The apps' names and
+// their menus' words stay in English in Hebrew too (D46, the user's call): each step reads left to
+// right, its → intact. At the (i)'s end, on the right in both languages (the row is left to right,
+// §16.4).
 export function LazyPasteHelp() {
-  const [pressed, setPressed] = useState(false);
-  const standIn = (
-    <PasteHelpButton
-      aria-expanded={false}
-      onPointerEnter={preloadHelp}
-      onFocus={preloadHelp}
-      onClick={() => {
-        setPressed(true);
-      }}
-    />
-  );
-  if (!pressed) return standIn;
+  const { t } = useTranslation();
+  // "Copy link" with a no-break space, so it's never split over two lines.
+  const apps = [
+    ["Instagram", t("imports.pasteHelp.instagram"), "Share (the paper plane) → Copy\u00A0link"],
+    ["Facebook", t("imports.pasteHelp.facebook"), "Share → Copy\u00A0link"],
+    ["YouTube", t("imports.pasteHelp.youtube"), "Share → Copy\u00A0link"],
+  ];
   return (
-    <Suspense fallback={standIn}>
-      <PasteHelp />
-    </Suspense>
+    <LazyInfoPopover label={t("imports.pasteHelp.label")} align="end">
+      <dl className="mt-3 space-y-2 text-sm">
+        {apps.map(([app, where, steps]) => (
+          <div key={app}>
+            <dt className="font-semibold">{app}</dt>
+            <dd className="text-muted-foreground">
+              {where}{" "}
+              <span dir="ltr" lang="en">
+                {steps}
+              </span>
+            </dd>
+          </div>
+        ))}
+      </dl>
+      <p className="mt-3 text-sm">{t("imports.pasteHelp.text")}</p>
+    </LazyInfoPopover>
   );
 }

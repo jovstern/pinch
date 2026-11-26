@@ -70,10 +70,14 @@ export const he: Translation<typeof en> = {
     couldntSend: "השליחה נכשלה. אפשר לנסות שוב.",
     dailyLimit: "המכסה היומית של {{cap}} מתכונים כבר נוצלה. אפשר לנסות שוב מחר.",
     globalLimit: "Pinch הגיע למכסה היומית שלו. אפשר לנסות שוב מחר.",
-    addScreenshots: "או להוסיף צילומי מסך",
-    screenshotsHint: "עד {{max}} צילומי מסך של המתכון, כשהקישור והטקסט לא מספיקים.",
+    addScreenshots: "או להעלות תמונה של מתכון",
+    uploadHelp: {
+      label: "על העלאת תמונה",
+      what: "צילום של דף מתוך ספר בישול או של כרטיס מתכון בכתב יד, או צילומי מסך של פוסט שהקישור שלו לא עובד.",
+      limits: "עד {{max}} תמונות בבת אחת (PNG,‏ JPEG או WebP), עד {{megabytes}} MB כל אחת.",
+      after: "Pinch קורא אותן וכותב טיוטה שאפשר לבדוק. התמונה הראשונה תהיה התמונה של המתכון.",
+    },
     couldntSendThese: "השליחה נכשלה. אפשר לנסות שוב.",
-    writeItYourself: "או לכתוב מתכון ידנית",
     pasteHelp: {
       label: "איפה מוצאים את הקישור",
       instagram: "בריל:",

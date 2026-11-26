@@ -1,18 +1,15 @@
 import { useQuery } from "@tanstack/react-query";
-import { PenLine } from "lucide-react";
 import { useRef } from "react";
 import { useTranslation } from "react-i18next";
-import { Link } from "react-router";
-import { Button } from "../../components/ui/Button.tsx";
-import { pageIsRtl } from "../../i18n.ts";
 import { cn } from "../../lib/cn.ts";
 import { useHeadingFocus } from "../../lib/useHeadingFocus.ts";
 import { ImportList } from "./ImportList.tsx";
 import { importListQuery } from "./importQueries.ts";
 import { LazyImportForm } from "./LazyImportForm.tsx";
+import { ScreenshotsUpload } from "./ScreenshotsUpload.tsx";
 
-// The Add recipe tab, at / (design §14, D24): paste a link or a post's text, and the queue of
-// what's being turned into recipes.
+// The Add recipe tab, at / (design §14, D24): paste a link or a post's text, or upload pictures of
+// a recipe, and the queue of what's being turned into recipes.
 export function ImportPage() {
   const { t } = useTranslation();
   // The paste box, where focus goes after an import is retried or dismissed.
@@ -35,21 +32,10 @@ export function ImportPage() {
           reach. */}
       <div className={cn("my-auto", isPending && "invisible")}>
         <LazyImportForm inputRef={pasteBoxRef} />
-        {/* Screenshots: hidden for now (user, 2026-11-10). <ScreenshotsUpload /> */}
-        {/* The other way in, quiet: the paste is the main one (design §14). Write a recipe's
-            pen, as in the header. Left to right in Hebrew too, as the box above (§16.4): the link
-            on the left. The link's own words, and its pen, in the page's direction: in Hebrew the
-            pen is at their right, as on the header's Write a recipe. */}
-        <div dir="ltr" className="mt-1 flex items-center justify-between gap-2">
-          <Button asChild variant="link" className="px-0 text-sm">
-            <Link to="/recipes/new" dir={pageIsRtl() ? "rtl" : "ltr"}>
-              <PenLine aria-hidden="true" className="size-4" />
-              {t("imports.writeItYourself")}
-            </Link>
-          </Button>
-          {/* The (i), where to find a post's link, on the right: hidden for now, the user's
-              call on 2026-11-14. <LazyPasteHelp /> */}
-        </div>
+        {/* The other way in, quiet: the paste is the main one (design §14). Write a recipe is the
+            header's. The (i) for where to find a post's link (<LazyPasteHelp />) would sit at the
+            other end of ScreenshotsUpload's row: hidden for now, the user's call on 2026-11-14. */}
+        <ScreenshotsUpload />
         <ImportList focusPasteBox={() => pasteBoxRef.current?.focus()} />
       </div>
     </>
