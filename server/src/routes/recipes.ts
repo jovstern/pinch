@@ -106,8 +106,10 @@ export function recipesRouter(db: Db) {
     const existing = await recipes.findOne(filter);
     if (!existing) throw recipeNotFound();
     // A save that changes nothing isn't an edit: its date stays, as the Edited mark reads the
-    // dates (design D50). As JSON, which leaves out a blank field both ways.
-    const unchanged = JSON.stringify(input) === JSON.stringify(RecipeInputSchema.parse(existing));
+    // dates (design D50). As JSON, which leaves out a blank field both ways. A stored recipe the
+    // schema no longer takes counts as changed, rather than failing the save.
+    const stored = RecipeInputSchema.safeParse(existing);
+    const unchanged = stored.success && JSON.stringify(input) === JSON.stringify(stored.data);
     // Every stored field the form doesn't send is kept here, or replaceOne erases it (D20).
     const recipe: RecipeDocument = {
       ...input,
