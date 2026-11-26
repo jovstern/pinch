@@ -186,6 +186,44 @@ export function findRecipes(
   );
 }
 
+// How many similar recipes a recipe's page shows (design D51).
+export const SIMILAR_COUNT = 4;
+
+// The user's other recipes most like this one (design D51): those that share a word of its title
+// or of its first ingredients' names (the text index, as a search: English stemmed, Hebrew by
+// whole words), best first by the text score plus one for each tag they share, so two pasta
+// dishes tagged italian come before a pasta salad. Only the first MAIN_INGREDIENTS: a recipe
+// lists what the dish is made of first, and with all of them every recipe matched every other on
+// salt, water and oil (tried on the user's library). A recipe that shares only tags isn't found:
+// tags alone ("dinner") say too little. The words go in as a plain search: a quote or a minus,
+// $search's syntax, is taken out.
+const MAIN_INGREDIENTS = 3;
+export function findSimilarRecipes(recipes: Collection<RecipeDocument>, recipe: RecipeDocument) {
+  const main = recipe.ingredients.slice(0, MAIN_INGREDIENTS);
+  const words = [recipe.title, ...main.map((ingredient) => ingredient.name)]
+    .join(" ")
+    .replaceAll(/["-]/g, " ");
+  // Through toRecipe, which reads a recipe saved before tags existed as having none; such a
+  // stored recipe has no tags field, so $ifNull.
+  const { tags } = toRecipe(recipe);
+  const sharedTags = { $setIntersection: [{ $ifNull: ["$tags", []] }, tags] };
+  return recipes.aggregate<RecipeDocument>([
+    {
+      $match: {
+        ownerId: recipe.ownerId,
+        ...NOT_DELETED,
+        _id: { $ne: recipe._id },
+        $text: { $search: words },
+      },
+    },
+    { $addFields: { likeness: { $add: [{ $meta: "textScore" }, { $size: sharedTags }] } } },
+    // _id breaks ties, so the same four come back every time.
+    { $sort: { likeness: -1, _id: -1 } },
+    { $limit: SIMILAR_COUNT },
+    { $project: { ...WITHOUT_MEDIA, likeness: 0 } },
+  ]);
+}
+
 // The recipes after the cursor, in the order's direction; at the same value, the ones after its
 // _id (the sort's tiebreak), so two recipes with the same time or title are neither skipped nor
 // shown twice. The plain range ($lte or $gte) starts the index scan at the cursor; without it,

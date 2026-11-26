@@ -209,7 +209,7 @@ After M10 (found by M10's UI review, not M10's to fix):
 - [ ] C2 Save on the import's review page, on a phone (waiting for the device)
 - [x] C3 Print, and save as PDF from the print dialog (D49)
 - [x] C4 An Edited mark on a recipe Pinch read and the user then changed (D50)
-- [ ] C5 Similar recipes under each recipe, from the user's own
+- [x] C5 Similar recipes under each recipe, from the user's own (D51)
 
 ## M11 — Pinch online (design §15, §8.3, D31–D38)
 

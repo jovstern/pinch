@@ -6,6 +6,7 @@ import {
   TimeLimitSchema,
   type RecipeCount,
   type RecipeList,
+  type SimilarRecipes,
   type RecipeSort,
 } from "@pinch/shared";
 import express from "express";
@@ -13,6 +14,7 @@ import { ObjectId, type Db } from "mongodb";
 import { z } from "zod";
 import {
   findRecipes,
+  findSimilarRecipes,
   PAGE_SIZE,
   recipesCollection,
   toRecipe,
@@ -85,6 +87,18 @@ export function recipesRouter(db: Db) {
     );
     if (!recipe) throw recipeNotFound();
     res.json(toRecipe(recipe));
+  });
+
+  // Up to four of the user's other recipes like this one, for under it (design D51). Its own
+  // route, so the recipe itself is never kept waiting for them.
+  router.get("/:id/similar", async (req, res) => {
+    const recipe = await recipes.findOne(
+      { _id: parseId(req.params.id), ownerId: req.userId, ...NOT_DELETED },
+      { projection: WITHOUT_MEDIA },
+    );
+    if (!recipe) throw recipeNotFound();
+    const similar = await findSimilarRecipes(recipes, recipe).toArray();
+    res.json({ items: similar.map(toRecipe) } satisfies SimilarRecipes);
   });
 
   // The recipe's picture (§5), apart from the recipe, so lists stay small.

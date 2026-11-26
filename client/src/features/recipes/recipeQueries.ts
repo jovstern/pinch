@@ -5,6 +5,7 @@ import {
   RecipeListSchema,
   RecipeSchema,
   RecipeSortSchema,
+  SimilarRecipesSchema,
   TimeLimitSchema,
   type ListSource,
   type Recipe,
@@ -85,6 +86,16 @@ export function recipeQuery(id: string) {
   return queryOptions({
     queryKey: ["recipes", "detail", id],
     queryFn: () => getJson(`/api/recipes/${id}`, RecipeSchema),
+  });
+}
+
+// Up to four of the user's other recipes like this one, for under it (design D51). Asked again
+// each time a recipe's page opens (no staleTime), so not refetched when a recipe changes: that
+// would ask for the similar ones of a recipe just deleted, a 404.
+export function similarRecipesQuery(id: string) {
+  return queryOptions({
+    queryKey: ["recipes", "similar", id],
+    queryFn: () => getJson(`/api/recipes/${id}/similar`, SimilarRecipesSchema),
   });
 }
 

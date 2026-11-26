@@ -306,6 +306,8 @@ export const en = {
     noServings: "The recipe doesn't say how many it serves.",
     // {{times}} is "×2", in its isolate.
     scaledTimes: "Amounts changed · {{times}} the original",
+    // Up to four of the user's other recipes, under the steps (D51).
+    similar: "Similar recipes of yours",
     comments: "Comments",
     commentsSoon: "Coming soon: notes from whoever you share this recipe with.",
     // ⋯ and its menu.

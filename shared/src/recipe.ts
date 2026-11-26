@@ -179,6 +179,9 @@ export const RecipeListSchema = z.object({
   nextCursor: z.string().nullable(),
 });
 
+// GET /api/recipes/:id/similar: a few of the user's other recipes like this one (design D51).
+export const SimilarRecipesSchema = z.object({ items: z.array(RecipeSchema) });
+
 // GET /api/recipes/count: how many recipes the user has (the My recipes tab, design §14).
 export const RecipeCountSchema = z.object({ count: z.number().int().nonnegative() });
 
@@ -191,6 +194,7 @@ export type Thumbnail = z.infer<typeof ThumbnailSchema>;
 export type Recipe = z.infer<typeof RecipeSchema>;
 export type RecipeCount = z.infer<typeof RecipeCountSchema>;
 export type RecipeList = z.infer<typeof RecipeListSchema>;
+export type SimilarRecipes = z.infer<typeof SimilarRecipesSchema>;
 export type RecipeSort = z.infer<typeof RecipeSortSchema>;
 export type TimeLimit = z.infer<typeof TimeLimitSchema>;
 export type ListSource = z.infer<typeof ListSourceSchema>;

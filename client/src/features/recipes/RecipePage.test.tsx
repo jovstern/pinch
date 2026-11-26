@@ -25,7 +25,8 @@ const omelette: Recipe = {
   updatedAt: "2026-11-01T10:00:00.000Z",
 };
 
-// A fake API: the recipe, an empty list, and DELETE answering 204 (or the status given).
+// A fake API: the recipe, nothing similar to it, an empty list, and DELETE answering 204 (or the
+// status given).
 function stubApi(deleteStatus = 204) {
   const fetch = vi.fn((path: string, init?: RequestInit) => {
     if (init?.method === "DELETE") {
@@ -33,6 +34,7 @@ function stubApi(deleteStatus = 204) {
     }
     if (path === "/api/recipes")
       return Promise.resolve(Response.json({ items: [], nextCursor: null }));
+    if (path.endsWith("/similar")) return Promise.resolve(Response.json({ items: [] }));
     return Promise.resolve(Response.json(omelette));
   });
   // Delete goes to /, which asks for the imports too.
@@ -268,6 +270,35 @@ test("Print opens the browser's print dialog, which saves as PDF too", async () 
   expect(print).toHaveBeenCalledOnce();
   // On paper the choice is written out in place of the list (jsdom has no print styles).
   expect(screen.getByText("2 people", { selector: "span" })).toHaveClass("print:inline");
+});
+
+test("similar recipes of the user's are listed under the recipe, each a link to it", async () => {
+  const frittata = { ...omelette, id: "6650a1b2c3d4e5f600000002", title: "Frittata" };
+  stubFetch((path: string) =>
+    Promise.resolve(Response.json(path.endsWith("/similar") ? { items: [frittata] } : omelette)),
+  );
+  renderApp(`/recipes/${omelette.id}`);
+
+  const similar = await screen.findByRole("list", { name: "Similar recipes of yours" });
+  expect(within(similar).getByRole("link", { name: /Frittata/ })).toHaveAttribute(
+    "href",
+    `/recipes/${frittata.id}`,
+  );
+  expect(within(similar).getByRole("heading", { level: 3, name: "Frittata" })).toBeInTheDocument();
+});
+
+test("with nothing similar, or when they can't be loaded, there's no such section", async () => {
+  stubFetch((path: string) =>
+    path.endsWith("/similar")
+      ? Promise.resolve(new Response(null, { status: 500 }))
+      : Promise.resolve(Response.json(omelette)),
+  );
+  renderApp(`/recipes/${omelette.id}`);
+
+  expect(await screen.findByRole("heading", { level: 2, name: "Comments" })).toBeInTheDocument();
+  expect(
+    screen.queryByRole("heading", { name: "Similar recipes of yours" }),
+  ).not.toBeInTheDocument();
 });
 
 test("Comments are there, and say they're coming", async () => {

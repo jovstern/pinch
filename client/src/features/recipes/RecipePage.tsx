@@ -20,6 +20,7 @@ import { RecipeSkeleton } from "./RecipeSkeleton.tsx";
 import { RecipeSource } from "./RecipeSource.tsx";
 import { scaleIngredients } from "./scaleQuantity.ts";
 import { ServingsPicker } from "./ServingsPicker.tsx";
+import { SimilarRecipes } from "./SimilarRecipes.tsx";
 import { useScale } from "./useScale.ts";
 import { filterParams, listedRecipe, noFilters, recipeQuery } from "./recipeQueries.ts";
 import { tagLabel } from "./tagLabels.ts";
@@ -193,6 +194,8 @@ export function RecipePage() {
 
       {/* A placeholder (design §1). When built: its own collection, never an array in the
           recipe, as comments grow without limit. */}
+      <SimilarRecipes id={recipe.id} />
+
       <div className="print:hidden">
         <h2 className="mt-8 text-xl font-semibold">{t("recipe.comments")}</h2>
         <p className="mt-3 text-muted-foreground">{t("recipe.commentsSoon")}</p>
