@@ -26,7 +26,7 @@ export function RecipeFace({ emoji, fromVideo, className }: RecipeFaceProps) {
       )}
     >
       {emoji ?? (
-        <span className="relative text-muted-foreground">
+        <span dir="ltr" className="relative text-muted-foreground">
           <CookingPot className="size-[1em]" strokeWidth={1.5} />
           {fromVideo && <Sparkles className="absolute -end-[0.4em] -top-[0.15em] size-[0.45em]" />}
         </span>
