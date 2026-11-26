@@ -303,6 +303,30 @@ test("a recipe from a link names its site and links to the post, in a new tab", 
   expect(screen.queryByText(/Written by you/)).not.toBeInTheDocument();
 });
 
+test("a recipe from a link, as it was saved, doesn't say Edited", async () => {
+  // Both dates are one moment.
+  stubFetch(() => Promise.resolve(Response.json({ ...omelette, source: { type: "youtube" } })));
+  renderApp(`/recipes/${omelette.id}`);
+
+  expect(await screen.findByText(/Prep 5 min/)).toHaveTextContent(
+    "YouTube · Serves 1 · Prep 5 min",
+  );
+});
+
+test("a recipe from a link that was changed since says Edited after its source", async () => {
+  const changed = {
+    ...omelette,
+    source: { type: "youtube" },
+    updatedAt: "2026-11-02T10:00:00.000Z",
+  };
+  stubFetch(() => Promise.resolve(Response.json(changed)));
+  renderApp(`/recipes/${omelette.id}`);
+
+  expect(await screen.findByText(/Prep 5 min/)).toHaveTextContent(
+    "YouTube · Edited · Serves 1 · Prep 5 min",
+  );
+});
+
 // Delete is in the ⋯ menu, named in the page's language.
 const englishMenu = { more: "More actions", delete: "Delete…" };
 const hebrewMenu = { more: "פעולות נוספות", delete: "למחוק…" };

@@ -6,6 +6,7 @@ import { Thumbnail } from "../../components/Thumbnail.tsx";
 import { Badge } from "../../components/ui/Badge.tsx";
 import { formatNumber } from "../../lib/formatNumber.ts";
 import { platformNames } from "../../lib/platformNames.ts";
+import { editedSincePinched } from "./editedSincePinched.ts";
 
 // A recipe in My recipes' grid (design §14): its picture, where it came from, its title, and the
 // two things that decide what to cook tonight. One link, so the grid is one tab stop a recipe.
@@ -67,11 +68,14 @@ export function RecipeCard({ recipe, eager }: RecipeCardProps) {
   );
 }
 
-// "10 min · 2 ingredients", as the wireframe; no time when the recipe has none.
+// "10 min · 2 ingredients", as the wireframe, then "Edited" when it is; no time when the recipe
+// has none.
 function summary(recipe: Recipe) {
   const minutes = (recipe.prepMinutes ?? 0) + (recipe.cookMinutes ?? 0);
   const ingredients = i18next.t("recipes.ingredients", { count: recipe.ingredients.length });
-  return minutes > 0
-    ? `${i18next.t("recipes.minutes", { minutes: formatNumber(minutes) })} · ${ingredients}`
-    : ingredients;
+  const parts: string[] = [ingredients];
+  if (minutes > 0) parts.unshift(i18next.t("recipes.minutes", { minutes: formatNumber(minutes) }));
+  // Pinched, then changed (design D50).
+  if (editedSincePinched(recipe)) parts.push(i18next.t("recipe.edited"));
+  return parts.join(" · ");
 }

@@ -11,6 +11,7 @@ import { Thumbnail } from "../../components/Thumbnail.tsx";
 import { formatNumber } from "../../lib/formatNumber.ts";
 import { isolate } from "../../lib/isolate.ts";
 import { useHeadingFocus } from "../../lib/useHeadingFocus.ts";
+import { editedSincePinched } from "./editedSincePinched.ts";
 import { ingredientLine } from "./ingredientLine.ts";
 import { keepRangesTogether } from "./ranges.ts";
 import { LazyRecipeMenu } from "./LazyRecipeMenu.tsx";
@@ -99,6 +100,8 @@ export function RecipePage() {
           <div className="mt-2 grid gap-1 text-sm text-muted-foreground">
             <p>
               <RecipeSource source={recipe.source} />
+              {/* No longer as Pinch read it (design D50). */}
+              {editedSincePinched(recipe) && ` · ${t("recipe.edited")}`}
               {recipeDetails && ` · ${recipeDetails}`}
             </p>
             {recipe.nutritionPerServing && (

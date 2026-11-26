@@ -226,6 +226,7 @@ export const he: Translation<typeof en> = {
     notLoaded: "המתכון לא נטען",
     couldntLoad: "המתכון לא נטען",
     writtenByYou: "נכתב ידנית",
+    edited: "נערך",
     fromText: "מטקסט מודבק",
     fromScreenshots: "מצילומי מסך",
     opensInNewTab: "(נפתח בכרטיסייה חדשה)",

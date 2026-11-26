@@ -582,6 +582,24 @@ test("PUT /api/recipes/:id replaces what the user can edit and clears what they 
   expect(read.body).toEqual(response.body);
 });
 
+test("PUT with nothing changed keeps updatedAt; a change moves it", async () => {
+  const created = await api.post("/api/recipes").send(omelette);
+  const { id } = RecipeSchema.parse(created.body);
+  // Saved an hour ago, so a moved date can't be the same millisecond.
+  const savedAt = new Date(Date.now() - 3_600_000);
+  await recipesCollection(db).updateOne(
+    { _id: new ObjectId(id) },
+    { $set: { createdAt: savedAt, updatedAt: savedAt } },
+  );
+
+  // As the form sends it: a blank field as "", which is stored as not there.
+  const same = await api.put(`/api/recipes/${id}`).send({ ...omelette, description: "" });
+  expect(RecipeSchema.parse(same.body).updatedAt).toBe(savedAt.toISOString());
+
+  const changed = await api.put(`/api/recipes/${id}`).send({ ...omelette, description: "Quick" });
+  expect(Date.parse(RecipeSchema.parse(changed.body).updatedAt)).toBeGreaterThan(savedAt.getTime());
+});
+
 test("PUT /api/recipes/:id answers 400 for invalid input", async () => {
   const created = await api.post("/api/recipes").send(omelette);
   const { id } = RecipeSchema.parse(created.body);

@@ -49,6 +49,21 @@ test("a recipe from a post shows its picture and its site in its card", async ()
   expect(link).toHaveAccessibleName("Omelette 10\u00A0min · 2 ingredients Instagram");
 });
 
+test("a recipe Pinch read says Edited once it was changed; one written by hand never does", async () => {
+  const later = "2026-11-02T10:00:00.000Z";
+  const pinched = { ...omelette, source: { type: "youtube" as const }, updatedAt: later };
+  const written = { ...omelette, id: "6650a1b2c3d4e5f600000002", title: "Soup", updatedAt: later };
+  stubFetch(
+    vi.fn().mockResolvedValue(Response.json({ items: [pinched, written], nextCursor: null })),
+  );
+  renderApp("/recipes");
+
+  expect(await screen.findByRole("link", { name: /Omelette/ })).toHaveTextContent(
+    "10 min · 2 ingredients · Edited",
+  );
+  expect(screen.getByRole("link", { name: /Soup/ })).not.toHaveTextContent("Edited");
+});
+
 test("one ingredient is counted in the singular", async () => {
   const lemonade = { ...omelette, ingredients: [{ name: "lemons" }], prepMinutes: undefined };
   stubFetch(vi.fn().mockResolvedValue(Response.json({ items: [lemonade], nextCursor: null })));

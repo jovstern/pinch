@@ -274,6 +274,8 @@ export const en = {
     couldntLoad: "We couldn't load this recipe",
     // Where it came from, first in the subtitle (also in cook mode). A post's site is its name.
     writtenByYou: "Written by you",
+    // After the source of a recipe Pinch read, once it was changed (D50); on its card too.
+    edited: "Edited",
     fromText: "From pasted text",
     fromScreenshots: "From screenshots",
     opensInNewTab: "(opens in a new tab)",
