@@ -192,10 +192,10 @@ export function RecipePage() {
         </section>
       </div>
 
-      {/* A placeholder (design §1). When built: its own collection, never an array in the
-          recipe, as comments grow without limit. */}
       <SimilarRecipes id={recipe.id} />
 
+      {/* A placeholder (design §1). When built: its own collection, never an array in the
+          recipe, as comments grow without limit. */}
       <div className="print:hidden">
         <h2 className="mt-8 text-xl font-semibold">{t("recipe.comments")}</h2>
         <p className="mt-3 text-muted-foreground">{t("recipe.commentsSoon")}</p>

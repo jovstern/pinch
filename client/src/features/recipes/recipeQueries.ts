@@ -23,7 +23,8 @@ import {
 import { getJson } from "../../lib/api.ts";
 
 // Keys nest under "recipes": a list is ["recipes", "list", filters], one recipe
-// ["recipes", "detail", id], so the lists' prefix never matches a recipe.
+// ["recipes", "detail", id] and its similar ones ["recipes", "similar", id], so the lists' prefix
+// never matches a recipe.
 
 // What the list is narrowed to, and its order (design §7): a search, tags it must all have,
 // sources it may come from, the most minutes it takes. Blank is none; a blank order is the API's
@@ -89,9 +90,9 @@ export function recipeQuery(id: string) {
   });
 }
 
-// Up to four of the user's other recipes like this one, for under it (design D51). Asked again
-// each time a recipe's page opens (no staleTime), so not refetched when a recipe changes: that
-// would ask for the similar ones of a recipe just deleted, a 404.
+// Up to four of the user's other recipes like this one, for under it (design D51). Not under the
+// lists' key, so refetchRecipeLists leaves it (it would ask for the similar ones of a recipe just
+// deleted, a 404); with no staleTime it's asked again whenever a recipe's page opens.
 export function similarRecipesQuery(id: string) {
   return queryOptions({
     queryKey: ["recipes", "similar", id],

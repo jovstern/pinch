@@ -56,7 +56,8 @@ test("a recipe lists similar recipes of the user's, and each opens", async ({ pa
 
   const similar = page.getByRole("list", { name: "Similar recipes of yours" });
   await similar.getByRole("link", { name: /Mujadara/ }).click();
-  await expect(page.getByRole("heading", { level: 1, name: "Mujadara" })).toBeVisible();
+  // At its top, though the link was at the foot of the page before.
+  await expect(page.getByRole("heading", { level: 1, name: "Mujadara" })).toBeInViewport();
   await expect(
     page
       .getByRole("list", { name: "Similar recipes of yours" })

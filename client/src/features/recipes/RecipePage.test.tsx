@@ -1,5 +1,5 @@
 import type { Recipe } from "@pinch/shared";
-import { fireEvent, screen, waitFor, within } from "@testing-library/react";
+import { act, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, test, vi } from "vitest";
 import { renderApp, renderInHebrew, stubFetch, toastTitled } from "../../test-utils.tsx";
@@ -287,15 +287,23 @@ test("similar recipes of the user's are listed under the recipe, each a link to 
   expect(within(similar).getByRole("heading", { level: 3, name: "Frittata" })).toBeInTheDocument();
 });
 
-test("with nothing similar, or when they can't be loaded, there's no such section", async () => {
+// Nothing similar ({ items: [] }), or an answer that failed: no section either way. Checked after
+// the answer has come, as Comments shows before it.
+test.each([
+  ["nothing is similar", () => Response.json({ items: [] })],
+  ["they can't be loaded", () => new Response(null, { status: 500 })],
+])("when %s, there's no Similar recipes section", async (_name, answer) => {
+  const similar = vi.fn(() => Promise.resolve(answer()));
   stubFetch((path: string) =>
-    path.endsWith("/similar")
-      ? Promise.resolve(new Response(null, { status: 500 }))
-      : Promise.resolve(Response.json(omelette)),
+    path.endsWith("/similar") ? similar() : Promise.resolve(Response.json(omelette)),
   );
   renderApp(`/recipes/${omelette.id}`);
 
   expect(await screen.findByRole("heading", { level: 2, name: "Comments" })).toBeInTheDocument();
+  await waitFor(() => {
+    expect(similar).toHaveBeenCalled();
+  });
+  await act(() => new Promise((resolve) => setTimeout(resolve, 50)));
   expect(
     screen.queryByRole("heading", { name: "Similar recipes of yours" }),
   ).not.toBeInTheDocument();

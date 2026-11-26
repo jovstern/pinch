@@ -3,6 +3,7 @@ import { Outlet, useLocation } from "react-router";
 import { useImportToasts } from "../features/imports/useImportToasts.ts";
 import { cn } from "../lib/cn.ts";
 import { useToastSent } from "../lib/toasts.tsx";
+import { useScrollToTop } from "../lib/useScrollToTop.ts";
 import { ErrorBoundary } from "./ErrorBoundary.tsx";
 import { Header } from "./Header.tsx";
 
@@ -21,6 +22,7 @@ const Toaster = lazy<ComponentType<{ alwaysTop: boolean }>>(() =>
 export function Layout() {
   const { pathname } = useLocation();
   useImportToasts();
+  useScrollToTop();
   const toastSent = useToastSent();
   // Add recipe's and My recipes' own pages, where Write a recipe floats on a phone (not All
   // recipes': a page of others' recipes, Coming soon for now).

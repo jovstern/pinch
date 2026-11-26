@@ -440,8 +440,9 @@ test("GET /api/recipes/:id/similar answers the user's other recipes that share i
     { title: "Spaghetti salad", ingredients: [{ name: "spaghetti" }], tags: [] },
     { title: "Spaghetti carbonara", ...pasta, tags: ["cuisine:italian", "meal:dinner"] },
     { title: "Pancakes", ingredients: [{ name: "flour" }], tags: ["meal:dinner"] },
-    // "a -spaghetti" would leave every spaghetti out, were the minus read as $search's.
-    { title: "Garlic-spaghetti bread", ingredients: [{ name: "bread" }], tags: [] },
+    // $search's syntax in a title: left in, the quotes would ask for "crusty" in every answer and
+    // the minus leave every spaghetti out.
+    { title: 'Bread "crusty" -spaghetti', ingredients: [{ name: "bread" }], tags: [] },
     // Only salt in common, and not among its first ingredients: not similar.
     {
       title: "Lemonade",
@@ -470,13 +471,13 @@ test("GET /api/recipes/:id/similar answers the user's other recipes that share i
   // Not itself, the deleted one, another user's, or one that shares only a tag.
   expect(titles[0]).toBe("Spaghetti carbonara");
   expect([...titles].sort()).toEqual([
-    "Garlic-spaghetti bread",
+    'Bread "crusty" -spaghetti',
     "Spaghetti carbonara",
     "Spaghetti salad",
   ]);
 
   const fromBread = await userApi.get(
-    `/api/recipes/${idOf("Garlic-spaghetti bread") ?? ""}/similar`,
+    `/api/recipes/${idOf('Bread "crusty" -spaghetti') ?? ""}/similar`,
   );
   expect(SimilarRecipesSchema.parse(fromBread.body).items).toHaveLength(3);
 });

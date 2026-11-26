@@ -187,7 +187,7 @@ export function findRecipes(
 }
 
 // How many similar recipes a recipe's page shows (design D51).
-export const SIMILAR_COUNT = 4;
+const SIMILAR_COUNT = 4;
 
 // The user's other recipes most like this one (design D51): those that share a word of its title
 // or of its first ingredients' names (the text index, as a search: English stemmed, Hebrew by
@@ -196,13 +196,17 @@ export const SIMILAR_COUNT = 4;
 // lists what the dish is made of first, and with all of them every recipe matched every other on
 // salt, water and oil (tried on the user's library). A recipe that shares only tags isn't found:
 // tags alone ("dinner") say too little. The words go in as a plain search: a quote or a minus,
-// $search's syntax, is taken out.
+// $search's syntax, is taken out; and a word of one or two letters too: the index drops English's
+// small words ("with", "of") but not Hebrew's ("עם", "של"), which would match half the library.
 const MAIN_INGREDIENTS = 3;
 export function findSimilarRecipes(recipes: Collection<RecipeDocument>, recipe: RecipeDocument) {
   const main = recipe.ingredients.slice(0, MAIN_INGREDIENTS);
   const words = [recipe.title, ...main.map((ingredient) => ingredient.name)]
     .join(" ")
-    .replaceAll(/["-]/g, " ");
+    .replaceAll(/["-]/g, " ")
+    .split(/\s+/)
+    .filter((word) => word.length > 2)
+    .join(" ");
   // Through toRecipe, which reads a recipe saved before tags existed as having none; such a
   // stored recipe has no tags field, so $ifNull.
   const { tags } = toRecipe(recipe);
