@@ -28,7 +28,8 @@ export function Toaster({ alwaysTop }: { alwaysTop: boolean }) {
   const rtl = pageIsRtl();
   const dark = useDarkTheme();
   return (
-    <div lang="en" className="contents">
+    // Not on paper: a toast is fixed, so print would repeat it on every page (design D49).
+    <div lang="en" className="contents print:hidden">
       <Sonner
         dir="ltr"
         // Sonner's phone rule (600 px and under) gives its list the screen's width and its

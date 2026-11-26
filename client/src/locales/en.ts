@@ -303,6 +303,7 @@ export const en = {
     // ⋯ and its menu.
     moreActions: "More actions",
     edit: "Edit",
+    print: "Print or save as PDF",
     shareSoon: "Share · coming soon",
     delete: "Delete…",
     // Delete's question. {{title}} is the recipe's, in its own <bdi> (§16.5).

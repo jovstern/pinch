@@ -1,5 +1,5 @@
 import type { Recipe } from "@pinch/shared";
-import { Ellipsis, Pencil, Share2, Trash2 } from "lucide-react";
+import { Ellipsis, Pencil, Printer, Share2, Trash2 } from "lucide-react";
 import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router";
@@ -56,12 +56,23 @@ export function RecipeMenu({ recipe }: { recipe: Recipe }) {
             <Ellipsis aria-hidden="true" className="size-5" />
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end">
+        {/* Not on paper: print may start before it has closed. */}
+        <DropdownMenuContent align="end" className="print:hidden">
           <DropdownMenuItem asChild>
             <Link to={`/recipes/${recipe.id}/edit`}>
               <Pencil aria-hidden="true" />
               {t("recipe.edit")}
             </Link>
+          </DropdownMenuItem>
+          {/* The browser's print dialog, whose "Save as PDF" is the download (design D49): the
+              page has a print layout, with the amounts as picked. */}
+          <DropdownMenuItem
+            onSelect={() => {
+              window.print();
+            }}
+          >
+            <Printer aria-hidden="true" />
+            {t("recipe.print")}
           </DropdownMenuItem>
           {/* A placeholder (design §1): sharing comes after auth. Unavailable, not hidden, so
               the household sees it's planned. Radix's arrow keys skip a disabled item; it's

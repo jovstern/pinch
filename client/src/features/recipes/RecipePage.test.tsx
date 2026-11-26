@@ -240,7 +240,7 @@ test("a picture that doesn't load is left out, with no broken image", async () =
   expect(screen.queryByRole("presentation")).not.toBeInTheDocument();
 });
 
-test("⋯ holds Edit, Share (coming soon) and Delete", async () => {
+test("⋯ holds Edit, Print, Share (coming soon) and Delete", async () => {
   stubApi();
   renderApp(`/recipes/${omelette.id}`);
 
@@ -255,6 +255,19 @@ test("⋯ holds Edit, Share (coming soon) and Delete", async () => {
     "true",
   );
   expect(within(menu).getByRole("menuitem", { name: "Delete…" })).toBeInTheDocument();
+});
+
+test("Print opens the browser's print dialog, which saves as PDF too", async () => {
+  stubApi();
+  const print = vi.fn();
+  vi.stubGlobal("print", print);
+  renderApp(`/recipes/${omelette.id}?serves=2`);
+
+  await userEvent.click(await screen.findByRole("button", { name: "More actions" }));
+  await userEvent.click(await screen.findByRole("menuitem", { name: "Print or save as PDF" }));
+  expect(print).toHaveBeenCalledOnce();
+  // On paper the choice is written out in place of the list (jsdom has no print styles).
+  expect(screen.getByText("2 people", { selector: "span" })).toHaveClass("print:inline");
 });
 
 test("Comments are there, and say they're coming", async () => {

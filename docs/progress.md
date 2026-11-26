@@ -207,7 +207,7 @@ After M10 (found by M10's UI review, not M10's to fix):
 
 - [x] C1 Cooking for: the amounts for more or fewer people on the recipe's page and in cook mode, never saved (D48)
 - [ ] C2 Save on the import's review page, on a phone (waiting for the device)
-- [ ] C3 Print, and save as PDF from the print dialog
+- [x] C3 Print, and save as PDF from the print dialog (D49)
 - [ ] C4 An Edited mark on a recipe pinched from a link and changed after saving
 - [ ] C5 Similar recipes under each recipe, from the user's own
 

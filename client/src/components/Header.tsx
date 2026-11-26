@@ -55,6 +55,8 @@ export function Header({ onTabPage }: { onTabPage: boolean }) {
     <header
       className={cn(
         "grid grid-cols-[1fr_auto_1fr] items-center gap-x-4 gap-y-2 px-4 pt-3 md:border-b md:border-border md:px-6 md:py-3",
+        // Not on paper, on any page: a printed page is only its content (design D49).
+        "print:hidden",
         // Two rows: the logo and the end, then the tabs.
         "[grid-template-areas:'logo_._end'_'nav_nav_nav']",
         // One row from 1024 px: the logo, the tabs, the end.
