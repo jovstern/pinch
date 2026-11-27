@@ -138,9 +138,9 @@ export function ImportForm({ inputRef }: { inputRef: RefObject<HTMLInputElement 
               </p>
               {/* shadcn's input group: the group draws the field's edge and focus ring, the
                   input inside has none (the picture button shows its own). The sparkles are
-                  Pinch's mark, not a control. The room
-                  for them (ps-6, plus the input's own px-3) is the group's: the input is
-                  dir="auto", so its own padding would follow what's typed, not the page.
+                  Pinch's mark, not a control. The room for them (ps-6, plus the input's own
+                  px-3) is the group's: the input is dir="auto", so its own padding would follow
+                  what's typed, not the page.
                   Left to right in Hebrew too, the user's call (design §16.4): the sparkles on
                   the left, Pinch it on the right, as in English. */}
               <div

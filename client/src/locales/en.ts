@@ -76,7 +76,7 @@ export const en = {
     trying: "Trying…",
   },
   // Add recipe, at /: the paste box, the screenshots and the queue under them (ImportPage,
-  // ImportForm, ScreenshotsUpload, ImportList, ImportActions). Its toasts stay English (D46): they
+  // ImportForm, ScreenshotsButton, ImportList, ImportActions). Its toasts stay English (D46): they
   // are in lib/toasts.tsx and useImportToasts, not here.
   imports: {
     // The paste box's label, for a screen reader, and its hint (the placeholder isn't read).

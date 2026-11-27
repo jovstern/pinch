@@ -254,9 +254,9 @@ test("a status shimmers while the worker has the import, and not while it waits"
 
   expect(await screen.findByText("Reading the recipe…")).toHaveClass("shimmer");
   expect(screen.getByText("Waiting to start…")).not.toHaveClass("shimmer");
-  // And its card glows from under (globals.css), the waiting one's not.
+  // Both cards glow from under (globals.css): they're cooking.
   expect(screen.getByText("Reading the recipe…").closest("li")).toHaveClass("glow");
-  expect(screen.getByText("Waiting to start…").closest("li")).not.toHaveClass("glow");
+  expect(screen.getByText("Waiting to start…").closest("li")).toHaveClass("glow");
 });
 
 test("a pasted text shows as such, with its text", async () => {
@@ -699,7 +699,9 @@ test("a stalled link says nothing is working on it, and offers Dismiss, not Retr
   stubApi([[importOf({ status: "processing", attempts: 1, stalled: true })]]);
   renderApp("/");
 
-  expect(await screen.findByText(/Stuck: nothing has worked on this/)).toBeInTheDocument();
+  const stuck = await screen.findByText(/Stuck: nothing has worked on this/);
+  // Nothing is cooking, so no glow under its card.
+  expect(stuck.closest("li")).not.toHaveClass("glow");
   expect(screen.queryByText("Working on it…")).not.toBeInTheDocument();
   expect(screen.getByRole("button", { name: "Dismiss" })).toBeInTheDocument();
   expect(screen.queryByRole("button", { name: "Retry" })).not.toBeInTheDocument();

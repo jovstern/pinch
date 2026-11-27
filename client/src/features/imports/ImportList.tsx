@@ -66,15 +66,13 @@ export function ImportList({ focusPasteBox }: { focusPasteBox: () => void }) {
           <h2 className="mb-2 font-sans text-sm font-semibold text-muted-foreground">
             {queueSummary(imports)}
           </h2>
-          <ul className="grid gap-3">
+          <ul className="isolate grid gap-3">
             {imports.map((job, index) => (
               // min-w-0: a grid item is as wide as its content, and a link is one long line.
-              // While the worker reads it, a glow of moving colours shows from under the card
-              // (globals.css), as apps show a model at work: the li draws it, behind the card.
-              <li
-                key={job.id}
-                className={cn("relative min-w-0", job.status === "processing" && "glow")}
-              >
+              // While it cooks, a glow of moving colours shows from under the card (globals.css),
+              // as apps show a model at work: the li draws it, behind every card (the list is
+              // its own stacking context, so the glow's z-index -1 stays inside it).
+              <li key={job.id} className={cn("relative min-w-0", cooking(job) && "glow")}>
                 <div className="relative flex gap-3 rounded-card border border-border bg-card p-3 md:items-center md:gap-4 md:p-4">
                   {/* The first cards' pictures are the page's largest thing on a phone, so they
                     don't wait to be found near the screen, as My recipes' first row
@@ -191,8 +189,14 @@ function queueSummary(imports: Import[]) {
     .join(" · ");
 }
 
+// On its way to a draft, waiting or being worked on: where the card says "Cooking…" and glows.
+// Not a stalled one, which nothing is working on: its card says it is stuck.
+function cooking(job: Import) {
+  return (job.status === "pending" || job.status === "processing") && !job.stalled;
+}
+
 // Ready stands out: it's the one waiting for the user. Stuck is a problem, as failed. One being
-// worked on (fetching, analyzing) shimmers (globals.css), and its card glows, as long as the worker has it; waiting
+// worked on (fetching, analyzing) shimmers (globals.css), as long as the worker has it; waiting
 // in the queue, or to try again, nothing is working on it yet, so it stays still. w-fit: the
 // band sweeps the words, not the card's whole width.
 function statusColor(job: Import) {

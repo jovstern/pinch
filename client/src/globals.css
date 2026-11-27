@@ -59,6 +59,11 @@
      and an edge (UI, 3:1): 4.78:1 on the page, 5.07:1 on a card; in dark, 10.6:1 or more. */
   --color-check-mark: #8a6a00;
   --color-cooked: #5e7a3a;
+  /* The glow under an import that's cooking (the glow utility below): decoration only, never
+     text or an edge, with the accent and check among them. The same in both themes. */
+  --color-glow-blue: #4285f4;
+  --color-glow-violet: #9b72cb;
+  --color-glow-pink: #d96570;
   /* A finished step (a draft ready, a recipe saved or back): the toast's tint, its edge, icon and
      title. Success on its soft: 5.47:1, on the page 6.03:1; muted text on the soft 5.06:1, the
      action (accent-strong) 5.81:1. In dark: 8.13:1 on its soft, 9.88:1 on the page, muted 5.66:1,
@@ -236,11 +241,10 @@ body {
   }
 }
 
-/* Under the card of an import being worked on (ImportList): a soft band of colours going round,
+/* Under the card of an import that's cooking (ImportList): a soft band of colours going round,
    blurred, showing past the card's lower edge, the way apps show a model at work (the user's
-   call, 2026-11-27). On the card's wrapper, drawn before the card, so behind it. Decoration only:
-   the status line says what's happening. The colours are its own, used nowhere else: the accent
-   and the check mark's yellow among a blue, a violet and a pink. With reduced motion it stays
+   call, 2026-11-27). On the card's wrapper, behind the list's cards. Decoration only: the status
+   line says what's happening. With reduced motion it stays
    still. Not on paper. */
 @property --glow-turn {
   syntax: "<angle>";
@@ -252,17 +256,19 @@ body {
   &::before {
     content: "";
     position: absolute;
+    /* Behind every card of the list, not only its own: the blur reaches the card above. */
+    z-index: -1;
     /* Narrower than the card and a little lower, so it shows under it more than around it. */
     inset: 0.5rem 0.75rem -0.5rem;
     border-radius: var(--radius-card);
     background: conic-gradient(
       from var(--glow-turn),
-      #4285f4,
-      #9b72cb,
-      #d96570,
+      var(--color-glow-blue),
+      var(--color-glow-violet),
+      var(--color-glow-pink),
       var(--color-accent),
       var(--color-check),
-      #4285f4
+      var(--color-glow-blue)
     );
     filter: blur(1rem);
     opacity: 0.75;
