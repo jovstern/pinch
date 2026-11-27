@@ -52,7 +52,7 @@ export function Header({ onTabPage }: { onTabPage: boolean }) {
     // A grid of named areas, so each width places the same three parts, kept in the tab order:
     // the logo, the tabs, then Write a recipe and the avatar. Its two outer columns share what's
     // left equally, so the middle one is the header's true centre (where the tabs go from
-    // 1024 px). The grid follows dir, so Hebrew needs no classes of its own.
+    // 768 px). The grid follows dir, so Hebrew needs no classes of its own.
     <header
       className={cn(
         "grid items-center gap-x-4 gap-y-2 px-4 pt-3 md:border-b md:border-border md:px-6 md:py-3",
@@ -136,8 +136,8 @@ export function Header({ onTabPage }: { onTabPage: boolean }) {
         {/* One link, placed by width: floating below 1024 px (in thumb reach, on Add recipe and
             My recipes only; in the header it would push the tabs to a second row), in the header
             from 1024 px on every page. Floating, it comes after the tabs in the tab order though
-            it shows at the bottom: fine for the header's one action. z-10: over My recipes' cards, which are positioned (the site's label on the
-            picture). */}
+            it shows at the bottom: fine for the header's one action. z-10: over My recipes'
+            cards, which are positioned (the site's label on the picture). */}
         <Button
           asChild
           variant="outline"

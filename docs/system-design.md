@@ -927,7 +927,7 @@ review (Review) or failed (Retry). An Undo that fails says "Couldn't undo", with
 whose item is gone for good (a 404) says "Can't undo · It's already gone", without. Alt+T
 (Sonner's) moves the keyboard to the toasts, and Tab reaches Undo. A status change toasts even when
 its card shows it too: one rule everywhere, chosen over ui-craft's "toasts only for things
-off-screen". Toasts sit at the top on a phone, under the header, and bottom right from 768 px
+off-screen". Toasts sit at the top below 1024 px, under the header (the bottom corner is Write a recipe's there), and bottom right from 1024 px
 (except in the editor, where they stay at the top, clear of its Save; opening a draft closes its
 "ready to review" toast); they are the queue's announcements too (Sonner's region is live).
 The toasts of a step that finished (ready to review, Saved to My recipes, Back in My recipes) are
@@ -990,8 +990,8 @@ phone's width up to 1024 px.
 **In Hebrew** (M10, §16) every screen is the mirror of the above, "left" and "right" read as start
 and end, the header too (the user's call, 2026-11-14, which replaced the centred logo of 2026-11-13;
 §16.4): the logo at the right, the tabs centred, Write a recipe and the avatar at the left, the
-avatar's menu opening from there. Write a recipe floats bottom left on a phone; toasts sit bottom
-left from 768 px; My recipes' filter panel is on the right from 1024 px, and the editor's main
+avatar's menu opening from there. Write a recipe floats bottom left below 1024 px; toasts sit bottom
+left from 1024 px; My recipes' filter panel is on the right from 1024 px, and the editor's main
 column too; a breadcrumb's › and cook mode's ‹ › point the other way, and there the next card comes
 in from the left, and ← goes to the next step. What a user or a post wrote keeps its own direction
 (D43): a Hebrew recipe reads right to left in English, an English one left to right in Hebrew. Log
