@@ -4,8 +4,9 @@ import { RecipeCard } from "./RecipeCard.tsx";
 import { similarRecipesQuery } from "./recipeQueries.ts";
 
 // Under a recipe (design D51): up to four of the user's other recipes like it, as My recipes'
-// cards, smaller: a suggestion, under the recipe that was asked for. An extra: while it loads, when it fails or when nothing is like this recipe, there's no
-// section at all, rather than a skeleton or an error for something nobody asked for. Not printed.
+// cards, smaller: a suggestion, under the recipe that was asked for. An extra: while it loads,
+// when it fails or when nothing is like this recipe, there's no section at all, rather than a
+// skeleton or an error for something nobody asked for. Not printed.
 export function SimilarRecipes({ id }: { id: string }) {
   const { t } = useTranslation();
   const { data } = useQuery(similarRecipesQuery(id));

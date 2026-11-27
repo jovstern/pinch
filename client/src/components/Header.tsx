@@ -56,7 +56,7 @@ export function Header({ onTabPage }: { onTabPage: boolean }) {
     // 1024 px). The grid follows dir, so Hebrew needs no classes of its own.
     <header
       className={cn(
-        "grid items-center gap-x-2 gap-y-2 px-3 pt-3 md:gap-x-4 md:border-b md:border-border md:px-6 md:py-3",
+        "grid items-center gap-x-4 gap-y-2 px-4 pt-3 md:border-b md:border-border md:px-6 md:py-3",
         // Not on paper, on any page: a printed page is only its content (design D49).
         "print:hidden",
         // Two rows: the logo and the end, then the tabs.
@@ -64,7 +64,8 @@ export function Header({ onTabPage }: { onTabPage: boolean }) {
         // A phone from 375 px: one row, the tabs taking what the logo and the avatar leave.
         // Narrower, they wouldn't fit with a ready count. From 768 px two rows again: Write a
         // recipe joins the avatar.
-        "min-[23.4375rem]:max-md:grid-cols-[auto_minmax(0,1fr)_auto] min-[23.4375rem]:max-md:[grid-template-areas:'logo_nav_end']",
+        // Tighter there, to fit.
+        "min-[23.4375rem]:max-md:grid-cols-[auto_minmax(0,1fr)_auto] min-[23.4375rem]:max-md:gap-x-2 min-[23.4375rem]:max-md:px-3 min-[23.4375rem]:max-md:[grid-template-areas:'logo_nav_end']",
         // One row again from 1024 px: the logo, the tabs in the centre, the end.
         "lg:[grid-template-areas:'logo_nav_end']",
       )}
@@ -87,7 +88,9 @@ export function Header({ onTabPage }: { onTabPage: boolean }) {
           Radix Tabs is for panels that switch within one page. It only borrows their look. */}
       <nav
         aria-label={t("header.nav")}
-        className="flex rounded-control bg-muted p-1 [grid-area:nav] md:justify-self-center"
+        // Cut at its edge on a phone: in a system font wider than the one measured, a label would
+        // otherwise run over the avatar.
+        className="flex rounded-control bg-muted p-1 [grid-area:nav] max-md:overflow-x-clip md:justify-self-center"
       >
         <Link to="/" aria-current={tab === "new" ? "page" : undefined} className={tabClass}>
           {t("header.addRecipe")}

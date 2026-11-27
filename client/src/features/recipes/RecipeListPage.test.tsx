@@ -72,7 +72,7 @@ test("Filters' sources are the sites, Image and By me, in that order", async () 
   expect(
     within(source)
       .getAllByRole("checkbox")
-      .map((box) => box.getAttribute("aria-label") ?? box.closest("label")?.textContent),
+      .map((box) => box.closest("label")?.textContent),
   ).toEqual(["YouTube", "Facebook", "Instagram", "Image", "By me"]);
 });
 
