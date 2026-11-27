@@ -24,19 +24,18 @@ function tabOf(pathname: string) {
 }
 
 // shadcn's TabsTrigger look; the selected one is lifted out of the row. On a phone the three
-// share what the logo and the avatar leave of the one row, so they're small and tight there
-// (12 px, as a tab bar's labels, and without My recipes' count), and at their own size from
-// 768 px.
+// share what the logo and the avatar leave of the row: tight at the sides, lower (36 px; the
+// after: keeps the touch area 44), without My recipes' count, and their text as large as the
+// width lets it be, from 13 px up to the page's 16 (at 457 px). Their own size from 768 px.
 const tabClass =
-  "inline-flex min-h-11 flex-1 items-center justify-center gap-1 rounded-control px-0.5 text-xs font-medium whitespace-nowrap text-muted-foreground aria-[current=page]:bg-background aria-[current=page]:text-foreground aria-[current=page]:shadow-sm md:gap-1.5 md:px-3 md:text-base";
+  "relative inline-flex min-h-9 flex-1 items-center justify-center gap-1 rounded-control px-0.5 text-[clamp(0.8125rem,3.5vw,1rem)] font-medium whitespace-nowrap text-muted-foreground after:absolute after:inset-x-0 after:-inset-y-1 aria-[current=page]:bg-background aria-[current=page]:text-foreground aria-[current=page]:shadow-sm md:min-h-11 md:gap-1.5 md:px-3 md:after:hidden";
 
 // The app's frame, on every page (design §14, D24): the logo, the three tabs, Write a recipe and
-// the avatar, and the imports read for the tab's count. On a phone one row: the logo, the tabs,
-// the avatar (under 375 px, where they don't fit, two). From 768 px two rows: the logo and the
-// avatar, then the tabs, as wide as they need, centred. Write a
-// recipe floats bottom right on a phone (on Add recipe and My recipes), and is by the avatar
-// from 768 px. One row from 1024 px: the logo at the start, the tabs in the header's true
-// centre, the rest at the end (the user's call, 2026-11-14). Hebrew is its mirror (§16.4).
+// the avatar, and the imports read for the tab's count. One row: the logo at the start, the
+// tabs, the rest at the end; on a phone the tabs take what's left, from 768 px they are in the
+// header's true centre (the user's call, 2026-11-14). Under 375 px, where they don't fit beside
+// the logo, the tabs have a row of their own. Write a recipe floats bottom right below 1024 px
+// (on Add recipe and My recipes), and is by the avatar from there. Hebrew is its mirror (§16.4).
 export function Header({ onTabPage }: { onTabPage: boolean }) {
   const { t } = useTranslation();
   const { pathname } = useLocation();
@@ -59,15 +58,13 @@ export function Header({ onTabPage }: { onTabPage: boolean }) {
         "grid items-center gap-x-4 gap-y-2 px-4 pt-3 md:border-b md:border-border md:px-6 md:py-3",
         // Not on paper, on any page: a printed page is only its content (design D49).
         "print:hidden",
-        // Two rows: the logo and the end, then the tabs.
+        // Under 375 px two rows: the logo and the avatar, then the tabs.
         "grid-cols-[1fr_auto_1fr] [grid-template-areas:'logo_._end'_'nav_nav_nav']",
-        // A phone from 375 px: one row, the tabs taking what the logo and the avatar leave.
-        // Narrower, they wouldn't fit with a ready count. From 768 px two rows again: Write a
-        // recipe joins the avatar.
-        // Tighter there, to fit.
-        "min-[23.4375rem]:max-md:grid-cols-[auto_minmax(0,1fr)_auto] min-[23.4375rem]:max-md:gap-x-2 min-[23.4375rem]:max-md:px-3 min-[23.4375rem]:max-md:[grid-template-areas:'logo_nav_end']",
-        // One row again from 1024 px: the logo, the tabs in the centre, the end.
-        "lg:[grid-template-areas:'logo_nav_end']",
+        // From there one row.
+        "min-[23.4375rem]:[grid-template-areas:'logo_nav_end']",
+        // On a phone the tabs take what the logo and the avatar leave, all three close to each
+        // other and to the screen's edges, to fit.
+        "min-[23.4375rem]:max-md:grid-cols-[auto_minmax(0,1fr)_auto] min-[23.4375rem]:max-md:gap-x-2 min-[23.4375rem]:max-md:px-2",
       )}
     >
       {/* The logo (D24), the "Pinch" wordmark, as files in public/: inlined, its paths would
@@ -81,7 +78,7 @@ export function Header({ onTabPage }: { onTabPage: boolean }) {
       >
         <Logo
           fetchPriority="low"
-          className="h-6 rounded-sm group-focus-visible:outline-2 group-focus-visible:outline-offset-2 group-focus-visible:outline-ring md:h-8"
+          className="h-7 rounded-sm group-focus-visible:outline-2 group-focus-visible:outline-offset-2 group-focus-visible:outline-ring md:h-8"
         />
       </Link>
       {/* Links in a nav, not Radix Tabs: each tab is its own page with its own address, and
@@ -101,7 +98,9 @@ export function Header({ onTabPage }: { onTabPage: boolean }) {
           {ready > 0 && (
             <>
               {" "}
-              <Badge className="min-w-5 px-1 py-0 text-xs font-semibold md:min-w-6 md:px-1.5">
+              {/* On a phone on the tab's top corner, as an app's count: in the row it would
+                  take the width the labels need. */}
+              <Badge className="min-w-6 px-1.5 py-0 text-xs font-semibold max-md:absolute max-md:end-0 max-md:-top-1.5 max-md:min-w-4 max-md:px-1 max-md:text-[0.6875rem]">
                 {ready}
               </Badge>{" "}
               <span className="sr-only">{t("header.readyToReview")}</span>
@@ -134,16 +133,16 @@ export function Header({ onTabPage }: { onTabPage: boolean }) {
       </nav>
 
       <div className="flex items-center gap-4 justify-self-end [grid-area:end]">
-        {/* One link, placed by width: floating on a phone (in thumb reach, on Add recipe and My
-            recipes only), in the header from 768 px on every page. On a phone it comes after
-            the tabs in the tab order though it shows at the bottom: fine for the header's one
-            action. z-10: over My recipes' cards, which are positioned (the site's label on the
+        {/* One link, placed by width: floating below 1024 px (in thumb reach, on Add recipe and
+            My recipes only; in the header it would push the tabs to a second row), in the header
+            from 1024 px on every page. Floating, it comes after the tabs in the tab order though
+            it shows at the bottom: fine for the header's one action. z-10: over My recipes' cards, which are positioned (the site's label on the
             picture). */}
         <Button
           asChild
           variant="outline"
           className={cn(
-            "md:static md:inline-flex md:rounded-control md:shadow-none",
+            "lg:static lg:inline-flex lg:rounded-control lg:shadow-none",
             onTabPage ? "fixed end-4 bottom-5 z-10 rounded-full shadow-sheet" : "hidden",
           )}
         >

@@ -57,7 +57,7 @@ export function Layout() {
             // An inner page starts with its breadcrumbs (D24), close under the header: their
             // 44 px rows have room in them.
             !onTabPage && "pt-2",
-            onTabPage && "pb-24 md:pb-8",
+            onTabPage && "pb-24 lg:pb-8",
           )}
         >
           {/* Keyed by address: going to another page clears a failure. */}
