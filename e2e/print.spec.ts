@@ -28,7 +28,7 @@ test("a recipe prints as the recipe alone, for the people picked, dark on white"
   await expect(page.getByRole("link", { name: "Cook", exact: true })).toBeHidden();
   await expect(page.getByRole("combobox", { name: "Cooking for" })).toBeHidden();
   await expect(page.locator("span", { hasText: "8 people" })).toBeVisible();
-  await expect(page.getByText("Amounts changed · the recipe is for 4")).toBeVisible();
+  await expect(page.getByText("Amounts changed · the original recipe is for 4")).toBeVisible();
   await expect(page.getByRole("heading", { level: 2, name: "Comments" })).toBeHidden();
   // The light theme's text colour, though the screen is dark.
   await expect(page.getByRole("heading", { level: 1 })).toHaveCSS("color", "rgb(34, 26, 18)");

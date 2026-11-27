@@ -1,4 +1,4 @@
-import type { ListSource, RecipeSort, TimeLimit } from "@pinch/shared";
+import type { ListSource, Recipe, RecipeSort, TimeLimit } from "@pinch/shared";
 import i18next from "i18next";
 import { platformNames } from "../../lib/platformNames.ts";
 import type { RecipeFilters } from "./recipeQueries.ts";
@@ -35,13 +35,26 @@ export function timeNames(): Record<TimeLimit, string> {
   };
 }
 
-// The sites' names stay as they are in Hebrew too (D46).
-export function sourceNames(): Record<ListSource, string> {
+// Where a recipe came from (design D52): the label on its card, and Filters' choices. The sites'
+// names stay as they are in Hebrew too (D46).
+export function sourceLabels(): Record<Recipe["source"]["type"], string> {
   return {
-    instagram: platformNames.instagram,
-    youtube: platformNames.youtube,
-    facebook: platformNames.facebook,
-    manual: i18next.t("filters.writtenByMe"),
+    ...platformNames,
+    image: i18next.t("filters.image"),
+    manual: i18next.t("filters.byMe"),
+  };
+}
+
+// Filters' choices, in the order shown. Pasted text has no choice of its own: "By me" finds it
+// too (the API's doing).
+export function sourceNames(): Record<ListSource, string> {
+  const labels = sourceLabels();
+  return {
+    youtube: labels.youtube,
+    facebook: labels.facebook,
+    instagram: labels.instagram,
+    image: labels.image,
+    manual: labels.manual,
   };
 }
 

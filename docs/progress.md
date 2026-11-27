@@ -210,6 +210,7 @@ After M10 (found by M10's UI review, not M10's to fix):
 - [x] C3 Print, and save as PDF from the print dialog (D49)
 - [x] C4 An Edited mark on a recipe Pinch read and the user then changed (D50)
 - [x] C5 Similar recipes under each recipe, from the user's own (D51)
+- [x] C6 Small fixes (2026-11-27): "the original recipe" in the scaled line, a source label on every card and Image / By me in Filters (D52), smaller similar cards, a one-row header on a phone
 
 ## M11 — Pinch online (design §15, §8.3, D31–D38)
 

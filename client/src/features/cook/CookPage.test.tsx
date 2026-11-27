@@ -399,7 +399,9 @@ test("cooks with the amounts chosen on the recipe's page, and says they aren't t
   stubApi({ ...omelette, servings: 2 });
   renderApp(`/recipes/${omelette.id}/cook?serves=4`, { wide: true });
 
-  expect(await screen.findByText("Amounts for 4 people · the recipe is for 2")).toBeInTheDocument();
+  expect(
+    await screen.findByText("Amounts for 4 people · the original recipe is for 2"),
+  ).toBeInTheDocument();
   const all = screen.getByRole("list", { name: "All ingredients (2)" });
   expect(within(all).getByRole("checkbox", { name: "4 eggs" })).toBeInTheDocument();
   expect(within(all).getByRole("checkbox", { name: "2 tbsp butter" })).toBeInTheDocument();

@@ -165,10 +165,10 @@ export const RecipeSchema = RecipeInputSchema.extend({
 export const RecipeSortSchema = z.enum(["newest", "quickest", "az"], messages.sort);
 // The most minutes a recipe takes, prep and cook together ("30 min or less").
 export const TimeLimitSchema = z.enum(["15", "30", "60"], messages.time);
-// Where a recipe came from: the three sites, or written by hand ("manual"). Pasted text and
-// screenshots aren't among them (the design's Filters have no place for them).
+// Where a recipe came from, as Filters ask it (design D52): the three sites, pictures, or the
+// user's own words ("manual", which here takes pasted text too: it has no choice of its own yet).
 export const ListSourceSchema = SourceSchema.shape.type.extract(
-  ["instagram", "youtube", "facebook", "manual"],
+  ["youtube", "facebook", "instagram", "image", "manual"],
   messages.source,
 );
 

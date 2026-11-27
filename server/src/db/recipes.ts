@@ -164,7 +164,12 @@ export function findRecipes(
   const filter: Filter<RecipeDocument> = { ownerId, ...NOT_DELETED };
   if (q) filter.$text = { $search: q };
   if (tags.length > 0) filter.tags = { $all: tags };
-  if (sources.length > 0) filter["source.type"] = { $in: sources };
+  // "By me" is what the user wrote and what they pasted as text (design D52).
+  if (sources.length > 0) {
+    filter["source.type"] = {
+      $in: sources.flatMap((source) => (source === "manual" ? ["manual", "text"] : [source])),
+    };
+  }
   if (maxMinutes !== undefined) filter.$expr = { $lte: [TOTAL_MINUTES, maxMinutes] };
 
   const pipeline: Document[] = [{ $match: filter }];

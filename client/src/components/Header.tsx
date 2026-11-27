@@ -24,14 +24,16 @@ function tabOf(pathname: string) {
 }
 
 // shadcn's TabsTrigger look; the selected one is lifted out of the row. On a phone the three
-// share the row's width, tighter and a size smaller, so they fit with their counts ("Add recipe
-// 13", "My recipes 120") at 360 px, and smaller and tighter again under it, for 320 px.
+// share what the logo and the avatar leave of the one row, so they're small and tight there
+// (12 px, as a tab bar's labels, and without My recipes' count), and at their own size from
+// 768 px.
 const tabClass =
-  "inline-flex min-h-11 flex-1 items-center justify-center gap-1 rounded-control px-1.5 text-sm font-medium whitespace-nowrap text-muted-foreground aria-[current=page]:bg-background aria-[current=page]:text-foreground aria-[current=page]:shadow-sm max-[22.5rem]:px-0.5 max-[22.5rem]:text-[0.8125rem] sm:gap-1.5 sm:px-3 sm:text-base";
+  "inline-flex min-h-11 flex-1 items-center justify-center gap-1 rounded-control px-0.5 text-xs font-medium whitespace-nowrap text-muted-foreground aria-[current=page]:bg-background aria-[current=page]:text-foreground aria-[current=page]:shadow-sm md:gap-1.5 md:px-3 md:text-base";
 
 // The app's frame, on every page (design §14, D24): the logo, the three tabs, Write a recipe and
-// the avatar, and the imports read for the tab's count. Two rows: the logo and the avatar, then
-// the tabs (the row's width on a phone; from 768 px as wide as they need, centred). Write a
+// the avatar, and the imports read for the tab's count. On a phone one row: the logo, the tabs,
+// the avatar (under 375 px, where they don't fit, two). From 768 px two rows: the logo and the
+// avatar, then the tabs, as wide as they need, centred. Write a
 // recipe floats bottom right on a phone (on Add recipe and My recipes), and is by the avatar
 // from 768 px. One row from 1024 px: the logo at the start, the tabs in the header's true
 // centre, the rest at the end (the user's call, 2026-11-14). Hebrew is its mirror (§16.4).
@@ -54,12 +56,16 @@ export function Header({ onTabPage }: { onTabPage: boolean }) {
     // 1024 px). The grid follows dir, so Hebrew needs no classes of its own.
     <header
       className={cn(
-        "grid grid-cols-[1fr_auto_1fr] items-center gap-x-4 gap-y-2 px-4 pt-3 md:border-b md:border-border md:px-6 md:py-3",
+        "grid items-center gap-x-2 gap-y-2 px-3 pt-3 md:gap-x-4 md:border-b md:border-border md:px-6 md:py-3",
         // Not on paper, on any page: a printed page is only its content (design D49).
         "print:hidden",
         // Two rows: the logo and the end, then the tabs.
-        "[grid-template-areas:'logo_._end'_'nav_nav_nav']",
-        // One row from 1024 px: the logo, the tabs, the end.
+        "grid-cols-[1fr_auto_1fr] [grid-template-areas:'logo_._end'_'nav_nav_nav']",
+        // A phone from 375 px: one row, the tabs taking what the logo and the avatar leave.
+        // Narrower, they wouldn't fit with a ready count. From 768 px two rows again: Write a
+        // recipe joins the avatar.
+        "min-[23.4375rem]:max-md:grid-cols-[auto_minmax(0,1fr)_auto] min-[23.4375rem]:max-md:[grid-template-areas:'logo_nav_end']",
+        // One row again from 1024 px: the logo, the tabs in the centre, the end.
         "lg:[grid-template-areas:'logo_nav_end']",
       )}
     >
@@ -74,7 +80,7 @@ export function Header({ onTabPage }: { onTabPage: boolean }) {
       >
         <Logo
           fetchPriority="low"
-          className="h-8 rounded-sm group-focus-visible:outline-2 group-focus-visible:outline-offset-2 group-focus-visible:outline-ring"
+          className="h-6 rounded-sm group-focus-visible:outline-2 group-focus-visible:outline-offset-2 group-focus-visible:outline-ring md:h-8"
         />
       </Link>
       {/* Links in a nav, not Radix Tabs: each tab is its own page with its own address, and
@@ -92,7 +98,9 @@ export function Header({ onTabPage }: { onTabPage: boolean }) {
           {ready > 0 && (
             <>
               {" "}
-              <Badge className="min-w-6 px-1.5 py-0 text-xs font-semibold">{ready}</Badge>{" "}
+              <Badge className="min-w-5 px-1 py-0 text-xs font-semibold md:min-w-6 md:px-1.5">
+                {ready}
+              </Badge>{" "}
               <span className="sr-only">{t("header.readyToReview")}</span>
             </>
           )}
@@ -108,7 +116,7 @@ export function Header({ onTabPage }: { onTabPage: boolean }) {
           {recipeCount !== undefined && recipeCount > 0 && (
             <>
               {" "}
-              <span className="text-muted-foreground tabular-nums sm:text-sm">
+              <span className="text-muted-foreground tabular-nums max-md:sr-only md:text-sm">
                 {recipeCount}
               </span>{" "}
               <span className="sr-only">{t("header.recipeCount", { count: recipeCount })}</span>
