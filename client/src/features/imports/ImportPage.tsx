@@ -6,10 +6,9 @@ import { useHeadingFocus } from "../../lib/useHeadingFocus.ts";
 import { ImportList } from "./ImportList.tsx";
 import { importListQuery } from "./importQueries.ts";
 import { LazyImportForm } from "./LazyImportForm.tsx";
-import { ScreenshotsUpload } from "./ScreenshotsUpload.tsx";
 
 // The Add recipe tab, at / (design §14, D24): paste a link or a post's text, or upload pictures of
-// a recipe, and the queue of what's being turned into recipes.
+// a recipe (the box's picture button), and the queue of what's being turned into recipes.
 export function ImportPage() {
   const { t } = useTranslation();
   // The paste box, where focus goes after an import is retried or dismissed.
@@ -32,10 +31,9 @@ export function ImportPage() {
           reach. */}
       <div className={cn("my-auto", isPending && "invisible")}>
         <LazyImportForm inputRef={pasteBoxRef} />
-        {/* The other way in, quiet: the paste is the main one (design §14). Write a recipe is the
-            header's. The (i) for where to find a post's link (<LazyPasteHelp />) would sit at the
-            other end of ScreenshotsUpload's row: hidden for now, the user's call on 2026-11-14. */}
-        <ScreenshotsUpload />
+        {/* Write a recipe is the header's. The (i) for where to find a post's link
+            (<LazyPasteHelp />) would sit under the box: hidden for now, the user's call on
+            2026-11-14. */}
         <ImportList focusPasteBox={() => pasteBoxRef.current?.focus()} />
       </div>
     </>

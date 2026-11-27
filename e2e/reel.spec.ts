@@ -46,7 +46,7 @@ test("upload a screenshot, review the draft made from it", async ({ page }) => {
   );
   await page.goto("/");
   await page
-    .getByLabel("Or upload a photo of a recipe")
+    .getByLabel("Upload a photo of a recipe")
     .setInputFiles({ name: "recipe.png", mimeType: "image/png", buffer: screenshot });
 
   // By its count: once ready, the card is named by the draft's title.

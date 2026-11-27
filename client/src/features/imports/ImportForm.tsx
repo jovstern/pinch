@@ -22,9 +22,12 @@ import {
   toastReady,
 } from "../../lib/toasts.tsx";
 import { cancelImport, importListQuery, limitNote } from "./importQueries.ts";
+import { ScreenshotsButton } from "./ScreenshotsButton.tsx";
+import { useScreenshotsUpload } from "./useScreenshotsUpload.ts";
 
 // The main action on / (design §14): paste a link, or a post's text when its link can't be read
-// (§1), and the worker turns it into a draft (§4.1). One line: the field, then Pinch it. Checked
+// (§1), and the worker turns it into a draft (§4.1). One line: the field, the picture button that
+// uploads photos of a recipe instead (the user's call, 2026-11-27), then Pinch it. Checked
 // as the recipe form is (RecipeForm.tsx): on the first send, then on every change, with the API's
 // own schema.
 export function ImportForm({ inputRef }: { inputRef: RefObject<HTMLInputElement | null> }) {
@@ -40,6 +43,8 @@ export function ImportForm({ inputRef }: { inputRef: RefObject<HTMLInputElement 
   const id = useId();
   const errorId = `${id}-error`;
   const hintId = `${id}-hint`;
+  const uploadNoteId = `${id}-upload`;
+  const upload = useScreenshotsUpload();
   const form = useForm({
     defaultValues: { pasted: "" },
     validationLogic: revalidateLogic(),
@@ -132,14 +137,15 @@ export function ImportForm({ inputRef }: { inputRef: RefObject<HTMLInputElement 
                 {t("imports.pasteHint")}
               </p>
               {/* shadcn's input group: the group draws the field's edge and focus ring, the
-                  input inside has none. The sparkles are Pinch's mark, not a control. The room
+                  input inside has none (the picture button shows its own). The sparkles are
+                  Pinch's mark, not a control. The room
                   for them (ps-6, plus the input's own px-3) is the group's: the input is
                   dir="auto", so its own padding would follow what's typed, not the page.
                   Left to right in Hebrew too, the user's call (design §16.4): the sparkles on
                   the left, Pinch it on the right, as in English. */}
               <div
                 dir="ltr"
-                className="relative flex items-center rounded-control border border-input bg-card ps-6 has-[[aria-invalid=true]]:border-destructive has-[input:focus-visible]:outline-2 has-[input:focus-visible]:outline-offset-2 has-[input:focus-visible]:outline-ring"
+                className="relative flex items-center rounded-control border border-input bg-card ps-6 has-[[aria-invalid=true]]:border-destructive has-[input:not([type=file]):focus-visible]:outline-2 has-[input:not([type=file]):focus-visible]:outline-offset-2 has-[input:not([type=file]):focus-visible]:outline-ring"
               >
                 <Sparkles
                   aria-hidden="true"
@@ -153,15 +159,16 @@ export function ImportForm({ inputRef }: { inputRef: RefObject<HTMLInputElement 
                   // English in Hebrew too, as Pinch it (design §16.8, the user's call). Only the
                   // direction changes: empty, left to right, so the placeholder sits by the
                   // sparkles; typed in, it follows what's typed (Hebrew reads right to left). No
-                  // lang: the field's name and hint are the page's language.
-                  placeholder="Paste a video or a recipe"
+                  // lang: the field's name and hint are the page's language. Too long for a
+                  // phone's box, where it ends in an ellipsis.
+                  placeholder="Paste a link to a recipe Reel or Short…"
                   dir={field.state.value === "" ? "ltr" : "auto"}
                   aria-invalid={invalid}
                   aria-describedby={invalid ? `${hintId} ${errorId}` : hintId}
                   enterKeyHint="send"
                   // The group shows focus and the edge. Important (!): the global focus ring is
                   // unlayered, so a plain utility can't remove it.
-                  className="flex-1 rounded-none border-0 bg-transparent outline-none!"
+                  className="min-w-0 flex-1 rounded-none border-0 bg-transparent text-ellipsis outline-none!"
                   onChange={(event) => {
                     field.handleChange(event.target.value);
                   }}
@@ -190,6 +197,12 @@ export function ImportForm({ inputRef }: { inputRef: RefObject<HTMLInputElement 
                     }
                   }}
                 />
+                {/* At the placeholder's other end, by Pinch it: the other way in. */}
+                <ScreenshotsButton
+                  sending={upload.sending}
+                  describedBy={(upload.limit ?? upload.error) ? uploadNoteId : undefined}
+                  onChoose={upload.choose}
+                />
                 <form.Subscribe selector={(state) => state.isSubmitting}>
                   {(isSubmitting) => (
                     <Button
@@ -206,6 +219,21 @@ export function ImportForm({ inputRef }: { inputRef: RefObject<HTMLInputElement 
                 </form.Subscribe>
               </div>
               <FieldError errors={field.state.meta.errors} id={errorId} />
+              {/* What the picture button's last pick came to. The limit's live region is always
+                  on the page (empty until then), so screen readers hear it; an error is an
+                  alert. Either one is the picker's description. */}
+              <p
+                id={upload.limit && uploadNoteId}
+                role="status"
+                className="text-sm text-text-muted not-empty:mt-1"
+              >
+                {upload.limit}
+              </p>
+              {upload.error && (
+                <p id={uploadNoteId} role="alert" className="mt-1 text-sm text-destructive">
+                  {upload.error}
+                </p>
+              )}
             </>
           );
         }}

@@ -236,6 +236,52 @@ body {
   }
 }
 
+/* Under the card of an import being worked on (ImportList): a soft band of colours going round,
+   blurred, showing past the card's lower edge, the way apps show a model at work (the user's
+   call, 2026-11-27). On the card's wrapper, drawn before the card, so behind it. Decoration only:
+   the status line says what's happening. The colours are its own, used nowhere else: the accent
+   and the check mark's yellow among a blue, a violet and a pink. With reduced motion it stays
+   still. Not on paper. */
+@property --glow-turn {
+  syntax: "<angle>";
+  inherits: false;
+  initial-value: 0deg;
+}
+
+@utility glow {
+  &::before {
+    content: "";
+    position: absolute;
+    /* Narrower than the card and a little lower, so it shows under it more than around it. */
+    inset: 0.5rem 0.75rem -0.5rem;
+    border-radius: var(--radius-card);
+    background: conic-gradient(
+      from var(--glow-turn),
+      #4285f4,
+      #9b72cb,
+      #d96570,
+      var(--color-accent),
+      var(--color-check),
+      #4285f4
+    );
+    filter: blur(1rem);
+    opacity: 0.75;
+    pointer-events: none;
+    @media (prefers-reduced-motion: no-preference) {
+      animation: glow 4s linear infinite;
+    }
+    @media print {
+      display: none;
+    }
+  }
+}
+
+@keyframes glow {
+  to {
+    --glow-turn: 360deg;
+  }
+}
+
 @keyframes shimmer {
   from {
     background-position: 100% 0;

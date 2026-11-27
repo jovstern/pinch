@@ -10,13 +10,14 @@ import { fireEvent, render, screen, waitFor, within } from "@testing-library/rea
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, test, vi } from "vitest";
 import { Direction } from "radix-ui";
+import { createRef } from "react";
 import { MemoryRouter } from "react-router";
 import { pageIsRtl } from "../../i18n.ts";
 import { inHebrew, renderApp, renderInHebrew, toastTitled } from "../../test-utils.tsx";
+import { ImportForm } from "./ImportForm.tsx";
 import { ImportList } from "./ImportList.tsx";
 import { pollInterval } from "./importQueries.ts";
 import { LazyPasteHelp } from "./LazyPasteHelp.tsx";
-import { ScreenshotsUpload } from "./ScreenshotsUpload.tsx";
 
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -253,6 +254,9 @@ test("a status shimmers while the worker has the import, and not while it waits"
 
   expect(await screen.findByText("Reading the recipe…")).toHaveClass("shimmer");
   expect(screen.getByText("Waiting to start…")).not.toHaveClass("shimmer");
+  // And its card glows from under (globals.css), the waiting one's not.
+  expect(screen.getByText("Reading the recipe…").closest("li")).toHaveClass("glow");
+  expect(screen.getByText("Waiting to start…").closest("li")).not.toHaveClass("glow");
 });
 
 test("a pasted text shows as such, with its text", async () => {
@@ -339,18 +343,15 @@ test("the heading counts what's ready, in progress and failed, a stalled one as 
   ).toBeInTheDocument();
 });
 
-test("under the box, a photo of a recipe can be uploaded, and its (i) says what to send", async () => {
+test("in the box, the picture button uploads a photo of a recipe", async () => {
   stubApi([[]]);
   renderApp("/");
 
-  const picker = await screen.findByLabelText("Or upload a photo of a recipe");
+  const picker = await screen.findByLabelText("Upload a photo of a recipe");
   expect(picker).toHaveAttribute("type", "file");
-  await userEvent.click(screen.getByRole("button", { name: "About uploading a photo" }));
-  const help = await screen.findByRole("dialog", { name: "About uploading a photo" });
-  expect(
-    within(help).getByText("Up to 4 pictures at once (PNG, JPEG or WebP), up to 10 MB each."),
-  ).toBeVisible();
-  expect(within(help).getByText(/A photo of a cookbook page/)).toBeVisible();
+  // In the paste box's own group, between the field and Pinch it.
+  const box = screen.getByRole("textbox", { name: "Pinch a recipe from a reel" });
+  expect(box.parentElement).toContainElement(picker);
 });
 
 // The (i) is hidden from / for now (ImportPage, the user's call on 2026-11-14), so it's tested on
@@ -401,7 +402,7 @@ test("the paste box's placeholder and an empty box read left to right", async ()
   renderApp("/");
 
   const box = await screen.findByRole("textbox", { name: "Pinch a recipe from a reel" });
-  expect(box).toHaveAttribute("placeholder", "Paste a video or a recipe");
+  expect(box).toHaveAttribute("placeholder", "Paste a link to a recipe Reel or Short…");
   expect(box).toHaveAttribute("dir", "ltr");
 });
 
@@ -852,13 +853,13 @@ test("polling runs only while the worker has a link in hand", () => {
 
 const screenshot = (name: string) => new File(["png"], name, { type: "image/png" });
 
-// The picker on its own, above the queue as on the page: its sends without the paste box's.
+// The paste box, whose picture button is the picker, above the queue as on the page.
 function renderScreenshots() {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   render(
     <QueryClientProvider client={queryClient}>
       <MemoryRouter>
-        <ScreenshotsUpload />
+        <ImportForm inputRef={createRef()} />
         <ImportList focusPasteBox={() => undefined} />
       </MemoryRouter>
     </QueryClientProvider>,
@@ -870,7 +871,7 @@ test("chosen screenshots are sent at once, as a form, and show in the list", asy
   const fetch = stubApi([[], [shots]], () => Response.json(shots, { status: 202 }));
   renderScreenshots();
 
-  await userEvent.upload(screen.getByLabelText("Or upload a photo of a recipe"), [
+  await userEvent.upload(screen.getByLabelText("Upload a photo of a recipe"), [
     screenshot("one.png"),
     screenshot("two.png"),
   ]);
@@ -885,7 +886,7 @@ test("chosen screenshots are sent at once, as a form, and show in the list", asy
 test("more than 4 screenshots, or one too big, are refused before anything is sent", async () => {
   const fetch = stubApi([[]]);
   renderScreenshots();
-  const picker = screen.getByLabelText("Or upload a photo of a recipe");
+  const picker = screen.getByLabelText("Upload a photo of a recipe");
 
   await userEvent.upload(
     picker,
@@ -906,7 +907,7 @@ test("the API's reason for refusing the screenshots is shown, and tied to the pi
   );
   renderScreenshots();
 
-  const picker = screen.getByLabelText("Or upload a photo of a recipe");
+  const picker = screen.getByLabelText("Upload a photo of a recipe");
   await userEvent.upload(picker, [screenshot("one.png")]);
 
   expect(await screen.findByRole("alert")).toHaveTextContent("Not an image.");
@@ -924,7 +925,7 @@ test("a pick while screenshots are sending sends nothing more", async () => {
   vi.stubGlobal("fetch", fetch);
   renderScreenshots();
 
-  await userEvent.upload(screen.getByLabelText("Or upload a photo of a recipe"), [
+  await userEvent.upload(screen.getByLabelText("Upload a photo of a recipe"), [
     screenshot("one.png"),
   ]);
   await userEvent.upload(await screen.findByLabelText("Sending…"), [screenshot("two.png")]);
@@ -938,7 +939,7 @@ test("screenshots past the day's cap say so", async () => {
   renderScreenshots();
 
   const regions = screen.getAllByRole("status");
-  await userEvent.upload(screen.getByLabelText("Or upload a photo of a recipe"), [
+  await userEvent.upload(screen.getByLabelText("Upload a photo of a recipe"), [
     screenshot("one.png"),
   ]);
 
@@ -951,7 +952,7 @@ test("screenshots past the global cap say so", async () => {
   renderScreenshots();
 
   const regions = screen.getAllByRole("status");
-  await userEvent.upload(screen.getByLabelText("Or upload a photo of a recipe"), [
+  await userEvent.upload(screen.getByLabelText("Upload a photo of a recipe"), [
     screenshot("one.png"),
   ]);
 
@@ -970,11 +971,11 @@ test("in Hebrew, Add recipe's box and its upload are in Hebrew, its placeholder 
     "אפשר להדביק סרטון קצר מ\u2011YouTube, ריל מ\u2011Facebook או מ\u2011Instagram, או מתכון כטקסט",
   );
   // The placeholder and Pinch it stay in English (D46, the user's call, 2026-11-14).
-  expect(box).toHaveAttribute("placeholder", "Paste a video or a recipe");
+  expect(box).toHaveAttribute("placeholder", "Paste a link to a recipe Reel or Short…");
   expect(screen.getByText("Pinch it")).toHaveAttribute("lang", "en");
   expect(screen.getByRole("button", { name: "Pinch it" })).toBeInTheDocument();
   expect(screen.getByRole("heading", { level: 1, name: "להוסיף מתכון" })).toBeInTheDocument();
-  expect(screen.getByLabelText("או להעלות תמונה של מתכון")).toHaveAttribute("type", "file");
+  expect(screen.getByLabelText("להעלות תמונה של מתכון")).toHaveAttribute("type", "file");
   await waitFor(() => {
     expect(document.title).toBe("להוסיף מתכון · Pinch");
   });
@@ -988,7 +989,7 @@ test("in Hebrew, the paste row is laid out left to right, and what's typed keeps
   // The user's call (design §16.4): the sparkles on the left and Pinch it on the right, as in
   // English; the upload on the left under it.
   expect(box.parentElement).toHaveAttribute("dir", "ltr");
-  const upload = screen.getByLabelText("או להעלות תמונה של מתכון").closest("label");
+  const upload = screen.getByLabelText("להעלות תמונה של מתכון").closest("label");
   expect(upload?.parentElement?.closest("[dir]")).toHaveAttribute("dir", "ltr");
   // Empty, English: the placeholder and the caret on the left, by the sparkles.
   expect(box).toHaveAttribute("dir", "ltr");
@@ -1029,13 +1030,19 @@ test("in Hebrew, the (i) is named in Hebrew, says it in Hebrew, and Escape puts 
   expect(screen.getByRole("button", { name: "איפה מוצאים את הקישור" })).toHaveFocus();
 });
 
-test("in Hebrew, the upload reads right to left inside its ltr row", async () => {
+test("in Hebrew, a refused pick's message is outside the ltr row, in the page's direction", async () => {
   stubApi([[]]);
   await renderInHebrew("/");
 
-  // Its words in the page's direction inside the ltr row (design §16.4).
-  const picker = await screen.findByLabelText("או להעלות תמונה של מתכון");
-  expect(picker.closest("label")).toHaveAttribute("dir", "rtl");
+  // The picture button is in the box's ltr row (design §16.4); what it says is under the box.
+  const picker = await screen.findByLabelText("להעלות תמונה של מתכון");
+  expect(picker.closest('[dir="ltr"]')).not.toBeNull();
+  await userEvent.upload(
+    picker,
+    ["1", "2", "3", "4", "5"].map((n) => screenshot(`${n}.png`)),
+  );
+
+  expect((await screen.findByRole("alert")).closest('[dir="ltr"]')).toBeNull();
 });
 
 test("in Hebrew, a refused paste's message is outside the ltr row, in the page's direction", async () => {
@@ -1177,8 +1184,7 @@ test("in Hebrew, the upload and its card are in Hebrew", async () => {
   await inHebrew();
   renderScreenshots();
 
-  expect(screen.getByRole("button", { name: "על העלאת תמונה" })).toBeInTheDocument();
-  await userEvent.upload(screen.getByLabelText("או להעלות תמונה של מתכון"), [
+  await userEvent.upload(screen.getByLabelText("להעלות תמונה של מתכון"), [
     screenshot("one.png"),
     screenshot("two.png"),
   ]);

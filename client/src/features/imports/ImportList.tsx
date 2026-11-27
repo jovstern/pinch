@@ -8,6 +8,7 @@ import { Link } from "react-router";
 import { RecipeFace } from "../../components/RecipeFace.tsx";
 import { Thumbnail } from "../../components/Thumbnail.tsx";
 import { Button } from "../../components/ui/Button.tsx";
+import { cn } from "../../lib/cn.ts";
 import { platformNames } from "../../lib/platformNames.ts";
 import { serverMessage } from "../../lib/serverMessage.tsx";
 import { countToLookAt } from "../../lib/thingsToLookAt.ts";
@@ -68,37 +69,41 @@ export function ImportList({ focusPasteBox }: { focusPasteBox: () => void }) {
           <ul className="grid gap-3">
             {imports.map((job, index) => (
               // min-w-0: a grid item is as wide as its content, and a link is one long line.
+              // While the worker reads it, a glow of moving colours shows from under the card
+              // (globals.css), as apps show a model at work: the li draws it, behind the card.
               <li
                 key={job.id}
-                className="flex min-w-0 gap-3 rounded-card border border-border bg-card p-3 md:items-center md:gap-4 md:p-4"
+                className={cn("relative min-w-0", job.status === "processing" && "glow")}
               >
-                {/* The first cards' pictures are the page's largest thing on a phone, so they
+                <div className="relative flex gap-3 rounded-card border border-border bg-card p-3 md:items-center md:gap-4 md:p-4">
+                  {/* The first cards' pictures are the page's largest thing on a phone, so they
                     don't wait to be found near the screen, as My recipes' first row
                     (docs/metrics/m08.md). */}
-                <Picture job={job} eager={index < 2} />
-                {/* Phone: the action under the words. From 768 px: at the end. */}
-                <div className="min-w-0 flex-1 md:flex md:items-center md:gap-4">
-                  <div className="min-w-0 flex-1">
-                    {/* Names the card's buttons and link too (aria-describedby), so a screen
+                  <Picture job={job} eager={index < 2} />
+                  {/* Phone: the action under the words. From 768 px: at the end. */}
+                  <div className="min-w-0 flex-1 md:flex md:items-center md:gap-4">
+                    <div className="min-w-0 flex-1">
+                      {/* Names the card's buttons and link too (aria-describedby), so a screen
                         reader's list of them says which import each is for. The card is laid
                         out by the interface's direction, which reverses #113's dir="ltr" (kept
                         until the app was localised); the title and a pasted text keep their own
                         (dir="auto"), and a link reads left to right (design §16.5, D43). */}
-                    <p dir="auto" id={`import-${job.id}`} className="font-semibold break-words">
-                      {title(job)}
-                    </p>
-                    {/* One line: shared links carry long tracking codes, and a pasted text is
+                      <p dir="auto" id={`import-${job.id}`} className="font-semibold break-words">
+                        {title(job)}
+                      </p>
+                      {/* One line: shared links carry long tracking codes, and a pasted text is
                         long. A link whole on hover; a text, up to 10,000 characters, isn't. */}
-                    <p
-                      dir={job.input.type === "link" ? "ltr" : "auto"}
-                      title={job.input.type === "link" ? job.input.url : undefined}
-                      className="truncate text-sm text-muted-foreground"
-                    >
-                      {inputText(job.input)}
-                    </p>
-                    <p className={`mt-1 text-sm ${statusColor(job)}`}>{statusText(job)}</p>
+                      <p
+                        dir={job.input.type === "link" ? "ltr" : "auto"}
+                        title={job.input.type === "link" ? job.input.url : undefined}
+                        className="truncate text-sm text-muted-foreground"
+                      >
+                        {inputText(job.input)}
+                      </p>
+                      <p className={`mt-1 text-sm ${statusColor(job)}`}>{statusText(job)}</p>
+                    </div>
+                    <Action job={job} focusPasteBox={focusPasteBox} />
                   </div>
-                  <Action job={job} focusPasteBox={focusPasteBox} />
                 </div>
               </li>
             ))}
@@ -187,7 +192,7 @@ function queueSummary(imports: Import[]) {
 }
 
 // Ready stands out: it's the one waiting for the user. Stuck is a problem, as failed. One being
-// worked on (fetching, analyzing) shimmers (globals.css), as long as the worker has it; waiting
+// worked on (fetching, analyzing) shimmers (globals.css), and its card glows, as long as the worker has it; waiting
 // in the queue, or to try again, nothing is working on it yet, so it stays still. w-fit: the
 // band sweeps the words, not the card's whole width.
 function statusColor(job: Import) {

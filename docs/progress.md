@@ -212,6 +212,7 @@ After M10 (found by M10's UI review, not M10's to fix):
 - [x] C5 Similar recipes under each recipe, from the user's own (D51)
 - [x] C6 Small fixes (2026-11-27): "the original recipe" in the scaled line, a source label on every card and Image / By me in Filters (D52), smaller similar cards, a one-row header on a phone
 - [x] C7 The header in one row from 375 px: larger tab text on a phone, lower tabs, the ready count on its corner; Write a recipe floats below 1024 px
+- [x] C8 The paste box: a new placeholder, a picture button in it for uploading a photo (in place of the link under it), and a glow under a card being read
 
 ## M11 — Pinch online (design §15, §8.3, D31–D38)
 
