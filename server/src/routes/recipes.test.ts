@@ -501,9 +501,12 @@ test("GET /api/recipes?source= lists the recipes from any of the sources", async
     { title: "Video", source: { type: "youtube", url: "https://youtu.be/a" } },
     { title: "By hand" },
     { title: "Pasted", source: { type: "text" } },
+    { title: "Photo", source: { type: "image" } },
   ]);
 
-  expect(await listTitles(userApi, { source: "instagram,manual" })).toEqual(["By hand", "Reel"]);
+  expect(await listTitles(userApi, { source: "instagram,image" })).toEqual(["Photo", "Reel"]);
+  // "By me" is what the user wrote and what they pasted as text (design D52).
+  expect(await listTitles(userApi, { source: "manual" })).toEqual(["Pasted", "By hand"]);
 });
 
 test("GET /api/recipes?time= lists the recipes that take at most that long, prep and cook together", async () => {

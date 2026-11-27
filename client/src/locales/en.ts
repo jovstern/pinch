@@ -200,7 +200,8 @@ export const en = {
     upTo30: "30 min or less",
     upTo60: "1 hour or less",
     source: "Source",
-    writtenByMe: "Written by me",
+    image: "Image",
+    byMe: "By me",
     byTags: "Filter by tags",
     // The sheet's button, which closes it: how many are left, as the page's count says it.
     showRecipes: "Show recipes",
@@ -301,8 +302,8 @@ export const en = {
     people_one: "{{count}} person",
     people_other: "{{count}} people",
     original: "{{option}} (original)",
-    scaledFrom_one: "Amounts changed · the recipe is for 1",
-    scaledFrom_other: "Amounts changed · the recipe is for {{count}}",
+    scaledFrom_one: "Amounts changed · the original recipe is for 1",
+    scaledFrom_other: "Amounts changed · the original recipe is for {{count}}",
     noServings: "The recipe doesn't say how many it serves.",
     // {{times}} is "×2", in its isolate.
     scaledTimes: "Amounts changed · {{times}} the original",
@@ -443,8 +444,8 @@ export const en = {
     mayLock: "This browser may let the screen lock.",
     allIngredients: "All ingredients ({{number}})",
     // The amounts chosen on the recipe's page (D48).
-    scaledFor_one: "Amounts for 1 person · the recipe is for {{servings}}",
-    scaledFor_other: "Amounts for {{count}} people · the recipe is for {{servings}}",
+    scaledFor_one: "Amounts for 1 person · the original recipe is for {{servings}}",
+    scaledFor_other: "Amounts for {{count}} people · the original recipe is for {{servings}}",
     forThisStep: "For this step",
     // The counter over the cards: the same words for any number of steps, in both languages.
     stepOf: "Step {{position}} of {{total}}",

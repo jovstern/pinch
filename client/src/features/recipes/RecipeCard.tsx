@@ -5,8 +5,8 @@ import { RecipeFace } from "../../components/RecipeFace.tsx";
 import { Thumbnail } from "../../components/Thumbnail.tsx";
 import { Badge } from "../../components/ui/Badge.tsx";
 import { formatNumber } from "../../lib/formatNumber.ts";
-import { platformNames } from "../../lib/platformNames.ts";
 import { editedSincePinched } from "./editedSincePinched.ts";
+import { sourceLabels } from "./filterLabels.ts";
 
 // A recipe in My recipes' grid (design §14): its picture, where it came from, its title, and the
 // two things that decide what to cook tonight. One link, so the grid is one tab stop a recipe.
@@ -20,7 +20,7 @@ type RecipeCardProps = {
 };
 
 export function RecipeCard({ recipe, eager, titleAs: Title = "h2" }: RecipeCardProps) {
-  // Instagram, YouTube or Facebook; a recipe written by hand (or from text) has no label.
+  // Read by Pinch from a post or pasted text: without a picture or an emoji, its pot has sparkles.
   const platform = PlatformSchema.safeParse(recipe.source.type).data;
   return (
     // The picture comes first on screen but last in the markup (order-first), so the link is
@@ -58,14 +58,13 @@ export function RecipeCard({ recipe, eager, titleAs: Title = "h2" }: RecipeCardP
             className="h-full text-5xl"
           />
         )}
-        {platform && (
-          <Badge
-            variant="secondary"
-            className="absolute end-2 top-2 bg-background/90 px-2 py-0.5 text-xs font-medium"
-          >
-            {platformNames[platform]}
-          </Badge>
-        )}
+        {/* Where it came from, on every card (design D52). */}
+        <Badge
+          variant="secondary"
+          className="absolute end-2 top-2 bg-background/90 px-2 py-0.5 text-xs font-medium"
+        >
+          {sourceLabels()[recipe.source.type]}
+        </Badge>
       </div>
     </Link>
   );

@@ -493,7 +493,7 @@ test("Cooking for scales the amounts, says the recipe's own number, and Cook kee
       .getAllByRole("listitem")
       .map((item) => item.textContent),
   ).toEqual(["6 eggs", "3 tbsp butter, soft"]);
-  expect(screen.getByText("Amounts changed · the recipe is for 1")).toBeInTheDocument();
+  expect(screen.getByText("Amounts changed · the original recipe is for 1")).toBeInTheDocument();
   // The details still say the recipe's own number.
   expect(screen.getByText(/Prep 5 min/)).toHaveTextContent("Serves 1");
   expect(screen.getByRole("link", { name: "Cook" })).toHaveAttribute(
@@ -553,5 +553,5 @@ test("in Hebrew, Cooking for and its note are in Hebrew", async () => {
   const picker = await screen.findByRole("combobox", { name: "בישול עבור" });
   expect(picker).toHaveDisplayValue("4 אנשים");
   expect(within(picker).getByRole("option", { name: "2 אנשים (כמו במתכון)" })).toBeInTheDocument();
-  expect(screen.getByText("הכמויות שונו · המתכון ל־2 אנשים")).toBeInTheDocument();
+  expect(screen.getByText("הכמויות שונו · המתכון המקורי ל־2 אנשים")).toBeInTheDocument();
 });

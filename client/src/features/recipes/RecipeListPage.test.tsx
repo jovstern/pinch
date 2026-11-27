@@ -49,6 +49,33 @@ test("a recipe from a post shows its picture and its site in its card", async ()
   expect(link).toHaveAccessibleName("Omelette 10\u00A0min · 2 ingredients Instagram");
 });
 
+// Every card says where its recipe came from (design D52).
+test.each([
+  ["image", "Image"],
+  ["text", "Plain Text"],
+  ["manual", "By me"],
+] as const)("a recipe from %s has %s on its card", async (type, label) => {
+  const recipe = { ...omelette, source: { type } };
+  stubFetch(vi.fn().mockResolvedValue(Response.json({ items: [recipe], nextCursor: null })));
+  renderApp("/recipes");
+
+  expect(await screen.findByRole("link", { name: /Omelette/ })).toHaveAccessibleName(
+    `Omelette 10\u00A0min · 2 ingredients ${label}`,
+  );
+});
+
+test("Filters' sources are the sites, Image and By me, in that order", async () => {
+  stubList();
+  renderApp("/recipes", { wide: true });
+
+  const source = await screen.findByRole("group", { name: "Source" });
+  expect(
+    within(source)
+      .getAllByRole("checkbox")
+      .map((box) => box.closest("label")?.textContent),
+  ).toEqual(["YouTube", "Facebook", "Instagram", "Image", "By me"]);
+});
+
 test("a recipe Pinch read says Edited once it was changed; one written by hand never does", async () => {
   const later = "2026-11-02T10:00:00.000Z";
   const pinched = { ...omelette, source: { type: "youtube" as const }, updatedAt: later };
@@ -302,7 +329,7 @@ test("a source and a time in the address tick the panel, and each one's ✕ take
   expect(screen.getByRole("radio", { name: "30 min or less" })).toBeChecked();
   expect(fetch).toHaveBeenCalledWith("/api/recipes?source=instagram%2Cmanual&time=30");
 
-  await userEvent.click(screen.getByRole("button", { name: "Remove Written by me" }));
+  await userEvent.click(screen.getByRole("button", { name: "Remove By me" }));
   await waitFor(() => {
     expect(fetch).toHaveBeenLastCalledWith("/api/recipes?source=instagram&time=30");
   });
@@ -523,7 +550,7 @@ test("in Hebrew, the Filters sheet, its choices, its count and its close are in 
   expect(within(sheet).getByRole("radio", { name: "הכול" })).toBeChecked();
   // The sites keep their names (D46).
   expect(within(sheet).getByRole("checkbox", { name: "Instagram" })).toBeInTheDocument();
-  expect(within(sheet).getByRole("checkbox", { name: "נכתבו ידנית" })).toBeInTheDocument();
+  expect(within(sheet).getByRole("checkbox", { name: "כתבתי" })).toBeInTheDocument();
   await userEvent.click(within(sheet).getByRole("checkbox", { name: "ארוחת בוקר" }));
   await userEvent.click(within(sheet).getByRole("radio", { name: "עד 30 דק׳" }));
   await waitFor(() => {
@@ -546,7 +573,7 @@ test("in Hebrew, the Filters panel and the filters beside the grid are in Hebrew
   expect(screen.getByRole("combobox", { name: "מיון" })).toHaveDisplayValue("הכי חדשים");
   expect(await screen.findByText("מתכון אחד מתאים.")).toBeInTheDocument();
 
-  await userEvent.click(screen.getByRole("button", { name: "להסיר: נכתבו ידנית" }));
+  await userEvent.click(screen.getByRole("button", { name: "להסיר: כתבתי" }));
   await waitFor(() => {
     expect(fetch).toHaveBeenLastCalledWith("/api/recipes?tags=meal%3Abreakfast");
   });

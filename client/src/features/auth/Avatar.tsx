@@ -4,8 +4,9 @@ import { useTranslation } from "react-i18next";
 import { Button } from "../../components/ui/Button.tsx";
 
 // The header's avatar (design §14, D24): the user's Google picture (§8.3), else the first letter of
-// their name, in a 44 px circle. A button that opens their menu; the props are the menu's (Radix's
-// trigger, or LazyUserMenu's).
+// their name, in a 44 px circle (36 px on a phone, where the tabs share its row; the after: keeps
+// its touch area 44). A button that opens their menu; the props are the menu's (Radix's trigger,
+// or LazyUserMenu's).
 export function Avatar({ me, ...props }: { me: Me } & ComponentProps<"button">) {
   const { t } = useTranslation();
   // A picture that doesn't load is as none, as Thumbnail's: the letter, no broken-image icon.
@@ -17,7 +18,7 @@ export function Avatar({ me, ...props }: { me: Me } & ComponentProps<"button">) 
       variant="secondary"
       aria-label={t("header.account")}
       aria-haspopup="menu"
-      className="group size-11 shrink-0 rounded-full px-0 text-lg"
+      className="group relative size-9 min-h-0 shrink-0 rounded-full px-0 text-base after:absolute after:-inset-1 md:size-11 md:text-lg md:after:hidden"
       {...props}
     >
       {picture ? (
