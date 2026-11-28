@@ -24,7 +24,7 @@ export function Layout() {
   useImportToasts();
   useScrollToTop();
   const toastSent = useToastSent();
-  // Add recipe's and My recipes' own pages, where Write a recipe floats on a phone (not All
+  // Add recipe's and My recipes' own pages, where Write a recipe floats below 1024 px (not All
   // recipes': a page of others' recipes, Coming soon for now).
   const onTabPage = pathname === "/" || pathname === "/recipes";
   // A recipe's own page, /recipes/<id>, and its cook mode: not /recipes/new, nor its edit page.
@@ -39,7 +39,7 @@ export function Layout() {
       <div className="flex min-h-svh flex-col">
         <Header onTabPage={onTabPage} />
         {/* wrap-anywhere: a long URL or word in a recipe wraps instead of widening the page. Room
-          at the bottom on a phone, so the floating button never covers the last item. w-full:
+          at the bottom below 1024 px, so the floating button never covers the last item. w-full:
           a flex item with auto margins would shrink to its content. */}
         <main
           className={cn(
@@ -57,7 +57,7 @@ export function Layout() {
             // An inner page starts with its breadcrumbs (D24), close under the header: their
             // 44 px rows have room in them.
             !onTabPage && "pt-2",
-            onTabPage && "pb-24 md:pb-8",
+            onTabPage && "pb-24 lg:pb-8",
           )}
         >
           {/* Keyed by address: going to another page clears a failure. */}

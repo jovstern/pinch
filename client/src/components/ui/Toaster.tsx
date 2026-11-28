@@ -5,10 +5,11 @@ import { pageIsRtl } from "../../i18n.ts";
 import { useDarkTheme } from "../../lib/theme.ts";
 import { useMediaQuery } from "../../lib/useMediaQuery.ts";
 
-// md: Tailwind's 768 px, where the toasts move from the top to the bottom corner on the end side:
-// the right, or the left in Hebrew (design §14, §16.4).
-const wide = "(min-width: 48rem)";
-// On a phone, under the header (its tabs, 64 px), so a toast never covers them.
+// lg: Tailwind's 1024 px, where the toasts move from the top to the bottom corner on the end side:
+// the right, or the left in Hebrew (design §14, §16.4). Below it that corner is Write a recipe's,
+// which floats there (Header).
+const wide = "(min-width: 64rem)";
+// At the top, under the header (69 px at its tallest, from 768 px), so a toast never covers it.
 const belowHeader = { top: "4.5rem" };
 // The app's one focus ring (globals.css), which Sonner's own outline: none hides.
 const focusRing =
@@ -16,8 +17,8 @@ const focusRing =
 
 // shadcn's Sonner (its toast), on Pinch's tokens. Mounted once, in the Layout.
 // Placed by width in JS, not CSS: Sonner takes one position, and its own phone rule (under
-// 600 px) keeps it, so a bottom-right Toaster would sit at the bottom on a phone, over the
-// floating button and the thumb. The media query is read as it changes: a turned phone follows.
+// 600 px) keeps it, so a bottom-right Toaster would sit at the bottom below 1024 px, over the
+// floating button and, on a phone, the thumb. The media query is read as it changes: a turned phone follows.
 // alwaysTop keeps them at the top on every width (the page says why: Layout).
 // The toasts are in English in both languages (design §16.8, D46): in Hebrew they keep the
 // page's corner, but each reads left to right, its button and ✕ on the right, and says it's
@@ -38,7 +39,7 @@ export function Toaster({ alwaysTop }: { alwaysTop: boolean }) {
         // Fitted between the gutters instead, the list sits where it should in both directions.
         className="max-[601px]:w-auto!"
         position={atBottom ? (rtl ? "bottom-left" : "bottom-right") : "top-center"}
-        // Both: Sonner's phone rule (mobileOffset) stops at 600 px, the header's at 768.
+        // Both: Sonner's phone rule (mobileOffset) stops at 600 px, the top's at 1024.
         offset={atBottom ? undefined : belowHeader}
         mobileOffset={belowHeader}
         // Sonner's own dark colours (the close button's hover) follow the page's theme, the one
