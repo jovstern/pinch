@@ -329,7 +329,7 @@ export const he: Translation<typeof en> = {
     cookMinutes: "בישול (דק׳)",
     removeTag: "להסיר: {{tag}}",
     addTag: "להוסיף תגית",
-    ownTag: "תגית משלך",
+    ownTag: "להוסיף תגית משלך",
     add: "להוסיף",
     ownTags: "התגיות שלך",
     tagAlreadyAdded: "התגית „{{tag}}” כבר נמצאת במתכון.",

@@ -1,5 +1,5 @@
 import { Check } from "lucide-react";
-import { useId } from "react";
+import { useId, type ReactNode } from "react";
 
 type ChoiceGroupProps<Value extends string> = {
   legend: string;
@@ -12,6 +12,8 @@ type ChoiceGroupProps<Value extends string> = {
   // "chips" (the sheets), or "list": a column of rows for a narrow panel (My recipes from
   // 1024 px, as in the wireframe).
   look?: "chips" | "list";
+  // After the choices, in their row: the editor's own tags end with the button that adds one.
+  children?: ReactNode;
 };
 
 // The input is hidden in a chip, so the chip shows its state (a fill and a ✓, not colour alone)
@@ -41,6 +43,7 @@ export function ChoiceGroup<Value extends string>({
   selected,
   onChange,
   look = "chips",
+  children,
 }: ChoiceGroupProps<Value>) {
   // The radios' name, so the browser makes them one group (one Tab stop, the arrow keys).
   const name = useId();
@@ -65,6 +68,7 @@ export function ChoiceGroup<Value extends string>({
             {label}
           </label>
         ))}
+        {children}
       </div>
     </fieldset>
   );

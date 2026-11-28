@@ -401,9 +401,10 @@ export const en = {
     // A tag's ✕: "Remove vegetarian".
     removeTag: "Remove {{tag}}",
     addTag: "Add tag",
-    // A tag of the user's own, in the Tags sheet (D53): the field, its button, the group of
-    // their tags, and what the line under the field says when the tag is already there.
-    ownTag: "Your own tag",
+    // A tag of the user's own, in the Tags sheet (D53): the group of their tags, the button
+    // that adds one ("Add +", then a bare +) and its field's name, and what the line under them
+    // says when the tag is already there.
+    ownTag: "Add a tag of your own",
     add: "Add",
     ownTags: "Your tags",
     tagAlreadyAdded: "This recipe already has “{{tag}}”.",

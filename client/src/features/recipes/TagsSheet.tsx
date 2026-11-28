@@ -12,8 +12,8 @@ type TagsSheetProps = {
   focusOnClose: () => void;
 };
 
-// Every tag by facet, for a recipe in the editor (design §14), as My recipes' Filters, under a
-// field for a tag of the user's own (D53).
+// Every tag by facet, for a recipe in the editor (design §14), as My recipes' Filters, under
+// the user's own tags and the button that adds one (D53).
 export function TagsSheet({ selected, onChange, onClose, focusOnClose }: TagsSheetProps) {
   const { t } = useTranslation();
   return (

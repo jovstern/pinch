@@ -228,7 +228,12 @@ test("a tag chosen in Add tag shows as a chip, and its ✕ removes it", async ()
   expect(screen.getByRole("button", { name: "Add tag" })).toHaveFocus();
 });
 
-// A tag of the user's own (design D53).
+// A tag of the user's own (design D53): "Add +" under Your tags opens a field for its words.
+async function addOwnTag(words: string) {
+  await userEvent.click(screen.getByRole("button", { name: "Add a tag of your own" }));
+  await userEvent.type(screen.getByRole("textbox", { name: "Add a tag of your own" }), words);
+}
+
 test("a tag of the user's own is added in lower case, shows as a chip, and is saved", async () => {
   const fetch = stubApi(() => Response.json(saved, { status: 201 }));
   renderApp("/recipes/new");
@@ -237,11 +242,19 @@ test("a tag of the user's own is added in lower case, shows as a chip, and is sa
   await userEvent.type(ingredient(1).getByLabelText("Ingredient"), "eggs");
   await userEvent.type(screen.getByLabelText("Step 1"), "Beat.");
   await userEvent.click(screen.getByRole("button", { name: "Add tag" }));
-  await userEvent.type(await screen.findByLabelText("Your own tag"), "  Grandma's   BEST{Enter}");
+  // No field until it's asked for, and with no tags yet the button says "Add".
+  const add = await screen.findByRole("button", { name: "Add a tag of your own" });
+  expect(add).toHaveTextContent("Add");
+  expect(screen.queryByRole("textbox", { name: "Add a tag of your own" })).not.toBeInTheDocument();
+  await addOwnTag("  Grandma's   BEST{Enter}");
 
-  // Ticked in the sheet, where it can be unticked, and the field is empty for the next.
-  expect(screen.getByRole("checkbox", { name: "grandma's best" })).toBeChecked();
-  expect(screen.getByLabelText("Your own tag")).toHaveValue("");
+  // Ticked under Your tags, where it can be unticked; the field is gone, focus on the button,
+  // now a bare +, for the next.
+  const own = screen.getByRole("group", { name: "Your tags" });
+  expect(within(own).getByRole("checkbox", { name: "grandma's best" })).toBeChecked();
+  expect(screen.queryByRole("textbox", { name: "Add a tag of your own" })).not.toBeInTheDocument();
+  expect(add).toHaveFocus();
+  expect(add).toHaveTextContent("");
   await userEvent.click(screen.getByRole("button", { name: "Done" }));
   expect(screen.getByRole("button", { name: "Remove grandma's best" })).toBeInTheDocument();
 
@@ -264,22 +277,23 @@ test("a tag that's already there isn't added twice, in any case, and one of the 
   renderApp("/recipes/new");
 
   await userEvent.click(await screen.findByRole("button", { name: "Add tag" }));
-  const field = await screen.findByLabelText("Your own tag");
-  await userEvent.type(field, "Picnic{Enter}");
-  await userEvent.type(field, "PICNIC");
-  await userEvent.click(screen.getByRole("button", { name: "Add" }));
+  const add = await screen.findByRole("button", { name: "Add a tag of your own" });
+  await addOwnTag("Picnic{Enter}");
+  // Leaving the field adds what's written, as Enter does.
+  await addOwnTag("PICNIC");
+  await userEvent.tab();
 
-  expect(field).toHaveAccessibleDescription("This recipe already has “picnic”.");
+  expect(add).toHaveAccessibleDescription("This recipe already has “picnic”.");
   expect(screen.getAllByRole("checkbox", { name: "picnic" })).toHaveLength(1);
 
   // One of the lists' tags by its name: that one is ticked, and no tag of the user's is made.
-  await userEvent.type(field, "Spicy{Enter}");
-  expect(field).toHaveAccessibleDescription("“spicy” is in the list, so it was ticked there.");
+  await addOwnTag("Spicy{Enter}");
+  expect(add).toHaveAccessibleDescription("“spicy” is in the list, so it was ticked there.");
   expect(screen.getAllByRole("checkbox", { name: "spicy" })).toHaveLength(1);
   expect(screen.getByRole("checkbox", { name: "spicy" })).toBeChecked();
 
   // By its own word too, with its hyphen: the list's "middle eastern".
-  await userEvent.type(field, "Middle-Eastern{Enter}");
+  await addOwnTag("Middle-Eastern{Enter}");
   expect(screen.getAllByRole("checkbox", { name: /middle.eastern/ })).toHaveLength(1);
   expect(screen.getByRole("checkbox", { name: "middle eastern" })).toBeChecked();
 });
