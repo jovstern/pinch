@@ -1,7 +1,9 @@
+import { customTagWords } from "@pinch/shared";
 import { useTranslation } from "react-i18next";
 import { ChoiceGroup } from "./ChoiceGroup.tsx";
 import { choicesOf, sortChoices, sourceNames, timeNames } from "./filterLabels.ts";
 import type { RecipeFilters } from "./recipeQueries.ts";
+import { tagLabel } from "./tagLabels.ts";
 import { TagPicker } from "./TagPicker.tsx";
 
 type FilterChoicesProps = {
@@ -17,6 +19,10 @@ type FilterChoicesProps = {
 export function FilterChoices({ filters, onChange, withSort, look }: FilterChoicesProps) {
   const { t } = useTranslation();
   const { sources } = filters;
+  // The user's own tags the list is filtered by (a recipe's tag opens My recipes filtered by
+  // it, D53): shown so each can be seen and taken off. The lists below don't have them, and on a
+  // phone nothing else names them.
+  const ownTags = filters.tags.filter((tag) => customTagWords(tag) !== undefined);
   return (
     <div className="grid gap-4">
       {withSort && (
@@ -54,6 +60,19 @@ export function FilterChoices({ filters, onChange, withSort, look }: FilterChoic
         }}
         look={look}
       />
+      {ownTags.length > 0 && (
+        <ChoiceGroup
+          legend={t("editor.ownTags")}
+          type="checkbox"
+          choices={ownTags.map((tag) => ({ value: tag, label: tagLabel(tag) }))}
+          selected={filters.tags}
+          onChange={(tag) => {
+            // Only ever unticked: once off, it's no longer listed.
+            onChange({ ...filters, tags: filters.tags.filter((other) => other !== tag) });
+          }}
+          look={look}
+        />
+      )}
       <TagPicker
         legend={t("filters.byTags")}
         selected={filters.tags}

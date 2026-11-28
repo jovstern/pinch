@@ -277,6 +277,11 @@ test("a tag that's already there isn't added twice, in any case, and one of the 
   expect(field).toHaveAccessibleDescription("“spicy” is in the list, so it was ticked there.");
   expect(screen.getAllByRole("checkbox", { name: "spicy" })).toHaveLength(1);
   expect(screen.getByRole("checkbox", { name: "spicy" })).toBeChecked();
+
+  // By its own word too, with its hyphen: the list's "middle eastern".
+  await userEvent.type(field, "Middle-Eastern{Enter}");
+  expect(screen.getAllByRole("checkbox", { name: /middle.eastern/ })).toHaveLength(1);
+  expect(screen.getByRole("checkbox", { name: "middle eastern" })).toBeChecked();
 });
 
 test("removing the last row moves focus to its list's Add button", async () => {

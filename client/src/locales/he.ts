@@ -333,6 +333,7 @@ export const he: Translation<typeof en> = {
     add: "להוסיף",
     ownTags: "התגיות שלך",
     tagAlreadyAdded: "התגית „{{tag}}” כבר נמצאת במתכון.",
+    tagTooLong: "תגית יכולה להכיל עד {{max}} תווים.",
     tagInList: "התגית „{{tag}}” נמצאת ברשימה, ולכן סומנה שם.",
     done: "סיום",
     toFix_one: "דבר אחד לתקן לפני השמירה",

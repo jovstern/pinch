@@ -131,7 +131,8 @@ export function RecipePage() {
                     className="relative h-8 min-w-11 after:absolute after:inset-x-0 after:-inset-y-1.5 hover:bg-border active:bg-border/70"
                   >
                     <Link to={`/recipes?${filterParams({ ...noFilters, tags: [tag] }).toString()}`}>
-                      {tagLabel(tag)}
+                      {/* Its own direction: the user's own tag may be in the other language. */}
+                      <bdi>{tagLabel(tag)}</bdi>
                     </Link>
                   </Badge>
                 </li>

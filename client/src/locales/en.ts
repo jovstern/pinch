@@ -407,6 +407,7 @@ export const en = {
     add: "Add",
     ownTags: "Your tags",
     tagAlreadyAdded: "This recipe already has “{{tag}}”.",
+    tagTooLong: "A tag can have up to {{max}} characters.",
     tagInList: "“{{tag}}” is in the list, so it was ticked there.",
     // The tags' sheet: they apply as they're ticked, so Done only closes it.
     done: "Done",

@@ -76,6 +76,23 @@ test("Filters' sources are the sites, Image and By me, in that order", async () 
   ).toEqual(["YouTube", "Facebook", "Instagram", "Image", "By me"]);
 });
 
+// A recipe's own tag opens the list filtered by it (design D53): Filters name it, so it can be
+// seen and taken off (on a phone nothing else does).
+test("a tag of the user's own in the address is in Filters, and unticking it takes it off", async () => {
+  const fetch = stubList();
+  renderApp("/recipes?tags=custom:picnic,meal:dinner", { wide: true });
+
+  const own = await screen.findByRole("group", { name: "Your tags" });
+  expect(within(own).getByRole("checkbox", { name: "picnic" })).toBeChecked();
+  expect(fetch).toHaveBeenCalledWith("/api/recipes?tags=custom%3Apicnic%2Cmeal%3Adinner");
+
+  await userEvent.click(within(own).getByRole("checkbox", { name: "picnic" }));
+  await waitFor(() => {
+    expect(fetch).toHaveBeenLastCalledWith("/api/recipes?tags=meal%3Adinner");
+  });
+  expect(screen.queryByRole("group", { name: "Your tags" })).not.toBeInTheDocument();
+});
+
 test("a recipe Pinch read says Edited once it was changed; one written by hand never does", async () => {
   const later = "2026-11-02T10:00:00.000Z";
   const pinched = { ...omelette, source: { type: "youtube" as const }, updatedAt: later };

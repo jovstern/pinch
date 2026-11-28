@@ -67,15 +67,22 @@ export function choicesOf<Value extends string>(names: Record<Value, string>) {
 // off: the ✕ chips beside the grid, the count on Filters and "No recipes match"'s line.
 export function appliedFilters(filters: RecipeFilters) {
   const { time, sources, tags } = filters;
-  const applied: { label: string; without: RecipeFilters }[] = [];
-  if (time !== "") applied.push({ label: timeNames()[time], without: { ...filters, time: "" } });
+  // The key is the filter, not its label: a tag of the user's own can read as another filter does.
+  const applied: { key: string; label: string; without: RecipeFilters }[] = [];
+  if (time !== "") {
+    applied.push({ key: "time", label: timeNames()[time], without: { ...filters, time: "" } });
+  }
   for (const source of sources) {
     const others = sources.filter((other) => other !== source);
-    applied.push({ label: sourceNames()[source], without: { ...filters, sources: others } });
+    applied.push({
+      key: `source:${source}`,
+      label: sourceNames()[source],
+      without: { ...filters, sources: others },
+    });
   }
   for (const tag of tags) {
     const others = tags.filter((other) => other !== tag);
-    applied.push({ label: tagLabel(tag), without: { ...filters, tags: others } });
+    applied.push({ key: tag, label: tagLabel(tag), without: { ...filters, tags: others } });
   }
   return applied;
 }

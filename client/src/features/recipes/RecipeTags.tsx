@@ -42,7 +42,8 @@ export function RecipeTags({ selected, onChange, errors }: RecipeTagsProps) {
             key={tag}
             className="inline-flex h-11 items-center rounded-full bg-secondary ps-4 text-sm"
           >
-            {tagLabel(tag)}
+            {/* Its own direction: a tag of the user's own may be in the other language (§16.5). */}
+            <bdi>{tagLabel(tag)}</bdi>
             <Button
               type="button"
               variant="ghost"

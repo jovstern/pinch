@@ -172,8 +172,8 @@ export function RecipeListPage() {
                 {/* From 1024 px the filters repeat here, each removable, so what narrows the grid
                     shows beside it (on a phone the chips and the Filters badge say it). The ✕
                     keeps the badge's size; its after: gives it a 44 px touch area. */}
-                {applied.map(({ label, without }) => (
-                  <Badge key={label} variant="secondary" className="hidden gap-0 py-0 pe-0 lg:flex">
+                {applied.map(({ key, label, without }) => (
+                  <Badge key={key} variant="secondary" className="hidden gap-0 py-0 pe-0 lg:flex">
                     {label}
                     <Button
                       type="button"

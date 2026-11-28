@@ -37,18 +37,19 @@ export type TagFacet = keyof typeof tagFacets;
 
 // A tag of the user's own (design D53): "custom:" and its words, as the user wrote them but
 // trimmed, single-spaced and in lower case, so "Grandma's", "grandma's " and "GRANDMA'S" are one
-// tag. No comma: the list's address joins its tags with them (?tags=a,b).
+// tag. No comma: the list's address joins its tags with them (?tags=a,b). And one spelling for
+// what looks the same: composed letters (NFC), and none of the marks nobody sees (the direction
+// marks that come along with copied Hebrew, zero-width spaces), which would make a second tag
+// that reads the same, or an empty one.
 const CUSTOM = "custom:";
 export const MAX_CUSTOM_TAG = 30;
 
 export function customTag(words: string) {
-  return (
-    CUSTOM +
-    words
-      .replace(/[\s,]+/g, " ")
-      .trim()
-      .toLowerCase()
-  );
+  const seen = words
+    .normalize("NFC")
+    .replace(/[\s,]+/g, " ")
+    .replace(/[\p{Cc}\p{Cf}]/gu, "");
+  return CUSTOM + seen.trim().toLowerCase();
 }
 
 // A custom tag's words, or undefined for any other tag.

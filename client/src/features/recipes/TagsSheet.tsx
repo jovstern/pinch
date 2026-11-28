@@ -26,6 +26,8 @@ export function TagsSheet({ selected, onChange, onClose, focusOnClose }: TagsShe
     >
       <SheetContent
         aria-describedby={undefined}
+        // No ring around the whole sheet when it takes focus (below): it isn't a control.
+        className="outline-none!"
         // Focus on the sheet itself, not its first control: that is the field for a tag of
         // the user's own, and a phone would open its keyboard over the lists.
         onOpenAutoFocus={(event) => {

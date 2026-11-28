@@ -23,15 +23,20 @@ export function CustomTagField({ selected, onChange }: CustomTagFieldProps) {
   const [note, setNote] = useState("");
   // The recipe's own tags, and the ones added while the sheet is open: unticked, a chip stays,
   // so it can be ticked again.
-  const [own, setOwn] = useState(() => selected.filter((tag) => customTagWords(tag)));
+  const [own, setOwn] = useState(() => selected.filter((tag) => customTagWords(tag) !== undefined));
 
   function add() {
     const tag = customTag(words);
     const typed = customTagWords(tag);
     if (!typed) return;
-    // One of the lists' tags by its name on screen: that one, not a second tag that reads the
-    // same.
-    const known = listTags().find((other) => tagLabel(other).toLowerCase() === typed) ?? tag;
+    // Lower case can be longer than what was typed (Turkish "İ"), past what the field allows.
+    if (typed.length > MAX_CUSTOM_TAG) {
+      setNote(t("editor.tagTooLong", { max: MAX_CUSTOM_TAG }));
+      return;
+    }
+    // One of the lists' tags, by its name on screen or its own word ("middle-eastern", or
+    // "italian" on a Hebrew page): that one, not a second tag that reads the same.
+    const known = listTags().find((other) => namesOf(other).includes(typed)) ?? tag;
     if (selected.includes(known)) {
       setNote(t("editor.tagAlreadyAdded", { tag: tagLabel(known) }));
     } else {
@@ -57,6 +62,8 @@ export function CustomTagField({ selected, onChange }: CustomTagFieldProps) {
             enterKeyHint="done"
             onChange={(event) => {
               setWords(event.target.value);
+              // The last tag's note is no longer about what's in the field.
+              setNote("");
             }}
             onKeyDown={(event) => {
               // Enter adds the tag (not while an input method is composing a word: that Enter
@@ -94,4 +101,12 @@ export function CustomTagField({ selected, onChange }: CustomTagFieldProps) {
 // Every tag of the lists.
 function listTags() {
   return facets.flatMap((facet) => tagFacets[facet].map((value) => `${facet}:${value}`));
+}
+
+// What a list's tag can be typed as: its label in the page's language, and its own word, with
+// its hyphen or with a space. Not its label in the other language: a page loads only its own
+// (D39).
+function namesOf(tag: string) {
+  const value = tag.slice(tag.indexOf(":") + 1);
+  return [tagLabel(tag).toLowerCase(), value, value.replaceAll("-", " ")];
 }

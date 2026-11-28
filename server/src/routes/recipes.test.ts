@@ -302,6 +302,9 @@ test.each([
   ["with a comma", "custom:sweet,sour"],
   ["empty", "custom:"],
   ["over 30 characters", `custom:${"a".repeat(31)}`],
+  ["with a mark nobody sees", "custom:פסח\u200F"],
+  ["of only a zero-width space", "custom:\u200B"],
+  ["in decomposed letters", "custom:cafe\u0301"],
 ])("POST /api/recipes answers 400 for a tag of the user's own %s", async (_how, tag) => {
   const response = await api.post("/api/recipes").send({ ...omelette, tags: [tag] });
 
