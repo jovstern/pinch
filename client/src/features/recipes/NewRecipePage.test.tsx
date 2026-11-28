@@ -228,6 +228,57 @@ test("a tag chosen in Add tag shows as a chip, and its ✕ removes it", async ()
   expect(screen.getByRole("button", { name: "Add tag" })).toHaveFocus();
 });
 
+// A tag of the user's own (design D53).
+test("a tag of the user's own is added in lower case, shows as a chip, and is saved", async () => {
+  const fetch = stubApi(() => Response.json(saved, { status: 201 }));
+  renderApp("/recipes/new");
+
+  await userEvent.type(await screen.findByLabelText("Title"), "Omelette");
+  await userEvent.type(ingredient(1).getByLabelText("Ingredient"), "eggs");
+  await userEvent.type(screen.getByLabelText("Step 1"), "Beat.");
+  await userEvent.click(screen.getByRole("button", { name: "Add tag" }));
+  await userEvent.type(await screen.findByLabelText("Your own tag"), "  Grandma's   BEST{Enter}");
+
+  // Ticked in the sheet, where it can be unticked, and the field is empty for the next.
+  expect(screen.getByRole("checkbox", { name: "grandma's best" })).toBeChecked();
+  expect(screen.getByLabelText("Your own tag")).toHaveValue("");
+  await userEvent.click(screen.getByRole("button", { name: "Done" }));
+  expect(screen.getByRole("button", { name: "Remove grandma's best" })).toBeInTheDocument();
+
+  await userEvent.click(screen.getByRole("button", { name: "Save recipe" }));
+  await screen.findByRole("heading", { level: 1, name: "Toast" });
+  expect(fetch).toHaveBeenCalledWith("/api/recipes", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      title: "Omelette",
+      ingredients: [{ name: "eggs" }],
+      steps: ["Beat."],
+      tags: ["custom:grandma's best"],
+    }),
+  });
+});
+
+test("a tag that's already there isn't added twice, in any case, and one of the lists' is ticked", async () => {
+  stubApi(() => Response.json(saved, { status: 201 }));
+  renderApp("/recipes/new");
+
+  await userEvent.click(await screen.findByRole("button", { name: "Add tag" }));
+  const field = await screen.findByLabelText("Your own tag");
+  await userEvent.type(field, "Picnic{Enter}");
+  await userEvent.type(field, "PICNIC");
+  await userEvent.click(screen.getByRole("button", { name: "Add" }));
+
+  expect(field).toHaveAccessibleDescription("This recipe already has “picnic”.");
+  expect(screen.getAllByRole("checkbox", { name: "picnic" })).toHaveLength(1);
+
+  // One of the lists' tags by its name: that one is ticked, and no tag of the user's is made.
+  await userEvent.type(field, "Spicy{Enter}");
+  expect(field).toHaveAccessibleDescription("“spicy” is in the list, so it was ticked there.");
+  expect(screen.getAllByRole("checkbox", { name: "spicy" })).toHaveLength(1);
+  expect(screen.getByRole("checkbox", { name: "spicy" })).toBeChecked();
+});
+
 test("removing the last row moves focus to its list's Add button", async () => {
   stubApi(() => Response.json(saved, { status: 201 }));
   renderApp("/recipes/new");

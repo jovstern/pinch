@@ -283,6 +283,34 @@ test("GET /api/recipes?tags= lists the recipes with every one of the tags, a pag
   expect(second.nextCursor).toBeNull();
 });
 
+// A tag of the user's own (design D53): "custom:" and its words, trimmed, single-spaced and in
+// lower case, so the same tag in another case can't be saved beside it.
+test("a recipe takes a tag of the user's own, and the list is filtered by it", async () => {
+  const { userApi } = await insertRecipesOfNewUser([{ title: "Plain" }]);
+  const created = await userApi
+    .post("/api/recipes")
+    .send({ ...omelette, title: "Hers", tags: ["meal:dinner", "custom:grandma's best"] });
+  expect(created.status).toBe(201);
+  expect(created.body).toMatchObject({ tags: ["meal:dinner", "custom:grandma's best"] });
+
+  expect(await listTitles(userApi, { tags: "custom:grandma's best" })).toEqual(["Hers"]);
+});
+
+test.each([
+  ["in upper case", "custom:Grandma"],
+  ["with spaces around it", "custom: grandma "],
+  ["with a comma", "custom:sweet,sour"],
+  ["empty", "custom:"],
+  ["over 30 characters", `custom:${"a".repeat(31)}`],
+])("POST /api/recipes answers 400 for a tag of the user's own %s", async (_how, tag) => {
+  const response = await api.post("/api/recipes").send({ ...omelette, tags: [tag] });
+
+  expect(response.status).toBe(400);
+  expect(response.body).toMatchObject({
+    error: { fields: { "tags.0": "Pick a tag from the list." } },
+  });
+});
+
 test("GET /api/recipes answers 400 for a tag filter not in the lists", async () => {
   const response = await api.get("/api/recipes").query({ tags: "cuisine:martian" });
 

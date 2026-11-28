@@ -1,6 +1,7 @@
 import { useTranslation } from "react-i18next";
 import { Button } from "../../components/ui/Button.tsx";
 import { Sheet, SheetClose, SheetContent, SheetTitle } from "../../components/ui/Sheet.tsx";
+import { CustomTagField } from "./CustomTagField.tsx";
 import { TagPicker } from "./TagPicker.tsx";
 
 type TagsSheetProps = {
@@ -11,7 +12,8 @@ type TagsSheetProps = {
   focusOnClose: () => void;
 };
 
-// Every tag by facet, for a recipe in the editor (design §14), as My recipes' Filters.
+// Every tag by facet, for a recipe in the editor (design §14), as My recipes' Filters, under a
+// field for a tag of the user's own (D53).
 export function TagsSheet({ selected, onChange, onClose, focusOnClose }: TagsSheetProps) {
   const { t } = useTranslation();
   return (
@@ -24,6 +26,12 @@ export function TagsSheet({ selected, onChange, onClose, focusOnClose }: TagsShe
     >
       <SheetContent
         aria-describedby={undefined}
+        // Focus on the sheet itself, not its first control: that is the field for a tag of
+        // the user's own, and a phone would open its keyboard over the lists.
+        onOpenAutoFocus={(event) => {
+          event.preventDefault();
+          if (event.currentTarget instanceof HTMLElement) event.currentTarget.focus();
+        }}
         onCloseAutoFocus={(event) => {
           event.preventDefault();
           focusOnClose();
@@ -32,7 +40,8 @@ export function TagsSheet({ selected, onChange, onClose, focusOnClose }: TagsShe
         <SheetTitle className="px-4 pt-5 pb-2 font-sans text-lg font-semibold">
           {t("recipe.tags")}
         </SheetTitle>
-        <div className="overflow-y-auto px-4 pt-4 pb-4">
+        <div className="grid gap-4 overflow-y-auto px-4 pt-4 pb-4">
+          <CustomTagField selected={selected} onChange={onChange} />
           <TagPicker legend={t("recipe.tags")} selected={selected} onChange={onChange} />
         </div>
         {/* Tags apply as they're ticked: Done only closes it. Above the home bar. */}

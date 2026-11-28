@@ -401,6 +401,13 @@ export const en = {
     // A tag's ✕: "Remove vegetarian".
     removeTag: "Remove {{tag}}",
     addTag: "Add tag",
+    // A tag of the user's own, in the Tags sheet (D53): the field, its button, the group of
+    // their tags, and what the line under the field says when the tag is already there.
+    ownTag: "Your own tag",
+    add: "Add",
+    ownTags: "Your tags",
+    tagAlreadyAdded: "This recipe already has “{{tag}}”.",
+    tagInList: "“{{tag}}” is in the list, so it was ticked there.",
     // The tags' sheet: they apply as they're ticked, so Done only closes it.
     done: "Done",
     // By Save: what's left to fix, and a save that failed for the whole form.

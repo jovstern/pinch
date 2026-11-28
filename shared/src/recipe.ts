@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { messages } from "./messages.ts";
-import { TagSchema } from "./tags.ts";
+import { RecipeTagSchema, TagSchema } from "./tags.ts";
 
 // An optional text field. Forms send "" for a blank input and models often answer "", so an
 // empty string means "not set" (design §9): one meaning, stored one way.
@@ -25,6 +25,16 @@ export const IngredientSchema = z.object({
   note: optionalText(200, messages.under200),
 });
 
+// A recipe's tags. Left out means none: toRecipe parses stored recipes with this, so ones saved
+// before tags existed read as []. Each tag once (the default comes first, so it's deduped too).
+function tagsOf(tag: z.ZodType<string>) {
+  return z
+    .array(tag)
+    .max(20, messages.tooManyTags)
+    .default([])
+    .transform((tags) => [...new Set(tags)]);
+}
+
 // What the user writes: the body of POST /api/recipes (design §6). Every limit has a message
 // the form can show (§8.1).
 export const RecipeInputSchema = z.object({
@@ -41,13 +51,8 @@ export const RecipeInputSchema = z.object({
   servings: optionalWholeNumber(1, 100, messages.servingsRange),
   prepMinutes: optionalWholeNumber(0, 1440, messages.prepRange),
   cookMinutes: optionalWholeNumber(0, 1440, messages.cookRange),
-  // Left out means none: toRecipe parses stored recipes with this schema, so ones saved before
-  // tags existed read as []. Each tag once (the default comes first, so it's deduped too).
-  tags: z
-    .array(TagSchema)
-    .max(20, messages.tooManyTags)
-    .default([])
-    .transform((tags) => [...new Set(tags)]),
+  // The lists' tags and the user's own (D53).
+  tags: tagsOf(RecipeTagSchema),
 });
 
 // Per serving, estimated by Gemini from the ingredients (design D14): always an estimate, and
@@ -119,6 +124,9 @@ function markExists(path: string, draft: { steps: unknown[]; ingredients: unknow
 // it (overwrite: a transform that keeps the type, and the schema an object, so its shape can
 // still be read).
 export const RecipeDraftSchema = RecipeInputSchema.extend({
+  // Only the lists' tags: the JSON schema made from this names each one, so the model picks
+  // from them and never writes its own (design §9, D53).
+  tags: tagsOf(TagSchema),
   nutritionPerServing: NutritionSchema.optional(),
   emoji: EmojiSchema,
   uncertain: z.array(UncertainFieldSchema).optional().catch(undefined),

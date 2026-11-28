@@ -1,5 +1,5 @@
 import { FileState, GenerateContentResponse, GoogleGenAI } from "@google/genai";
-import { messages } from "@pinch/shared";
+import { messages, RecipeDraftSchema } from "@pinch/shared";
 import { Binary } from "mongodb";
 import { pino } from "pino";
 import { existsSync, writeFileSync } from "node:fs";
@@ -400,4 +400,13 @@ test("each answer's time and tokens are logged", async () => {
     outputTokens: 300,
     thinkingTokens: 800,
   });
+});
+
+// The model picks from the lists and never writes a tag of its own (design D53): the user's own
+// tags are only for a recipe they save.
+test("a draft's tags are only the lists'", () => {
+  const draft = { title: "Toast", ingredients: [{ name: "bread" }], steps: ["Toast it."] };
+
+  expect(RecipeDraftSchema.safeParse({ ...draft, tags: ["meal:breakfast"] }).success).toBe(true);
+  expect(RecipeDraftSchema.safeParse({ ...draft, tags: ["custom:mine"] }).success).toBe(false);
 });

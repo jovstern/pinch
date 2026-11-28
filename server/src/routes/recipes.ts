@@ -2,7 +2,7 @@ import {
   ListSourceSchema,
   RecipeInputSchema,
   RecipeSortSchema,
-  TagSchema,
+  RecipeTagSchema,
   TimeLimitSchema,
   type RecipeCount,
   type RecipeList,
@@ -184,7 +184,7 @@ const ListQuerySchema = z
     tags: z
       .string("Send the tags once, comma-separated.")
       .transform((text) => text.split(","))
-      .pipe(z.array(TagSchema).max(20, "Filter by up to 20 tags."))
+      .pipe(z.array(RecipeTagSchema).max(20, "Filter by up to 20 tags."))
       .optional(),
     source: z
       .string("Send the sources once, comma-separated.")

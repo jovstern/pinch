@@ -69,4 +69,13 @@ export {
   type TimeLimit,
   type UncertainField,
 } from "./recipe.ts";
-export { isTag, tagFacets, TagSchema, type TagFacet } from "./tags.ts";
+export {
+  customTag,
+  customTagWords,
+  isTag,
+  MAX_CUSTOM_TAG,
+  RecipeTagSchema,
+  tagFacets,
+  TagSchema,
+  type TagFacet,
+} from "./tags.ts";
